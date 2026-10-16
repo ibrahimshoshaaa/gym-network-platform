@@ -1,0 +1,114 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  allowedPath,
+  boundedBody,
+  checkOrigin,
+  apiOrigin,
+} from "../lib/security";
+import { decimal, minorUnits } from "../lib/client";
+
+test("gateway allows only explicit financial UI routes and UUID parameters", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  assert.equal(allowedPath("POST", `admin/topups/${id}/review`), true);
+  assert.equal(allowedPath("GET", `receipts/${id}/access`), true);
+  for (const path of [
+    "admin/ledger",
+    "../auth/admin/login",
+    "https://evil.test",
+    "//evil.test",
+    "admin/topups/not-a-uuid/review",
+    "auth/logout",
+  ])
+    assert.equal(allowedPath("POST", path), false);
+  assert.equal(allowedPath("DELETE", "topups"), false);
+});
+test("mutations require exact same origin, including login and reject missing or cross-site origin", () => {
+  const previous = process.env.WEB_ORIGIN;
+  try {
+    process.env.WEB_ORIGIN = "https://gym.example.test";
+    checkOrigin(
+      new Request("https://internal.test/api/session", {
+        headers: { origin: "https://gym.example.test" },
+      }),
+    );
+    for (const origin of [
+      "",
+      "https://evil.test",
+      "https://gym.example.test.evil.test",
+      "null",
+    ])
+      assert.throws(
+        () =>
+          checkOrigin(
+            new Request("https://internal.test/api/session", {
+              headers: { origin },
+            }),
+          ),
+        { code: "ORIGIN_REJECTED" },
+      );
+    assert.throws(
+      () =>
+        checkOrigin(
+          new Request("https://internal.test/api/session", {
+            headers: {
+              origin: "https://gym.example.test",
+              "sec-fetch-site": "cross-site",
+            },
+          }),
+        ),
+      { code: "ORIGIN_REJECTED" },
+    );
+  } finally {
+    if (previous === undefined) delete process.env.WEB_ORIGIN;
+    else process.env.WEB_ORIGIN = previous;
+  }
+});
+test("gateway bounds streamed bodies even without content length", async () => {
+  assert.equal(
+    (
+      await boundedBody(
+        new Request("https://gym.test", { method: "POST", body: "abc" }),
+        3,
+      )
+    ).length,
+    3,
+  );
+  await assert.rejects(
+    boundedBody(
+      new Request("https://gym.test", { method: "POST", body: "abcd" }),
+      3,
+    ),
+    { code: "BODY_TOO_LARGE" },
+  );
+});
+test("money conversion preserves piasters and never uses floating-point totals", () => {
+  assert.equal(minorUnits("1200"), "120000");
+  assert.equal(minorUnits("0.01"), "1");
+  assert.equal(minorUnits("90071992547409.93"), "9007199254740993");
+  assert.equal(decimal("9007199254740993"), "90071992547409.93");
+  assert.equal(decimal(1500), "15");
+  assert.equal(decimal("150"), "1.5");
+  for (const value of ["1.234", "1e3", "-1", "NaN", "", "0"])
+    assert.throws(() => minorUnits(value));
+  assert.equal(minorUnits("0", true), "0");
+});
+test("backend origin cannot include credentials or a URL-controlled route", () => {
+  const previous = process.env.API_INTERNAL_URL;
+  try {
+    for (const value of [
+      "file:///tmp/private",
+      "https://user:password@host.test",
+      "https://api.test/path",
+      "https://api.test/?next=evil",
+    ]) {
+      process.env.API_INTERNAL_URL = value;
+      assert.throws(() => apiOrigin(), { code: "SERVICE_NOT_CONFIGURED" });
+    }
+    process.env.API_INTERNAL_URL = "https://api.example.test";
+    assert.equal(apiOrigin(), "https://api.example.test");
+  } finally {
+    if (previous === undefined) delete process.env.API_INTERNAL_URL;
+    else process.env.API_INTERNAL_URL = previous;
+  }
+});

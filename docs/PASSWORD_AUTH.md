@@ -103,3 +103,10 @@ deployed migrations as an automatic rollback.
 
 References: [Node crypto](https://nodejs.org/docs/latest-v22.x/api/crypto.html),
 [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+
+## Dashboard admin increment
+
+Platform admins can now sign in via `/auth/admin/login` after private operator
+provisioning. Admin sessions last eight hours. Password change now also supports
+admins with the same credential confirmation and session revocation. Dashboard
+cookies and provisioning details: [WEB_DASHBOARD.md](WEB_DASHBOARD.md).

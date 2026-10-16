@@ -5,8 +5,9 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev:api": "pnpm --filter @gym/api dev",
-    "typecheck": "pnpm --filter @gym/api typecheck",
+    "typecheck": "pnpm --filter @gym/api typecheck && pnpm --filter @gym/web typecheck",
     "db:generate": "pnpm --filter @gym/api db:generate",
-    "db:validate": "pnpm --filter @gym/api db:validate"
+    "db:validate": "pnpm --filter @gym/api db:validate",
+    "dev:web": "pnpm --filter @gym/web dev"
   }
 }

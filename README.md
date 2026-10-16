@@ -14,7 +14,7 @@ Multi-gym visit and points platform. ShoTech Solutions.
 
 - API: Fastify + TypeScript
 - Database: PostgreSQL + Prisma
-- Dashboard: Next.js (planned)
+- Dashboard: Next.js (Arabic operations UI)
 - Mobile: Flutter (planned)
 
 ## Start the API
@@ -37,7 +37,9 @@ The API exposes public health, trainee password registration/login, and
 session-authenticated `/me`, password change and logout. Email/phone verification
 is deferred by the project owner; see [password auth](docs/PASSWORD_AUTH.md).
 Gym/branch onboarding, staff invitations and approved pricing are described in
-[gym management](docs/GYM_MANAGEMENT.md). Dashboard/mobile UI remains planned.
+[gym management](docs/GYM_MANAGEMENT.md). The Arabic web dashboard now includes
+admin settings/reviews and owner branch-stock requests; see
+[dashboard setup](docs/WEB_DASHBOARD.md). Mobile UI remains planned.
 Admin pricing, InstaPay/wallet receiver settings, private Cloudinary receipts and
 manual trainee/branch topup approval are described in [topups](docs/TOPUPS.md).
 Cloudinary needs server credentials; the real provider has not yet been verified.
@@ -49,3 +51,14 @@ testing and rollback instructions. See also `docs/ARCHITECTURE.md` and
 
 Never commit .env files, phone OTP secrets, or payment credentials.
 
+
+## Run the dashboard
+
+Configure `apps/web/.env.local` using `apps/web/.env.example`, provision the first
+admin as described in [dashboard setup](docs/WEB_DASHBOARD.md), start the API, then:
+
+```bash
+pnpm --filter @gym/web dev
+```
+
+No hosted deployment or default admin credentials are included.

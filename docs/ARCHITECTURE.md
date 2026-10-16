@@ -2,7 +2,7 @@
 
 ## Runtime components
 - Flutter trainee mobile application (planned).
-- Next.js responsive dashboard for platform owner, gym owners, managers and cashiers (planned).
+- Next.js Arabic responsive dashboard: admin settings/reviews and gym owner stock requests implemented; other operational screens planned.
 - Node.js + Fastify API with a PostgreSQL data store.
 - Server-side authoritative mutations, never client-computed balances or client-trusted roles.
 - Signed short-lived QR and one-time consumption with anti-replay store (future sprint).
@@ -36,6 +36,8 @@ remain pending. The checklist below tracks the broader sprint.
 - [x] Implement audited ledger service with transactional tests
 - [x] Expose reviewed topup issuance endpoints
 - [ ] Implement visits, cashier sales and settlements
+
+Dashboard boundary, operator provisioning and validation: [WEB_DASHBOARD.md](WEB_DASHBOARD.md).
 
 ## Pending client/ops decisions
 - Whether financial receivables are aggregated per gym or per branch (gym-level draft in schema; **not yet explicitly approved**).

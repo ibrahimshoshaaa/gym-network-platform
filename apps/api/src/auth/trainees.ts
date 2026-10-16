@@ -11,7 +11,7 @@ export const publicIdentity = (user: User) => ({
   emailVerified: user.emailVerifiedAt !== null, phoneVerified: user.phoneVerifiedAt !== null,
 });
 export async function sessionResult(tx: Prisma.TransactionClient, user: User) {
-  const expiresAt = new Date(Date.now() + sessionMilliseconds);
+  const expiresAt = new Date(Date.now() + (user.role === 'PLATFORM_ADMIN' ? 8 * 3600000 : sessionMilliseconds));
   const accessToken = await createSession(tx, user.id, expiresAt);
   return { user: publicIdentity(user), accessToken, tokenType: 'Bearer', expiresAt: expiresAt.toISOString() };
 }
@@ -65,7 +65,7 @@ export async function changeTraineePassword(db: PrismaClient, userId: string, se
   const parsed = passwordChangeSchema.safeParse(input);
   if (!parsed.success) throw new DomainError('INVALID_INPUT');
   const user = await db.user.findUnique({ where: { id: userId }, include: { password: true } });
-  const eligible = Boolean(user?.isActive && user.role !== 'PLATFORM_ADMIN' && user.password);
+  const eligible = Boolean(user?.isActive && user.password);
   const hash = eligible ? user!.password!.passwordHash : undefined;
   if (!await verifyPassword(parsed.data.currentPassword, hash) || !eligible) throw new DomainError('INVALID_CREDENTIALS');
   const passwordHash = await hashPassword(parsed.data.newPassword);
@@ -73,7 +73,7 @@ export async function changeTraineePassword(db: PrismaClient, userId: string, se
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
     const current = await tx.user.findUnique({ where: { id: userId }, include: { password: true } });
     const session = await tx.authSession.findUnique({ where: { tokenHash: hashToken(sessionToken) } });
-    if (!current?.isActive || current.role === 'PLATFORM_ADMIN' || current.password?.passwordHash !== hash ||
+    if (!current?.isActive || current.password?.passwordHash !== hash ||
         !session || session.userId !== userId || session.revokedAt || session.expiresAt <= new Date()) throw new DomainError('INVALID_CREDENTIALS');
     await tx.userPassword.update({ where: { userId }, data: { passwordHash, changedAt: new Date() } });
     await tx.authSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
