@@ -7,10 +7,13 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:db": "node --import tsx --test test-db/*.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
