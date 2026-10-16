@@ -13,8 +13,10 @@ Update 17 October 2026: see [ledger foundation](LEDGER_FOUNDATION.md) for implem
 SQL integrity constraints, internal posting/stock services, sessions and test scope.
 Trainee password sign-in is now implemented with contact verification deferred
 by the owner; see [password auth](PASSWORD_AUTH.md) and [decisions](DECISIONS.md).
-Financial HTTP workflows remain pending; the checklist below
-tracks the broader sprint, not only this increment.
+Gym/branch onboarding is implemented; see [gym management](GYM_MANAGEMENT.md).
+Configurable pricing, private receipt evidence and manually approved topups are
+implemented; see [topups](TOPUPS.md). Visit, cashier-sale and settlement workflows
+remain pending. The checklist below tracks the broader sprint.
 `apps/api/prisma/schema.prisma` is the first domain-model draft. It separates:
 - `PointAccount / PointTransaction / PointPosting` (points).
 - `MoneyAccount / MoneyTransaction / MoneyPosting` (gym receivables, held funds, payouts).
@@ -27,11 +29,13 @@ tracks the broader sprint, not only this increment.
 - [x] Private repository and separated development branch
 - [x] Workspace and first API scaffold
 - [x] Initial schema draft and written accounting requirements
-- [ ] Review schema relations and generate migration on disposable PostgreSQL
-- [ ] Test typecheck and health endpoint on CI
-- [ ] Implement authenticated users, staff scoping and OTP adapter
-- [ ] Implement audited ledger service with transactional tests
-- [ ] Only then expose money/points mutation endpoints
+- [x] Review foundation schema relations and test migrations on disposable PostgreSQL
+- [x] Test typecheck and health endpoint on CI
+- [x] Implement password-authenticated users and staff scoping
+- [ ] Implement contact verification/OTP (deferred by owner)
+- [x] Implement audited ledger service with transactional tests
+- [x] Expose reviewed topup issuance endpoints
+- [ ] Implement visits, cashier sales and settlements
 
 ## Pending client/ops decisions
 - Whether financial receivables are aggregated per gym or per branch (gym-level draft in schema; **not yet explicitly approved**).
