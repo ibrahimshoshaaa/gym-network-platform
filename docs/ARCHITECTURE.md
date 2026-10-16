@@ -9,6 +9,10 @@
 - FCM notifications, mapping and SMS OTP adapters (future sprint).
 
 ## Database design
+Update 17 October 2026: see [ledger foundation](LEDGER_FOUNDATION.md) for implemented
+SQL integrity constraints, internal posting/stock services, sessions and test scope.
+OTP sign-in and financial HTTP workflows remain pending; the checklist below
+tracks the broader sprint, not only this increment.
 `apps/api/prisma/schema.prisma` is the first domain-model draft. It separates:
 - `PointAccount / PointTransaction / PointPosting` (points).
 - `MoneyAccount / MoneyTransaction / MoneyPosting` (gym receivables, held funds, payouts).
@@ -33,3 +37,4 @@
 - Policy for disputed/reversed visits already paid out.
 - Detailed pricing/reconciliation rules and treatment of unused, expired, reversed, and refunded points.
 - OTP vendor, map provider, hosting and production legal/accounting approval.
+

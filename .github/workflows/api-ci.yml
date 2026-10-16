@@ -1,4 +1,4 @@
-name: Validate API scaffold
+name: Validate API and ledger
 
 on:
   push:
@@ -13,6 +13,17 @@ jobs:
   api:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: gym_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d gym_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/gym_ci?schema=public
     steps:
@@ -25,7 +36,7 @@ jobs:
       - name: Enable package manager
         run: corepack enable
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
         run: pnpm --filter @gym/api db:generate
       - name: Validate Prisma schema
@@ -34,14 +45,22 @@ jobs:
         run: pnpm --filter @gym/api typecheck
       - name: Build API
         run: pnpm --filter @gym/api build
-      - name: Smoke-test health route
+      - name: Test health and disabled routes
+        run: pnpm --filter @gym/api test
+      - name: Apply migrations to disposable PostgreSQL
+        run: pnpm --filter @gym/api db:deploy
+      - name: Create restricted runtime role
+        env:
+          PGPASSWORD: ci
         run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { buildApp } from './apps/api/dist/app.js';
-          const app = buildApp();
-          const response = await app.inject({ method: 'GET', url: '/health' });
-          assert.equal(response.statusCode, 200);
-          assert.equal(response.json().status, 'ok');
-          await app.close();
-          NODE
+          psql -h localhost -U ci -d gym_ci -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE gym_app LOGIN PASSWORD 'gym_app' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+          GRANT CONNECT ON DATABASE gym_ci TO gym_app;
+          GRANT USAGE ON SCHEMA public TO gym_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gym_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gym_app;
+          SQL
+      - name: Test ledger, concurrency, permissions and sessions on PostgreSQL
+        env:
+          DATABASE_URL: postgresql://gym_app:gym_app@localhost:5432/gym_ci?schema=public
+        run: pnpm --filter @gym/api test:db
