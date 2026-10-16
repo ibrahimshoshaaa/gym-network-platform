@@ -5,16 +5,18 @@ import { DomainError } from './domain/errors.js';
 import { ThrottleError } from './auth/throttle.js';
 import { registerTraineeRoutes } from './auth/routes.js';
 import { publicIdentity } from './auth/trainees.js';
+import { registerTopupRoutes } from './topups/routes.js';
+import { CloudinaryReceiptStorage, type ReceiptStorage } from './topups/receipts.js';
 import { registerGymRoutes } from './gyms/routes.js';
 
-export function buildApp(db?: PrismaClient) {
+export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptStorage } = {}) {
   const app = Fastify({ bodyLimit: 8192, logger: { redact: ['req.headers.authorization', 'req.body.password', 'req.body.currentPassword', 'req.body.newPassword', 'req.body.token'] }, trustProxy: false });
   app.addHook('onRequest', async (request, reply) => {
-    if (request.headers.authorization || ['/auth/', '/admin/', '/gyms', '/invitations/', '/me'].some(prefix => request.url.startsWith(prefix))) reply.header('Cache-Control', 'no-store');
+    if (request.headers.authorization || ['/auth/', '/admin/', '/gyms', '/invitations/', '/me', '/topup', '/receipts', '/trainee/'].some(prefix => request.url.startsWith(prefix))) reply.header('Cache-Control', 'no-store');
   });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof DomainError) {
-      const codes: Record<string, number> = { INVALID_INPUT: 400, INVALID_CREDENTIALS: 401, UNAUTHENTICATED: 401, ACCOUNT_UNAVAILABLE: 409, RATE_LIMITED: 429, AUTH_BUSY: 503,
+      const codes: Record<string, number> = { STORAGE_NOT_CONFIGURED: 503, STORAGE_UNAVAILABLE: 503, INVALID_RECEIPT: 400, RECEIPT_ACCESS_DENIED: 403, RECEIPT_ALREADY_USED: 409, STALE_SETTINGS: 409, PRICING_NOT_CONFIGURED: 409, PACKAGE_UNAVAILABLE: 409, PAYMENT_METHOD_UNAVAILABLE: 409, IDEMPOTENCY_CONFLICT: 409, PAYMENT_AMOUNT_MISMATCH: 409, PAYMENT_REFERENCE_USED: 409, LEGACY_REQUEST_REVIEW_REQUIRED: 409, WALLET_EXPIRY_REVIEW_REQUIRED: 409, ACCOUNT_NOT_FOUND: 409, INVALID_INPUT: 400, INVALID_CREDENTIALS: 401, UNAUTHENTICATED: 401, ACCOUNT_UNAVAILABLE: 409, RATE_LIMITED: 429, AUTH_BUSY: 503,
         ACCESS_DENIED: 403, GYM_ACCESS_DENIED: 403, BRANCH_ACCESS_DENIED: 403, GYM_INACTIVE: 409, INVALID_STATE: 409,
         BRANCH_NOT_READY: 409, NOT_FOUND: 404, PENDING_REQUEST_EXISTS: 409, STALE_PRICE_REQUEST: 409, STAFF_ALREADY_ASSIGNED: 409, INVITATION_INVALID: 400 };
       const status = codes[error.code] ?? 500;
@@ -37,6 +39,7 @@ export function buildApp(db?: PrismaClient) {
   if (db) {
     registerTraineeRoutes(app, db);
     registerGymRoutes(app, db);
+    registerTopupRoutes(app, db, options.receiptStorage ?? new CloudinaryReceiptStorage());
     app.get('/me', async (request, reply) => {
       const user = await authenticate(db, request.headers.authorization);
       if (!user) return reply.code(401).send({ code: 'UNAUTHENTICATED' });
@@ -50,7 +53,7 @@ export function buildApp(db?: PrismaClient) {
       return reply.code(204).send();
     });
   }
-  // Contact verification/OTP and financial HTTP routes remain unavailable.
+  // Contact verification/OTP remains deferred.
   return app;
 }
 

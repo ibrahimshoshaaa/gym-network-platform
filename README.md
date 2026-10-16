@@ -38,7 +38,10 @@ session-authenticated `/me`, password change and logout. Email/phone verificatio
 is deferred by the project owner; see [password auth](docs/PASSWORD_AUTH.md).
 Gym/branch onboarding, staff invitations and approved pricing are described in
 [gym management](docs/GYM_MANAGEMENT.md). Dashboard/mobile UI remains planned.
-Financial HTTP workflows are not yet available. Internal ledger,
+Admin pricing, InstaPay/wallet receiver settings, private Cloudinary receipts and
+manual trainee/branch topup approval are described in [topups](docs/TOPUPS.md).
+Cloudinary needs server credentials; the real provider has not yet been verified.
+Visit, cashier sales and settlement HTTP workflows remain pending. Internal ledger,
 stock-transfer and authorization foundations are described in
 [`docs/LEDGER_FOUNDATION.md`](docs/LEDGER_FOUNDATION.md), including migration,
 testing and rollback instructions. See also `docs/ARCHITECTURE.md` and

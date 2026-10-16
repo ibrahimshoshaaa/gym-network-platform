@@ -33,6 +33,16 @@ enum BranchStatus {
   SUSPENDED
 }
 
+enum TopupKind {
+  TRAINEE
+  BRANCH_STOCK
+}
+
+enum PaymentMethodType {
+  INSTAPAY
+  WALLET
+}
+
 enum RequestStatus {
   PENDING
   APPROVED
@@ -107,6 +117,8 @@ model User {
   visits          Visit[]           @relation("TraineeVisits")
   sessions        AuthSession[]
   invitations     StaffInvitation[]
+  receipts        ReceiptEvidence[]
+  topupRequests   TopupRequest[]    @relation("TopupRequestor")
 }
 
 model Gym {
@@ -199,6 +211,7 @@ model PointTransaction {
   reversalOf     PointTransaction? @relation("PointReversal", fields: [reversalOfId], references: [id])
   reversedBy     PointTransaction? @relation("PointReversal")
   visit          Visit?
+  topup          TopupRequest?
   kind           PointTxKind
   actorId        String?           @db.Uuid
   referenceId    String?           @db.Uuid
@@ -222,17 +235,35 @@ model PointPosting {
 }
 
 model TopupRequest {
-  id                String        @id @default(uuid()) @db.Uuid
-  requestorUserId   String        @db.Uuid
-  receivingBranchId String?       @db.Uuid
-  receivingBranch   Branch?       @relation(fields: [receivingBranchId], references: [id])
-  points            Int
-  chargePiasters    BigInt
-  receiptObjectKey  String
-  status            RequestStatus @default(PENDING)
-  reviewedById      String?       @db.Uuid
-  reviewedAt        DateTime?
-  createdAt         DateTime      @default(now())
+  id                 String             @id @default(uuid()) @db.Uuid
+  requestorUserId    String             @db.Uuid
+  requestorUser      User               @relation("TopupRequestor", fields: [requestorUserId], references: [id])
+  kind               TopupKind?
+  idempotencyKey     String?            @unique
+  requestHash        String?
+  policyId           String?            @db.Uuid
+  policy             PricingPolicy?     @relation(fields: [policyId], references: [id])
+  receiptId          String?            @unique @db.Uuid
+  receipt            ReceiptEvidence?   @relation(fields: [receiptId], references: [id])
+  pointTransactionId String?            @unique @db.Uuid
+  pointTransaction   PointTransaction?  @relation(fields: [pointTransactionId], references: [id])
+  paymentMethodType  PaymentMethodType?
+  paymentAccount     String?
+  paymentAccountName String?
+  paymentReference   String?            @unique
+  unitPricePiasters  BigInt?
+  discountBps        Int?
+  redemptionBps      Int?
+  reviewReason       String?
+  receivingBranchId  String?            @db.Uuid
+  receivingBranch    Branch?            @relation(fields: [receivingBranchId], references: [id])
+  points             Int
+  chargePiasters     BigInt
+  receiptObjectKey   String
+  status             RequestStatus      @default(PENDING)
+  reviewedById       String?            @db.Uuid
+  reviewedAt         DateTime?
+  createdAt          DateTime           @default(now())
 
   @@index([status, createdAt])
 }
@@ -401,4 +432,51 @@ model BranchPricingRequest {
   createdAt              DateTime      @default(now())
 
   @@index([branchId, createdAt])
+}
+
+model PricingPolicy {
+  id                 String         @id @default(uuid()) @db.Uuid
+  version            Int            @unique
+  pointPricePiasters BigInt
+  gymDiscountBps     Int
+  redemptionBps      Int
+  createdById        String         @db.Uuid
+  createdAt          DateTime       @default(now())
+  topups             TopupRequest[]
+}
+
+model PaymentMethod {
+  id          String            @id @default(uuid()) @db.Uuid
+  type        PaymentMethodType @unique
+  account     String
+  accountName String
+  enabled     Boolean
+  version     Int               @default(1)
+  updatedAt   DateTime          @updatedAt
+}
+
+model TopupPackage {
+  id        String    @id @default(uuid()) @db.Uuid
+  label     String
+  kind      TopupKind
+  points    Int
+  enabled   Boolean   @default(true)
+  version   Int       @default(1)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model ReceiptEvidence {
+  id          String        @id @default(uuid()) @db.Uuid
+  ownerUserId String        @db.Uuid
+  owner       User          @relation(fields: [ownerUserId], references: [id])
+  objectKey   String        @unique
+  assetId     String        @unique
+  contentHash String        @unique
+  mimeType    String
+  bytes       Int
+  createdAt   DateTime      @default(now())
+  topup       TopupRequest?
+
+  @@index([ownerUserId, createdAt])
 }

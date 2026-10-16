@@ -57,7 +57,7 @@ export async function serializable<T>(db: PrismaClient, run: (tx: Prisma.Transac
 }
 
 // Caller must be an authorized domain service within the same transaction.
-async function post(tx: Prisma.TransactionClient, input: LedgerCommand) {
+export async function postInTransaction(tx: Prisma.TransactionClient, input: LedgerCommand) {
   const { command: c, requestHash } = prepare(input);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${c.idempotencyKey}, 0))`;
   const [oldPoints, oldMoney] = await Promise.all([
@@ -110,7 +110,7 @@ async function post(tx: Prisma.TransactionClient, input: LedgerCommand) {
 
 // Privileged internal primitive; there is deliberately no HTTP posting route.
 export function postLedger(db: PrismaClient, command: LedgerCommand) {
-  return serializable(db, async tx => { await requireAdmin(tx, command.actorId); return post(tx, command); });
+  return serializable(db, async tx => { await requireAdmin(tx, command.actorId); return postInTransaction(tx, command); });
 }
 
 export function transferStock(db: PrismaClient, input: {
@@ -124,7 +124,7 @@ export function transferStock(db: PrismaClient, input: {
     const [from, to] = await Promise.all([input.fromBranchId, input.toBranchId].map(branchId =>
       tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId } } })));
     if (!from || !to) throw new DomainError('ACCOUNT_NOT_FOUND');
-    return post(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: 'Owner branch stock transfer',
+    return postInTransaction(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: 'Owner branch stock transfer',
       points: { kind: 'TRANSFER', entries: [{ accountId: from.id, delta: -BigInt(input.points) }, { accountId: to.id, delta: BigInt(input.points) }] } });
   });
 }
@@ -147,9 +147,10 @@ export function reverseLedger(db: PrismaClient, input: {
         (!p && await tx.pointTransaction.findUnique({ where: { idempotencyKey: key } }))) throw new DomainError('INCOMPLETE_REVERSAL');
     // Visit/sale policy approvals have not been implemented; the low-level
     // reversal primitive cannot bypass those pending workflows.
+    if (p && await tx.topupRequest.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     if (p && ['VISIT', 'VISIT_REVERSAL', 'SALE_REVERSAL', 'EXPIRY'].includes(p.kind) ||
         m && m.kind !== 'ADJUSTMENT') throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
-    return post(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: input.reason,
+    return postInTransaction(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: input.reason,
       points: p ? { kind: 'ADJUSTMENT', reversalOfId: p.id, entries: p.postings.map(e => ({ accountId: e.accountId, delta: -BigInt(e.delta) })) } : undefined,
       money: m ? { kind: 'ADJUSTMENT', reversalOfId: m.id, entries: m.postings.map(e => ({ accountId: e.accountId, delta: -e.deltaPiasters })) } : undefined,
     });

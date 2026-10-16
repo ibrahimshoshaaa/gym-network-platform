@@ -13,11 +13,13 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "test": "node --import tsx --test test/*.test.ts",
-    "test:db": "node --import tsx --test test-db/*.test.ts"
+    "test:db": "node --import tsx --test --test-concurrency=1 test-db/*.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
+    "cloudinary": "^2.11.0",
     "fastify": "^5.6.1",
+    "sharp": "^0.35.5",
     "zod": "^4.1.11"
   },
   "devDependencies": {
