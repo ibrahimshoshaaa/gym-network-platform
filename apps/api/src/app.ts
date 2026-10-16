@@ -1,11 +1,26 @@
 import Fastify from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { authenticate, hashToken } from './auth/sessions.js';
+import { DomainError } from './domain/errors.js';
+import { ThrottleError } from './auth/throttle.js';
+import { registerTraineeRoutes } from './auth/routes.js';
+import { publicIdentity } from './auth/trainees.js';
 
 export function buildApp(db?: PrismaClient) {
-  const app = Fastify({ logger: true, trustProxy: false });
+  const app = Fastify({ logger: { redact: ['req.headers.authorization', 'req.body.password', 'req.body.currentPassword', 'req.body.newPassword'] }, trustProxy: false });
+  app.addHook('onRequest', async (request, reply) => {
+    if (request.url.startsWith('/auth/') || request.url.split('?')[0] === '/me') reply.header('Cache-Control', 'no-store');
+  });
   app.setErrorHandler((error, request, reply) => {
-    request.log.error(error);
+    if (error instanceof DomainError) {
+      const codes: Record<string, number> = { INVALID_INPUT: 400, INVALID_CREDENTIALS: 401, UNAUTHENTICATED: 401, ACCOUNT_UNAVAILABLE: 409, RATE_LIMITED: 429, AUTH_BUSY: 503 };
+      const status = codes[error.code] ?? 500;
+      if (error instanceof ThrottleError) reply.header('Retry-After', error.retryAfter);
+      if (error.code === 'AUTH_BUSY') reply.header('Retry-After', 1);
+      return reply.code(status).send({ code: status < 500 || status === 503 ? error.code : 'INTERNAL_ERROR', requestId: request.id });
+    }
+    // Never log request bodies or Prisma argument dumps containing credentials.
+    request.log.error({ errorName: error instanceof Error ? error.name : 'UnknownError' }, 'Request failed');
     const status = error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number' ? error.statusCode : 500;
     return reply.code(status).send({ code: status >= 500 ? 'INTERNAL_ERROR' : 'INVALID_REQUEST', requestId: request.id });
   });
@@ -17,10 +32,11 @@ export function buildApp(db?: PrismaClient) {
   }));
 
   if (db) {
+    registerTraineeRoutes(app, db);
     app.get('/me', async (request, reply) => {
       const user = await authenticate(db, request.headers.authorization);
       if (!user) return reply.code(401).send({ code: 'UNAUTHENTICATED' });
-      return { id: user.id, displayName: user.displayName, role: user.role };
+      return publicIdentity(user);
     });
     app.post('/auth/logout', async (request, reply) => {
       const user = await authenticate(db, request.headers.authorization);
@@ -30,7 +46,7 @@ export function buildApp(db?: PrismaClient) {
       return reply.code(204).send();
     });
   }
-  // OTP/sign-in and financial HTTP routes remain unavailable.
+  // Contact verification/OTP and financial HTTP routes remain unavailable.
   return app;
 }
 

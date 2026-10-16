@@ -78,18 +78,22 @@ enum WithdrawalStatus {
 }
 
 model User {
-  id            String            @id @default(uuid()) @db.Uuid
-  phoneE164     String            @unique
-  displayName   String
-  role          UserRole
-  isActive      Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  ownedGyms     Gym[]             @relation("GymOwner")
-  assignments   StaffAssignment[]
-  pointAccounts PointAccount[]
-  visits        Visit[]           @relation("TraineeVisits")
-  sessions      AuthSession[]
+  id              String            @id @default(uuid()) @db.Uuid
+  phoneE164       String            @unique
+  email           String?           @unique
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  password        UserPassword?
+  displayName     String
+  role            UserRole
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  ownedGyms       Gym[]             @relation("GymOwner")
+  assignments     StaffAssignment[]
+  pointAccounts   PointAccount[]
+  visits          Visit[]           @relation("TraineeVisits")
+  sessions        AuthSession[]
 }
 
 model Gym {
@@ -313,4 +317,19 @@ model AuthSession {
   createdAt DateTime  @default(now())
 
   @@index([userId, expiresAt])
+}
+
+model UserPassword {
+  userId       String   @id @db.Uuid
+  user         User     @relation(fields: [userId], references: [id])
+  passwordHash String
+  changedAt    DateTime @default(now())
+}
+
+model AuthThrottle {
+  key       String   @id
+  attempts  Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
