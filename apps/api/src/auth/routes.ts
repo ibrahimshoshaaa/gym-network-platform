@@ -5,8 +5,27 @@ import { authenticate } from './sessions.js';
 import { consumeAuthLimit } from './throttle.js';
 import { loginSchema } from './validation.js';
 import { changeTraineePassword, loginTrainee, registerTrainee } from './trainees.js';
+import { acceptInvitation, invitationAcceptSchema, loginStaff } from './staff.js';
 
 export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
+  app.post('/auth/staff/login', {
+    bodyLimit: 8192,
+    onRequest: async request => { await consumeAuthLimit(db, 'login-ip', request.ip, 30, 900); },
+  }, async request => {
+    const parsed = loginSchema.safeParse(request.body);
+    if (!parsed.success) throw new DomainError('INVALID_INPUT');
+    await consumeAuthLimit(db, 'login-identity', parsed.data.identifier, 10, 900);
+    return loginStaff(db, parsed.data);
+  });
+  app.post('/auth/invitations/accept', {
+    bodyLimit: 8192,
+    onRequest: async request => { await consumeAuthLimit(db, 'invite-ip', request.ip, 20, 900); },
+  }, async request => {
+    const parsed = invitationAcceptSchema.safeParse(request.body);
+    if (!parsed.success) throw new DomainError('INVALID_INPUT');
+    await consumeAuthLimit(db, 'invite-token', parsed.data.token, 10, 900);
+    return acceptInvitation(db, parsed.data);
+  });
   app.post('/auth/register', {
     bodyLimit: 8192,
     onRequest: async request => { await consumeAuthLimit(db, 'register-ip', request.ip, 5, 3600); },

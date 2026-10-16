@@ -36,6 +36,8 @@ Health check: `GET http://localhost:4000/health`
 The API exposes public health, trainee password registration/login, and
 session-authenticated `/me`, password change and logout. Email/phone verification
 is deferred by the project owner; see [password auth](docs/PASSWORD_AUTH.md).
+Gym/branch onboarding, staff invitations and approved pricing are described in
+[gym management](docs/GYM_MANAGEMENT.md). Dashboard/mobile UI remains planned.
 Financial HTTP workflows are not yet available. Internal ledger,
 stock-transfer and authorization foundations are described in
 [`docs/LEDGER_FOUNDATION.md`](docs/LEDGER_FOUNDATION.md), including migration,

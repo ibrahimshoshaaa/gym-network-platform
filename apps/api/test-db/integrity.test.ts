@@ -26,8 +26,8 @@ async function fixture() {
   const cashier = await user('CASHIER');
   const manager = await user('BRANCH_MANAGER');
   const trainee = await user('TRAINEE');
-  const gym = await db.gym.create({ data: { ownerId: owner.id, name: 'Synthetic Gym' } });
-  const otherGym = await db.gym.create({ data: { ownerId: outsider.id, name: 'Other Gym' } });
+  const gym = await db.gym.create({ data: { ownerId: owner.id, name: 'Synthetic Gym', status: 'ACTIVE', ownerAcceptedAt: new Date() } });
+  const otherGym = await db.gym.create({ data: { ownerId: outsider.id, name: 'Other Gym', status: 'ACTIVE', ownerAcceptedAt: new Date() } });
   const branch = (gymId: string) => db.branch.create({ data: { gymId, name: 'Synthetic Branch', status: 'ACTIVE', visitPricePoints: 25, sessionMinutes: 120 } });
   const a = await branch(gym.id), b = await branch(gym.id), foreign = await branch(otherGym.id);
   await db.staffAssignment.createMany({ data: [

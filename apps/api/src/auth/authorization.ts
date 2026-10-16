@@ -20,10 +20,10 @@ export async function requireBranchAccess(
   permission: 'TRANSFER_STOCK' | 'SELL_POINTS' | 'CANCEL_VISIT',
 ) {
   await requireActor(tx, userId);
-  const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: true } });
-  if (!branch || branch.status !== 'ACTIVE') throw new DomainError('BRANCH_ACCESS_DENIED');
+  const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: { include: { owner: { select: { isActive: true } } } } } });
+  if (!branch || branch.status !== 'ACTIVE' || branch.gym.status !== 'ACTIVE' || !branch.gym.ownerAcceptedAt || !branch.gym.owner.isActive) throw new DomainError('BRANCH_ACCESS_DENIED');
   if (permission === 'TRANSFER_STOCK') {
-    if (branch.gym.ownerId !== userId) throw new DomainError('BRANCH_ACCESS_DENIED');
+    if (branch.gym.ownerId !== userId || !branch.gym.ownerAcceptedAt) throw new DomainError('BRANCH_ACCESS_DENIED');
   } else {
     const role = permission === 'SELL_POINTS' ? 'CASHIER' : 'BRANCH_MANAGER';
     const membership = await tx.staffAssignment.findUnique({
@@ -32,4 +32,17 @@ export async function requireBranchAccess(
     if (!membership?.active) throw new DomainError('BRANCH_ACCESS_DENIED');
   }
   return branch;
+}
+
+export async function requireGymOwner(tx: Prisma.TransactionClient, userId: string, gymId: string, editable = true) {
+  await requireActor(tx, userId);
+  const gym = await tx.gym.findUnique({ where: { id: gymId } });
+  if (!gym || gym.ownerId !== userId || !gym.ownerAcceptedAt) throw new DomainError('GYM_ACCESS_DENIED');
+  if (editable && !['PENDING', 'ACTIVE'].includes(gym.status)) throw new DomainError('GYM_INACTIVE');
+  return gym;
+}
+
+export async function hasStaffAccess(tx: Prisma.TransactionClient, userId: string) {
+  return Boolean(await tx.gym.findFirst({ where: { ownerId: userId, ownerAcceptedAt: { not: null }, status: { in: ['PENDING', 'ACTIVE'] } }, select: { id: true } }) ||
+    await tx.staffAssignment.findFirst({ where: { userId, active: true, branch: { gym: { status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } } }, select: { id: true } }));
 }
