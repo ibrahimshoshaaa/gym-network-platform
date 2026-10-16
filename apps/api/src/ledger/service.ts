@@ -48,7 +48,9 @@ export async function serializable<T>(db: PrismaClient, run: (tx: Prisma.Transac
       // too; the next snapshot either replays or reports a payload conflict.
       const keyRace = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' &&
         String(error.meta?.target).includes('idempotencyKey');
-      if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2034' || keyRace) && attempt < 8) continue;
+      const rawConflict = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2010' &&
+        ['40001', '40P01'].includes(String(error.meta?.code));
+      if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2034' || keyRace || rawConflict) && attempt < 8) continue;
       throw error;
     }
   }

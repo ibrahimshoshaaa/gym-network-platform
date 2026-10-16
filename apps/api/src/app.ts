@@ -4,6 +4,11 @@ import { authenticate, hashToken } from './auth/sessions.js';
 
 export function buildApp(db?: PrismaClient) {
   const app = Fastify({ logger: true, trustProxy: false });
+  app.setErrorHandler((error, request, reply) => {
+    request.log.error(error);
+    const status = error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number' ? error.statusCode : 500;
+    return reply.code(status).send({ code: status >= 500 ? 'INTERNAL_ERROR' : 'INVALID_REQUEST', requestId: request.id });
+  });
 
   app.get('/health', async () => ({
     status: 'ok',

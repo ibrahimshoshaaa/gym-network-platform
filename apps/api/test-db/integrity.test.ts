@@ -130,6 +130,35 @@ test('money remains exact beyond JavaScript safe integers and reconciles', async
   assert.equal(sum, 0n);
 });
 
+test('a late money FK failure rolls back already-written point postings and balances', async () => {
+  const f = await fixture(); const cmd = f.command();
+  cmd.money = { kind: 'ADJUSTMENT', reversalOfId: randomUUID(), entries: [
+    { accountId: f.offset.id, delta: -100n }, { accountId: f.money.id, delta: 100n },
+  ] };
+  await assert.rejects(postLedger(db, cmd));
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 0);
+  assert.equal(await db.pointTransaction.count({ where: { idempotencyKey: cmd.idempotencyKey } }), 0);
+  assert.equal(await db.moneyTransaction.count({ where: { idempotencyKey: cmd.idempotencyKey } }), 0);
+});
+
+test('money races cannot overdraw and cached piasters reconcile with immutable postings', async () => {
+  const f = await fixture();
+  const reserved = await db.moneyAccount.create({ data: { type: 'GYM_RESERVED', gymId: f.gym.id } });
+  await postLedger(db, { actorId: f.admin.id, idempotencyKey: randomUUID(), reason: 'Synthetic receivable',
+    money: { kind: 'ADJUSTMENT', entries: [{ accountId: f.offset.id, delta: -5000n }, { accountId: f.money.id, delta: 5000n }] } });
+  const results = await Promise.allSettled(Array.from({ length: 2 }, () => postLedger(db, {
+    actorId: f.admin.id, idempotencyKey: randomUUID(), reason: 'Synthetic reserve race',
+    money: { kind: 'WITHDRAWAL_RESERVE', entries: [{ accountId: f.money.id, delta: -4000n }, { accountId: reserved.id, delta: 4000n }] },
+  })));
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal((await db.moneyAccount.findUniqueOrThrow({ where: { id: f.money.id } })).balancePiasters, 1000n);
+  assert.equal((await db.moneyAccount.findUniqueOrThrow({ where: { id: reserved.id } })).balancePiasters, 4000n);
+  await assert.rejects(db.moneyAccount.update({ where: { id: f.money.id }, data: { balancePiasters: 1001n } }));
+  await assert.rejects(db.moneyPosting.deleteMany({ where: { accountId: reserved.id } }));
+  const drift = await db.$queryRaw<unknown[]>`SELECT a.id FROM "MoneyAccount" a LEFT JOIN "MoneyPosting" p ON p."accountId" = a.id GROUP BY a.id HAVING a."balancePiasters" <> COALESCE(sum(p."deltaPiasters"),0)`;
+  assert.equal(drift.length, 0);
+});
+
 test('exact reversal preserves original records, is replayable and cannot be applied twice', async () => {
   const f = await fixture(); const result = await postLedger(db, f.command());
   const input = { actorId: f.admin.id, idempotencyKey: randomUUID(), reason: 'Synthetic funding reversal', pointTransactionId: result.pointTransactionId };
