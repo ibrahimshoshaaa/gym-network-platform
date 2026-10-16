@@ -7,7 +7,10 @@ These are implementation requirements, **not** evidence of regulatory compliance
 - Gym owner manages branches, purchases points for a selected branch, and transfers inventory between their branches.
 - Manager can cancel an entry within its first 10 minutes, with reason logged; later cancellation requires platform admin approval.
 - Cashier may sell points only from their assigned branch's prepaid inventory; sale transfer is immediate once payment is confirmed.
-- Trainee self-registers with phone OTP (provider and abuse controls TBD).
+- Updated 17 October 2026: trainee self-registers with name, phone, email and
+  password; login accepts email or phone plus password. Contact verification by
+  email/phone OTP is postponed, and both contacts remain unverified. See
+  [DECISIONS.md](DECISIONS.md) and [PASSWORD_AUTH.md](PASSWORD_AUTH.md).
 
 ## Points
 - Separate accounts for platform issuance, each branch's point inventory, each trainee's wallet, and consumed/expired points.
@@ -38,3 +41,4 @@ These are implementation requirements, **not** evidence of regulatory compliance
 7. Actor permission and scope are checked server-side on every mutation; admin approval is audited.
 8. Never modify or delete a posted ledger entry; corrections are reversing postings with reasons and approvals.
 9. Protect receipt files and OTP; implement rate limiting, audit trail, account recovery, staff revocation and fraud signals.
+

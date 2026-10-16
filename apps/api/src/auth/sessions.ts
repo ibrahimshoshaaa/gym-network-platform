@@ -1,11 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
 
-// Internal only: invoke after a verified identity flow. Never expose a userId
-// based session creation route. OTP provider/sign-in is a subsequent sprint.
-export async function createSession(db: PrismaClient, userId: string, expiresAt: Date) {
+// Internal only: invoke after password/provider authentication. Verification
+// of contact ownership is tracked separately. No userId-based public sign-in.
+export async function createSession(db: PrismaClient | Prisma.TransactionClient, userId: string, expiresAt: Date) {
   if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= new Date()) throw new Error('Invalid session expiry');
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user?.isActive) throw new Error('Inactive identity');

@@ -11,7 +11,9 @@
 ## Database design
 Update 17 October 2026: see [ledger foundation](LEDGER_FOUNDATION.md) for implemented
 SQL integrity constraints, internal posting/stock services, sessions and test scope.
-OTP sign-in and financial HTTP workflows remain pending; the checklist below
+Trainee password sign-in is now implemented with contact verification deferred
+by the owner; see [password auth](PASSWORD_AUTH.md) and [decisions](DECISIONS.md).
+Financial HTTP workflows remain pending; the checklist below
 tracks the broader sprint, not only this increment.
 `apps/api/prisma/schema.prisma` is the first domain-model draft. It separates:
 - `PointAccount / PointTransaction / PointPosting` (points).

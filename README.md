@@ -33,8 +33,10 @@ pnpm --filter @gym/api dev
 
 Health check: `GET http://localhost:4000/health`
 
-The API exposes public health plus session-authenticated `/me` and `/auth/logout`.
-OTP/sign-in and financial HTTP workflows are not yet available. Internal ledger,
+The API exposes public health, trainee password registration/login, and
+session-authenticated `/me`, password change and logout. Email/phone verification
+is deferred by the project owner; see [password auth](docs/PASSWORD_AUTH.md).
+Financial HTTP workflows are not yet available. Internal ledger,
 stock-transfer and authorization foundations are described in
 [`docs/LEDGER_FOUNDATION.md`](docs/LEDGER_FOUNDATION.md), including migration,
 testing and rollback instructions. See also `docs/ARCHITECTURE.md` and
