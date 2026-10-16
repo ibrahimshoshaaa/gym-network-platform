@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PLATFORM_ADMIN
+  GYM_OWNER
+  BRANCH_MANAGER
+  CASHIER
+  TRAINEE
+}
+
+enum BranchStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PointAccountType {
+  ISSUANCE
+  BRANCH_INVENTORY
+  TRAINEE_WALLET
+  REDEEMED
+  EXPIRED
+}
+
+enum PointTxKind {
+  ISSUE
+  TRANSFER
+  VISIT
+  VISIT_REVERSAL
+  SALE_REVERSAL
+  EXPIRY
+  ADJUSTMENT
+}
+
+enum VisitStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum MoneyAccountType {
+  PLATFORM_OFFSET
+  GYM_AVAILABLE
+  GYM_RESERVED
+  GYM_PAID
+}
+
+enum MoneyTxKind {
+  VISIT_SETTLEMENT
+  VISIT_REVERSAL
+  WITHDRAWAL_RESERVE
+  WITHDRAWAL_RELEASE
+  WITHDRAWAL_PAYMENT
+  ADJUSTMENT
+}
+
+enum WithdrawalStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PAID
+  DISPUTED
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  phoneE164    String     @unique
+  displayName  String
+  role         UserRole
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  ownedGyms    Gym[]      @relation("GymOwner")
+  assignments  StaffAssignment[]
+  pointAccounts PointAccount[]
+  visits       Visit[]    @relation("TraineeVisits")
+}
+
+model Gym {
+  id           String      @id @default(uuid()) @db.Uuid
+  name         String
+  ownerId      String      @db.Uuid
+  owner        User        @relation("GymOwner", fields: [ownerId], references: [id])
+  branches     Branch[]
+  moneyAccounts MoneyAccount[]
+  withdrawals  WithdrawalRequest[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([ownerId])
+}
+
+model Branch {
+  id                 String       @id @default(uuid()) @db.Uuid
+  gymId              String       @db.Uuid
+  gym                Gym          @relation(fields: [gymId], references: [id])
+  name               String
+  status             BranchStatus @default(PENDING)
+  visitPricePoints   Int
+  sessionMinutes     Int
+  latitude           Decimal?     @db.Decimal(10, 7)
+  longitude          Decimal?     @db.Decimal(10, 7)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  staff              StaffAssignment[]
+  pointAccounts      PointAccount[]
+  visits             Visit[]
+  topups             TopupRequest[]
+
+  @@index([gymId, status])
+}
+
+model StaffAssignment {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  branchId     String    @db.Uuid
+  role         UserRole
+  active       Boolean   @default(true)
+  user         User      @relation(fields: [userId], references: [id])
+  branch       Branch    @relation(fields: [branchId], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@unique([userId, branchId, role])
+}
+
+model PointAccount {
+  id           String           @id @default(uuid()) @db.Uuid
+  type         PointAccountType
+  ownerUserId  String?          @db.Uuid
+  ownerUser    User?            @relation(fields: [ownerUserId], references: [id])
+  branchId     String?          @db.Uuid
+  branch       Branch?          @relation(fields: [branchId], references: [id])
+  balance      Int              @default(0)
+  expiresAt    DateTime?
+  postings     PointPosting[]
+  createdAt    DateTime         @default(now())
+
+  @@index([type, ownerUserId])
+  @@index([type, branchId])
+}
+
+model PointTransaction {
+  id              String         @id @default(uuid()) @db.Uuid
+  idempotencyKey  String         @unique
+  kind            PointTxKind
+  actorId         String?        @db.Uuid
+  referenceId     String?        @db.Uuid
+  reason          String?
+  createdAt       DateTime       @default(now())
+  postings        PointPosting[]
+
+  @@index([referenceId])
+}
+
+model PointPosting {
+  id             String            @id @default(uuid()) @db.Uuid
+  transactionId  String            @db.Uuid
+  accountId      String            @db.Uuid
+  delta          Int
+  transaction    PointTransaction  @relation(fields: [transactionId], references: [id])
+  account        PointAccount      @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([transactionId])
+}
+
+model TopupRequest {
+  id                String         @id @default(uuid()) @db.Uuid
+  requestorUserId   String         @db.Uuid
+  receivingBranchId String?        @db.Uuid
+  receivingBranch   Branch?        @relation(fields: [receivingBranchId], references: [id])
+  points            Int
+  chargePiasters    BigInt
+  receiptObjectKey  String
+  status            RequestStatus  @default(PENDING)
+  reviewedById      String?        @db.Uuid
+  reviewedAt        DateTime?
+  createdAt         DateTime       @default(now())
+
+  @@index([status, createdAt])
+}
+
+model Visit {
+  id                  String       @id @default(uuid()) @db.Uuid
+  traineeId           String       @db.Uuid
+  trainee             User         @relation("TraineeVisits", fields: [traineeId], references: [id])
+  branchId            String       @db.Uuid
+  branch              Branch       @relation(fields: [branchId], references: [id])
+  cashierId           String       @db.Uuid
+  pointsCharged       Int
+  settlementPiasters  BigInt
+  status              VisitStatus  @default(ACTIVE)
+  startedAt           DateTime     @default(now())
+  expiresAt           DateTime
+  cancelledAt         DateTime?
+  cancelledById       String?      @db.Uuid
+  cancellationReason  String?
+  pointTransactionId  String       @unique @db.Uuid
+  moneyTransactionId  String       @unique @db.Uuid
+
+  @@index([traineeId, branchId, status])
+  @@index([branchId, startedAt])
+}
+
+model MoneyAccount {
+  id               String             @id @default(uuid()) @db.Uuid
+  type             MoneyAccountType
+  gymId            String?            @db.Uuid
+  gym              Gym?               @relation(fields: [gymId], references: [id])
+  balancePiasters  BigInt             @default(0)
+  postings         MoneyPosting[]
+
+  @@index([type, gymId])
+}
+
+model MoneyTransaction {
+  id             String         @id @default(uuid()) @db.Uuid
+  idempotencyKey String         @unique
+  kind           MoneyTxKind
+  referenceId    String?        @db.Uuid
+  reason         String?
+  createdAt      DateTime       @default(now())
+  postings       MoneyPosting[]
+
+  @@index([referenceId])
+}
+
+model MoneyPosting {
+  id             String            @id @default(uuid()) @db.Uuid
+  transactionId  String            @db.Uuid
+  accountId      String            @db.Uuid
+  deltaPiasters  BigInt
+  transaction    MoneyTransaction  @relation(fields: [transactionId], references: [id])
+  account        MoneyAccount      @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([transactionId])
+}
+
+model WithdrawalRequest {
+  id                String             @id @default(uuid()) @db.Uuid
+  gymId             String             @db.Uuid
+  gym               Gym                @relation(fields: [gymId], references: [id])
+  amountPiasters    BigInt
+  status            WithdrawalStatus   @default(REQUESTED)
+  requestedAt       DateTime           @default(now())
+  acceptedAt        DateTime?
+  paidAt            DateTime?
+  reviewedById      String?            @db.Uuid
+  transferProofKey  String?
+  rejectionReason   String?
+
+  @@index([gymId, status])
+}
