@@ -2,7 +2,8 @@
 
 This increment follows the trainee password-authentication work. PR #3 was
 merged into develop before this feature branch was created. It implements
-backend workflows only; the Next.js dashboards and Flutter UI remain planned.
+backend workflows plus Arabic dashboard management screens; Flutter UI remains planned.
+See [WEB_DASHBOARD.md](WEB_DASHBOARD.md) for operator setup and UI validation.
 
 ## Onboarding and access
 
@@ -144,9 +145,33 @@ in [LEDGER_FOUNDATION.md](LEDGER_FOUNDATION.md).
 
 No financial balances are changed, no monetary accounts are provisioned, and the
 gym-vs-branch financial scope remains open. No receipt review, point sale, visit,
-withdrawal, map UI, dashboard, Flutter app or production deployment is added.
+withdrawal, interactive map UI, Flutter app or production deployment is added.
+The subsequent management dashboard adds the existing onboarding and staff workflows to Next.js.
 
 For rollback, revert the application commit while retaining the additive schema.
 Do not delete pricing/invitation/audit history or rewrite deployed migrations.
 Before deploying over a persistent development database, review the pending gym
 and unapproved branch states and plan explicit onboarding of existing records.
+
+
+## Management dashboard read increment
+
+The dashboard now includes paginated admin/owner gym lists, admin status changes,
+owner profile/branch edits, independent stock balances, admin branch activation,
+visit-price requests and history, staff assignments and invitations. No existing
+ledger migration or visit settlement rule changes.
+
+New private reads are `GET /admin/gyms/:gymId`,
+`GET /admin/gyms/:gymId/branches`, `GET /admin/gyms/:gymId/invitations`
+(owner invitations only), and `GET /gyms/:gymId` (accepted owner only).
+Admin routes require active PLATFORM_ADMIN; owner routes recheck actual ownership.
+Private branch list responses include only the branch inventory balance rather
+than raw ledger accounts. Staff/invitation lists include scoped display names,
+contacts and branch names, with no token/hash fields. Optional gym/branch contact
+phones can be cleared with `null` in an owner metadata PATCH; create validation
+and immutable pricing review remain unchanged.
+
+Invitation tokens appear only in the create/reissue response, stay in component
+memory, and are manually copied. They never appear in list responses, URLs or
+browser persistence. Issuing a new token invalidates prior unused invitations
+in the same scope. No email/SMS/other person-directed message is sent by the UI.

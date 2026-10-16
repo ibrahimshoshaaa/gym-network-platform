@@ -69,4 +69,5 @@ async function handle(request: Request, context: Context) {
 }
 export const GET = handle,
   POST = handle,
-  PUT = handle;
+  PUT = handle,
+  PATCH = handle;

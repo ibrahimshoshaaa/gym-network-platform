@@ -2,7 +2,7 @@
 
 ## Runtime components
 - Flutter trainee mobile application (planned).
-- Next.js Arabic responsive dashboard: admin settings/reviews and gym owner stock requests implemented; other operational screens planned.
+- Next.js Arabic responsive dashboard: admin settings/reviews, gym/branch onboarding, price review, scoped staff management and owner stock requests implemented; visit/cashier/payout screens planned.
 - Node.js + Fastify API with a PostgreSQL data store.
 - Server-side authoritative mutations, never client-computed balances or client-trusted roles.
 - Signed short-lived QR and one-time consumption with anti-replay store (future sprint).

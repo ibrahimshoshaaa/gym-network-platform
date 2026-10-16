@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   KeyRound,
   Building2,
+  MapPin,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   request,
@@ -24,10 +26,31 @@ import {
 import { Login } from "./login";
 import { SettingsPanel } from "./settings";
 import { Reviews } from "./reviews";
+import { GymManagement } from "./gyms/management";
+import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
-type Tab = "reviews" | "pricing" | "payments" | "packages" | "purchases";
+type Tab =
+  | "gyms"
+  | "branch-prices"
+  | "reviews"
+  | "pricing"
+  | "payments"
+  | "packages"
+  | "purchases";
 const tabs = [
+  {
+    id: "gyms" as const,
+    label: "الجيمات والفروع",
+    icon: MapPin,
+    description: "إدارة الجيمات والفروع والدعوات والموظفين",
+  },
+  {
+    id: "branch-prices" as const,
+    label: "أسعار الزيارات",
+    icon: ClipboardCheck,
+    description: "مراجعة أسعار الزيارة ومدد الجلسات المقترحة",
+  },
   {
     id: "reviews" as const,
     label: "مراجعة الشحن",
@@ -69,7 +92,7 @@ export function Dashboard() {
     [password, setPassword] = useState(false);
   function loggedIn(person: Identity) {
     setUser(person);
-    setTab(person.role === "PLATFORM_ADMIN" ? "reviews" : "purchases");
+    setTab(person.role === "PLATFORM_ADMIN" ? "reviews" : "gyms");
     setError("");
   }
   async function check() {
@@ -130,7 +153,7 @@ export function Dashboard() {
     );
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
-      admin ? t.id !== "purchases" : t.id === "purchases",
+      admin ? t.id !== "purchases" : ["purchases", "gyms"].includes(t.id),
     ),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   return (
@@ -231,7 +254,11 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "reviews" ? (
+          {current.id === "gyms" ? (
+            <GymManagement admin={admin} />
+          ) : current.id === "branch-prices" ? (
+            <PriceReviews />
+          ) : current.id === "reviews" ? (
             <Reviews />
           ) : current.id === "purchases" ? (
             <Purchases />

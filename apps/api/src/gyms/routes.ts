@@ -32,22 +32,50 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
     const userId = await actorId(db, r); const args = pagination(r);
     return db.$transaction(async tx => { await requireAdmin(tx, userId); return page(await tx.gym.findMany({ ...args, include: { owner: { select: { id: true, displayName: true, email: true, phoneE164: true, isActive: true } } } }), args.take); });
   });
+  app.get('/admin/gyms/:gymId', async r => {
+    const userId = await actorId(db, r), gymId = id(r, 'gymId');
+    return db.$transaction(async tx => {
+      await requireAdmin(tx, userId);
+      const gym = await tx.gym.findUnique({ where: { id: gymId }, include: { owner: { select: { id: true, displayName: true, email: true, phoneE164: true, isActive: true } } } });
+      if (!gym) throw new DomainError('NOT_FOUND');
+      return gym;
+    });
+  });
+  app.get('/admin/gyms/:gymId/branches', async r => {
+    const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
+    return db.$transaction(async tx => {
+      await requireAdmin(tx, userId);
+      if (!await tx.gym.findUnique({ where: { id: gymId }, select: { id: true } })) throw new DomainError('NOT_FOUND');
+      return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pointAccounts: { where: { type: 'BRANCH_INVENTORY' }, select: { balance: true } } } }), args.take);
+    });
+  });
+  app.get('/admin/gyms/:gymId/invitations', async r => {
+    const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
+    return db.$transaction(async tx => { await requireAdmin(tx, userId);
+      if (!await tx.gym.findUnique({ where: { id: gymId }, select: { id: true } })) throw new DomainError('NOT_FOUND');
+      return page(await tx.staffInvitation.findMany({ ...args, where: { gymId, type: 'OWNER' }, select: { id: true, userId: true, branchId: true, type: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true, createdAt: true, user: { select: { displayName: true, email: true, phoneE164: true } }, branch: { select: { name: true } } } }), args.take);
+    });
+  });
   app.patch('/admin/gyms/:gymId/status', async r => setGymStatus(db, await actorId(db, r), id(r, 'gymId'), r.body));
   app.post('/admin/gyms/:gymId/owner-invitations', async r => reissueOwnerInvitation(db, await actorId(db, r), id(r, 'gymId')));
   app.patch('/admin/branches/:branchId/status', async r => setBranchStatus(db, await actorId(db, r), id(r, 'branchId'), r.body));
   app.get('/admin/price-change-requests', async r => {
     const userId = await actorId(db, r); const args = pagination(r);
-    return db.$transaction(async tx => { await requireAdmin(tx, userId); return page(await tx.branchPricingRequest.findMany({ ...args, where: { status: 'PENDING' }, include: { branch: { select: { id: true, name: true, gymId: true } } } }), args.take); });
+    return db.$transaction(async tx => { await requireAdmin(tx, userId); return page(await tx.branchPricingRequest.findMany({ ...args, where: { status: 'PENDING' }, include: { branch: { select: { id: true, name: true, gymId: true, gym: { select: { name: true, status: true } } } } } }), args.take); });
   });
   app.post('/admin/price-change-requests/:requestId/review', async r => reviewPricing(db, await actorId(db, r), id(r, 'requestId'), r.body));
   app.get('/gyms', async r => {
     const userId = await actorId(db, r); const args = pagination(r);
     return page(await db.gym.findMany({ ...args, where: { ownerId: userId, ownerAcceptedAt: { not: null } } }), args.take);
   });
+  app.get('/gyms/:gymId', async r => {
+    const userId = await actorId(db, r), gymId = id(r, 'gymId');
+    return db.$transaction(async tx => requireGymOwner(tx, userId, gymId, false));
+  });
   app.patch('/gyms/:gymId', async r => updateGym(db, await actorId(db, r), id(r, 'gymId'), r.body));
   app.get('/gyms/:gymId/branches', async r => {
     const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
-    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.branch.findMany({ ...args, where: { gymId } }), args.take); });
+    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pointAccounts: { where: { type: 'BRANCH_INVENTORY' }, select: { balance: true } } } }), args.take); });
   });
   app.post('/gyms/:gymId/branches', { bodyLimit: 8192 }, async (r, reply) => reply.code(201).send(await createBranch(db, await actorId(db, r), id(r, 'gymId'), r.body)));
   app.patch('/gyms/:gymId/branches/:branchId', async r => updateBranch(db, await actorId(db, r), id(r, 'gymId'), id(r, 'branchId'), r.body));
@@ -63,12 +91,12 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
   app.post('/gyms/:gymId/staff-invitations', { bodyLimit: 8192 }, async (r, reply) => reply.code(201).send(await inviteStaff(db, await actorId(db, r), id(r, 'gymId'), r.body)));
   app.get('/gyms/:gymId/staff', async r => {
     const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
-    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffAssignment.findMany({ ...args, where: { branch: { gymId } }, select: { id: true, branchId: true, role: true, active: true, user: { select: { id: true, displayName: true, email: true, phoneE164: true } } } }), args.take); });
+    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffAssignment.findMany({ ...args, where: { branch: { gymId } }, select: { id: true, branchId: true, role: true, active: true, branch: { select: { name: true } }, user: { select: { id: true, displayName: true, email: true, phoneE164: true } } } }), args.take); });
   });
   app.patch('/gyms/:gymId/staff/:assignmentId', async r => setStaffActive(db, await actorId(db, r), id(r, 'gymId'), id(r, 'assignmentId'), r.body));
   app.get('/gyms/:gymId/invitations', async r => {
     const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
-    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffInvitation.findMany({ ...args, where: { gymId }, select: { id: true, userId: true, branchId: true, type: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true, createdAt: true } }), args.take); });
+    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffInvitation.findMany({ ...args, where: { gymId }, select: { id: true, userId: true, branchId: true, type: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true, createdAt: true, user: { select: { displayName: true, email: true, phoneE164: true } }, branch: { select: { name: true } } } }), args.take); });
   });
   app.post('/invitations/:invitationId/revoke', async r => revokeInvitation(db, await actorId(db, r), id(r, 'invitationId')));
   app.get('/branches/:branchId/manage', async r => {

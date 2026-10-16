@@ -267,3 +267,41 @@ test('pagination and public directory omit private ownership, staff and invitati
     assert.equal((await f.request('GET', '/branches?cursor=not-a-uuid')).statusCode, 400);
   } finally { await f.app.close(); }
 });
+
+test('management read endpoints isolate tenants and expose balances without invitation secrets', async () => {
+  const a = await network(), b = await network();
+  try {
+    const teammate = await staff(a);
+    const adminDetail = await a.request('GET', `/admin/gyms/${a.gymId}`, a.adminToken);
+    assert.equal(adminDetail.statusCode, 200); assert.equal(adminDetail.json().owner.email, a.ownerContact.email);
+    const branches = await a.request('GET', `/admin/gyms/${a.gymId}/branches?limit=1`, a.adminToken);
+    assert.equal(branches.statusCode, 200, branches.body); assert.equal(branches.json().items[0].pointAccounts[0].balance, 0);
+    assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/branches`, a.owner.accessToken)).statusCode, 403);
+    assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/invitations`, a.owner.accessToken)).statusCode, 403);
+    assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}`, a.owner.accessToken)).statusCode, 403);
+    assert.equal((await a.request('GET', `/gyms/${b.gymId}`, a.owner.accessToken)).statusCode, 403);
+    assert.equal((await a.request('GET', `/gyms/${a.gymId}`, teammate.accessToken)).statusCode, 403);
+    const owners = await a.request('GET', `/admin/gyms/${a.gymId}/invitations`, a.adminToken);
+    assert.equal(owners.statusCode, 200); assert.ok(owners.json().items.every((row: { type: string }) => row.type === 'OWNER'));
+    const invited = await a.request('GET', `/gyms/${a.gymId}/invitations`, a.owner.accessToken);
+    assert.equal(invited.statusCode, 200); assert.ok(invited.json().items.some((row: { user: { email: string } }) => row.user.email === teammate.contact.email));
+    for (const response of [owners, invited]) { assert.equal(response.body.includes('tokenHash'), false); assert.equal(response.body.includes('"token"'), false); }
+    const people = await a.request('GET', `/gyms/${a.gymId}/staff`, a.owner.accessToken);
+    assert.equal(people.json().items[0].branch.name, 'Synthetic Branch');
+    assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/branches?limit=101`, a.adminToken)).statusCode, 400);
+  } finally { await a.app.close(); await b.app.close(); }
+});
+
+test('owner can clear optional contact phones without altering branch pricing or another gym', async () => {
+  const f = await network();
+  try {
+    const gymPath = `/gyms/${f.gymId}`, branchPath = `${gymPath}/branches/${f.branch.id}`;
+    assert.equal((await f.request('PATCH', gymPath, f.owner.accessToken, { contactPhone: '01500000011' })).statusCode, 200);
+    const clearedGym = await f.request('PATCH', gymPath, f.owner.accessToken, { contactPhone: null });
+    assert.equal(clearedGym.statusCode, 200, clearedGym.body); assert.equal(clearedGym.json().contactPhone, null);
+    assert.equal((await f.request('PATCH', branchPath, f.owner.accessToken, { contactPhone: '01500000012' })).statusCode, 200);
+    const clearedBranch = await f.request('PATCH', branchPath, f.owner.accessToken, { contactPhone: null });
+    assert.equal(clearedBranch.statusCode, 200, clearedBranch.body); assert.equal(clearedBranch.json().contactPhone, null);
+    assert.equal(clearedBranch.json().visitPricePoints, f.branch.visitPricePoints); assert.equal(clearedBranch.json().pricingVersion, 1);
+  } finally { await f.app.close(); }
+});

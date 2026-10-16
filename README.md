@@ -38,7 +38,8 @@ session-authenticated `/me`, password change and logout. Email/phone verificatio
 is deferred by the project owner; see [password auth](docs/PASSWORD_AUTH.md).
 Gym/branch onboarding, staff invitations and approved pricing are described in
 [gym management](docs/GYM_MANAGEMENT.md). The Arabic web dashboard now includes
-admin settings/reviews and owner branch-stock requests; see
+admin settings/reviews, gym/branch management, scoped staff invitations and owner
+branch-stock requests; see
 [dashboard setup](docs/WEB_DASHBOARD.md). Mobile UI remains planned.
 Admin pricing, InstaPay/wallet receiver settings, private Cloudinary receipts and
 manual trainee/branch topup approval are described in [topups](docs/TOPUPS.md).

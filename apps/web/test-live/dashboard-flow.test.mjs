@@ -70,7 +70,7 @@ test(
       data: {
         role: "PLATFORM_ADMIN",
         displayName: "Synthetic HTTP Admin",
-        phoneE164: `+20admin${id}`,
+        phoneE164: "+201500000001",
         email: `http-admin-${id}@example.test`,
         password: { create: { passwordHash } },
       },
@@ -79,7 +79,7 @@ test(
       data: {
         role: "GYM_OWNER",
         displayName: "Synthetic HTTP Owner",
-        phoneE164: `+20owner${id}`,
+        phoneE164: "+201500000002",
         email: `http-owner-${id}@example.test`,
         password: { create: { passwordHash } },
       },
@@ -294,6 +294,268 @@ test(
         (await db.pointAccount.findUniqueOrThrow({ where: { id: stock.id } }))
           .balance,
         100,
+      );
+
+      // Operate the full onboarding surface through the browser gateway.
+      const createGym = await request("/api/backend/admin/gyms", {
+        cookie,
+        method: "POST",
+        body: {
+          name: "Synthetic Onboarding Gym",
+          owner: {
+            displayName: "Synthetic Invited Owner",
+            email: `invited-owner-${id}@example.test`,
+            phone: "01500000003",
+          },
+        },
+      });
+      assert.equal(createGym.status, 201);
+      const newGym = await createGym.json();
+      assert.equal(
+        (
+          await request(`/api/backend/admin/gyms/${newGym.gym.id}/status`, {
+            cookie,
+            method: "PATCH",
+            body: { status: "ACTIVE", reason: "Not yet accepted" },
+          })
+        ).status,
+        409,
+      );
+      const reissued = await request(
+        `/api/backend/admin/gyms/${newGym.gym.id}/owner-invitations`,
+        { cookie, method: "POST", body: {} },
+      );
+      assert.equal(reissued.status, 200);
+      const ownerInvitation = await reissued.json();
+      assert.equal(
+        (
+          await request("/api/session", {
+            method: "POST",
+            body: { mode: "invite", token: newGym.invitation.token, password },
+          })
+        ).status,
+        400,
+      );
+      const accepted = await request("/api/session", {
+        method: "POST",
+        body: { mode: "invite", token: ownerInvitation.token, password },
+      });
+      assert.equal(accepted.status, 200);
+      const invitedOwnerCookie = sessionCookie(accepted);
+      assert.ok(invitedOwnerCookie);
+      const activateGym = await request(
+        `/api/backend/admin/gyms/${newGym.gym.id}/status`,
+        {
+          cookie,
+          method: "PATCH",
+          body: { status: "ACTIVE", reason: "Synthetic onboarding approved" },
+        },
+      );
+      assert.equal(activateGym.status, 200);
+      assert.equal(
+        (
+          await request(`/api/backend/gyms/${newGym.gym.id}`, {
+            cookie: ownerCookie,
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await request(`/api/backend/admin/gyms/${newGym.gym.id}/branches`, {
+            cookie: invitedOwnerCookie,
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await request(`/api/backend/gyms/${newGym.gym.id}`, {
+            cookie: invitedOwnerCookie,
+          })
+        ).status,
+        200,
+      );
+      const newBranchResponse = await request(
+        `/api/backend/gyms/${newGym.gym.id}/branches`,
+        {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          body: {
+            name: "Synthetic Onboarding Branch",
+            address: "Synthetic full address",
+            governorate: "Menofia",
+            city: "Synthetic City",
+            latitude: 30.5,
+            longitude: 31.0,
+            visitPricePoints: 30,
+            sessionMinutes: 100,
+          },
+        },
+      );
+      assert.equal(newBranchResponse.status, 201);
+      const newBranch = await newBranchResponse.json();
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/branches/${newBranch.branch.id}/status`,
+            {
+              cookie,
+              method: "PATCH",
+              body: { status: "ACTIVE", reason: "Price not yet approved" },
+            },
+          )
+        ).status,
+        409,
+      );
+      const reviewPrice = await request(
+        `/api/backend/admin/price-change-requests/${newBranch.pricingRequest.id}/review`,
+        {
+          cookie,
+          method: "POST",
+          body: {
+            decision: "APPROVED",
+            reason: "Synthetic branch pricing approved",
+          },
+        },
+      );
+      assert.equal(reviewPrice.status, 200);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/branches/${newBranch.branch.id}/status`,
+            {
+              cookie,
+              method: "PATCH",
+              body: {
+                status: "ACTIVE",
+                reason: "Synthetic location and pricing verified",
+              },
+            },
+          )
+        ).status,
+        200,
+      );
+      const branchList = await request(
+        `/api/backend/admin/gyms/${newGym.gym.id}/branches`,
+        { cookie },
+      );
+      assert.equal(branchList.status, 200);
+      assert.equal(
+        (await branchList.json()).items[0].pointAccounts[0].balance,
+        0,
+      );
+      const profileEdit = await request(
+        `/api/backend/gyms/${newGym.gym.id}/branches/${newBranch.branch.id}`,
+        {
+          cookie: invitedOwnerCookie,
+          method: "PATCH",
+          body: { address: "Updated synthetic address", contactPhone: null },
+        },
+      );
+      assert.equal(profileEdit.status, 200);
+      const changePrice = await request(
+        `/api/backend/gyms/${newGym.gym.id}/branches/${newBranch.branch.id}/price-change-requests`,
+        {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          body: {
+            visitPricePoints: 35,
+            sessionMinutes: 110,
+            reason: "Synthetic updated session",
+          },
+        },
+      );
+      assert.equal(changePrice.status, 201);
+      const priceHistory = await request(
+        `/api/backend/gyms/${newGym.gym.id}/branches/${newBranch.branch.id}/pricing-history`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(priceHistory.status, 200);
+      assert.equal((await priceHistory.json()).items.length, 2);
+      const staffBody = {
+        branchId: newBranch.branch.id,
+        role: "CASHIER",
+        contact: {
+          displayName: "Synthetic Invited Cashier",
+          email: `invited-cashier-${id}@example.test`,
+          phone: "01500000004",
+        },
+      };
+      const inviteCashier = () =>
+        request(`/api/backend/gyms/${newGym.gym.id}/staff-invitations`, {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          body: staffBody,
+        });
+      const firstStaff = await inviteCashier();
+      assert.equal(firstStaff.status, 201);
+      const firstStaffInvite = await firstStaff.json();
+      const revoked = await request(
+        `/api/backend/invitations/${firstStaffInvite.invitation.id}/revoke`,
+        { cookie: invitedOwnerCookie, method: "POST", body: {} },
+      );
+      assert.equal(revoked.status, 200);
+      assert.equal(
+        (
+          await request("/api/session", {
+            method: "POST",
+            body: {
+              mode: "invite",
+              token: firstStaffInvite.invitation.token,
+              password,
+            },
+          })
+        ).status,
+        400,
+      );
+      const freshStaff = await inviteCashier();
+      assert.equal(freshStaff.status, 201);
+      const freshStaffInvite = await freshStaff.json();
+      const acceptedStaff = await request("/api/session", {
+        method: "POST",
+        body: {
+          mode: "invite",
+          token: freshStaffInvite.invitation.token,
+          password,
+        },
+      });
+      assert.equal(acceptedStaff.status, 200);
+      const inviteLog = await request(
+        `/api/backend/gyms/${newGym.gym.id}/invitations`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(inviteLog.status, 200);
+      const invitations = await inviteLog.json();
+      assert.equal(JSON.stringify(invitations).includes("tokenHash"), false);
+      assert.equal(JSON.stringify(invitations).includes('"token"'), false);
+      const staffList = await request(
+        `/api/backend/gyms/${newGym.gym.id}/staff`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(staffList.status, 200);
+      const membership = (await staffList.json()).items[0];
+      assert.equal(membership.branch.name, newBranch.branch.name);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/gyms/${newGym.gym.id}/staff/${membership.id}`,
+            {
+              cookie: invitedOwnerCookie,
+              method: "PATCH",
+              body: { active: false },
+            },
+          )
+        ).status,
+        200,
+      );
+      assert.equal(
+        (
+          await request(`/api/backend/gyms/${newGym.gym.id}`, {
+            cookie: sessionCookie(acceptedStaff),
+          })
+        ).status,
+        403,
       );
       const changed = await request("/api/backend/auth/password/change", {
         cookie,

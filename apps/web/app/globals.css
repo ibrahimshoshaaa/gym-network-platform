@@ -1457,3 +1457,167 @@ dialog::backdrop {
     scroll-behavior: auto !important;
   }
 }
+/* Gym onboarding and branch operations */
+.gym-profile {
+  margin-bottom: 24px;
+}
+.gym-profile .card-heading {
+  margin-bottom: 18px;
+}
+.gym-profile .card-heading p {
+  max-width: 620px;
+  overflow-wrap: anywhere;
+}
+.owner-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  padding: 18px 0 22px;
+  font-size: 12px;
+}
+.owner-summary > span:not(.badge) {
+  font-size: 11px;
+  color: var(--muted);
+}
+.management-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+  overflow-x: auto;
+}
+.management-tabs button {
+  padding: 14px 20px;
+  color: var(--muted);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.management-tabs button.active {
+  border-bottom-color: var(--teal);
+  color: var(--teal);
+  font-weight: 700;
+}
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 140px;
+  max-width: 290px;
+}
+.row-actions button:disabled {
+  color: #9aa9a7;
+}
+.form-divider {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  margin: 8px 0 20px;
+}
+.field-hint {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.9;
+  margin: -8px 0 20px;
+}
+.gym-profile > .field-hint {
+  margin: 17px 0 0;
+}
+.invite-secret {
+  margin-top: 24px;
+}
+.invite-secret textarea {
+  font-family: monospace;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+.invite-secret ~ .primary {
+  margin: 20px 0 10px;
+}
+.list-notice .notice {
+  margin: 18px 18px 0;
+}
+.timeline article {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.timeline .section-toolbar {
+  margin-bottom: 8px;
+}
+.timeline strong {
+  font-size: 13px;
+}
+.timeline small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.timeline p {
+  font-size: 12px;
+  margin-top: 10px;
+}
+.price-proposal {
+  margin: 0 0 24px;
+}
+.price-proposal strong {
+  font-size: 13px;
+}
+.price-proposal p {
+  margin-top: 8px;
+}
+.modal-body .subtle-box {
+  margin-bottom: 24px;
+}
+.modal-body .subtle-box:first-child {
+  margin-top: 0;
+}
+@media (max-width: 540px) {
+  .management-tabs button {
+    padding: 12px 17px;
+  }
+  .owner-summary {
+    gap: 12px;
+  }
+  .row-actions {
+    gap: 10px;
+    min-width: 165px;
+  }
+  .gym-profile .card-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .gym-profile .card-heading > .badge {
+    margin-inline-start: 0;
+  }
+  .gym-profile .actions {
+    gap: 9px;
+  }
+  .gym-profile .actions > button {
+    font-size: 10px;
+  }
+  .section-toolbar > .actions {
+    justify-content: flex-end;
+  }
+  .section-toolbar > .actions > .compact {
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+  .owner-summary > span[dir="ltr"] {
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+}
+
+.sidebar {
+  overflow-y: auto;
+}
+.sidebar .brand,
+.sidebar .workspace,
+.sidebar nav,
+.sidebar-bottom {
+  flex-shrink: 0;
+}

@@ -53,6 +53,15 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  ACCOUNT_UNAVAILABLE:
+    "الحساب غير متاح بهذه البيانات. لو موجود بالفعل استخدم بريده ورقمه المسجلين معًا.",
+  BRANCH_NOT_READY:
+    "الفرع يحتاج جيمًا نشطًا وسعرًا معتمدًا وبيانات موقع مكتملة قبل التفعيل.",
+  PENDING_REQUEST_EXISTS:
+    "يوجد طلب سعر قيد المراجعة لهذا الفرع. راجع سجل الأسعار.",
+  STALE_PRICE_REQUEST: "تغيرت نسخة سعر الفرع. حدّث الطلبات قبل المراجعة.",
+  STAFF_ALREADY_ASSIGNED: "الموظف لديه هذه الصلاحية مفعّلة في الفرع بالفعل.",
+
   INVALID_CREDENTIALS: "راجع بيانات الدخول وحاول تاني.",
   INVALID_INPUT: "راجع الحقول المطلوبة والقيم المدخلة.",
   UNAUTHENTICATED: "انتهت الجلسة. سجّل الدخول مرة أخرى.",

@@ -7,7 +7,7 @@ export const contactSchema = z.object({ displayName: text(100), email: emailSche
 export const gymCreateSchema = z.object({ name: text(150), description: z.string().trim().max(2000).optional(), contactPhone: phoneSchema.optional(),
   owner: contactSchema.optional(), ownerId: z.string().uuid().optional(),
 }).strict().refine(v => Boolean(v.owner) !== Boolean(v.ownerId));
-export const gymUpdateSchema = z.object({ name: text(150).optional(), description: z.string().trim().max(2000).optional(), contactPhone: phoneSchema.optional() }).strict().refine(v => Object.keys(v).length > 0);
+export const gymUpdateSchema = z.object({ name: text(150).optional(), description: z.string().trim().max(2000).optional(), contactPhone: phoneSchema.nullable().optional() }).strict().refine(v => Object.keys(v).length > 0);
 const positiveInt = z.number().int().positive().max(2147483647);
 export const priceSchema = z.object({ visitPricePoints: positiveInt, sessionMinutes: positiveInt, reason: text(1000) }).strict();
 const metadata = {
@@ -16,7 +16,7 @@ const metadata = {
   contactPhone: phoneSchema.optional(), openingHours: z.string().trim().max(1000).optional(),
 };
 export const branchCreateSchema = z.object({ ...metadata, visitPricePoints: positiveInt, sessionMinutes: positiveInt }).strict();
-export const branchUpdateSchema = z.object(metadata).partial().strict()
+export const branchUpdateSchema = z.object({ ...metadata, contactPhone: phoneSchema.nullable().optional() }).partial().strict()
   .refine(v => Object.keys(v).length > 0)
   .refine(v => (v.latitude === undefined) === (v.longitude === undefined));
 export const staffInviteSchema = z.object({ branchId: z.string().uuid(), role: z.enum(['CASHIER', 'BRANCH_MANAGER']), contact: contactSchema }).strict();

@@ -19,11 +19,15 @@ hosted deployment. Merge prerequisite gym management/topup branches first.
 - Gym owner branch-stock purchases: active owned gym/branch selection, quantity,
   amount or package quotes, exact payable amount, receiver copy, binary receipt
   upload, idempotent submit and paginated own history.
+- Admin gym creation/owner invitations, gym activation/suspension/rejection,
+  branch activation and visit-pricing review; paginated management lists.
+- Accepted gym owners can edit gym/branch metadata, add branches and propose visit
+  prices, inspect price history, invite scoped cashiers/managers, disable/re-enable
+  assignments, and revoke/reissue invitations. Every branch shows its stock balance.
 - Password change and session revocation; logout waits for server confirmation.
 
-Staff with no owned gyms see an explanatory empty state. Cashier sales, branch
-management/onboarding forms, trainee mobile UI, QR visits, payouts and settlements
-remain later increments. The current owner selector shows at most 100 gyms/branches;
+Staff with no owned gyms see an explanatory empty state. Cashier sales, trainee
+mobile UI, QR visits, payouts and settlements remain later increments. The current owner selector shows at most 100 gyms/branches;
 admin package settings show the first 100 packages. Request histories paginate.
 
 ## Operator setup
@@ -42,9 +46,9 @@ admin package settings show the first 100 packages. Request histories paginate.
    Example local API origin is `http://127.0.0.1:4000`; browser origin is normally
    `http://localhost:3000`. Restart after changing environment variables.
 4. `pnpm --filter @gym/web dev` starts the local Next.js dashboard. Sign in as
-   platform owner using the account you provisioned. For gym owners, create and
-   accept the existing invitation and activate gym/branches using the API until
-   the onboarding UI is added. Invitation acceptance is also available in login.
+   platform owner using the account you provisioned. Create gyms and owner invitations from the admin Gym/Branches screen. Owners
+   accept through the login invitation mode, add branches and propose visit
+   pricing. Admin approves prices and explicitly activates each branch.
 5. For deployment, run `pnpm --filter @gym/web build` then `start`, or use the
    Next.js hosting adapter. Both origin variables are required in production.
    Use HTTPS for public origins. API HTTP is allowed only for loopback hosts in
@@ -90,7 +94,9 @@ rather than trusting arbitrary `X-Forwarded-For` values.
 CI builds/typechecks API and web, runs API unit and restricted PostgreSQL tests,
 web origin/allowlist/body-bound/exact-money tests, and a live HTTP test:
 web cookie login → gateway → Fastify → PostgreSQL → owner quote/topup → admin
-review → branch balance → password rotation → revoked sessions → logout.
+review → branch balance → gym creation → owner invitation reissue/acceptance →
+branch pricing/activation → staff invitation revoke/reissue/acceptance → scoped
+assignment disable → password rotation → revoked sessions → logout.
 The live test uses synthetic identities and pre-seeded evidence; provider upload
 normalization/access is separately tested with an injected storage adapter.
 Real Cloudinary connectivity still needs the owner's server credentials.
@@ -99,3 +105,12 @@ The managed workspace has no supported browser-control skill, so visual browser
 QA is not performed here. No preview server or browser was installed as a
 substitute. TypeScript/build, HTTP flows and static accessibility review are
 covered; mobile/desktop visual inspection remains before client handover.
+
+
+Management controls mirror the API status transitions: an owner must accept before
+admin activation; branch activation also requires active gym, approved price and
+complete location metadata. Owner metadata forms cannot set status or prices.
+A pending pricing request does not replace the current approved price. Suspended
+or rejected gyms stay readable by their accepted owner but cannot be edited;
+unused staff invitations may still be revoked. Price review and branch activation
+are separate operations. No destructive delete controls are introduced.

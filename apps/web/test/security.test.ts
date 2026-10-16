@@ -112,3 +112,36 @@ test("backend origin cannot include credentials or a URL-controlled route", () =
     else process.env.API_INTERNAL_URL = previous;
   }
 });
+
+test("gym management gateway exposes scoped reads and PATCH actions, without broadening the proxy", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  for (const path of [
+    `admin/gyms/${id}`,
+    `admin/gyms/${id}/branches`,
+    `admin/gyms/${id}/invitations`,
+    `gyms/${id}`,
+    `gyms/${id}/staff`,
+    `gyms/${id}/invitations`,
+    `gyms/${id}/branches/${id}/pricing-history`,
+  ])
+    assert.equal(allowedPath("GET", path), true);
+  for (const path of [
+    `admin/gyms/${id}/status`,
+    `admin/branches/${id}/status`,
+    `gyms/${id}`,
+    `gyms/${id}/branches/${id}`,
+    `gyms/${id}/staff/${id}`,
+  ])
+    assert.equal(allowedPath("PATCH", path), true);
+  for (const path of [
+    `admin/gyms/${id}/owner-invitations`,
+    `gyms/${id}/branches`,
+    `gyms/${id}/branches/${id}/price-change-requests`,
+    `gyms/${id}/staff-invitations`,
+    `invitations/${id}/revoke`,
+  ])
+    assert.equal(allowedPath("POST", path), true);
+  assert.equal(allowedPath("PATCH", `admin/gyms/${id}/owner`), false);
+  assert.equal(allowedPath("GET", `gyms/${id}/passwords`), false);
+  assert.equal(allowedPath("POST", `invitations/../admin/revoke`), false);
+});
