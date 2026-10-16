@@ -51,6 +51,13 @@ test('only admin configures prices; concurrent expected version saves have one w
   await assert.rejects(db.pricingPolicy.update({ where: { id: current.id }, data: { redemptionBps: 9000 } }));
 });
 
+test('concurrent initial payment-channel configuration rejects the stale save', async () => {
+  const data = { expectedVersion: 0, account: 'synthetic-wallet', accountName: 'Synthetic Wallet Receiver', enabled: true };
+  const outcomes = await Promise.allSettled([savePaymentMethod(db, admin.id, 'WALLET', data), savePaymentMethod(db, admin.id, 'WALLET', data)]);
+  assert.equal(outcomes.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(outcomes.filter(r => r.status === 'rejected' && r.reason.code === 'STALE_SETTINGS').length, 1);
+});
+
 test('submitted request is pending; concurrent approvals create one balanced issuance and one wallet renewal', async () => {
   const { trainee, wallet } = await fixture();
   const data = await input(trainee.id), key = randomUUID();

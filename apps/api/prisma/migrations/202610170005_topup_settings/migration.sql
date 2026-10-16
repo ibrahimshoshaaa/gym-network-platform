@@ -136,8 +136,8 @@ ALTER TABLE "TopupRequest" ADD CONSTRAINT topup_snapshot_valid CHECK (kind IS NU
   "paymentMethodType" IS NOT NULL AND "paymentAccount" IS NOT NULL AND "paymentAccountName" IS NOT NULL AND
   ((kind = 'TRAINEE' AND "receivingBranchId" IS NULL AND "discountBps" = 0) OR (kind = 'BRANCH_STOCK' AND "receivingBranchId" IS NOT NULL)) AND
   ((status = 'PENDING' AND "reviewedById" IS NULL AND "reviewedAt" IS NULL AND "reviewReason" IS NULL AND "pointTransactionId" IS NULL AND "paymentReference" IS NULL) OR
-   (status = 'REJECTED' AND "reviewedById" IS NOT NULL AND "reviewedAt" IS NOT NULL AND length("reviewReason") > 0 AND "pointTransactionId" IS NULL AND "paymentReference" IS NULL) OR
-   (status = 'APPROVED' AND "reviewedById" IS NOT NULL AND "reviewedAt" IS NOT NULL AND length("reviewReason") > 0 AND "pointTransactionId" IS NOT NULL AND "paymentReference" IS NOT NULL))));
+   (status = 'REJECTED' AND "reviewedById" IS NOT NULL AND "reviewedAt" IS NOT NULL AND "reviewReason" IS NOT NULL AND length("reviewReason") > 0 AND "pointTransactionId" IS NULL AND "paymentReference" IS NULL) OR
+   (status = 'APPROVED' AND "reviewedById" IS NOT NULL AND "reviewedAt" IS NOT NULL AND "reviewReason" IS NOT NULL AND length("reviewReason") > 0 AND "pointTransactionId" IS NOT NULL AND "paymentReference" IS NOT NULL))));
 CREATE FUNCTION guard_topup_history() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN

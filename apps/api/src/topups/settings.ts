@@ -34,9 +34,9 @@ export async function publishPolicy(db: PrismaClient, actorId: string, input: un
   }
 }
 
-export function savePaymentMethod(db: PrismaClient, actorId: string, kind: unknown, input: unknown) {
+export async function savePaymentMethod(db: PrismaClient, actorId: string, kind: unknown, input: unknown) {
   const type = parse(methodTypeSchema, kind), data = parse(methodSchema, input);
-  return serializable(db, async tx => {
+  try { return await serializable(db, async tx => {
     await requireAdmin(tx, actorId);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`payment-method:${type}`}, 0))`;
     const current = await tx.paymentMethod.findUnique({ where: { type } });
@@ -45,7 +45,10 @@ export function savePaymentMethod(db: PrismaClient, actorId: string, kind: unkno
     const result = current ? await tx.paymentMethod.update({ where: { id: current.id }, data: { ...fields, version: { increment: 1 } } }) : await tx.paymentMethod.create({ data: { ...fields, type } });
     await audit(tx, actorId, 'PAYMENT_METHOD_UPDATED', result.id, `${type} receiver details updated; existing requests retain their snapshot`);
     return result;
-  });
+  }); } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new DomainError('STALE_SETTINGS');
+    throw e;
+  }
 }
 
 export function savePackage(db: PrismaClient, actorId: string, packageId: string | undefined, input: unknown) {
