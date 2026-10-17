@@ -26,12 +26,14 @@ import {
 import { Login } from "./login";
 import { SettingsPanel } from "./settings";
 import { Cashier, TraineeQr } from "./operations";
+import { OperationReviews } from "./operation-reviews";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "operation-reviews"
   | "cashier"
   | "trainee"
   | "gyms"
@@ -42,6 +44,12 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {
+    id: "operation-reviews" as const,
+    label: "الإلغاء والتصحيح",
+    icon: ClipboardCheck,
+    description: "طلبات مراجعة الزيارات وتصحيح مبيعات النقاط",
+  },
   {
     id: "cashier" as const,
     label: "الكاشير والزيارات",
@@ -178,7 +186,9 @@ export function Dashboard() {
     available = tabs.filter((t) =>
       admin
         ? !["purchases", "cashier", "trainee"].includes(t.id)
-        : ["purchases", "gyms", "cashier"].includes(t.id) ||
+        : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
+            t.id,
+          ) ||
           (user.role === "TRAINEE" && t.id === "trainee"),
     ),
     current = available.find((t) => t.id === tab) ?? available[0]!;
@@ -280,7 +290,9 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "cashier" ? (
+          {current.id === "operation-reviews" ? (
+            <OperationReviews admin={admin} />
+          ) : current.id === "cashier" ? (
             <Cashier />
           ) : current.id === "trainee" ? (
             <TraineeQr />

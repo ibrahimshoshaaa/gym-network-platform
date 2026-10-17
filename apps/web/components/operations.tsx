@@ -1,12 +1,19 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Camera, RefreshCw, ScanLine, Coins, CheckCircle2 } from "lucide-react";
-import { FinancialCommand } from "../lib/financial-command";
+import { useCommand } from "../lib/use-financial-command";
+import { RequestAction, VisitCancelAction } from "./operation-reviews";
 import { QRCodeSVG } from "qrcode.react";
 import { api, send, message, decimal, minorUnits, date } from "../lib/client";
 import { Busy, Empty, Field, Notice } from "./ui";
 import { More, usePage } from "./gyms/shared";
-type Branch = { id: string; name: string; gymName: string; canSell: boolean };
+type Branch = {
+  id: string;
+  name: string;
+  gymName: string;
+  canSell: boolean;
+  canCancel: boolean;
+};
 type Sale = {
   id: string;
   traineeLabel: string;
@@ -22,6 +29,7 @@ type Visit = {
   startedAt: string;
   expiresAt: string;
   status: string;
+  cancellationReason: string | null;
 };
 type Preview = {
   traineeLabel: string;
@@ -42,25 +50,6 @@ type SaleQuote = {
   traineeLabel: string;
   phoneLast4: string;
 };
-function useCommand() {
-  const command = useRef<FinancialCommand | null>(null);
-  if (!command.current) command.current = new FinancialCommand();
-  const [uncertain, setUncertain] = useState(false);
-  async function call<T>(path: string, body: unknown): Promise<T> {
-    try {
-      return await command.current!.run<T>(path, body);
-    } catch (e) {
-      if (command.current!.uncertain)
-        throw new Error(
-          "نتيجة الطلب غير مؤكدة. اضغط التأكيد لإعادة نفس الطلب بأمان، ولا تحصّل المبلغ مرة ثانية أو تبدأ طلبًا جديدًا قبل مراجعة السجل.",
-        );
-      throw e;
-    } finally {
-      setUncertain(command.current!.uncertain);
-    }
-  }
-  return { call, uncertain };
-}
 export function Cashier() {
   const [branches, setBranches] = useState<Branch[]>([]),
     [branch, setBranch] = useState(""),
@@ -142,7 +131,7 @@ export function Cashier() {
   );
 }
 function BranchOperations({ branch }: { branch: Branch }) {
-  const [tab, setTab] = useState("sale"),
+  const [tab, setTab] = useState(branch.canSell ? "sale" : "history"),
     [stock, setStock] = useState<number | null>(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
@@ -204,7 +193,7 @@ function BranchOperations({ branch }: { branch: Branch }) {
       ) : tab === "visit" ? (
         <VisitForm branchId={branch.id} />
       ) : (
-        <OperationHistory branchId={branch.id} />
+        <OperationHistory branchId={branch.id} canCancel={branch.canCancel} />
       )}
     </>
   );
@@ -630,7 +619,13 @@ function Scanner({
     />
   );
 }
-function OperationHistory({ branchId }: { branchId: string }) {
+function OperationHistory({
+  branchId,
+  canCancel,
+}: {
+  branchId: string;
+  canCancel: boolean;
+}) {
   const sales = usePage<Sale>(`operations/branches/${branchId}/sales`),
     visits = usePage<Visit>(`operations/branches/${branchId}/visits`);
   return (
@@ -653,6 +648,7 @@ function OperationHistory({ branchId }: { branchId: string }) {
                   {decimal(s.chargePiasters)} ج.م · {date(s.createdAt)}
                 </p>
                 <small>مرجع: {s.id}</small>
+                <RequestAction kind="SALE_CORRECTION" targetId={s.id} />
               </article>
             ))}
           </div>
@@ -680,6 +676,24 @@ function OperationHistory({ branchId }: { branchId: string }) {
                 </strong>
                 <p>حتى {date(v.expiresAt)}</p>
                 <small>مرجع: {v.id}</small>
+                {v.cancellationReason && (
+                  <p className="subtle-box">
+                    سبب الإلغاء: {v.cancellationReason}
+                  </p>
+                )}
+                {v.status !== "CANCELLED" && (
+                  <div className="section-toolbar">
+                    {canCancel && (
+                      <VisitCancelAction
+                        branchId={branchId}
+                        visitId={v.id}
+                        impact={v}
+                        onDone={() => void visits.refresh()}
+                      />
+                    )}
+                    <RequestAction kind="VISIT_CANCEL" targetId={v.id} />
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -823,6 +837,14 @@ export function TraineeQr() {
                   </strong>
                   <p>تنتهي: {date(v.expiresAt)}</p>
                   <small>مرجع: {v.id}</small>
+                  {v.cancellationReason && (
+                    <p className="subtle-box">
+                      سبب الإلغاء: {v.cancellationReason}
+                    </p>
+                  )}
+                  {v.status !== "CANCELLED" && (
+                    <RequestAction kind="VISIT_CANCEL" targetId={v.id} />
+                  )}
                 </article>
               ))}
             </div>

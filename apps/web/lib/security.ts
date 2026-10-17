@@ -61,6 +61,8 @@ const uuid =
 const rules: Record<string, RegExp[]> = {
   GET: [
     /^operations\/branches$/,
+    /^(admin\/)?operation-reviews$/,
+    new RegExp(`^admin/operation-reviews/${uuid}$`),
     /^trainee\/(wallet|visits)$/,
     new RegExp(`^operations/branches/${uuid}/(summary|sales|visits)$`),
     new RegExp(`^(admin/)?gyms/${uuid}/receivables$`),
@@ -82,6 +84,9 @@ const rules: Record<string, RegExp[]> = {
   ],
   POST: [
     /^trainee\/qr$/,
+    /^operation-reviews$/,
+    new RegExp(`^admin/operation-reviews/${uuid}/review$`),
+    new RegExp(`^operations/branches/${uuid}/visits/${uuid}/cancel$`),
     new RegExp(
       `^cashier/branches/${uuid}/(trainee-lookup|sale-quotes|sales|visit-previews|visits)$`,
     ),

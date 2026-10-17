@@ -79,7 +79,13 @@ export function registerOperationRoutes(
       });
       const map = new Map<
         string,
-        { id: string; name: string; gymName: string; canSell: boolean }
+        {
+          id: string;
+          name: string;
+          gymName: string;
+          canSell: boolean;
+          canCancel: boolean;
+        }
       >();
       for (const row of rows) {
         const old = map.get(row.branch.id);
@@ -88,6 +94,7 @@ export function registerOperationRoutes(
           name: row.branch.name,
           gymName: row.branch.gym.name,
           canSell: row.role === "CASHIER" || Boolean(old?.canSell),
+          canCancel: row.role === "BRANCH_MANAGER" || Boolean(old?.canCancel),
         });
       }
       return { items: [...map.values()] };

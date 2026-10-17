@@ -31,8 +31,9 @@ no platform cash posting or gym visit receivable from a sale. Retries replay the
 same sale; changed payload conflicts. Negative inventory/overflow aborts fully.
 The provisional 90-day wallet renewal remains; positive expired wallets require
 separate expiry reconciliation before recharge/sale. Contact OTP remains deferred.
-All sale reversals require a later admin-approved correction workflow; even the
-internal generic reversal cannot reverse a linked sale. No refund endpoint exists.
+Sale correction requests are now available in
+[OPERATION_REVIEWS.md](OPERATION_REVIEWS.md); approval remains blocked until the
+refund policy is decided. The internal generic reversal cannot reverse a linked sale. No refund endpoint exists.
 
 ## Trainee QR and visits
 
@@ -110,7 +111,8 @@ receivable. No live funds or actual customer records are used.
 
 Production builds and HTTP flows are tested. Physical-camera scan, desktop/mobile
 visual QA and real Cloudinary integration still require a supported browser and
-server credentials. Flutter, cancellations/refund review (including manager's
-first-ten-minute flow), paid-out reversal reconciliation, withdrawals, devices,
-fraud review and production rollout are not implemented here. Generic visit
-reversals remain blocked, so pending cancellation policies cannot be bypassed.
+server credentials. Visit cancellations and correction review requests are implemented
+in [OPERATION_REVIEWS.md](OPERATION_REVIEWS.md). Flutter, paid-out reversal
+reconciliation, sale refund execution, withdrawals, devices, fraud review and
+production rollout remain pending. Generic visit reversals stay blocked;
+cancellations must use the authorized domain flow.

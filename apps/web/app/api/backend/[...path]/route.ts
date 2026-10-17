@@ -38,6 +38,8 @@ async function handle(request: Request, context: Context) {
       body = await boundedBody(request, upload ? 5242880 : 8192);
       if (
         path === "topups" ||
+        path === "operation-reviews" ||
+        /^operations\/branches\/[^/]+\/visits\/[^/]+\/cancel$/.test(path) ||
         /^cashier\/branches\/[^/]+\/(sales|visits)$/.test(path)
       )
         headers["idempotency-key"] =

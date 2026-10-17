@@ -53,6 +53,16 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  CANCEL_WINDOW_CLOSED:
+    "فاتت أول ١٠ دقائق؛ قدم طلب مراجعة للإدارة مع السبب والأدلة.",
+  VISIT_ALREADY_CANCELLED: "الزيارة ملغاة بالفعل. لم تُرد النقاط مرة أخرى.",
+  OPERATION_REVIEW_EXISTS:
+    "يوجد طلب مراجعة سابق لهذه العملية. راجع سجل الطلبات.",
+  SETTLEMENT_REVIEW_REQUIRED:
+    "المستحقات تحتاج مراجعة تسوية قبل الإلغاء؛ لم تتغير النقاط أو الأموال.",
+  SALE_REFUND_POLICY_REQUIRED:
+    "اعتماد تصحيح البيع متوقف لحين تحديد مسؤولية رد الفلوس.",
+  INSUFFICIENT_FUNDS: "المبلغ المتاح لا يكفي لتنفيذ العملية.",
   QR_INVALID:
     "الرمز انتهى أو تم تغييره أو انتهت جلسته. اطلب رمزًا جديدًا من المتدرب.",
   QR_ALREADY_USED: "الرمز استُخدم بالفعل. راجع سجل الزيارات ولا تكرر الخصم.",

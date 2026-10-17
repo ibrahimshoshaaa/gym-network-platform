@@ -145,3 +145,26 @@ test("gym management gateway exposes scoped reads and PATCH actions, without bro
   assert.equal(allowedPath("GET", `gyms/${id}/passwords`), false);
   assert.equal(allowedPath("POST", `invitations/../admin/revoke`), false);
 });
+
+test("operation review and cancellation proxy routes remain explicit and scoped", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  for (const path of [
+    "operation-reviews",
+    "admin/operation-reviews",
+    `admin/operation-reviews/${id}`,
+  ])
+    assert.equal(allowedPath("GET", path), true);
+  for (const path of [
+    "operation-reviews",
+    `admin/operation-reviews/${id}/review`,
+    `operations/branches/${id}/visits/${id}/cancel`,
+  ])
+    assert.equal(allowedPath("POST", path), true);
+  for (const path of [
+    `operations/branches/${id}/visits/not-a-uuid/cancel`,
+    `admin/operation-reviews/${id}/approve`,
+    `operation-reviews/${id}/review`,
+  ])
+    assert.equal(allowedPath("POST", path), false);
+  assert.equal(allowedPath("DELETE", "operation-reviews"), false);
+});

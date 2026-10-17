@@ -10,7 +10,17 @@ import {
   quoteSale,
   sellPoints,
 } from "../src/operations/service.js";
-import { postLedger, reverseLedger } from "../src/ledger/service.js";
+import {
+  cancelVisit,
+  requestReview,
+  decideReview,
+} from "../src/reviews/service.js";
+import { buildApp } from "../src/app.js";
+import {
+  postLedger,
+  reverseLedger,
+  postInTransaction,
+} from "../src/ledger/service.js";
 import { createSession } from "../src/auth/sessions.js";
 const url = new URL(process.env.DATABASE_URL ?? "");
 if (
@@ -533,6 +543,700 @@ test("distribution gym earns no visit receivable; hosting gym keeps its original
         where: { id: host.inventory.id },
       })
     ).balance,
+    0,
+  );
+});
+
+async function visited() {
+  const f = await fixture();
+  const qr = await f.qr();
+  const entry = await confirmVisit(
+    db,
+    f.cashier.id,
+    f.branch.id,
+    randomUUID(),
+    f.entry(qr.token),
+  );
+  return { ...f, visit: entry.visit, token: qr.token };
+}
+const cancelReason = { reason: "Synthetic duplicate attendance correction" };
+const reviewBody = (
+  targetId: string,
+  kind: "VISIT_CANCEL" | "SALE_CORRECTION" = "VISIT_CANCEL",
+) => ({
+  kind,
+  targetId,
+  reason: "Synthetic review of incorrect operation",
+  evidenceText: "Synthetic attendance record and cashier explanation",
+});
+
+test("manager cancellation reverses both exact original legs once under concurrent retries without renewing expiry", async () => {
+  const f = await visited(),
+    key = randomUUID();
+  const before = await db.pointAccount.findUniqueOrThrow({
+    where: { id: f.wallet.id },
+  });
+  const results = await Promise.all(
+    [1, 2, 3].map(() =>
+      cancelVisit(db, f.manager.id, f.branch.id, f.visit.id, key, cancelReason),
+    ),
+  );
+  assert.equal(new Set(results.map((r) => r.id)).size, 1);
+  const row = await db.visit.findUniqueOrThrow({ where: { id: f.visit.id } });
+  assert.equal(row.status, "CANCELLED");
+  assert.equal(row.cancelledById, f.manager.id);
+  const wallet = await db.pointAccount.findUniqueOrThrow({
+    where: { id: f.wallet.id },
+  });
+  assert.equal(wallet.balance, 80);
+  assert.deepEqual(wallet.expiresAt, before.expiresAt);
+  const money = await db.moneyAccount.findFirstOrThrow({
+    where: { gymId: f.gym.id, type: "GYM_AVAILABLE" },
+  });
+  assert.equal(money.balancePiasters, 0n);
+  const p = await db.pointTransaction.findUniqueOrThrow({
+    where: { id: results[0]!.pointTransactionId },
+    include: { postings: true },
+  });
+  const m = await db.moneyTransaction.findUniqueOrThrow({
+    where: { id: results[0]!.moneyTransactionId },
+    include: { postings: true },
+  });
+  assert.equal(p.reversalOfId, row.pointTransactionId);
+  assert.equal(m.reversalOfId, row.moneyTransactionId);
+  assert.equal(
+    m.postings.find((x) => x.accountId === money.id)!.deltaPiasters,
+    -row.settlementPiasters,
+  );
+  assert.equal(
+    p.postings.find((x) => x.accountId === f.wallet.id)!.delta,
+    row.pointsCharged,
+  );
+  await code(
+    cancelVisit(db, f.manager.id, f.branch.id, f.visit.id, key, {
+      reason: "Different explanation",
+    }),
+    "IDEMPOTENCY_CONFLICT",
+  );
+  await code(
+    cancelVisit(
+      db,
+      f.manager.id,
+      f.branch.id,
+      f.visit.id,
+      randomUUID(),
+      cancelReason,
+    ),
+    "VISIT_ALREADY_CANCELLED",
+  );
+  await code(
+    previewVisit(db, f.cashier.id, f.branch.id, { token: f.token }),
+    "QR_ALREADY_USED",
+  );
+  assert.equal(
+    await db.visitCancellation.count({ where: { visitId: row.id } }),
+    1,
+  );
+});
+
+test("direct cancellation requires assigned active manager in the exact branch, never implicit owner/admin/cashier", async () => {
+  const f = await visited(),
+    other = await fixture();
+  for (const actor of [f.cashier, f.owner, f.admin, f.person, other.manager])
+    await code(
+      cancelVisit(
+        db,
+        actor.id,
+        f.branch.id,
+        f.visit.id,
+        randomUUID(),
+        cancelReason,
+      ),
+      "BRANCH_ACCESS_DENIED",
+    );
+  await code(
+    cancelVisit(
+      db,
+      other.manager.id,
+      other.branch.id,
+      f.visit.id,
+      randomUUID(),
+      cancelReason,
+    ),
+    "BRANCH_ACCESS_DENIED",
+  );
+  await db.staffAssignment.updateMany({
+    where: { userId: f.manager.id },
+    data: { active: false },
+  });
+  await code(
+    cancelVisit(
+      db,
+      f.manager.id,
+      f.branch.id,
+      f.visit.id,
+      randomUUID(),
+      cancelReason,
+    ),
+    "BRANCH_ACCESS_DENIED",
+  );
+  assert.equal(
+    (await db.visit.findUniqueOrThrow({ where: { id: f.visit.id } })).status,
+    "ACTIVE",
+  );
+  assert.equal(
+    await db.visitCancellation.count({ where: { visitId: f.visit.id } }),
+    0,
+  );
+});
+
+test("ten-minute deadline is inclusive, replay survives it and later corrections require admin review", async (t) => {
+  const a = await visited(),
+    b = await visited(),
+    key = randomUUID();
+  t.mock.timers.enable({
+    apis: ["Date"],
+    now: new Date(a.visit.startedAt).getTime() + 600000,
+  });
+  try {
+    const cancelled = await cancelVisit(
+      db,
+      a.manager.id,
+      a.branch.id,
+      a.visit.id,
+      key,
+      cancelReason,
+    );
+    t.mock.timers.tick(60001);
+    assert.equal(
+      (
+        await cancelVisit(
+          db,
+          a.manager.id,
+          a.branch.id,
+          a.visit.id,
+          key,
+          cancelReason,
+        )
+      ).id,
+      cancelled.id,
+    );
+    await code(
+      cancelVisit(
+        db,
+        b.manager.id,
+        b.branch.id,
+        b.visit.id,
+        randomUUID(),
+        cancelReason,
+      ),
+      "CANCEL_WINDOW_CLOSED",
+    );
+    const request = await requestReview(
+      db,
+      b.person.id,
+      randomUUID(),
+      reviewBody(b.visit.id),
+    );
+    await code(
+      decideReview(db, b.manager.id, request.id, {
+        decision: "APPROVE",
+        reason: "Synthetic approval",
+      }),
+      "ACCESS_DENIED",
+    );
+    const result = await decideReview(db, b.admin.id, request.id, {
+      decision: "APPROVE",
+      reason: "Synthetic administrator verified correction",
+    });
+    assert.equal(result.status, "APPROVED");
+    assert.equal(
+      (await db.visit.findUniqueOrThrow({ where: { id: b.visit.id } })).status,
+      "CANCELLED",
+    );
+  } finally {
+    t.mock.timers.reset();
+  }
+});
+
+test("review request is scoped and replayable; other customers cannot read it or attach someone else evidence", async () => {
+  const f = await visited(),
+    other = await fixture(),
+    key = randomUUID();
+  await code(
+    requestReview(db, other.person.id, randomUUID(), reviewBody(f.visit.id)),
+    "BRANCH_ACCESS_DENIED",
+  );
+  const receipt = await db.receiptEvidence.create({
+    data: {
+      ownerUserId: other.person.id,
+      objectKey: `synthetic-review-${key}`,
+      assetId: `synthetic-review-${key}`,
+      contentHash: `review-${key}`,
+      mimeType: "image/jpeg",
+      bytes: 10,
+    },
+  });
+  await code(
+    requestReview(db, f.person.id, randomUUID(), {
+      ...reviewBody(f.visit.id),
+      evidenceId: receipt.id,
+    }),
+    "RECEIPT_ACCESS_DENIED",
+  );
+  const rows = await Promise.all(
+    [1, 2].map(() =>
+      requestReview(db, f.person.id, key, reviewBody(f.visit.id)),
+    ),
+  );
+  assert.equal(rows[0]!.id, rows[1]!.id);
+  await code(
+    requestReview(db, f.person.id, key, {
+      ...reviewBody(f.visit.id),
+      reason: "Different review reason",
+    }),
+    "IDEMPOTENCY_CONFLICT",
+  );
+  await code(
+    requestReview(db, f.manager.id, randomUUID(), reviewBody(f.visit.id)),
+    "OPERATION_REVIEW_EXISTS",
+  );
+  await code(
+    cancelVisit(
+      db,
+      f.manager.id,
+      f.branch.id,
+      f.visit.id,
+      randomUUID(),
+      cancelReason,
+    ),
+    "OPERATION_REVIEW_EXISTS",
+  );
+  const app = buildApp(db),
+    bearer = await createSession(
+      db,
+      other.person.id,
+      new Date(Date.now() + 60000),
+    );
+  try {
+    const list = await app.inject({
+      method: "GET",
+      url: "/operation-reviews",
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+    assert.equal(list.statusCode, 200);
+    assert.equal(
+      list.json().items.some((r: { id: string }) => r.id === rows[0]!.id),
+      false,
+    );
+    assert.equal(
+      (
+        await app.inject({
+          method: "GET",
+          url: `/admin/operation-reviews/${rows[0]!.id}`,
+          headers: { authorization: `Bearer ${bearer}` },
+        })
+      ).statusCode,
+      403,
+    );
+  } finally {
+    await app.close();
+  }
+});
+
+test("concurrent review approval and rejection produce one terminal decision with atomic balanced reversal", async () => {
+  const f = await visited(),
+    r = await requestReview(
+      db,
+      f.owner.id,
+      randomUUID(),
+      reviewBody(f.visit.id),
+    );
+  const approval = {
+    decision: "APPROVE",
+    reason: "Synthetic approved after investigation",
+  };
+  const rejection = {
+    decision: "REJECT",
+    reason: "Synthetic rejected after investigation",
+  };
+  const results = await Promise.allSettled([
+    decideReview(db, f.admin.id, r.id, approval),
+    decideReview(db, f.admin.id, r.id, rejection),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  const final = await db.operationReview.findUniqueOrThrow({
+    where: { id: r.id },
+  });
+  assert.equal(
+    await db.visitCancellation.count({ where: { visitId: f.visit.id } }),
+    final.status === "APPROVED" ? 1 : 0,
+  );
+  assert.equal(
+    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
+      .balance,
+    final.status === "APPROVED" ? 80 : 50,
+  );
+  const decision = final.status === "APPROVED" ? approval : rejection;
+  assert.equal((await decideReview(db, f.admin.id, r.id, decision)).id, r.id);
+  await assert.rejects(
+    db.operationReview.update({
+      where: { id: r.id },
+      data: { reason: "Mutated evidence" },
+    }),
+  );
+  await assert.rejects(db.operationReview.delete({ where: { id: r.id } }));
+});
+
+test("different manager cancellation keys race without duplicate refunds", async () => {
+  const f = await visited();
+  const results = await Promise.allSettled(
+    [1, 2].map(() =>
+      cancelVisit(
+        db,
+        f.manager.id,
+        f.branch.id,
+        f.visit.id,
+        randomUUID(),
+        cancelReason,
+      ),
+    ),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(
+    await db.visitCancellation.count({ where: { visitId: f.visit.id } }),
+    1,
+  );
+  assert.equal(
+    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
+      .balance,
+    80,
+  );
+});
+
+test("expired wallet cancellation and approval leave both ledgers and request untouched", async () => {
+  const f = await visited();
+  await db.pointAccount.update({
+    where: { id: f.wallet.id },
+    data: { expiresAt: new Date(Date.now() - 1000) },
+  });
+  await code(
+    cancelVisit(
+      db,
+      f.manager.id,
+      f.branch.id,
+      f.visit.id,
+      randomUUID(),
+      cancelReason,
+    ),
+    "WALLET_EXPIRY_REVIEW_REQUIRED",
+  );
+  const r = await requestReview(
+    db,
+    f.person.id,
+    randomUUID(),
+    reviewBody(f.visit.id),
+  );
+  await code(
+    decideReview(db, f.admin.id, r.id, {
+      decision: "APPROVE",
+      reason: "Synthetic invalid expiry approval",
+    }),
+    "WALLET_EXPIRY_REVIEW_REQUIRED",
+  );
+  assert.equal(
+    (await db.operationReview.findUniqueOrThrow({ where: { id: r.id } }))
+      .status,
+    "PENDING",
+  );
+  assert.equal(
+    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
+      .balance,
+    50,
+  );
+  assert.equal(
+    await db.visitCancellation.count({ where: { visitId: f.visit.id } }),
+    0,
+  );
+});
+
+test("prior reservation or payment blocks cancellation even after available cash is refilled", async () => {
+  const f = await visited();
+  const available = await db.moneyAccount.findFirstOrThrow({
+    where: { gymId: f.gym.id, type: "GYM_AVAILABLE" },
+  });
+  const reserved = await db.moneyAccount.create({
+    data: { gymId: f.gym.id, type: "GYM_RESERVED" },
+  });
+  await postLedger(db, {
+    actorId: f.admin.id,
+    idempotencyKey: randomUUID(),
+    reason: "Synthetic future payout reservation",
+    money: {
+      kind: "WITHDRAWAL_RESERVE",
+      entries: [
+        { accountId: available.id, delta: -1n },
+        { accountId: reserved.id, delta: 1n },
+      ],
+    },
+  });
+  const offset = await db.moneyAccount.findFirstOrThrow({
+    where: { type: "PLATFORM_OFFSET" },
+  });
+  await postLedger(db, {
+    actorId: f.admin.id,
+    idempotencyKey: randomUUID(),
+    reason: "Synthetic later cash refill",
+    money: {
+      kind: "ADJUSTMENT",
+      entries: [
+        { accountId: offset.id, delta: -1000n },
+        { accountId: available.id, delta: 1000n },
+      ],
+    },
+  });
+  await code(
+    cancelVisit(
+      db,
+      f.manager.id,
+      f.branch.id,
+      f.visit.id,
+      randomUUID(),
+      cancelReason,
+    ),
+    "SETTLEMENT_REVIEW_REQUIRED",
+  );
+  const r = await requestReview(
+    db,
+    f.owner.id,
+    randomUUID(),
+    reviewBody(f.visit.id),
+  );
+  await code(
+    decideReview(db, f.admin.id, r.id, {
+      decision: "APPROVE",
+      reason: "Synthetic unsafe payout clawback",
+    }),
+    "SETTLEMENT_REVIEW_REQUIRED",
+  );
+  assert.equal(
+    (await db.operationReview.findUniqueOrThrow({ where: { id: r.id } }))
+      .status,
+    "PENDING",
+  );
+  assert.equal(
+    await db.visitCancellation.count({ where: { visitId: f.visit.id } }),
+    0,
+  );
+});
+
+test("sale correction is review-only pending refund policy; no point or cash movement is invented", async () => {
+  const f = await fixture(),
+    s = await sellPoints(
+      db,
+      f.cashier.id,
+      f.branch.id,
+      randomUUID(),
+      f.sale(20),
+    );
+  const r = await requestReview(
+    db,
+    f.cashier.id,
+    randomUUID(),
+    reviewBody(s.id, "SALE_CORRECTION"),
+  );
+  const counts = [
+    await db.pointTransaction.count(),
+    await db.moneyTransaction.count(),
+  ];
+  await code(
+    decideReview(db, f.admin.id, r.id, {
+      decision: "APPROVE",
+      reason: "Synthetic unapproved refund policy",
+    }),
+    "SALE_REFUND_POLICY_REQUIRED",
+  );
+  const rejected = await decideReview(db, f.admin.id, r.id, {
+    decision: "REJECT",
+    reason: "Synthetic corrected receipt verified",
+  });
+  assert.equal(rejected.status, "REJECTED");
+  assert.deepEqual(
+    [await db.pointTransaction.count(), await db.moneyTransaction.count()],
+    counts,
+  );
+  assert.equal(
+    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
+      .balance,
+    100,
+  );
+});
+
+test("database rejects forged cancellation metadata, orphan approval and mutation of cancellation receipts", async () => {
+  const f = await visited();
+  await assert.rejects(
+    db.visit.update({
+      where: { id: f.visit.id },
+      data: {
+        status: "CANCELLED",
+        cancelledAt: new Date(),
+        cancelledById: f.manager.id,
+        cancellationReason: "Forged cancellation without postings",
+      },
+    }),
+  );
+  const r = await requestReview(
+    db,
+    f.person.id,
+    randomUUID(),
+    reviewBody(f.visit.id),
+  );
+  await assert.rejects(
+    db.operationReview.update({
+      where: { id: r.id },
+      data: {
+        status: "APPROVED",
+        reviewedAt: new Date(),
+        reviewedById: f.admin.id,
+        reviewReason: "Forged approval without reversal",
+      },
+    }),
+  );
+  await assert.rejects(
+    db.operationReview.update({
+      where: { id: r.id },
+      data: {
+        status: "REJECTED",
+        reviewedAt: new Date(),
+        reviewedById: f.admin.id,
+      },
+    }),
+  );
+  await decideReview(db, f.admin.id, r.id, {
+    decision: "APPROVE",
+    reason: "Synthetic verified cancellation",
+  });
+  const c = await db.visitCancellation.findUniqueOrThrow({
+    where: { visitId: f.visit.id },
+  });
+  await assert.rejects(
+    db.visitCancellation.update({
+      where: { id: c.id },
+      data: { reason: "Mutable reversal facts" },
+    }),
+  );
+  await assert.rejects(db.visitCancellation.delete({ where: { id: c.id } }));
+});
+
+test("cancellation uses the original financial snapshot after platform pricing changes", async () => {
+  const f = await visited();
+  await db.pricingPolicy.create({
+    data: {
+      version: f.p.version + 1,
+      pointPricePiasters: 190n,
+      gymDiscountBps: 2000,
+      redemptionBps: 5000,
+      createdById: f.admin.id,
+    },
+  });
+  const r = await cancelVisit(
+    db,
+    f.manager.id,
+    f.branch.id,
+    f.visit.id,
+    randomUUID(),
+    cancelReason,
+  );
+  const money = await db.moneyTransaction.findUniqueOrThrow({
+    where: { id: r.moneyTransactionId },
+    include: { postings: true },
+  });
+  assert.equal(
+    money.postings.find((p) => p.deltaPiasters > 0n)!.deltaPiasters.toString(),
+    f.visit.settlementPiasters,
+  );
+});
+
+test("database rejects a balanced but incomplete cancellation reversal atomically", async () => {
+  const f = await visited(),
+    row = await db.visit.findUniqueOrThrow({ where: { id: f.visit.id } });
+  const redeemed = await db.pointAccount.findFirstOrThrow({
+    where: { type: "REDEEMED" },
+  });
+  const available = await db.moneyAccount.findFirstOrThrow({
+    where: { type: "GYM_AVAILABLE", gymId: f.gym.id },
+  });
+  const offset = await db.moneyAccount.findFirstOrThrow({
+    where: { type: "PLATFORM_OFFSET" },
+  });
+  await assert.rejects(
+    db.$transaction(async (tx) => {
+      const id = randomUUID(),
+        key = randomUUID();
+      const legs = await postInTransaction(tx, {
+        actorId: f.admin.id,
+        idempotencyKey: key,
+        referenceId: id,
+        reason: cancelReason.reason,
+        points: {
+          kind: "VISIT_REVERSAL",
+          reversalOfId: row.pointTransactionId,
+          entries: [
+            { accountId: f.wallet.id, delta: 1n },
+            { accountId: redeemed.id, delta: -1n },
+          ],
+        },
+        money: {
+          kind: "VISIT_REVERSAL",
+          reversalOfId: row.moneyTransactionId,
+          entries: [
+            { accountId: available.id, delta: -1n },
+            { accountId: offset.id, delta: 1n },
+          ],
+        },
+      });
+      await tx.visitCancellation.create({
+        data: {
+          id,
+          visitId: row.id,
+          actorId: f.admin.id,
+          reason: cancelReason.reason,
+          idempotencyKey: key,
+          requestHash: "a".repeat(64),
+          pointTransactionId: legs.pointTransactionId!,
+          moneyTransactionId: legs.moneyTransactionId!,
+        },
+      });
+      await tx.visit.update({
+        where: { id: row.id },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+          cancelledById: f.admin.id,
+          cancellationReason: cancelReason.reason,
+        },
+      });
+    }),
+  );
+  assert.equal(
+    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
+      .balance,
+    50,
+  );
+  assert.equal(
+    (await db.visit.findUniqueOrThrow({ where: { id: row.id } })).status,
+    "ACTIVE",
+  );
+  assert.equal(
+    await db.pointTransaction.count({
+      where: { reversalOfId: row.pointTransactionId },
+    }),
+    0,
+  );
+  assert.equal(
+    await db.moneyTransaction.count({
+      where: { reversalOfId: row.moneyTransactionId },
+    }),
     0,
   );
 });

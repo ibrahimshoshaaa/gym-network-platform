@@ -121,6 +121,8 @@ export function visitView(v: Visit) {
     startedAt: v.startedAt,
     expiresAt: v.expiresAt,
     branchPricingVersion: v.branchPricingVersion,
+    cancelledAt: v.cancelledAt,
+    cancellationReason: v.cancellationReason,
   };
 }
 export async function lookupTrainee(

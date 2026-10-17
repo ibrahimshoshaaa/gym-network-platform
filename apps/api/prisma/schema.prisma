@@ -525,3 +525,44 @@ model ReceiptEvidence {
 
   @@index([ownerUserId, createdAt])
 }
+
+// Corrections preserve the original sale/visit and its sealed postings.
+enum OperationReviewKind {
+  VISIT_CANCEL
+  SALE_CORRECTION
+}
+
+model OperationReview {
+  id               String              @id @default(uuid()) @db.Uuid
+  kind             OperationReviewKind
+  visitId          String?             @unique @db.Uuid
+  saleId           String?             @unique @db.Uuid
+  branchId         String              @db.Uuid
+  requestorId      String              @db.Uuid
+  reason           String
+  evidenceText     String
+  evidenceId       String?             @db.Uuid
+  status           RequestStatus       @default(PENDING)
+  idempotencyKey   String              @unique
+  requestHash      String
+  reviewedById     String?             @db.Uuid
+  reviewReason     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime            @default(now())
+
+  @@index([requestorId, createdAt])
+  @@index([status, createdAt])
+}
+
+model VisitCancellation {
+  id                   String   @id @default(uuid()) @db.Uuid
+  visitId              String   @unique @db.Uuid
+  actorId              String   @db.Uuid
+  reason               String
+  reviewId             String?  @unique @db.Uuid
+  idempotencyKey       String   @unique
+  requestHash          String
+  pointTransactionId   String   @unique @db.Uuid
+  moneyTransactionId   String   @unique @db.Uuid
+  createdAt            DateTime @default(now())
+}

@@ -632,6 +632,7 @@ test(
         },
       );
       assert.equal(sell.status, 201);
+      const sold = await sell.json();
       const ticketResponse = await request("/api/backend/trainee/qr", {
         cookie: traineeCookie,
         method: "POST",
@@ -682,6 +683,214 @@ test(
         ).balancePiasters,
         "3000",
       );
+      // Manager cancellation and review decisions cross the production BFF,
+      // preserving private cookies, explicit scopes and idempotency headers.
+      const managerInviteResponse = await request(
+        `/api/backend/gyms/${newGym.gym.id}/staff-invitations`,
+        {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          body: {
+            ...staffBody,
+            role: "BRANCH_MANAGER",
+            contact: {
+              displayName: "Synthetic Branch Manager",
+              email: `manager-${id}@example.test`,
+              phone: "01500000006",
+            },
+          },
+        },
+      );
+      assert.equal(managerInviteResponse.status, 201);
+      const managerInvite = await managerInviteResponse.json();
+      const managerLogin = await request("/api/session", {
+        method: "POST",
+        body: {
+          mode: "invite",
+          token: managerInvite.invitation.token,
+          password,
+        },
+      });
+      assert.equal(managerLogin.status, 200);
+      const managerCookie = sessionCookie(managerLogin);
+      const managedBranches = await request(
+        "/api/backend/operations/branches",
+        { cookie: managerCookie },
+      );
+      const managerBranch = (await managedBranches.json()).items.find(
+        (b) => b.id === newBranch.branch.id,
+      );
+      assert.equal(managerBranch.canCancel, true);
+      assert.equal(managerBranch.canSell, false);
+      const cancelPath = `/api/backend/operations/branches/${newBranch.branch.id}/visits/${entered.visit.id}/cancel`;
+      const cancellationKey = randomUUID(),
+        cancelBody = { reason: "Synthetic duplicate admission cancelled" };
+      assert.equal(
+        (
+          await request(cancelPath, {
+            cookie: cashierCookie,
+            method: "POST",
+            headers: { "idempotency-key": cancellationKey },
+            body: cancelBody,
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await request(cancelPath, {
+            cookie: managerCookie,
+            method: "POST",
+            headers: { "idempotency-key": cancellationKey },
+            body: cancelBody,
+            crossOrigin: true,
+          })
+        ).status,
+        403,
+      );
+      const cancel = () =>
+        request(cancelPath, {
+          cookie: managerCookie,
+          method: "POST",
+          headers: { "idempotency-key": cancellationKey },
+          body: cancelBody,
+        });
+      const cancelledResponse = await cancel();
+      assert.equal(cancelledResponse.status, 200);
+      const cancelled = await cancelledResponse.json();
+      assert.equal((await (await cancel()).json()).id, cancelled.id);
+      assert.equal(
+        (
+          await (
+            await request("/api/backend/trainee/wallet", {
+              cookie: traineeCookie,
+            })
+          ).json()
+        ).balance,
+        60,
+      );
+      assert.equal(
+        (
+          await (
+            await request(`/api/backend/gyms/${newGym.gym.id}/receivables`, {
+              cookie: invitedOwnerCookie,
+            })
+          ).json()
+        ).accounts.find((a) => a.type === "GYM_AVAILABLE").balancePiasters,
+        "0",
+      );
+      const nextQr = await (
+        await request("/api/backend/trainee/qr", {
+          cookie: traineeCookie,
+          method: "POST",
+          body: {},
+        })
+      ).json();
+      const nextEntryResponse = await request(
+        `/api/backend/cashier/branches/${newBranch.branch.id}/visits`,
+        {
+          cookie: cashierCookie,
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: { ...entryBody, token: nextQr.token },
+        },
+      );
+      assert.equal(nextEntryResponse.status, 201);
+      const nextEntry = await nextEntryResponse.json();
+      const reviewKey = randomUUID(),
+        correctionBody = {
+          kind: "VISIT_CANCEL",
+          targetId: nextEntry.visit.id,
+          reason: "Synthetic trainee requested correction",
+          evidenceText: "Synthetic supporting attendance details",
+        };
+      const submitCorrection = () =>
+        request("/api/backend/operation-reviews", {
+          cookie: traineeCookie,
+          method: "POST",
+          headers: { "idempotency-key": reviewKey },
+          body: correctionBody,
+        });
+      const correctionResponse = await submitCorrection();
+      assert.equal(correctionResponse.status, 200);
+      const correction = await correctionResponse.json();
+      assert.equal((await (await submitCorrection()).json()).id, correction.id);
+      const mine = await (
+        await request("/api/backend/operation-reviews", {
+          cookie: traineeCookie,
+        })
+      ).json();
+      assert.ok(mine.items.some((r) => r.id === correction.id));
+      const foreignReviews = await (
+        await request("/api/backend/operation-reviews", { cookie: ownerCookie })
+      ).json();
+      assert.equal(
+        foreignReviews.items.some((r) => r.id === correction.id),
+        false,
+      );
+      const correctionDetail = await request(
+        `/api/backend/admin/operation-reviews/${correction.id}`,
+        { cookie },
+      );
+      assert.equal(correctionDetail.status, 200);
+      assert.equal(
+        (await correctionDetail.json()).target.settlementPiasters,
+        "3000",
+      );
+      const approvalBody = {
+        decision: "APPROVE",
+        reason: "Synthetic administrator verified correction",
+      };
+      const approveCorrection = () =>
+        request(
+          `/api/backend/admin/operation-reviews/${correction.id}/review`,
+          { cookie, method: "POST", body: approvalBody },
+        );
+      assert.equal((await approveCorrection()).status, 200);
+      assert.equal((await approveCorrection()).status, 200);
+      assert.equal(
+        (
+          await (
+            await request("/api/backend/trainee/wallet", {
+              cookie: traineeCookie,
+            })
+          ).json()
+        ).balance,
+        60,
+      );
+      const saleCorrection = await request("/api/backend/operation-reviews", {
+        cookie: cashierCookie,
+        method: "POST",
+        headers: { "idempotency-key": randomUUID() },
+        body: { ...correctionBody, kind: "SALE_CORRECTION", targetId: sold.id },
+      });
+      assert.equal(saleCorrection.status, 200);
+      const saleReview = await saleCorrection.json();
+      const policyBlocked = await request(
+        `/api/backend/admin/operation-reviews/${saleReview.id}/review`,
+        { cookie, method: "POST", body: approvalBody },
+      );
+      assert.equal(policyBlocked.status, 409);
+      assert.equal(
+        (await policyBlocked.json()).code,
+        "SALE_REFUND_POLICY_REQUIRED",
+      );
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/operation-reviews/${saleReview.id}/review`,
+            {
+              cookie,
+              method: "POST",
+              body: {
+                decision: "REJECT",
+                reason: "Synthetic valid sale kept unchanged",
+              },
+            },
+          )
+        ).status,
+        200,
+      );
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },
@@ -695,7 +904,9 @@ test(
         { cookie: invitedOwnerCookie },
       );
       assert.equal(staffList.status, 200);
-      const membership = (await staffList.json()).items[0];
+      const membership = (await staffList.json()).items.find(
+        (m) => m.role === "CASHIER",
+      );
       assert.equal(membership.branch.name, newBranch.branch.name);
       assert.equal(
         (
