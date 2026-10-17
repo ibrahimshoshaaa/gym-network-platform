@@ -2,7 +2,8 @@
 
 Implements the [17 October 2026 approved decision](DECISIONS.md) using the existing
 Fastify/Prisma identity and hashed bearer sessions. This is backend functionality;
-Flutter and Next.js applications are still planned and do not yet have login UI.
+The Next.js dashboard now has login UI, including a temporary trainee wallet/QR panel.
+Flutter remains planned; see WEB_DASHBOARD.md and CASHIER_VISITS.md.
 
 ## Endpoints
 

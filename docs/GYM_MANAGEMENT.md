@@ -68,7 +68,8 @@ version and records reviewer, time and reason. Database triggers prevent editing
 proposal contents and changing/deleting reviewed history.
 
 The API cannot update price, status, gym ownership or approval fields through
-owner metadata patches. Visit/session endpoints are not yet implemented; when
+owner metadata patches. Visit/session endpoints now implement this requirement; see
+[CASHIER_VISITS.md](CASHIER_VISITS.md). The original rule is that services must snapshot terms
 added they must snapshot the approved terms at visit start and preserve old visits
 when a tariff changes. Opening-hours text is display data and is not an approved
 outside-hours entry restriction.
@@ -144,7 +145,8 @@ pagination, private data and prior ledger/auth regressions. Standard commands ar
 in [LEDGER_FOUNDATION.md](LEDGER_FOUNDATION.md).
 
 No financial balances are changed, no monetary accounts are provisioned, and the
-gym-vs-branch financial scope remains open. No receipt review, point sale, visit,
+gym-vs-branch financial scope was open in the foundation increment; O01 is now resolved
+as one wallet per gym (see CASHIER_VISITS.md). No receipt review, point sale, visit,
 withdrawal, interactive map UI, Flutter app or production deployment is added.
 The subsequent management dashboard adds the existing onboarding and staff workflows to Next.js.
 

@@ -1,5 +1,7 @@
 # Ledger foundation — 17 October 2026
 
+Current status: cashier sales and QR visits now use this foundation, and O01 is approved as one wallet per gym. See [CASHIER_VISITS.md](CASHIER_VISITS.md); the scope described below records the original foundation milestone.
+
 ## Implemented scope
 
 This increment adds an initial Prisma migration and a hand-written integrity
