@@ -19,3 +19,23 @@ Approved by the project owner in the Work conversation:
   operation pending the remaining reviews. No other open decision is resolved.
 
 Implementation details and test scope: [PASSWORD_AUTH.md](PASSWORD_AUTH.md).
+
+## 2026-10-17 — Configurable pricing, gym redemption and manual channels
+
+Project owner confirmed that the platform owner sets point price, gym stock
+purchase discount and the ratio for gyms selling/redeeming points to the platform.
+The redemption ratio is independent of the stock purchase discount. No commercial
+values are approved as fixed defaults. Rates apply prospectively and operational
+records retain the rate used at creation.
+
+The platform owner controls InstaPay and wallet destination identifiers and
+account names. Receipt images use the owner's Cloudinary account once server
+credentials are configured. Transfers remain manually reviewed, with independent
+confirmation of received funds before issuance. See [TOPUPS.md](TOPUPS.md).
+
+## 2026-10-17 — O01 resolved: one financial wallet per gym
+
+The owner selected “محفظة واحدة للجيم” with branch-level details, rather than a
+separate monetary wallet per branch. Each visit stores its hosting branch;
+receivables aggregate into the hosting gym's accounts. Branch point inventories
+remain independent. Migration and operational details: [CASHIER_VISITS.md](CASHIER_VISITS.md).

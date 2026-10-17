@@ -15,10 +15,32 @@ enum UserRole {
   TRAINEE
 }
 
+enum GymStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum InvitationType {
+  OWNER
+  STAFF
+}
+
 enum BranchStatus {
   PENDING
   ACTIVE
   SUSPENDED
+}
+
+enum TopupKind {
+  TRAINEE
+  BRANCH_STOCK
+}
+
+enum PaymentMethodType {
+  INSTAPAY
+  WALLET
 }
 
 enum RequestStatus {
@@ -70,6 +92,7 @@ enum MoneyTxKind {
 }
 
 enum WithdrawalStatus {
+  CANCELLED
   REQUESTED
   APPROVED
   REJECTED
@@ -94,40 +117,58 @@ model User {
   pointAccounts   PointAccount[]
   visits          Visit[]           @relation("TraineeVisits")
   sessions        AuthSession[]
+  invitations     StaffInvitation[]
+  receipts        ReceiptEvidence[]
+  topupRequests   TopupRequest[]    @relation("TopupRequestor")
 }
 
 model Gym {
-  id            String              @id @default(uuid()) @db.Uuid
-  name          String
-  ownerId       String              @db.Uuid
-  owner         User                @relation("GymOwner", fields: [ownerId], references: [id])
-  branches      Branch[]
-  moneyAccounts MoneyAccount[]
-  withdrawals   WithdrawalRequest[]
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id              String              @id @default(uuid()) @db.Uuid
+  name            String
+  ownerId         String              @db.Uuid
+  ownerAcceptedAt DateTime?
+  owner           User                @relation("GymOwner", fields: [ownerId], references: [id])
+  status          GymStatus           @default(PENDING)
+  description     String              @default("")
+  contactPhone    String?
+  invitations     StaffInvitation[]
+  branches        Branch[]
+  moneyAccounts   MoneyAccount[]
+  withdrawals     WithdrawalRequest[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   @@index([ownerId])
 }
 
 model Branch {
-  id               String              @id @default(uuid()) @db.Uuid
-  gymId            String              @db.Uuid
-  gym              Gym                 @relation(fields: [gymId], references: [id])
-  name             String
-  status           BranchStatus        @default(PENDING)
-  visitPricePoints Int
-  sessionMinutes   Int
-  latitude         Decimal?            @db.Decimal(10, 7)
-  longitude        Decimal?            @db.Decimal(10, 7)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  staff            StaffAssignment[]
-  pointAccounts    PointAccount[]
-  visits           Visit[]
-  topups           TopupRequest[]
-  moneyAccounts    MoneyAccount[]
-  withdrawals      WithdrawalRequest[]
+  id                String                 @id @default(uuid()) @db.Uuid
+  gymId             String                 @db.Uuid
+  gym               Gym                    @relation(fields: [gymId], references: [id])
+  name              String
+  status            BranchStatus           @default(PENDING)
+  visitPricePoints  Int
+  sessionMinutes    Int
+  address           String                 @default("")
+  governorate       String                 @default("")
+  city              String                 @default("")
+  contactPhone      String?
+  openingHours      String?
+  pricingVersion    Int                    @default(0)
+  priceApprovedAt   DateTime?
+  priceApprovedById String?                @db.Uuid
+  pricingRequests   BranchPricingRequest[]
+  invitations       StaffInvitation[]
+  latitude          Decimal?               @db.Decimal(10, 7)
+  longitude         Decimal?               @db.Decimal(10, 7)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  staff             StaffAssignment[]
+  pointAccounts     PointAccount[]
+  visits            Visit[]
+  topups            TopupRequest[]
+  moneyAccounts     MoneyAccount[]
+  withdrawals       WithdrawalRequest[]
 
   @@unique([id, gymId])
   @@index([gymId, status])
@@ -171,6 +212,7 @@ model PointTransaction {
   reversalOf     PointTransaction? @relation("PointReversal", fields: [reversalOfId], references: [id])
   reversedBy     PointTransaction? @relation("PointReversal")
   visit          Visit?
+  topup          TopupRequest?
   kind           PointTxKind
   actorId        String?           @db.Uuid
   referenceId    String?           @db.Uuid
@@ -194,40 +236,103 @@ model PointPosting {
 }
 
 model TopupRequest {
-  id                String        @id @default(uuid()) @db.Uuid
-  requestorUserId   String        @db.Uuid
-  receivingBranchId String?       @db.Uuid
-  receivingBranch   Branch?       @relation(fields: [receivingBranchId], references: [id])
-  points            Int
-  chargePiasters    BigInt
-  receiptObjectKey  String
-  status            RequestStatus @default(PENDING)
-  reviewedById      String?       @db.Uuid
-  reviewedAt        DateTime?
-  createdAt         DateTime      @default(now())
+  id                 String             @id @default(uuid()) @db.Uuid
+  requestorUserId    String             @db.Uuid
+  requestorUser      User               @relation("TopupRequestor", fields: [requestorUserId], references: [id])
+  kind               TopupKind?
+  idempotencyKey     String?            @unique
+  requestHash        String?
+  policyId           String?            @db.Uuid
+  policy             PricingPolicy?     @relation(fields: [policyId], references: [id])
+  receiptId          String?            @unique @db.Uuid
+  receipt            ReceiptEvidence?   @relation(fields: [receiptId], references: [id])
+  pointTransactionId String?            @unique @db.Uuid
+  pointTransaction   PointTransaction?  @relation(fields: [pointTransactionId], references: [id])
+  paymentMethodType  PaymentMethodType?
+  paymentAccount     String?
+  paymentAccountName String?
+  paymentReference   String?            @unique
+  unitPricePiasters  BigInt?
+  discountBps        Int?
+  redemptionBps      Int?
+  reviewReason       String?
+  receivingBranchId  String?            @db.Uuid
+  receivingBranch    Branch?            @relation(fields: [receivingBranchId], references: [id])
+  points             Int
+  chargePiasters     BigInt
+  receiptObjectKey   String
+  status             RequestStatus      @default(PENDING)
+  reviewedById       String?            @db.Uuid
+  reviewedAt         DateTime?
+  createdAt          DateTime           @default(now())
 
   @@index([status, createdAt])
 }
 
+model PointSale {
+  id                 String   @id @default(uuid()) @db.Uuid
+  branchId           String   @db.Uuid
+  traineeId          String   @db.Uuid
+  cashierId          String   @db.Uuid
+  traineeLabel       String
+  phoneLast4         String
+  points             Int
+  chargePiasters     BigInt
+  unitPricePiasters  BigInt
+  policyId           String   @db.Uuid
+  pricingVersion     Int
+  idempotencyKey     String   @unique
+  requestHash        String
+  pointTransactionId String   @unique @db.Uuid
+  createdAt          DateTime @default(now())
+
+  @@index([branchId, createdAt])
+  @@index([traineeId, createdAt])
+}
+
+model QrTicket {
+  userId     String    @id @db.Uuid
+  tokenHash  String    @unique
+  sessionId  String    @db.Uuid
+  expiresAt  DateTime
+  consumedAt DateTime?
+  visitId    String?   @db.Uuid
+}
+
+model VisitEntry {
+  id             String   @id @default(uuid()) @db.Uuid
+  idempotencyKey String   @unique
+  requestHash    String
+  actorId        String   @db.Uuid
+  branchId       String   @db.Uuid
+  visitId        String   @db.Uuid
+  alreadyActive  Boolean
+  createdAt      DateTime @default(now())
+}
+
 model Visit {
-  id                 String           @id @default(uuid()) @db.Uuid
-  traineeId          String           @db.Uuid
-  trainee            User             @relation("TraineeVisits", fields: [traineeId], references: [id])
-  branchId           String           @db.Uuid
-  branch             Branch           @relation(fields: [branchId], references: [id])
-  cashierId          String           @db.Uuid
-  pointsCharged      Int
-  settlementPiasters BigInt
-  status             VisitStatus      @default(ACTIVE)
-  startedAt          DateTime         @default(now())
-  expiresAt          DateTime
-  cancelledAt        DateTime?
-  cancelledById      String?          @db.Uuid
-  cancellationReason String?
-  pointTransactionId String           @unique @db.Uuid
-  moneyTransactionId String           @unique @db.Uuid
-  pointTransaction   PointTransaction @relation(fields: [pointTransactionId], references: [id])
-  moneyTransaction   MoneyTransaction @relation(fields: [moneyTransactionId], references: [id])
+  id                   String           @id @default(uuid()) @db.Uuid
+  traineeId            String           @db.Uuid
+  trainee              User             @relation("TraineeVisits", fields: [traineeId], references: [id])
+  branchId             String           @db.Uuid
+  branch               Branch           @relation(fields: [branchId], references: [id])
+  cashierId            String           @db.Uuid
+  pointsCharged        Int
+  settlementPiasters   BigInt
+  policyId             String?          @db.Uuid
+  unitPricePiasters    BigInt?
+  redemptionBps        Int?
+  branchPricingVersion Int?
+  status               VisitStatus      @default(ACTIVE)
+  startedAt            DateTime         @default(now())
+  expiresAt            DateTime
+  cancelledAt          DateTime?
+  cancelledById        String?          @db.Uuid
+  cancellationReason   String?
+  pointTransactionId   String           @unique @db.Uuid
+  moneyTransactionId   String           @unique @db.Uuid
+  pointTransaction     PointTransaction @relation(fields: [pointTransactionId], references: [id])
+  moneyTransaction     MoneyTransaction @relation(fields: [moneyTransactionId], references: [id])
 
   @@index([traineeId, branchId, status])
   @@index([branchId, startedAt])
@@ -292,6 +397,25 @@ model WithdrawalRequest {
   transferProofKey String?
   rejectionReason  String?
 
+  requestorId          String            @db.Uuid
+  idempotencyKey       String            @unique
+  requestHash          String
+  paymentMethod        PaymentMethodType
+  destinationAccount   String
+  destinationName      String
+  reserveTransactionId String            @unique @db.Uuid
+  releaseTransactionId String?           @unique @db.Uuid
+  paymentTransactionId String?           @unique @db.Uuid
+  calendarId           String?           @db.Uuid
+  dueAt                DateTime?
+  reviewReason         String?
+  closedAt             DateTime?
+  closedById           String?           @db.Uuid
+  paidById             String?           @db.Uuid
+  proofReceiptId       String?           @unique @db.Uuid
+  transferReference    String?           @unique
+  delayReason          String?
+
   @@index([gymId, status])
 }
 
@@ -332,4 +456,174 @@ model AuthThrottle {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+model StaffInvitation {
+  id          String         @id @default(uuid()) @db.Uuid
+  type        InvitationType
+  tokenHash   String         @unique
+  userId      String         @db.Uuid
+  user        User           @relation(fields: [userId], references: [id])
+  gymId       String         @db.Uuid
+  gym         Gym            @relation(fields: [gymId], references: [id])
+  branchId    String?        @db.Uuid
+  branch      Branch?        @relation(fields: [branchId, gymId], references: [id, gymId])
+  role        UserRole
+  createdById String         @db.Uuid
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime       @default(now())
+
+  @@index([gymId, createdAt])
+  @@index([userId])
+}
+
+model BranchPricingRequest {
+  id                     String        @id @default(uuid()) @db.Uuid
+  branchId               String        @db.Uuid
+  branch                 Branch        @relation(fields: [branchId], references: [id])
+  requestedById          String        @db.Uuid
+  visitPricePoints       Int
+  sessionMinutes         Int
+  baseVersion            Int
+  previousPricePoints    Int
+  previousSessionMinutes Int
+  status                 RequestStatus @default(PENDING)
+  reason                 String
+  reviewedById           String?       @db.Uuid
+  reviewReason           String?
+  reviewedAt             DateTime?
+  createdAt              DateTime      @default(now())
+
+  @@index([branchId, createdAt])
+}
+
+model PricingPolicy {
+  id                 String         @id @default(uuid()) @db.Uuid
+  version            Int            @unique
+  pointPricePiasters BigInt
+  gymDiscountBps     Int
+  redemptionBps      Int
+  createdById        String         @db.Uuid
+  createdAt          DateTime       @default(now())
+  topups             TopupRequest[]
+}
+
+model PaymentMethod {
+  id          String            @id @default(uuid()) @db.Uuid
+  type        PaymentMethodType @unique
+  account     String
+  accountName String
+  enabled     Boolean
+  version     Int               @default(1)
+  updatedAt   DateTime          @updatedAt
+}
+
+model TopupPackage {
+  id        String    @id @default(uuid()) @db.Uuid
+  label     String
+  kind      TopupKind
+  points    Int
+  enabled   Boolean   @default(true)
+  version   Int       @default(1)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model ReceiptEvidence {
+  id          String        @id @default(uuid()) @db.Uuid
+  ownerUserId String        @db.Uuid
+  owner       User          @relation(fields: [ownerUserId], references: [id])
+  objectKey   String        @unique
+  assetId     String        @unique
+  contentHash String        @unique
+  mimeType    String
+  bytes       Int
+  createdAt   DateTime      @default(now())
+  topup       TopupRequest?
+
+  @@index([ownerUserId, createdAt])
+}
+
+// Corrections preserve the original sale/visit and its sealed postings.
+enum OperationReviewKind {
+  VISIT_CANCEL
+  SALE_CORRECTION
+}
+
+model OperationReview {
+  id               String              @id @default(uuid()) @db.Uuid
+  kind             OperationReviewKind
+  visitId          String?             @unique @db.Uuid
+  saleId           String?             @unique @db.Uuid
+  branchId         String              @db.Uuid
+  requestorId      String              @db.Uuid
+  reason           String
+  evidenceText     String
+  evidenceId       String?             @db.Uuid
+  status           RequestStatus       @default(PENDING)
+  idempotencyKey   String              @unique
+  requestHash      String
+  reviewedById     String?             @db.Uuid
+  reviewReason     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime            @default(now())
+
+  @@index([requestorId, createdAt])
+  @@index([status, createdAt])
+}
+
+model VisitCancellation {
+  id                   String   @id @default(uuid()) @db.Uuid
+  visitId              String   @unique @db.Uuid
+  actorId              String   @db.Uuid
+  reason               String
+  reviewId             String?  @unique @db.Uuid
+  idempotencyKey       String   @unique
+  requestHash          String
+  pointTransactionId   String   @unique @db.Uuid
+  moneyTransactionId   String   @unique @db.Uuid
+  createdAt            DateTime @default(now())
+}
+
+model WithdrawalCalendar {
+  id                 String   @id @default(uuid()) @db.Uuid
+  version            Int      @unique
+  workdays           Int[]
+  holidays           String[]
+  countAcceptanceDay Boolean
+  deadlineHour       Int
+  deadlineMinute     Int
+  createdById        String   @db.Uuid
+  createdAt          DateTime @default(now())
+}
+
+model WithdrawalAction {
+  id             String   @id @default(uuid()) @db.Uuid
+  withdrawalId   String   @db.Uuid
+  actorId        String   @db.Uuid
+  kind           String
+  reason         String
+  idempotencyKey String   @unique
+  requestHash    String
+  createdAt      DateTime @default(now())
+
+  @@index([withdrawalId, createdAt])
+}
+
+model WithdrawalFeedback {
+  id           String   @id @default(uuid()) @db.Uuid
+  withdrawalId String   @unique @db.Uuid
+  actorId      String   @db.Uuid
+  kind         String
+  reason       String
+  createdAt    DateTime @default(now())
+}
+
+model FinancialEvidenceUse {
+  receiptId    String   @id @db.Uuid
+  topupId      String?  @unique @db.Uuid
+  withdrawalId String?  @unique @db.Uuid
+  createdAt    DateTime @default(now())
 }

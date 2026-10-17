@@ -2,7 +2,8 @@
 
 Implements the [17 October 2026 approved decision](DECISIONS.md) using the existing
 Fastify/Prisma identity and hashed bearer sessions. This is backend functionality;
-Flutter and Next.js applications are still planned and do not yet have login UI.
+The Next.js dashboard now has login UI, including a temporary trainee wallet/QR panel.
+Flutter remains planned; see WEB_DASHBOARD.md and CASHIER_VISITS.md.
 
 ## Endpoints
 
@@ -103,3 +104,10 @@ deployed migrations as an automatic rollback.
 
 References: [Node crypto](https://nodejs.org/docs/latest-v22.x/api/crypto.html),
 [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
+
+## Dashboard admin increment
+
+Platform admins can now sign in via `/auth/admin/login` after private operator
+provisioning. Admin sessions last eight hours. Password change now also supports
+admins with the same credential confirmation and session revocation. Dashboard
+cookies and provisioning details: [WEB_DASHBOARD.md](WEB_DASHBOARD.md).

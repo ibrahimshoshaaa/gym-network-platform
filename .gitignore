@@ -12,3 +12,6 @@ build/
 coverage/
 *.log
 .DS_Store
+
+
+*.tsbuildinfo

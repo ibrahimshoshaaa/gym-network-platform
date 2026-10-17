@@ -64,3 +64,16 @@ jobs:
         env:
           DATABASE_URL: postgresql://gym_app:gym_app@localhost:5432/gym_ci?schema=public
         run: pnpm --filter @gym/api test:db
+
+      - name: Typecheck dashboard
+        run: pnpm --filter @gym/web typecheck
+      - name: Test dashboard gateway security and money conversion
+        run: pnpm --filter @gym/web test
+      - name: Build dashboard
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: pnpm --filter @gym/web build
+      - name: Test dashboard HTTP flow through API and PostgreSQL
+        env:
+          DATABASE_URL: postgresql://gym_app:gym_app@localhost:5432/gym_ci?schema=public
+        run: pnpm --filter @gym/web test:live
