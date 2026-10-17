@@ -8,6 +8,10 @@
     "typecheck": "pnpm --filter @gym/api typecheck && pnpm --filter @gym/web typecheck",
     "db:generate": "pnpm --filter @gym/api db:generate",
     "db:validate": "pnpm --filter @gym/api db:validate",
-    "dev:web": "pnpm --filter @gym/web dev"
+    "dev:web": "pnpm --filter @gym/web dev",
+    "build:neon": "node scripts/build-neon.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

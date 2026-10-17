@@ -5,8 +5,25 @@ import {
   boundedBody,
   checkOrigin,
   apiOrigin,
+  apiHeaders,
 } from "../lib/security";
 import { decimal, minorUnits } from "../lib/client";
+
+test('Neon origin credential comes only from server configuration and keeps user auth separate', () => {
+  const previous = process.env.API_ORIGIN_SECRET;
+  try {
+    delete process.env.API_ORIGIN_SECRET;
+    assert.equal(apiHeaders({ 'x-gym-origin-secret': 'untrusted' }).has('x-gym-origin-secret'), false);
+    process.env.API_ORIGIN_SECRET = 'test-server-only-origin-secret';
+    const headers = apiHeaders(new Headers({ 'content-type': 'image/jpeg', 'x-gym-origin-secret': 'untrusted' }), 'user-session');
+    assert.equal(headers.get('x-gym-origin-secret'), process.env.API_ORIGIN_SECRET);
+    assert.equal(headers.get('authorization'), 'Bearer user-session');
+    assert.equal(headers.get('content-type'), 'image/jpeg');
+  } finally {
+    if (previous === undefined) delete process.env.API_ORIGIN_SECRET;
+    else process.env.API_ORIGIN_SECRET = previous;
+  }
+});
 
 test("gateway allows only explicit financial UI routes and UUID parameters", () => {
   const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";

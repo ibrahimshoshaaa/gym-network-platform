@@ -6,6 +6,15 @@ export class GatewayError extends Error {
     super(code);
   }
 }
+export function apiHeaders(initial?: HeadersInit, token?: string) {
+  const headers = new Headers(initial);
+  if (token) headers.set('authorization', `Bearer ${token}`);
+  // Transport credential is read only on the server. Never forward a caller's
+  // claimed origin credential when this deployment has not configured one.
+  headers.delete('x-gym-origin-secret');
+  if (process.env.API_ORIGIN_SECRET) headers.set('x-gym-origin-secret', process.env.API_ORIGIN_SECRET);
+  return headers;
+}
 export function apiOrigin() {
   const value =
     process.env.API_INTERNAL_URL ??

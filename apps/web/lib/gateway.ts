@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { apiOrigin, GatewayError } from "./security";
+import { apiOrigin, apiHeaders, GatewayError } from "./security";
 export const cookieName = () =>
   process.env.NODE_ENV === "production" ? "__Host-gym_session" : "gym_session";
 export const cookieOptions = () => ({
@@ -28,10 +28,7 @@ export async function upstream(
   try {
     return await fetch(`${apiOrigin()}/${path}`, {
       ...init,
-      headers: {
-        ...init.headers,
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
+      headers: apiHeaders(init.headers, token),
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(25000),
