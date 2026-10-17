@@ -891,6 +891,208 @@ test(
         ).status,
         200,
       );
+      // Manual withdrawals reserve one consolidated gym wallet, snapshot the
+      // destination/calendar, record proof and retain a paid-transfer dispute.
+      const earnTicket = await (
+        await request("/api/backend/trainee/qr", {
+          cookie: traineeCookie,
+          method: "POST",
+          body: {},
+        })
+      ).json();
+      const earnedResponse = await request(
+        `/api/backend/cashier/branches/${newBranch.branch.id}/visits`,
+        {
+          cookie: cashierCookie,
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: { ...entryBody, token: earnTicket.token },
+        },
+      );
+      assert.equal(earnedResponse.status, 201);
+      const earned = await earnedResponse.json();
+      const payoutBody = {
+        amountPiasters: "1000",
+        paymentMethod: "INSTAPAY",
+        destinationAccount: "synthetic-owner@instapay",
+        destinationName: "Synthetic Gym Beneficiary",
+      };
+      const makeWithdrawal = (key = randomUUID()) =>
+        request(`/api/backend/gyms/${newGym.gym.id}/withdrawals`, {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          headers: { "idempotency-key": key },
+          body: payoutBody,
+        });
+      assert.equal(
+        (
+          await request(`/api/backend/gyms/${newGym.gym.id}/withdrawals`, {
+            cookie: ownerCookie,
+            method: "POST",
+            headers: { "idempotency-key": randomUUID() },
+            body: payoutBody,
+          })
+        ).status,
+        403,
+      );
+      const pendingResponse = await makeWithdrawal();
+      assert.equal(pendingResponse.status, 200);
+      const pending = await pendingResponse.json();
+      const cancelKey = randomUUID();
+      const cancelWithdrawal = () =>
+        request(`/api/backend/withdrawals/${pending.id}/cancel`, {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          headers: { "idempotency-key": cancelKey },
+          body: { reason: "Synthetic owner corrected withdrawal" },
+        });
+      assert.equal((await cancelWithdrawal()).status, 200);
+      assert.equal((await cancelWithdrawal()).status, 200);
+      const withdrawalKey = randomUUID();
+      const withdrawalResponse = await makeWithdrawal(withdrawalKey);
+      assert.equal(withdrawalResponse.status, 200);
+      const withdrawal = await withdrawalResponse.json();
+      assert.equal(
+        (await (await makeWithdrawal(withdrawalKey)).json()).id,
+        withdrawal.id,
+      );
+      const currentCalendar = await (
+        await request("/api/backend/admin/withdrawal-calendar", { cookie })
+      ).json();
+      const calendarResponse = await request(
+        "/api/backend/admin/withdrawal-calendar",
+        {
+          cookie,
+          method: "POST",
+          body: {
+            expectedVersion: currentCalendar.calendar?.version ?? 0,
+            workdays: [1, 2, 3, 4, 5],
+            holidays: [],
+            countAcceptanceDay: false,
+            deadlineHour: 17,
+            deadlineMinute: 0,
+          },
+        },
+      );
+      assert.equal(calendarResponse.status, 200);
+      const payoutCalendar = await calendarResponse.json();
+      const acceptWithdrawal = await request(
+        `/api/backend/admin/withdrawals/${withdrawal.id}/review`,
+        {
+          cookie,
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: {
+            decision: "APPROVE",
+            reason: "Synthetic payout destination independently verified",
+            calendarVersion: payoutCalendar.version,
+            destinationVerified: true,
+          },
+        },
+      );
+      assert.equal(acceptWithdrawal.status, 200);
+      const acceptedWithdrawal = await acceptWithdrawal.json();
+      assert.ok(acceptedWithdrawal.acceptedAt);
+      assert.ok(acceptedWithdrawal.dueAt);
+      const transferProof = await db.receiptEvidence.create({
+        data: {
+          ownerUserId: admin.id,
+          objectKey: `synthetic-payout/${id}`,
+          assetId: `payout-${id}`,
+          contentHash: `payout-${id}`,
+          mimeType: "image/jpeg",
+          bytes: 10,
+        },
+      });
+      const paymentKey = randomUUID(),
+        payoutReference = `PAYOUT-${id}`;
+      const registerPayment = () =>
+        request(`/api/backend/admin/withdrawals/${withdrawal.id}/payment`, {
+          cookie,
+          method: "POST",
+          headers: { "idempotency-key": paymentKey },
+          body: {
+            proofReceiptId: transferProof.id,
+            transferReference: payoutReference,
+            transferredAmountPiasters: "1000",
+            fundsTransferred: true,
+            proofReviewed: true,
+            reason: "Synthetic external transfer confirmed",
+          },
+        });
+      assert.equal((await registerPayment()).status, 200);
+      assert.equal((await registerPayment()).status, 200);
+      const ownWithdrawalDetail = await request(
+        `/api/backend/withdrawals/${withdrawal.id}`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(ownWithdrawalDetail.status, 200);
+      assert.equal(
+        (await ownWithdrawalDetail.json()).withdrawal.proofReceiptId,
+        transferProof.id,
+      );
+      assert.equal(
+        (
+          await request(`/api/backend/withdrawals/${withdrawal.id}`, {
+            cookie: ownerCookie,
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await request(`/api/backend/receipts/${transferProof.id}/access`, {
+            cookie: ownerCookie,
+          })
+        ).status,
+        403,
+      );
+      const feedbackKey = randomUUID();
+      const disputePayment = () =>
+        request(`/api/backend/withdrawals/${withdrawal.id}/feedback`, {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          headers: { "idempotency-key": feedbackKey },
+          body: {
+            kind: "DISPUTE",
+            reason: "Synthetic owner reported transfer not received",
+          },
+        });
+      assert.equal((await disputePayment()).status, 200);
+      assert.equal((await disputePayment()).status, 200);
+      const afterPayout = await (
+        await request(`/api/backend/gyms/${newGym.gym.id}/receivables`, {
+          cookie: invitedOwnerCookie,
+        })
+      ).json();
+      assert.equal(
+        afterPayout.accounts.find((a) => a.type === "GYM_AVAILABLE")
+          .balancePiasters,
+        "2000",
+      );
+      assert.equal(
+        afterPayout.accounts.find((a) => a.type === "GYM_RESERVED")
+          .balancePiasters,
+        "0",
+      );
+      assert.equal(
+        afterPayout.accounts.find((a) => a.type === "GYM_PAID").balancePiasters,
+        "1000",
+      );
+      const unsafeClawback = await request(
+        `/api/backend/operations/branches/${newBranch.branch.id}/visits/${earned.visit.id}/cancel`,
+        {
+          cookie: managerCookie,
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: { reason: "Synthetic already settled visit correction" },
+        },
+      );
+      assert.equal(unsafeClawback.status, 409);
+      assert.equal(
+        (await unsafeClawback.json()).code,
+        "SETTLEMENT_REVIEW_REQUIRED",
+      );
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },

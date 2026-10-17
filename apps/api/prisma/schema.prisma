@@ -92,6 +92,7 @@ enum MoneyTxKind {
 }
 
 enum WithdrawalStatus {
+  CANCELLED
   REQUESTED
   APPROVED
   REJECTED
@@ -396,6 +397,25 @@ model WithdrawalRequest {
   transferProofKey String?
   rejectionReason  String?
 
+  requestorId          String            @db.Uuid
+  idempotencyKey       String            @unique
+  requestHash          String
+  paymentMethod        PaymentMethodType
+  destinationAccount   String
+  destinationName      String
+  reserveTransactionId String            @unique @db.Uuid
+  releaseTransactionId String?           @unique @db.Uuid
+  paymentTransactionId String?           @unique @db.Uuid
+  calendarId           String?           @db.Uuid
+  dueAt                DateTime?
+  reviewReason         String?
+  closedAt             DateTime?
+  closedById           String?           @db.Uuid
+  paidById             String?           @db.Uuid
+  proofReceiptId       String?           @unique @db.Uuid
+  transferReference    String?           @unique
+  delayReason          String?
+
   @@index([gymId, status])
 }
 
@@ -565,4 +585,45 @@ model VisitCancellation {
   pointTransactionId   String   @unique @db.Uuid
   moneyTransactionId   String   @unique @db.Uuid
   createdAt            DateTime @default(now())
+}
+
+model WithdrawalCalendar {
+  id                 String   @id @default(uuid()) @db.Uuid
+  version            Int      @unique
+  workdays           Int[]
+  holidays           String[]
+  countAcceptanceDay Boolean
+  deadlineHour       Int
+  deadlineMinute     Int
+  createdById        String   @db.Uuid
+  createdAt          DateTime @default(now())
+}
+
+model WithdrawalAction {
+  id             String   @id @default(uuid()) @db.Uuid
+  withdrawalId   String   @db.Uuid
+  actorId        String   @db.Uuid
+  kind           String
+  reason         String
+  idempotencyKey String   @unique
+  requestHash    String
+  createdAt      DateTime @default(now())
+
+  @@index([withdrawalId, createdAt])
+}
+
+model WithdrawalFeedback {
+  id           String   @id @default(uuid()) @db.Uuid
+  withdrawalId String   @unique @db.Uuid
+  actorId      String   @db.Uuid
+  kind         String
+  reason       String
+  createdAt    DateTime @default(now())
+}
+
+model FinancialEvidenceUse {
+  receiptId    String   @id @db.Uuid
+  topupId      String?  @unique @db.Uuid
+  withdrawalId String?  @unique @db.Uuid
+  createdAt    DateTime @default(now())
 }

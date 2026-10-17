@@ -27,12 +27,14 @@ import { Login } from "./login";
 import { SettingsPanel } from "./settings";
 import { Cashier, TraineeQr } from "./operations";
 import { OperationReviews } from "./operation-reviews";
+import { Withdrawals } from "./withdrawals";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "withdrawals"
   | "operation-reviews"
   | "cashier"
   | "trainee"
@@ -44,6 +46,12 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {
+    id: "withdrawals" as const,
+    label: "السحب والتسويات",
+    icon: CreditCard,
+    description: "طلبات السحب اليدوي والإثبات وتأكيد الاستلام والاعتراض",
+  },
   {
     id: "operation-reviews" as const,
     label: "الإلغاء والتصحيح",
@@ -184,12 +192,14 @@ export function Dashboard() {
     );
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
-      admin
-        ? !["purchases", "cashier", "trainee"].includes(t.id)
-        : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
-            t.id,
-          ) ||
-          (user.role === "TRAINEE" && t.id === "trainee"),
+      t.id === "withdrawals"
+        ? admin || user.role === "GYM_OWNER"
+        : admin
+          ? !["purchases", "cashier", "trainee"].includes(t.id)
+          : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
+              t.id,
+            ) ||
+            (user.role === "TRAINEE" && t.id === "trainee"),
     ),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   return (
@@ -290,7 +300,9 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "operation-reviews" ? (
+          {current.id === "withdrawals" ? (
+            <Withdrawals admin={admin} />
+          ) : current.id === "operation-reviews" ? (
             <OperationReviews admin={admin} />
           ) : current.id === "cashier" ? (
             <Cashier />

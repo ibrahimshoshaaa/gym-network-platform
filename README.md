@@ -69,3 +69,5 @@ No hosted deployment or default admin credentials are included.
 Trainees can use the temporary web wallet/QR panel; Flutter remains planned.
 
 Visit cancellation, correction reviews, safeguards and remaining policy decisions: [docs/OPERATION_REVIEWS.md](docs/OPERATION_REVIEWS.md).
+
+Gym withdrawal reservation, manual proof, business calendar and remaining settlement policies: [docs/WITHDRAWALS.md](docs/WITHDRAWALS.md).

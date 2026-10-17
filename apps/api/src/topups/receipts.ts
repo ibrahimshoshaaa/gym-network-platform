@@ -68,6 +68,9 @@ export async function uploadReceipt(db: PrismaClient, storage: ReceiptStorage, a
 export async function accessReceipt(db: PrismaClient, storage: ReceiptStorage, actorId: string, id: string) {
   const user = await requireActor(db, actorId);
   const receipt = await db.receiptEvidence.findUnique({ where: { id } });
-  if (!receipt || (receipt.ownerUserId !== actorId && user.role !== 'PLATFORM_ADMIN')) throw new DomainError('RECEIPT_ACCESS_DENIED');
+  if (!receipt) throw new DomainError('RECEIPT_ACCESS_DENIED');
+  if (receipt.ownerUserId !== actorId && user.role !== 'PLATFORM_ADMIN' && !await db.withdrawalRequest.findFirst({
+    where: { proofReceiptId: id, status: { in: ['PAID', 'DISPUTED'] }, gym: { ownerId: actorId, ownerAcceptedAt: { not: null } } }, select: { id: true }
+  })) throw new DomainError('RECEIPT_ACCESS_DENIED');
   return { url: storage.readUrl(receipt.objectKey), expiresInSeconds: 60 };
 }

@@ -78,9 +78,10 @@ export async function submitTopup(db: PrismaClient, actorId: string, key: string
       const method = await tx.paymentMethod.findUnique({ where: { type: data.paymentMethod } });
       if (!method?.enabled) throw new DomainError('PAYMENT_METHOD_UNAVAILABLE');
       if (method.version !== data.paymentMethodVersion) throw new DomainError('STALE_SETTINGS');
+      await tx.$queryRaw`SELECT id FROM "ReceiptEvidence" WHERE id=${data.receiptId}::uuid FOR UPDATE`;
       const receipt = await tx.receiptEvidence.findUnique({ where: { id: data.receiptId } });
       if (!receipt || receipt.ownerUserId !== actorId) throw new DomainError('RECEIPT_ACCESS_DENIED');
-      if (await tx.topupRequest.findUnique({ where: { receiptId: receipt.id } })) throw new DomainError('RECEIPT_ALREADY_USED');
+      if (await tx.topupRequest.findUnique({ where: { receiptId: receipt.id } }) || await tx.withdrawalRequest.findUnique({ where: { proofReceiptId: receipt.id } })) throw new DomainError('RECEIPT_ALREADY_USED');
       const request = await tx.topupRequest.create({ data: {
         requestorUserId: actorId, kind: data.kind, receivingBranchId: data.receivingBranchId, points: q.points, chargePiasters: q.chargePiasters,
         receiptObjectKey: receipt.objectKey, receiptId: receipt.id, policyId: q.policy.id, unitPricePiasters: q.policy.pointPricePiasters, discountBps: q.discountBps, redemptionBps: q.policy.redemptionBps,

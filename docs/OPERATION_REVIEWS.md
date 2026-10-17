@@ -63,9 +63,10 @@ produce one result. Requestors can see the decision and reason in their history.
   balance also blocks. This deliberately conservative guard leaves reviews pending;
   it does not invent debt or debit future earnings. Later withdrawals need explicit
   allocation/provenance and an approved paid-out correction policy.
-- Withdrawal request/reserve/approval/payment/dispute execution is still pending.
-  Three business days from acceptance is approved, but workdays, holidays, cutoff
-  rules and payout destination validation must remain configurable or be decided.
+- Withdrawal request/reserve/approval/payment/dispute recording is implemented in
+  [WITHDRAWALS.md](WITHDRAWALS.md), with an explicitly configured business calendar.
+  Paid-out visit correction, debt/repayment execution and per-visit settlement
+  allocation remain pending decisions/workflows.
 
 ## Database and web guarantees
 

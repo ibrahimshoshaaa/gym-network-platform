@@ -53,6 +53,9 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  CALENDAR_NOT_CONFIGURED: "اضبط سياسة أيام العمل والعطلات قبل قبول طلب السحب.",
+  CALENDAR_CUTOFF_INVALID: "موعد نهاية العمل غير صالح في هذا التقويم. راجع الأيام والساعة.",
+  DELAY_REASON_REQUIRED: "المهلة انتهت. اكتب سبب تأخر التحويل لتوثيقه.",
   CANCEL_WINDOW_CLOSED:
     "فاتت أول ١٠ دقائق؛ قدم طلب مراجعة للإدارة مع السبب والأدلة.",
   VISIT_ALREADY_CANCELLED: "الزيارة ملغاة بالفعل. لم تُرد النقاط مرة أخرى.",

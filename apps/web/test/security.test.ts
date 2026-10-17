@@ -168,3 +168,30 @@ test("operation review and cancellation proxy routes remain explicit and scoped"
     assert.equal(allowedPath("POST", path), false);
   assert.equal(allowedPath("DELETE", "operation-reviews"), false);
 });
+
+test("withdrawal proxy separates owner actions from admin review and payment routes", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  for (const path of [
+    "admin/withdrawal-calendar",
+    "admin/withdrawals",
+    `gyms/${id}/withdrawals`,
+    `withdrawals/${id}`,
+  ])
+    assert.equal(allowedPath("GET", path), true);
+  for (const path of [
+    "admin/withdrawal-calendar",
+    `gyms/${id}/withdrawals`,
+    `admin/withdrawals/${id}/review`,
+    `admin/withdrawals/${id}/payment`,
+    `withdrawals/${id}/cancel`,
+    `withdrawals/${id}/feedback`,
+  ])
+    assert.equal(allowedPath("POST", path), true);
+  for (const path of [
+    `withdrawals/${id}/payment`,
+    `admin/withdrawals/${id}/feedback`,
+    `withdrawals/not-a-uuid/cancel`,
+  ])
+    assert.equal(allowedPath("POST", path), false);
+  assert.equal(allowedPath("DELETE", `withdrawals/${id}`), false);
+});
