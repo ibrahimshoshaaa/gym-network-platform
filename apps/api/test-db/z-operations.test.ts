@@ -1240,3 +1240,20 @@ test("database rejects a balanced but incomplete cancellation reversal atomicall
     0,
   );
 });
+
+test("different review keys racing for the same operation return one case and a scoped conflict", async () => {
+  const f = await visited();
+  const results = await Promise.allSettled(
+    [f.manager.id, f.person.id].map((actorId) =>
+      requestReview(db, actorId, randomUUID(), reviewBody(f.visit.id)),
+    ),
+  );
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  const failure = results.find((r) => r.status === "rejected");
+  assert.ok(failure?.status === "rejected");
+  assert.equal(failure.reason.code, "OPERATION_REVIEW_EXISTS");
+  assert.equal(
+    await db.operationReview.count({ where: { visitId: f.visit.id } }),
+    1,
+  );
+});

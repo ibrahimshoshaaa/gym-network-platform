@@ -235,6 +235,26 @@ export async function cancelVisit(
     );
   });
 }
+async function reviewSerializable<T>(
+  db: PrismaClient,
+  run: (tx: Tx) => Promise<T>,
+): Promise<T> {
+  try {
+    return await serializable(db, run);
+  } catch (error) {
+    // A waiting serializable snapshot can miss the case just committed under
+    // another key. Refresh it to replay the winner or report a scoped conflict.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      ["visitId", "saleId"].some((column) =>
+        String(error.meta?.target).includes(column),
+      )
+    )
+      return serializable(db, run);
+    throw error;
+  }
+}
 export async function requestReview(
   db: PrismaClient,
   actorId: string,
@@ -245,7 +265,7 @@ export async function requestReview(
   parse(uuid, key);
   const idempotencyKey = `opreview:${actorId}:${key}`,
     requestHash = digest(data);
-  return serializable(db, async (tx) => {
+  return reviewSerializable(db, async (tx) => {
     const actor = await requireActor(tx, actorId);
     await lock(tx, idempotencyKey);
     // Serialize different keys for the same target, too. A second request never
