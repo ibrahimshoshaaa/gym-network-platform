@@ -49,14 +49,6 @@ export function registerTopupRoutes(app: FastifyInstance, db: PrismaClient, stor
     });
   }
   app.post('/admin/topups/:requestId/review', async r => reviewTopup(db, await actorId(db, r), id(r, 'requestId'), r.body));
-  app.get('/trainee/wallet', async r => {
-    const userId = await actorId(db, r);
-    const user = await requireActor(db, userId);
-    if (user.role !== 'TRAINEE') throw new DomainError('ACCESS_DENIED');
-    const wallet = await db.pointAccount.findUnique({ where: { type_ownerUserId: { type: 'TRAINEE_WALLET', ownerUserId: userId } }, select: { balance: true, expiresAt: true } });
-    if (!wallet) throw new DomainError('ACCOUNT_NOT_FOUND');
-    return wallet;
-  });
   app.addContentTypeParser(['image/jpeg', 'image/png', 'image/webp'], { parseAs: 'buffer', bodyLimit: receiptLimit }, (_r, body, done) => done(null, body));
   app.post('/receipts', { bodyLimit: receiptLimit, onRequest: async r => {
     const userId = await actorId(db, r);

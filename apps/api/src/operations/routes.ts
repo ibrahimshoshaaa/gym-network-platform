@@ -169,19 +169,6 @@ export function registerOperationRoutes(
     await consumeAuthLimit(db, "qr-issue", id, 12, 60);
     return issueQr(db, id, r.headers.authorization!.slice(7));
   });
-  app.get("/trainee/visits", async (r) => {
-    const id = await actorId(db, r),
-      p = args(r);
-    return db.$transaction(async (tx) => {
-      const user = await requireActor(tx, id);
-      if (user.role !== "TRAINEE") throw new DomainError("ACCESS_DENIED");
-      return page(
-        await tx.visit.findMany({ ...p, where: { traineeId: id } }),
-        p.take,
-        visitView,
-      );
-    });
-  });
   for (const kind of ["sales", "visits"] as const)
     app.get(`/operations/branches/:branchId/${kind}`, async (r) => {
       const id = await actorId(db, r),

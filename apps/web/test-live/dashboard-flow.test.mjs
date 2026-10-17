@@ -1451,6 +1451,105 @@ test(
         ).status,
         200,
       );
+      const walletSnapshotResponse = await request(
+        "/api/backend/trainee/wallet",
+        { cookie: traineeCookie },
+      );
+      assert.equal(walletSnapshotResponse.status, 200);
+      const walletSnapshot = await walletSnapshotResponse.json();
+      assert.equal(walletSnapshot.balance, 30);
+      assert.equal(walletSnapshot.spendablePoints, 30);
+      assert.equal(walletSnapshot.unavailablePoints, 0);
+      assert.equal(walletSnapshot.status, "VALID");
+      assert.ok(walletSnapshot.serverTime);
+      const pointHistoryResponse = await request(
+        "/api/backend/trainee/wallet/movements?limit=1",
+        { cookie: traineeCookie },
+      );
+      assert.equal(pointHistoryResponse.status, 200);
+      assert.match(
+        pointHistoryResponse.headers.get("cache-control"),
+        /no-store/,
+      );
+      const pointPage = await pointHistoryResponse.json();
+      assert.equal(pointPage.items.length, 1);
+      assert.ok(pointPage.nextCursor);
+      const pointHistory = await (
+        await request("/api/backend/trainee/wallet/movements", {
+          cookie: traineeCookie,
+        })
+      ).json();
+      assert.equal(
+        pointHistory.items.reduce((sum, m) => sum + m.delta, 0),
+        30,
+      );
+      assert.equal(
+        pointHistory.items.filter((m) => m.operation === "SALE").length,
+        1,
+      );
+      assert.equal(
+        pointHistory.items.filter((m) => m.operation === "VISIT").length,
+        3,
+      );
+      assert.equal(
+        pointHistory.items.filter((m) => m.operation === "VISIT_CANCELLATION")
+          .length,
+        2,
+      );
+      assert.equal(
+        JSON.stringify(pointHistory).includes("settlementPiasters"),
+        false,
+      );
+      assert.equal(JSON.stringify(pointHistory).includes("requestHash"), false);
+      const onlySales = await (
+        await request(
+          "/api/backend/trainee/wallet/movements?operation=SALE&limit=1",
+          { cookie: traineeCookie },
+        )
+      ).json();
+      assert.equal(onlySales.items.length, 1);
+      assert.equal(onlySales.items[0].delta, 60);
+      assert.equal(onlySales.items[0].referenceId, sold.id);
+      const activeSessions = await request(
+        "/api/backend/trainee/active-visits",
+        { cookie: traineeCookie },
+      );
+      assert.equal(activeSessions.status, 200);
+      const activeSession = (await activeSessions.json()).items[0];
+      assert.equal(activeSession.id, earned.visit.id);
+      assert.equal(activeSession.branch.id, newBranch.branch.id);
+      assert.ok(activeSession.serverTime);
+      assert.equal("settlementPiasters" in activeSession, false);
+      const ownVisitHistory = await request("/api/backend/trainee/visits", {
+        cookie: traineeCookie,
+      });
+      assert.equal(ownVisitHistory.status, 200);
+      const ownVisits = (await ownVisitHistory.json()).items;
+      assert.equal(ownVisits.length, 3);
+      assert.equal(ownVisits.filter((v) => v.status === "CANCELLED").length, 2);
+      assert.equal(ownVisits[0].id, earned.visit.id);
+      assert.equal(JSON.stringify(ownVisits).includes("cashierId"), false);
+      assert.equal(
+        (
+          await request("/api/backend/trainee/wallet/movements", {
+            cookie: invitedOwnerCookie,
+          })
+        ).status,
+        403,
+      );
+      assert.equal(
+        (await request("/api/backend/trainee/wallet/movements")).status,
+        401,
+      );
+      assert.equal(
+        (
+          await request(
+            `/api/backend/trainee/wallet/movements?userId=${traineeIdentity.user.id}`,
+            { cookie: traineeCookie },
+          )
+        ).status,
+        400,
+      );
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },

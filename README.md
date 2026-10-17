@@ -68,7 +68,7 @@ pnpm --filter @gym/web dev
 
 No hosted deployment or default admin credentials are included.
 
-Trainees can use the temporary web wallet/QR panel and the
+Trainees can use the [web wallet, activity and session panel](docs/TRAINEE_WALLET.md) and the
 [participating branch directory](docs/TRAINEE_DIRECTORY.md); Flutter remains planned.
 
 Visit cancellation, correction reviews, safeguards and remaining policy decisions: [docs/OPERATION_REVIEWS.md](docs/OPERATION_REVIEWS.md).

@@ -248,3 +248,15 @@ test("directory proxy exposes only explicit read-only branch listing and detail"
   ])
     assert.equal(allowedPath("GET", path), false);
 });
+
+test("trainee wallet proxy allows only own read endpoints without arbitrary accounts", () => {
+  for (const path of [
+    "trainee/wallet/movements",
+    "trainee/active-visits",
+    "trainee/visits",
+  ]) {
+    assert.equal(allowedPath("GET", path), true);
+    assert.equal(allowedPath("POST", path), false);
+  }
+  assert.equal(allowedPath("GET", "trainee/wallet/some-user/movements"), false);
+});

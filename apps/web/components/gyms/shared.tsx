@@ -116,7 +116,7 @@ export function usePage<T extends { id: string }>(path: string | null) {
       setError("");
       try {
         const result = await api<Page<T>>(
-          `${path}?limit=25${next ? `&cursor=${next}` : ""}`,
+          `${path}${path.includes("?") ? "&" : "?"}limit=25${next ? `&cursor=${next}` : ""}`,
         );
         if (version.current === current) {
           setRows((old) =>

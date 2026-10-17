@@ -4,6 +4,7 @@ import { Camera, RefreshCw, ScanLine, Coins, CheckCircle2 } from "lucide-react";
 import { useCommand } from "../lib/use-financial-command";
 import { RequestAction, VisitCancelAction } from "./operation-reviews";
 import { QRCodeSVG } from "qrcode.react";
+import { TraineeWallet } from "./trainee-wallet";
 import { api, send, message, decimal, minorUnits, date } from "../lib/client";
 import { Busy, Empty, Field, Notice } from "./ui";
 import { More, usePage } from "./gyms/shared";
@@ -709,43 +710,40 @@ export function TraineeQr() {
       expiresAt: string;
       serverTime: string;
     } | null>(null),
-    [wallet, setWallet] = useState<{
-      balance: number;
-      expiresAt: string | null;
-    } | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [left, setLeft] = useState(0);
+    [left, setLeft] = useState(0),
+    [revision, setRevision] = useState(0);
   const until = useRef(0),
-    visits = usePage<Visit>("trainee/visits");
+    generation = useRef(0);
   async function renew() {
     if (busy) return;
+    const current = ++generation.current,
+      started = performance.now();
     setBusy(true);
     setError("");
     try {
-      const [code, balance] = await Promise.all([
-        api<{ token: string; expiresAt: string; serverTime: string }>(
-          "trainee/qr",
-          send({}),
-        ),
-        api<{ balance: number; expiresAt: string | null }>("trainee/wallet"),
-      ]);
+      const code = await api<{
+        token: string;
+        expiresAt: string;
+        serverTime: string;
+      }>("trainee/qr", send({}));
+      if (current !== generation.current) return;
       until.current =
-        performance.now() +
-        Math.max(
-          0,
-          new Date(code.expiresAt).getTime() -
-            new Date(code.serverTime).getTime(),
-        );
+        started +
+        Math.max(0, Date.parse(code.expiresAt) - Date.parse(code.serverTime));
       setQr(code);
-      setWallet(balance);
-      setLeft(Math.ceil((until.current - performance.now()) / 1000));
-      void visits.refresh();
+      setLeft(
+        Math.max(0, Math.ceil((until.current - performance.now()) / 1000)),
+      );
+      setRevision((v) => v + 1);
     } catch (e) {
-      setError(message(e));
-      setQr(null);
+      if (current === generation.current) {
+        setError(message(e));
+        setQr(null);
+      }
     } finally {
-      setBusy(false);
+      if (current === generation.current) setBusy(false);
     }
   }
   useEffect(() => {
@@ -756,102 +754,59 @@ export function TraineeQr() {
         ),
       500,
     );
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      generation.current++;
+    };
   }, []);
   return (
-    <>
-      <Notice text={error} />
-      <div className="settings-grid">
-        <section className="card trainee-code">
-          <h2>رمز دخول الجيم</h2>
-          <p className="muted">
-            اعرض الرمز للكاشير عند حضورك. الرمز لا يحتوي اسمك أو رقمك.
-          </p>
-          {qr && left > 0 ? (
-            <>
-              <QRCodeSVG
-                value={`gymqr:${qr.token}`}
-                size={224}
-                level="M"
-                title="رمز الدخول المؤقت"
+    <TraineeWallet revision={revision}>
+      <section className="card trainee-code">
+        <h2>رمز دخول الجيم</h2>
+        <Notice text={error} />
+        <p className="muted">
+          اعرض الرمز للكاشير عند حضورك. الرمز لا يحتوي اسمك أو رقمك؛ إصدار الرمز
+          لا يخصم نقاطًا.
+        </p>
+        {qr && left > 0 ? (
+          <>
+            <QRCodeSVG
+              value={`gymqr:${qr.token}`}
+              size={224}
+              level="M"
+              title="رمز الدخول المؤقت"
+            />
+            <p role="status">ينتهي بعد {left} ثانية</p>
+            <details>
+              <summary>نسخ الرمز عند تعذر الكاميرا</summary>
+              <input
+                readOnly
+                value={qr.token}
+                dir="ltr"
+                aria-label="رمز الدخول النصي"
+                autoComplete="off"
               />
-              <p role="status">ينتهي بعد {left} ثانية</p>
-              <details>
-                <summary>نسخ الرمز عند تعذر الكاميرا</summary>
-                <input
-                  readOnly
-                  value={qr.token}
-                  dir="ltr"
-                  aria-label="رمز الدخول النصي"
-                  autoComplete="off"
-                />
-              </details>
-            </>
-          ) : (
-            <Empty title={qr ? "انتهت صلاحية الرمز" : "الرمز جاهز للإصدار"}>
-              اضغط لعرض رمز جديد قصير الصلاحية.
-            </Empty>
-          )}
-          <button
-            className="primary full"
-            disabled={busy}
-            onClick={() => void renew()}
-          >
-            {busy ? (
-              <Busy />
-            ) : qr ? (
-              "إصدار رمز جديد وتحديث الرصيد"
-            ) : (
-              "إظهار رمز الدخول"
-            )}
-          </button>
-          {wallet && (
-            <div className="subtle-box">
-              <strong>رصيد المحفظة: {wallet.balance} نقطة</strong>
-              <p>
-                {wallet.expiresAt
-                  ? `الصلاحية حتى ${date(wallet.expiresAt)}`
-                  : "لا يوجد شحن سابق"}
-              </p>
-            </div>
-          )}
-        </section>
-        <section className="card">
-          <h2>سجل زياراتك</h2>
-          <Notice text={visits.error} />
-          {visits.loading && !visits.rows.length ? (
+            </details>
+          </>
+        ) : (
+          <Empty title={qr ? "انتهت صلاحية الرمز" : "الرمز جاهز للإصدار"}>
+            اضغط لعرض رمز جديد قصير الصلاحية.
+          </Empty>
+        )}
+        <button
+          className="primary full"
+          disabled={busy}
+          onClick={() => void renew()}
+        >
+          {busy ? (
             <Busy />
-          ) : !visits.rows.length ? (
-            <Empty title="لم تسجل زيارات بعد" />
+          ) : qr ? (
+            "إصدار رمز جديد وتحديث المحفظة"
           ) : (
-            <div className="timeline">
-              {visits.rows.map((v) => (
-                <article key={v.id}>
-                  <strong>
-                    {v.pointsCharged} نقطة ·{" "}
-                    {v.status === "ACTIVE"
-                      ? "سيشن قائم"
-                      : v.status === "EXPIRED"
-                        ? "انتهت المدة"
-                        : "ملغاة"}
-                  </strong>
-                  <p>تنتهي: {date(v.expiresAt)}</p>
-                  <small>مرجع: {v.id}</small>
-                  {v.cancellationReason && (
-                    <p className="subtle-box">
-                      سبب الإلغاء: {v.cancellationReason}
-                    </p>
-                  )}
-                  {v.status !== "CANCELLED" && (
-                    <RequestAction kind="VISIT_CANCEL" targetId={v.id} />
-                  )}
-                </article>
-              ))}
-            </div>
+            "إظهار رمز الدخول"
           )}
-          <More list={visits} />
-        </section>
-      </div>
-    </>
+        </button>
+      </section>
+    </TraineeWallet>
   );
 }

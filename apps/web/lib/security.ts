@@ -60,6 +60,7 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^trainee\/(?:wallet\/movements|active-visits)$/,
     /^directory\/branches$/,
     new RegExp(`^directory/branches/${uuid}$`),
     new RegExp(`^inventory/branches/${uuid}(?:/movements)?$`),

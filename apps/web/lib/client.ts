@@ -53,6 +53,7 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  WALLET_BUSY: "تعذر تحميل المحفظة الآن. حاول مرة أخرى بعد قليل.",
   DIRECTORY_BUSY: "دليل الفروع مشغول حاليًا. حاول مرة أخرى أو استخدم بحثًا أدق.",
   REPORT_BUSY: "التقرير كبير أو الخدمة مشغولة. قلّل الفترة أو اختَر جيمًا/فرعًا.",
   EXPORT_TOO_LARGE: "التقرير يتجاوز ٥٠٠٠ سجل. قلّل الفترة أو استخدم فلاتر أدق للتصدير.",
