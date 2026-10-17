@@ -1,15 +1,15 @@
 import { build } from 'esbuild';
 import { createRequire } from 'node:module';
-import { readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, stat, copyFile, symlink } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const work = path.join(root, 'build/neon');
+const work = path.join(root, 'apps/api/build/neon');
 const runtime = path.join(work, 'runtime');
 const apiRequire = createRequire(path.join(root, 'apps/api/package.json'));
-const sharpVersion = apiRequire('sharp/package.json').version;
+const sharpVersion = apiRequire('sharp').versions.sharp;
 const prismaVersion = apiRequire('@prisma/client/package.json').version;
 function run(command, args, cwd = root, env = process.env) {
   const result = spawnSync(command, args, { cwd, env, stdio: 'inherit' });
@@ -21,7 +21,7 @@ await mkdir(runtime, { recursive: true });
 // Generate an isolated JS client; the native Rust engine plus libvips exceeds
 // Neon's 10 MiB archive limit. Do not change the regular TCP/CI client.
 const schema = (await readFile(path.join(root, 'apps/api/prisma/schema.prisma'), 'utf8'))
-  .replace('provider = "prisma-client-js"', `provider = ${JSON.stringify(apiRequire.resolve('@prisma/client/generator-build/index.js'))}\n  output = "./client"\n  engineType = "client"`);
+  .replace('provider = "prisma-client-js"', 'provider = "prisma-client-js"\n  output = "./client"\n  engineType = "client"');
 await writeFile(path.join(work, 'schema.prisma'), schema);
 run('node', [apiRequire.resolve('prisma/build/index.js'), 'generate', '--schema', path.join(work, 'schema.prisma')]);
 const deps = path.join(work, 'deps');
@@ -45,9 +45,27 @@ await build({
   alias: { '@prisma/client': path.join(work, 'client/index.js') },
   banner: { js: "import{createRequire}from'node:module';import{fileURLToPath}from'node:url';import{dirname}from'node:path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=dirname(__filename);" },
 });
+// Generated Prisma resolves this WASM relative to config.dirname. Keeping the
+// schema at the bundle root prevents its fallback to the build-machine path.
+await copyFile(path.join(work, 'client/query_compiler_bg.wasm'), path.join(runtime, 'query_compiler_bg.wasm'));
+await copyFile(path.join(work, 'schema.prisma'), path.join(runtime, 'schema.prisma'));
+if (process.env.NEON_DB_SMOKE === 'true') {
+  // Exercise the actual bundled ORM query, using the CI host's sharp only for
+  // this invocation. The deploy archive then gets a fresh ARM64 install below.
+  await symlink(path.join(root, 'apps/api/node_modules'), path.join(runtime, 'node_modules'), 'dir');
+  try {
+    const smoke = `import api from ${JSON.stringify(path.join(runtime, 'index.mjs'))};const headers={'x-gym-origin-secret':process.env.API_ORIGIN_SECRET};const health=await api.fetch(new Request('https://ci.test/health',{headers}));if(health.status!==200)throw Error('Bundled health failed');headers.authorization='Bearer '+ 'a'.repeat(43);const result=await api.fetch(new Request('https://ci.test/me',{headers}));if(result.status!==401)throw Error('Bundled Prisma session lookup failed: '+result.status);console.log('Bundled Neon handler and Prisma model query smoke passed');process.exit(0);`;
+    run('node', ['--input-type=module', '-e', smoke], root, { ...process.env, API_ORIGIN_SECRET: 'disposable-ci-only-origin-secret-with-no-real-credentials' });
+  } finally {
+    await rm(path.join(runtime, 'node_modules'));
+  }
+}
 await writeFile(path.join(runtime, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
 // Install the published native ARM64/glibc addon, never a host-machine binary.
 run('npm', ['install', '--ignore-scripts', '--cpu=arm64', '--os=linux', '--libc=glibc', '--omit=dev', '--no-audit', '--no-fund', '--package-lock=false', `sharp@${sharpVersion}`], runtime);
+// npm also installs sharp's optional browser-WASM fallback. This archive runs
+// exclusively on ARM64/glibc and already carries the verified native addon.
+await rm(path.join(runtime, 'node_modules/@img/sharp-wasm32'), { recursive: true, force: true });
 // Native packages must contain AArch64 ELF files, not the local x64 build.
 run('python3', ['-c', `
 import pathlib, struct, zipfile

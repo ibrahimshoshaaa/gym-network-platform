@@ -87,5 +87,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gym-api-neon
-          path: build/neon/gym-api-neon.zip
+          path: apps/api/build/neon/gym-api-neon.zip
           retention-days: 7
