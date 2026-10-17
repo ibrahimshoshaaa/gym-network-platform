@@ -123,7 +123,7 @@ export function visitView(v: Visit) {
     branchPricingVersion: v.branchPricingVersion,
   };
 }
-export function lookupTrainee(
+export async function lookupTrainee(
   db: PrismaClient,
   actorId: string,
   branchId: string,
@@ -160,7 +160,7 @@ async function saleQuote(
   if (!stock) throw new DomainError("ACCOUNT_NOT_FOUND");
   return { user, p, charge, stock };
 }
-export function quoteSale(
+export async function quoteSale(
   db: PrismaClient,
   actorId: string,
   branchId: string,
@@ -179,7 +179,7 @@ export function quoteSale(
     };
   });
 }
-export function sellPoints(
+export async function sellPoints(
   db: PrismaClient,
   actorId: string,
   branchId: string,
@@ -352,7 +352,7 @@ async function visitQuote(
     throw new DomainError("INVALID_INPUT");
   return { branch, qr, user, p, active, account, settlement };
 }
-export function previewVisit(
+export async function previewVisit(
   db: PrismaClient,
   actorId: string,
   branchId: string,
@@ -391,7 +391,7 @@ async function visitAccounts(tx: Tx, gymId: string) {
     }),
   };
 }
-export function confirmVisit(
+export async function confirmVisit(
   db: PrismaClient,
   actorId: string,
   branchId: string,
