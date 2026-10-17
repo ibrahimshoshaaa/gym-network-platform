@@ -45,8 +45,10 @@ Admin pricing, InstaPay/wallet receiver settings, private Cloudinary receipts an
 manual trainee/branch topup approval are described in [topups](docs/TOPUPS.md).
 Cloudinary needs server credentials; the real provider has not yet been verified.
 Cashier stock sales and QR visits with hosting-gym receivables are implemented;
-see [cashier and visits](docs/CASHIER_VISITS.md). Cancellations, withdrawals and
-paid-out settlement reconciliation remain pending. Internal ledger,
+see [cashier and visits](docs/CASHIER_VISITS.md). Visit cancellations, reviewed
+corrections and manual withdrawals are implemented; paid-out clawback/refund
+policy remains open. Scoped [reports and monitoring](docs/REPORTS.md) and
+[branch inventory transfers/history](docs/BRANCH_INVENTORY.md) are available. Internal ledger,
 stock-transfer and authorization foundations are described in
 [`docs/LEDGER_FOUNDATION.md`](docs/LEDGER_FOUNDATION.md), including migration,
 testing and rollback instructions. See also `docs/ARCHITECTURE.md` and

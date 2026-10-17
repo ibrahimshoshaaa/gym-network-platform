@@ -1184,6 +1184,161 @@ test(
         ).status,
         400,
       );
+      const receivingBranchResponse = await request(
+        `/api/backend/gyms/${newGym.gym.id}/branches`,
+        {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          body: {
+            name: "Synthetic Transfer Destination",
+            address: "Synthetic receiving branch address",
+            governorate: "Menofia",
+            city: "Synthetic City",
+            latitude: 30.6,
+            longitude: 31.1,
+            visitPricePoints: 30,
+            sessionMinutes: 100,
+          },
+        },
+      );
+      assert.equal(receivingBranchResponse.status, 201);
+      const receivingBranch = await receivingBranchResponse.json();
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/price-change-requests/${receivingBranch.pricingRequest.id}/review`,
+            {
+              cookie,
+              method: "POST",
+              body: {
+                decision: "APPROVED",
+                reason: "Synthetic destination price approved",
+              },
+            },
+          )
+        ).status,
+        200,
+      );
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/branches/${receivingBranch.branch.id}/status`,
+            {
+              cookie,
+              method: "PATCH",
+              body: {
+                status: "ACTIVE",
+                reason: "Synthetic destination approved for operation",
+              },
+            },
+          )
+        ).status,
+        200,
+      );
+      const stockPath = `/api/backend/gyms/${newGym.gym.id}/stock-transfers`,
+        stockKey = randomUUID(),
+        stockBody = {
+          fromBranchId: newBranch.branch.id,
+          toBranchId: receivingBranch.branch.id,
+          points: 20,
+        };
+      const beforeStock = await request(
+        `/api/backend/inventory/branches/${newBranch.branch.id}`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(beforeStock.status, 200);
+      assert.equal((await beforeStock.json()).stock, 40);
+      for (const forbiddenCookie of [
+        cashierCookie,
+        managerCookie,
+        ownerCookie,
+        cookie,
+      ])
+        assert.equal(
+          (
+            await request(stockPath, {
+              cookie: forbiddenCookie,
+              method: "POST",
+              headers: { "idempotency-key": randomUUID() },
+              body: stockBody,
+            })
+          ).status,
+          403,
+        );
+      const transferStock = () =>
+        request(stockPath, {
+          cookie: invitedOwnerCookie,
+          method: "POST",
+          headers: { "idempotency-key": stockKey },
+          body: stockBody,
+        });
+      const stockTransfer = await transferStock();
+      assert.equal(stockTransfer.status, 201);
+      const transferredStock = await stockTransfer.json();
+      assert.ok(transferredStock.id);
+      assert.equal(
+        (await (await transferStock()).json()).id,
+        transferredStock.id,
+      );
+      assert.equal(
+        (
+          await request(stockPath, {
+            cookie: invitedOwnerCookie,
+            method: "POST",
+            headers: { "idempotency-key": stockKey },
+            body: { ...stockBody, points: 21 },
+          })
+        ).status,
+        409,
+      );
+      const afterSource = await (
+          await request(
+            `/api/backend/inventory/branches/${newBranch.branch.id}`,
+            { cookie: invitedOwnerCookie },
+          )
+        ).json(),
+        afterTarget = await (
+          await request(
+            `/api/backend/inventory/branches/${receivingBranch.branch.id}`,
+            { cookie: invitedOwnerCookie },
+          )
+        ).json();
+      assert.equal(afterSource.stock, 20);
+      assert.equal(afterTarget.stock, 20);
+      const sourceMovements = await request(
+          `/api/backend/inventory/branches/${newBranch.branch.id}/movements`,
+          { cookie: cashierCookie },
+        ),
+        targetMovements = await request(
+          `/api/backend/inventory/branches/${receivingBranch.branch.id}/movements`,
+          { cookie: invitedOwnerCookie },
+        );
+      assert.equal(sourceMovements.status, 200);
+      assert.match(sourceMovements.headers.get("cache-control"), /no-store/);
+      const sourceMovement = (await sourceMovements.json()).items.find(
+          (m) => m.transactionId === transferredStock.id,
+        ),
+        targetMovement = (await targetMovements.json()).items[0];
+      assert.equal(sourceMovement.delta, -20);
+      assert.equal(sourceMovement.operation, "BRANCH_TRANSFER");
+      assert.equal(targetMovement.delta, 20);
+      assert.equal(targetMovement.transactionId, transferredStock.id);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/inventory/branches/${receivingBranch.branch.id}/movements`,
+            { cookie: cashierCookie },
+          )
+        ).status,
+        403,
+      );
+      const conserved = await (
+        await request(`/api/backend/reports/summary?${reportQuery}`, {
+          cookie: invitedOwnerCookie,
+        })
+      ).json();
+      assert.equal(conserved.currentStockPoints, "40");
+      assert.equal(conserved.netVisitReceivablesPiasters, "3000");
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },

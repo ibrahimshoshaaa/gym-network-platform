@@ -216,3 +216,21 @@ test("report proxy exposes only read-only explicit routes", () => {
   ])
     assert.equal(allowedPath("GET", path), false);
 });
+
+test("inventory proxy scopes read paths and exposes only the owner transfer action", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  for (const path of [
+    `inventory/branches/${id}`,
+    `inventory/branches/${id}/movements`,
+  ]) {
+    assert.equal(allowedPath("GET", path), true);
+    assert.equal(allowedPath("POST", path), false);
+  }
+  assert.equal(allowedPath("POST", `gyms/${id}/stock-transfers`), true);
+  for (const path of [
+    `inventory/branches/${id}/adjust`,
+    `gyms/${id}/stock-transfers/reverse`,
+    "inventory/branches/not-a-uuid/movements",
+  ])
+    assert.equal(allowedPath("POST", path) || allowedPath("GET", path), false);
+});

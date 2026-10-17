@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { registerInventoryRoutes } from './inventory/routes.js';
 import { registerReportRoutes } from './reports/routes.js';
 import { registerWithdrawalRoutes } from './withdrawals/routes.js';
 import { registerReviewRoutes } from './reviews/routes.js';
@@ -16,7 +17,7 @@ import { registerGymRoutes } from './gyms/routes.js';
 export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptStorage } = {}) {
   const app = Fastify({ bodyLimit: 8192, logger: { redact: ['req.headers.authorization', 'req.body.password', 'req.body.currentPassword', 'req.body.newPassword', 'req.body.token'] }, trustProxy: false });
   app.addHook('onRequest', async (request, reply) => {
-    if (request.headers.authorization || ['/auth/', '/admin/', '/gyms', '/invitations/', '/me', '/topup', '/receipts', '/trainee/', '/operations', '/operation-reviews', '/withdrawals', '/reports'].some(prefix => request.url.startsWith(prefix))) reply.header('Cache-Control', 'no-store');
+    if (request.headers.authorization || ['/auth/', '/admin/', '/gyms', '/invitations/', '/me', '/topup', '/receipts', '/trainee/', '/operations', '/operation-reviews', '/withdrawals', '/reports', '/inventory'].some(prefix => request.url.startsWith(prefix))) reply.header('Cache-Control', 'no-store');
   });
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof DomainError) {
@@ -47,6 +48,7 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
     registerReviewRoutes(app, db);
     registerWithdrawalRoutes(app, db);
     registerReportRoutes(app, db);
+    registerInventoryRoutes(app, db);
     registerTopupRoutes(app, db, options.receiptStorage ?? new CloudinaryReceiptStorage());
     app.get('/me', async (request, reply) => {
       const user = await authenticate(db, request.headers.authorization);

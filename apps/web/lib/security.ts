@@ -60,6 +60,7 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    new RegExp(`^inventory/branches/${uuid}(?:/movements)?$`),
     /^reports\/(gyms|summary|rows|export)$/,
     new RegExp(`^reports/gyms/${uuid}/branches$`),
     /^admin\/withdrawal-calendar$/,
@@ -89,6 +90,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    new RegExp(`^gyms/${uuid}/stock-transfers$`),
     /^admin\/withdrawal-calendar$/,
     new RegExp(`^gyms/${uuid}/withdrawals$`),
     new RegExp(`^admin/withdrawals/${uuid}/(review|payment)$`),

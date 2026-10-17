@@ -114,13 +114,13 @@ export function postLedger(db: PrismaClient, command: LedgerCommand) {
 }
 
 export function transferStock(db: PrismaClient, input: {
-  actorId: string; fromBranchId: string; toBranchId: string; points: number; idempotencyKey: string;
+  actorId: string; gymId?: string; fromBranchId: string; toBranchId: string; points: number; idempotencyKey: string;
 }) {
   if (!Number.isSafeInteger(input.points) || input.points <= 0 || input.points > Number(maxInt) || input.fromBranchId === input.toBranchId) throw new DomainError('INVALID_TRANSFER');
   return serializable(db, async tx => {
     const source = await requireBranchAccess(tx, input.actorId, input.fromBranchId, 'TRANSFER_STOCK');
     const target = await requireBranchAccess(tx, input.actorId, input.toBranchId, 'TRANSFER_STOCK');
-    if (source.gymId !== target.gymId) throw new DomainError('BRANCH_ACCESS_DENIED');
+    if (source.gymId !== target.gymId || (input.gymId && input.gymId !== source.gymId)) throw new DomainError('BRANCH_ACCESS_DENIED');
     const [from, to] = await Promise.all([input.fromBranchId, input.toBranchId].map(branchId =>
       tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId } } })));
     if (!from || !to) throw new DomainError('ACCOUNT_NOT_FOUND');

@@ -29,12 +29,14 @@ import { Cashier, TraineeQr } from "./operations";
 import { OperationReviews } from "./operation-reviews";
 import { Withdrawals } from "./withdrawals";
 import { Reports } from "./reports";
+import { Inventory } from "./inventory";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "inventory"
   | "reports"
   | "withdrawals"
   | "operation-reviews"
@@ -48,6 +50,12 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {
+    id: "inventory" as const,
+    label: "مخزون الفروع",
+    icon: Package,
+    description: "الأرصدة وحركة النقاط والنقل بين الفروع",
+  },
   {
     id: "reports" as const,
     label: "التقارير والمتابعة",
@@ -200,7 +208,7 @@ export function Dashboard() {
     );
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
-      t.id === "reports"
+      ["reports", "inventory"].includes(t.id)
         ? user.role !== "TRAINEE"
         : t.id === "withdrawals"
           ? admin || user.role === "GYM_OWNER"
@@ -310,7 +318,9 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "reports" ? (
+          {current.id === "inventory" ? (
+            <Inventory admin={admin} />
+          ) : current.id === "reports" ? (
             <Reports admin={admin} />
           ) : current.id === "withdrawals" ? (
             <Withdrawals admin={admin} />

@@ -37,7 +37,7 @@ async function handle(request: Request, context: Context) {
       headers["content-type"] = type;
       body = await boundedBody(request, upload ? 5242880 : 8192);
       if (
-        /^(?:gyms\/[^/]+\/withdrawals|(?:admin\/)?withdrawals\/[^/]+\/(?:cancel|feedback|review|payment))$/.test(
+        /^(?:gyms\/[^/]+\/(?:withdrawals|stock-transfers)|(?:admin\/)?withdrawals\/[^/]+\/(?:cancel|feedback|review|payment))$/.test(
           path,
         ) ||
         path === "topups" ||
