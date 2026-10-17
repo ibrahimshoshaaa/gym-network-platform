@@ -20,7 +20,7 @@ await rm(work, { recursive: true, force: true });
 await mkdir(runtime, { recursive: true });
 // Generate an isolated ARM client without changing the regular TCP/CI client.
 const schema = (await readFile(path.join(root, 'apps/api/prisma/schema.prisma'), 'utf8'))
-  .replace('provider = "prisma-client-js"', `provider = "prisma-client-js"\n  output = "./client"\n  binaryTargets = ["${target}"]`);
+  .replace('provider = "prisma-client-js"', `provider = ${JSON.stringify(apiRequire.resolve('@prisma/client/generator-build/index.js'))}\n  output = "./client"\n  binaryTargets = ["${target}"]`);
 await writeFile(path.join(work, 'schema.prisma'), schema);
 run('node', [apiRequire.resolve('prisma/build/index.js'), 'generate', '--schema', path.join(work, 'schema.prisma')]);
 const engineName = `libquery_engine-${target}.so.node`;
