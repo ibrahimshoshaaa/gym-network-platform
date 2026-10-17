@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/.env
+**/.env.*
+!**/.env.example
+coverage/
+*.log
+.DS_Store
+
+
+*.tsbuildinfo
