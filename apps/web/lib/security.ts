@@ -60,6 +60,8 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^reports\/(gyms|summary|rows|export)$/,
+    new RegExp(`^reports/gyms/${uuid}/branches$`),
     /^admin\/withdrawal-calendar$/,
     /^admin\/withdrawals$/,
     new RegExp(`^gyms/${uuid}/withdrawals$`),
@@ -128,7 +130,10 @@ const rules: Record<string, RegExp[]> = {
 export function allowedPath(method: string, path: string) {
   return Boolean(rules[method]?.some((rule) => rule.test(path)));
 }
-export async function boundedBody(request: Request, max: number) {
+export async function boundedBody(
+  request: Pick<Request, "headers" | "body">,
+  max: number,
+) {
   const length = request.headers.get("content-length");
   if (length && (!/^\d+$/.test(length) || Number(length) > max))
     throw new GatewayError("BODY_TOO_LARGE", 413);

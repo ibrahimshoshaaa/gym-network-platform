@@ -55,7 +55,12 @@ function parts(d: Date) {
 }
 // Find actual instants using the runtime's IANA zone data. Nonexistent local
 // cutoffs fail closed; an ambiguous repeated time uses its later occurrence.
-export function cairoInstant(day: string, hour: number, minute: number) {
+export function cairoInstant(
+  day: string,
+  hour: number,
+  minute: number,
+  occurrence: "earliest" | "latest" = "latest",
+) {
   const nominal = Date.parse(`${day}T00:00:00Z`) + (hour * 60 + minute) * 60000;
   const offsets = new Set<number>();
   for (const delta of [-36, 0, 36]) {
@@ -74,7 +79,11 @@ export function cairoInstant(day: string, hour: number, minute: number) {
       return p.date === day && p.hour === hour && p.minute === minute;
     });
   if (!valid.length) throw new DomainError("CALENDAR_CUTOFF_INVALID");
-  return new Date(Math.max(...valid.map((d) => d.getTime())));
+  return new Date(
+    (occurrence === "earliest" ? Math.min : Math.max)(
+      ...valid.map((d) => d.getTime()),
+    ),
+  );
 }
 export function withdrawalDeadline(acceptedAt: Date, calendar: Calendar) {
   if (!calendar.workdays.length)

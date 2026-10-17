@@ -59,6 +59,23 @@ async function handle(request: Request, context: Context) {
       },
       token,
     );
+    if (path === "reports/export" && response.ok) {
+      if (!response.headers.get("content-type")?.startsWith("text/csv"))
+        throw new GatewayError("SERVICE_UNAVAILABLE", 503);
+      const bytes = await boundedBody(response, 8 * 1024 * 1024);
+      const name = response.headers.get("content-disposition") ?? "";
+      return new Response(Buffer.from(bytes), {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Cache-Control": "no-store, private",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Disposition":
+            /^attachment; filename="[a-z0-9-]+\.csv"$/.test(name)
+              ? name
+              : 'attachment; filename="gym-report.csv"',
+        },
+      });
+    }
     const result = await response.json();
     if (path === "auth/password/change" && response.ok) {
       (await cookies()).set(cookieName(), result.accessToken, {

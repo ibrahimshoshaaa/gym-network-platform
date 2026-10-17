@@ -53,6 +53,8 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  REPORT_BUSY: "التقرير كبير أو الخدمة مشغولة. قلّل الفترة أو اختَر جيمًا/فرعًا.",
+  EXPORT_TOO_LARGE: "التقرير يتجاوز ٥٠٠٠ سجل. قلّل الفترة أو استخدم فلاتر أدق للتصدير.",
   CALENDAR_NOT_CONFIGURED: "اضبط سياسة أيام العمل والعطلات قبل قبول طلب السحب.",
   CALENDAR_CUTOFF_INVALID: "موعد نهاية العمل غير صالح في هذا التقويم. راجع الأيام والساعة.",
   DELAY_REASON_REQUIRED: "المهلة انتهت. اكتب سبب تأخر التحويل لتوثيقه.",

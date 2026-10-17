@@ -1093,6 +1093,97 @@ test(
         (await unsafeClawback.json()).code,
         "SETTLEMENT_REVIEW_REQUIRED",
       );
+      const reportDay = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Africa/Cairo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      const reportQuery = new URLSearchParams({
+        from: reportDay,
+        to: reportDay,
+        gymId: newGym.gym.id,
+      }).toString();
+      const summaryResponse = await request(
+        `/api/backend/reports/summary?${reportQuery}`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(summaryResponse.status, 200);
+      const report = await summaryResponse.json();
+      assert.equal(report.sales.points, "60");
+      assert.equal(report.sales.amountPiasters, "7500");
+      assert.equal(report.visits.count, "3");
+      assert.equal(report.visits.amountPiasters, "9000");
+      assert.equal(report.cancellations.count, "2");
+      assert.equal(report.netVisitReceivablesPiasters, "3000");
+      assert.equal(report.paidWithdrawals.amountPiasters, "1000");
+      assert.equal(report.alerts.withdrawals.disputed, "1");
+      assert.equal(report.currentStockPoints, "40");
+      const reportCsv = await request(
+        `/api/backend/reports/export?${reportQuery}&kind=SALES`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(reportCsv.status, 200);
+      assert.match(reportCsv.headers.get("content-type"), /text\/csv/);
+      assert.match(
+        reportCsv.headers.get("content-disposition"),
+        /attachment; filename="gym-report-sales-/,
+      );
+      assert.match(reportCsv.headers.get("cache-control"), /no-store/);
+      assert.equal(reportCsv.headers.get("x-content-type-options"), "nosniff");
+      const csvText = await reportCsv.text();
+      assert.match(csvText, /"60","7500"/);
+      assert.equal(csvText.includes("tokenHash"), false);
+      assert.equal(csvText.includes("beneficiary"), false);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/reports/export?${reportQuery}&kind=SALES`,
+            { cookie: ownerCookie },
+          )
+        ).status,
+        403,
+      );
+      assert.equal(
+        (
+          await request(`/api/backend/reports/summary?${reportQuery}`, {
+            cookie: cashierCookie,
+          })
+        ).status,
+        403,
+      );
+      const branchReport = await request(
+        `/api/backend/reports/summary?${reportQuery}&branchId=${newBranch.branch.id}`,
+        { cookie: cashierCookie },
+      );
+      assert.equal(branchReport.status, 200);
+      const scopedReport = await branchReport.json();
+      assert.equal(scopedReport.currentBalances, null);
+      assert.equal(scopedReport.topups, null);
+      assert.equal(scopedReport.alerts.withdrawals, null);
+      const reportPage = await request(
+        `/api/backend/reports/rows?${reportQuery}&kind=VISITS&limit=1`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(reportPage.status, 200);
+      const pageReport = await reportPage.json();
+      assert.equal(pageReport.items.length, 1);
+      assert.ok(pageReport.nextCursor);
+      const allVisits = await request(
+        `/api/backend/reports/export?${reportQuery}&kind=VISITS&limit=1`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(allVisits.status, 200);
+      assert.equal((await allVisits.text()).split("\r\n").length, 5);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/reports/export?${reportQuery}&kind=VISITS&status=PAID`,
+            { cookie: invitedOwnerCookie },
+          )
+        ).status,
+        400,
+      );
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },

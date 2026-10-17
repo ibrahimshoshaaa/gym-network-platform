@@ -28,12 +28,14 @@ import { SettingsPanel } from "./settings";
 import { Cashier, TraineeQr } from "./operations";
 import { OperationReviews } from "./operation-reviews";
 import { Withdrawals } from "./withdrawals";
+import { Reports } from "./reports";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "reports"
   | "withdrawals"
   | "operation-reviews"
   | "cashier"
@@ -46,6 +48,12 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {
+    id: "reports" as const,
+    label: "التقارير والمتابعة",
+    icon: ClipboardCheck,
+    description: "حركة الفترة والأرصدة الحالية وتنبيهات الطلبات",
+  },
   {
     id: "withdrawals" as const,
     label: "السحب والتسويات",
@@ -192,14 +200,16 @@ export function Dashboard() {
     );
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
-      t.id === "withdrawals"
-        ? admin || user.role === "GYM_OWNER"
-        : admin
-          ? !["purchases", "cashier", "trainee"].includes(t.id)
-          : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
-              t.id,
-            ) ||
-            (user.role === "TRAINEE" && t.id === "trainee"),
+      t.id === "reports"
+        ? user.role !== "TRAINEE"
+        : t.id === "withdrawals"
+          ? admin || user.role === "GYM_OWNER"
+          : admin
+            ? !["purchases", "cashier", "trainee"].includes(t.id)
+            : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
+                t.id,
+              ) ||
+              (user.role === "TRAINEE" && t.id === "trainee"),
     ),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   return (
@@ -300,7 +310,9 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "withdrawals" ? (
+          {current.id === "reports" ? (
+            <Reports admin={admin} />
+          ) : current.id === "withdrawals" ? (
             <Withdrawals admin={admin} />
           ) : current.id === "operation-reviews" ? (
             <OperationReviews admin={admin} />

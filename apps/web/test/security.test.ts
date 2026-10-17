@@ -195,3 +195,24 @@ test("withdrawal proxy separates owner actions from admin review and payment rou
     assert.equal(allowedPath("POST", path), false);
   assert.equal(allowedPath("DELETE", `withdrawals/${id}`), false);
 });
+
+test("report proxy exposes only read-only explicit routes", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  for (const path of [
+    "reports/gyms",
+    `reports/gyms/${id}/branches`,
+    "reports/summary",
+    "reports/rows",
+    "reports/export",
+  ]) {
+    assert.equal(allowedPath("GET", path), true);
+    assert.equal(allowedPath("POST", path), false);
+  }
+  for (const path of [
+    "reports/passwords",
+    "reports/gyms/not-a-uuid/branches",
+    "reports/../admin",
+    `reports/gyms/${id}/withdrawals`,
+  ])
+    assert.equal(allowedPath("GET", path), false);
+});
