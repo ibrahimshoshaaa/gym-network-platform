@@ -1679,3 +1679,5 @@ dialog::backdrop {
   overflow-wrap: anywhere;
   display: block;
 }
+
+.directory-hours { white-space: pre-line; }

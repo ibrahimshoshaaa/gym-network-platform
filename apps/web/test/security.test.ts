@@ -234,3 +234,17 @@ test("inventory proxy scopes read paths and exposes only the owner transfer acti
   ])
     assert.equal(allowedPath("POST", path) || allowedPath("GET", path), false);
 });
+
+test("directory proxy exposes only explicit read-only branch listing and detail", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  for (const path of ["directory/branches", `directory/branches/${id}`]) {
+    assert.equal(allowedPath("GET", path), true);
+    assert.equal(allowedPath("POST", path), false);
+  }
+  for (const path of [
+    "directory/branches/not-a-uuid",
+    `directory/branches/${id}/staff`,
+    `directory/branches/${id}/stock`,
+  ])
+    assert.equal(allowedPath("GET", path), false);
+});

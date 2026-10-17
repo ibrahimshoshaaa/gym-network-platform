@@ -30,12 +30,14 @@ import { OperationReviews } from "./operation-reviews";
 import { Withdrawals } from "./withdrawals";
 import { Reports } from "./reports";
 import { Inventory } from "./inventory";
+import { BranchDirectory } from "./branch-directory";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "directory"
   | "inventory"
   | "reports"
   | "withdrawals"
@@ -50,6 +52,12 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {
+    id: "directory" as const,
+    label: "دليل الجيمات",
+    icon: MapPin,
+    description: "الفروع المشاركة والأسعار والمواقع ومواعيد العمل",
+  },
   {
     id: "inventory" as const,
     label: "مخزون الفروع",
@@ -208,16 +216,18 @@ export function Dashboard() {
     );
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
-      ["reports", "inventory"].includes(t.id)
-        ? user.role !== "TRAINEE"
-        : t.id === "withdrawals"
-          ? admin || user.role === "GYM_OWNER"
-          : admin
-            ? !["purchases", "cashier", "trainee"].includes(t.id)
-            : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
-                t.id,
-              ) ||
-              (user.role === "TRAINEE" && t.id === "trainee"),
+      t.id === "directory"
+        ? user.role === "TRAINEE"
+        : ["reports", "inventory"].includes(t.id)
+          ? user.role !== "TRAINEE"
+          : t.id === "withdrawals"
+            ? admin || user.role === "GYM_OWNER"
+            : admin
+              ? !["purchases", "cashier", "trainee"].includes(t.id)
+              : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
+                  t.id,
+                ) ||
+                (user.role === "TRAINEE" && t.id === "trainee"),
     ),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   return (
@@ -318,7 +328,9 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "inventory" ? (
+          {current.id === "directory" ? (
+            <BranchDirectory />
+          ) : current.id === "inventory" ? (
             <Inventory admin={admin} />
           ) : current.id === "reports" ? (
             <Reports admin={admin} />

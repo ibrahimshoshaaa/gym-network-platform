@@ -1339,6 +1339,118 @@ test(
       ).json();
       assert.equal(conserved.currentStockPoints, "40");
       assert.equal(conserved.netVisitReceivablesPiasters, "3000");
+      assert.equal(
+        (await request("/api/backend/directory/branches")).status,
+        401,
+      );
+      assert.equal(
+        (await request("/api/backend/directory/branches", { cookie })).status,
+        403,
+      );
+      const directoryQuery = new URLSearchParams({
+        q: newBranch.branch.name,
+        governorate: "Menofia",
+        city: "Synthetic City",
+        limit: "1",
+      }).toString();
+      const directoryResponse = await request(
+        `/api/backend/directory/branches?${directoryQuery}`,
+        { cookie: traineeCookie },
+      );
+      assert.equal(directoryResponse.status, 200);
+      assert.match(directoryResponse.headers.get("cache-control"), /no-store/);
+      const branchDirectory = await directoryResponse.json();
+      assert.equal(branchDirectory.items.length, 1);
+      assert.equal(branchDirectory.items[0].id, newBranch.branch.id);
+      assert.equal(branchDirectory.items[0].visitPricePoints, 30);
+      assert.equal(branchDirectory.items[0].sessionMinutes, 100);
+      assert.equal(JSON.stringify(branchDirectory).includes("ownerId"), false);
+      assert.equal(
+        JSON.stringify(branchDirectory).includes("pointAccounts"),
+        false,
+      );
+      const directoryDetailResponse = await request(
+        `/api/backend/directory/branches/${newBranch.branch.id}`,
+        { cookie: traineeCookie },
+      );
+      assert.equal(directoryDetailResponse.status, 200);
+      const directoryDetail = await directoryDetailResponse.json();
+      assert.equal(directoryDetail.branch.gym.id, newGym.gym.id);
+      assert.equal(Number(directoryDetail.branch.latitude), 30.5);
+      assert.equal(Number(directoryDetail.branch.longitude), 31);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/directory/branches/${newBranch.branch.id}/staff`,
+            { cookie: traineeCookie },
+          )
+        ).status,
+        404,
+      );
+      assert.equal(
+        (
+          await request("/api/backend/directory/branches?status=SUSPENDED", {
+            cookie: traineeCookie,
+          })
+        ).status,
+        400,
+      );
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/branches/${newBranch.branch.id}/status`,
+            {
+              cookie,
+              method: "PATCH",
+              body: {
+                status: "SUSPENDED",
+                reason: "Synthetic directory suspension visibility test",
+              },
+            },
+          )
+        ).status,
+        200,
+      );
+      assert.equal(
+        (
+          await request(
+            `/api/backend/directory/branches/${newBranch.branch.id}`,
+            { cookie: traineeCookie },
+          )
+        ).status,
+        404,
+      );
+      const hiddenDirectory = await (
+        await request(`/api/backend/directory/branches?${directoryQuery}`, {
+          cookie: traineeCookie,
+        })
+      ).json();
+      assert.equal(hiddenDirectory.items.length, 0);
+      assert.equal(
+        (
+          await request(
+            `/api/backend/admin/branches/${newBranch.branch.id}/status`,
+            {
+              cookie,
+              method: "PATCH",
+              body: {
+                status: "ACTIVE",
+                reason: "Synthetic directory branch reactivation",
+              },
+            },
+          )
+        ).status,
+        200,
+      );
+      assert.equal(
+        (
+          await request(
+            `/api/backend/directory/branches/${newBranch.branch.id}`,
+            { cookie: traineeCookie },
+          )
+        ).status,
+        200,
+      );
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },

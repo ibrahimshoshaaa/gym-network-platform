@@ -49,7 +49,7 @@ async function handle(request: Request, context: Context) {
           request.headers.get("idempotency-key") ?? "";
     }
     const query = new URL(request.url).search;
-    if (query.length > 1024) throw new GatewayError("INVALID_INPUT", 400);
+    if (query.length > (path === "directory/branches" ? 2048 : 1024)) throw new GatewayError("INVALID_INPUT", 400);
     const response = await upstream(
       path + query,
       {
