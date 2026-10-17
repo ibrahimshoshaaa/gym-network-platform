@@ -1,6 +1,6 @@
 import { build } from 'esbuild';
 import { createRequire } from 'node:module';
-import { readFile, writeFile, mkdir, rm, copyFile, stat } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -8,9 +8,9 @@ import path from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const work = path.join(root, 'build/neon');
 const runtime = path.join(work, 'runtime');
-const target = 'linux-arm64-openssl-3.0.x';
 const apiRequire = createRequire(path.join(root, 'apps/api/package.json'));
 const sharpVersion = apiRequire('sharp/package.json').version;
+const prismaVersion = apiRequire('@prisma/client/package.json').version;
 function run(command, args, cwd = root, env = process.env) {
   const result = spawnSync(command, args, { cwd, env, stdio: 'inherit' });
   if (result.error) throw result.error;
@@ -18,21 +18,32 @@ function run(command, args, cwd = root, env = process.env) {
 }
 await rm(work, { recursive: true, force: true });
 await mkdir(runtime, { recursive: true });
-// Generate an isolated ARM client without changing the regular TCP/CI client.
+// Generate an isolated JS client; the native Rust engine plus libvips exceeds
+// Neon's 10 MiB archive limit. Do not change the regular TCP/CI client.
 const schema = (await readFile(path.join(root, 'apps/api/prisma/schema.prisma'), 'utf8'))
-  .replace('provider = "prisma-client-js"', `provider = ${JSON.stringify(apiRequire.resolve('@prisma/client/generator-build/index.js'))}\n  output = "./client"\n  binaryTargets = ["${target}"]`);
+  .replace('provider = "prisma-client-js"', `provider = ${JSON.stringify(apiRequire.resolve('@prisma/client/generator-build/index.js'))}\n  output = "./client"\n  engineType = "client"`);
 await writeFile(path.join(work, 'schema.prisma'), schema);
 run('node', [apiRequire.resolve('prisma/build/index.js'), 'generate', '--schema', path.join(work, 'schema.prisma')]);
-const engineName = `libquery_engine-${target}.so.node`;
-await copyFile(path.join(work, 'client', engineName), path.join(runtime, engineName));
-await copyFile(path.join(work, 'schema.prisma'), path.join(runtime, 'schema.prisma'));
+const deps = path.join(work, 'deps');
+await mkdir(deps, { recursive: true });
+await writeFile(path.join(deps, 'package.json'), JSON.stringify({ private: true }));
+run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false', `@prisma/adapter-pg@${prismaVersion}`, 'pg@8.16.3'], deps);
+const stagedRequire = createRequire(path.join(deps, 'package.json'));
+const adapterPath = stagedRequire.resolve('@prisma/adapter-pg');
+// Optional read-only smoke check, used only against disposable CI PostgreSQL.
+if (process.env.NEON_DB_SMOKE === 'true') {
+  const smoke = `const {PrismaClient}=require(${JSON.stringify(path.join(work, 'client'))});const {PrismaPg}=require(${JSON.stringify(adapterPath)});const db=new PrismaClient({adapter:new PrismaPg({connectionString:process.env.DATABASE_URL,max:2})});(async()=>{try{await db.$transaction(async tx=>{await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(92170341)');const rows=await tx.$queryRawUnsafe('SELECT current_user AS role, COUNT(*)::int AS users FROM "User"');if(rows[0]?.role!=='gym_app')throw Error('Expected restricted CI role');},{isolationLevel:'Serializable'});console.log('Prisma JS adapter serializable transaction smoke passed');}finally{await db.$disconnect();}})().catch(()=>{console.error('Prisma JS adapter smoke failed');process.exitCode=1;});`;
+  run('node', ['-e', smoke]);
+}
+const entry = path.join(work, 'entry.mjs');
+await writeFile(entry, `import{PrismaClient}from ${JSON.stringify(path.join(work, 'client/index.js'))};import{PrismaPg}from ${JSON.stringify(adapterPath)};import{buildNeonApp}from ${JSON.stringify(path.join(root, 'apps/api/src/neon.ts'))};if(!process.env.DATABASE_URL)throw Error('DATABASE_URL is required');const db=new PrismaClient({adapter:new PrismaPg({connectionString:process.env.DATABASE_URL,max:3,connectionTimeoutMillis:10000,idleTimeoutMillis:10000})});export default buildNeonApp(db);`);
 await build({
-  entryPoints: [path.join(root, 'apps/api/src/neon.ts')],
+  entryPoints: [entry],
   outfile: path.join(runtime, 'index.mjs'),
   bundle: true, platform: 'node', format: 'esm', target: 'node24', minify: true,
-  external: ['sharp'],
+  external: ['sharp', 'pg-native'],
   alias: { '@prisma/client': path.join(work, 'client/index.js') },
-  banner: { js: `import{createRequire}from'node:module';import{fileURLToPath}from'node:url';import{dirname}from'node:path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=dirname(__filename);process.env.PRISMA_QUERY_ENGINE_LIBRARY=fileURLToPath(new URL('./${engineName}',import.meta.url));` },
+  banner: { js: "import{createRequire}from'node:module';import{fileURLToPath}from'node:url';import{dirname}from'node:path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=dirname(__filename);" },
 });
 await writeFile(path.join(runtime, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
 // Install the published native ARM64/glibc addon, never a host-machine binary.

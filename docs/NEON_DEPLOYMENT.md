@@ -3,7 +3,8 @@
 The dashboard stays a Next.js server application on Vercel (`apps/web`). It
 keeps bearer sessions in private cookies and calls the API from its server.
 The API has two entrypoints: `server.ts` for TCP/local development and
-`neon.ts` for the Neon Functions Web Request/Response runtime. Both use the
+the deployment builder's default export using `neon.ts` for the Neon Functions
+Web Request/Response runtime. Both use the
 same Fastify routes, authorization, Prisma schema and financial services.
 
 ## Transport and secrets
@@ -26,9 +27,12 @@ invocations before returning 401; this check is not an upstream WAF.
 
 Run `pnpm build:neon` after the frozen-lockfile install. CI does this after the
 existing API/database/dashboard tests, then uploads `gym-api-neon` for seven
-days. The script generates a separate Prisma ARM64/OpenSSL 3 client, bundles
-the application, and installs sharp's ARM64/glibc addon. It includes the real
-Prisma query engine and schema, never the host's x64 engine. It verifies ELF
+days. The script generates a separate Prisma JavaScript engine client with
+the matching-version `@prisma/adapter-pg` and a small pg pool, bundles the
+application, and installs sharp's ARM64/glibc addon. The native Rust engine
+plus libvips would exceed Neon's compressed size limit. The TCP app and
+migration client stay unchanged. CI also runs a serializable transaction and
+advisory-lock smoke check using the JS adapter and restricted role. It verifies ELF
 architecture and Neon's 10 MiB compressed / 64 MiB expanded / 4096-file limits.
 No credentials belong in the archive. Build output is ignored by git.
 
