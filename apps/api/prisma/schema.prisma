@@ -268,25 +268,70 @@ model TopupRequest {
   @@index([status, createdAt])
 }
 
+model PointSale {
+  id                 String   @id @default(uuid()) @db.Uuid
+  branchId           String   @db.Uuid
+  traineeId          String   @db.Uuid
+  cashierId          String   @db.Uuid
+  traineeLabel       String
+  phoneLast4         String
+  points             Int
+  chargePiasters     BigInt
+  unitPricePiasters  BigInt
+  policyId           String   @db.Uuid
+  pricingVersion     Int
+  idempotencyKey     String   @unique
+  requestHash        String
+  pointTransactionId String   @unique @db.Uuid
+  createdAt          DateTime @default(now())
+
+  @@index([branchId, createdAt])
+  @@index([traineeId, createdAt])
+}
+
+model QrTicket {
+  userId     String    @id @db.Uuid
+  tokenHash  String    @unique
+  sessionId  String    @db.Uuid
+  expiresAt  DateTime
+  consumedAt DateTime?
+  visitId    String?   @db.Uuid
+}
+
+model VisitEntry {
+  id             String   @id @default(uuid()) @db.Uuid
+  idempotencyKey String   @unique
+  requestHash    String
+  actorId        String   @db.Uuid
+  branchId       String   @db.Uuid
+  visitId        String   @db.Uuid
+  alreadyActive  Boolean
+  createdAt      DateTime @default(now())
+}
+
 model Visit {
-  id                 String           @id @default(uuid()) @db.Uuid
-  traineeId          String           @db.Uuid
-  trainee            User             @relation("TraineeVisits", fields: [traineeId], references: [id])
-  branchId           String           @db.Uuid
-  branch             Branch           @relation(fields: [branchId], references: [id])
-  cashierId          String           @db.Uuid
-  pointsCharged      Int
-  settlementPiasters BigInt
-  status             VisitStatus      @default(ACTIVE)
-  startedAt          DateTime         @default(now())
-  expiresAt          DateTime
-  cancelledAt        DateTime?
-  cancelledById      String?          @db.Uuid
-  cancellationReason String?
-  pointTransactionId String           @unique @db.Uuid
-  moneyTransactionId String           @unique @db.Uuid
-  pointTransaction   PointTransaction @relation(fields: [pointTransactionId], references: [id])
-  moneyTransaction   MoneyTransaction @relation(fields: [moneyTransactionId], references: [id])
+  id                   String           @id @default(uuid()) @db.Uuid
+  traineeId            String           @db.Uuid
+  trainee              User             @relation("TraineeVisits", fields: [traineeId], references: [id])
+  branchId             String           @db.Uuid
+  branch               Branch           @relation(fields: [branchId], references: [id])
+  cashierId            String           @db.Uuid
+  pointsCharged        Int
+  settlementPiasters   BigInt
+  policyId             String?          @db.Uuid
+  unitPricePiasters    BigInt?
+  redemptionBps        Int?
+  branchPricingVersion Int?
+  status               VisitStatus      @default(ACTIVE)
+  startedAt            DateTime         @default(now())
+  expiresAt            DateTime
+  cancelledAt          DateTime?
+  cancelledById        String?          @db.Uuid
+  cancellationReason   String?
+  pointTransactionId   String           @unique @db.Uuid
+  moneyTransactionId   String           @unique @db.Uuid
+  pointTransaction     PointTransaction @relation(fields: [pointTransactionId], references: [id])
+  moneyTransaction     MoneyTransaction @relation(fields: [moneyTransactionId], references: [id])
 
   @@index([traineeId, branchId, status])
   @@index([branchId, startedAt])

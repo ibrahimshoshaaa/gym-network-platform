@@ -44,7 +44,9 @@ branch-stock requests; see
 Admin pricing, InstaPay/wallet receiver settings, private Cloudinary receipts and
 manual trainee/branch topup approval are described in [topups](docs/TOPUPS.md).
 Cloudinary needs server credentials; the real provider has not yet been verified.
-Visit, cashier sales and settlement HTTP workflows remain pending. Internal ledger,
+Cashier stock sales and QR visits with hosting-gym receivables are implemented;
+see [cashier and visits](docs/CASHIER_VISITS.md). Cancellations, withdrawals and
+paid-out settlement reconciliation remain pending. Internal ledger,
 stock-transfer and authorization foundations are described in
 [`docs/LEDGER_FOUNDATION.md`](docs/LEDGER_FOUNDATION.md), including migration,
 testing and rollback instructions. See also `docs/ARCHITECTURE.md` and
@@ -63,3 +65,5 @@ pnpm --filter @gym/web dev
 ```
 
 No hosted deployment or default admin credentials are included.
+
+Trainees can use the temporary web wallet/QR panel; Flutter remains planned.

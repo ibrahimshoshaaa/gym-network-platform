@@ -2,10 +2,10 @@
 
 ## Runtime components
 - Flutter trainee mobile application (planned).
-- Next.js Arabic responsive dashboard: admin settings/reviews, gym/branch onboarding, price review, scoped staff management and owner stock requests implemented; visit/cashier/payout screens planned.
+- Next.js Arabic responsive dashboard: admin settings/reviews, gym/branch onboarding, price review, scoped staff management and owner stock requests implemented; cashier sales/QR entry and temporary trainee web QR implemented; payout screens planned.
 - Node.js + Fastify API with a PostgreSQL data store.
 - Server-side authoritative mutations, never client-computed balances or client-trusted roles.
-- Signed short-lived QR and one-time consumption with anti-replay store (future sprint).
+- Short-lived session-bound opaque QR tickets, atomic entry and gym receivables; see [CASHIER_VISITS.md](CASHIER_VISITS.md).
 - FCM notifications, mapping and SMS OTP adapters (future sprint).
 
 ## Database design
@@ -40,7 +40,7 @@ remain pending. The checklist below tracks the broader sprint.
 Dashboard boundary, operator provisioning and validation: [WEB_DASHBOARD.md](WEB_DASHBOARD.md).
 
 ## Pending client/ops decisions
-- Whether financial receivables are aggregated per gym or per branch (gym-level draft in schema; **not yet explicitly approved**).
+- Financial scope is approved as one wallet per gym, with visit/branch details (see DECISIONS.md).
 - Business day calendar and time zone for withdrawal deadlines, plus request review SLA.
 - Policy for disputed/reversed visits already paid out.
 - Detailed pricing/reconciliation rules and treatment of unused, expired, reversed, and refunded points.

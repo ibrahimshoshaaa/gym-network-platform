@@ -84,6 +84,7 @@ export function Login({ onLogin }: { onLogin: (user: Identity) => void }) {
               }}
             >
               <option value="admin">صاحب المنصة</option>
+              <option value="trainee">متدرب</option>
               <option value="staff">صاحب جيم / موظف</option>
               <option value="invite">تفعيل دعوة</option>
             </select>

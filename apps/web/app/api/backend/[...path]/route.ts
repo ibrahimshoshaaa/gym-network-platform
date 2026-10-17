@@ -36,7 +36,10 @@ async function handle(request: Request, context: Context) {
         throw new GatewayError("INVALID_INPUT", 400);
       headers["content-type"] = type;
       body = await boundedBody(request, upload ? 5242880 : 8192);
-      if (path === "topups")
+      if (
+        path === "topups" ||
+        /^cashier\/branches\/[^/]+\/(sales|visits)$/.test(path)
+      )
         headers["idempotency-key"] =
           request.headers.get("idempotency-key") ?? "";
     }

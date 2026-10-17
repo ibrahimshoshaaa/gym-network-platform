@@ -25,12 +25,15 @@ import {
 } from "../lib/client";
 import { Login } from "./login";
 import { SettingsPanel } from "./settings";
+import { Cashier, TraineeQr } from "./operations";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "cashier"
+  | "trainee"
   | "gyms"
   | "branch-prices"
   | "reviews"
@@ -39,6 +42,18 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {
+    id: "cashier" as const,
+    label: "الكاشير والزيارات",
+    icon: Building2,
+    description: "بيع نقاط الفرع وتأكيد حضور المتدربين بالـQR",
+  },
+  {
+    id: "trainee" as const,
+    label: "محفظتي ورمز الدخول",
+    icon: ShieldCheck,
+    description: "رصيد المحفظة ورمز QR قصير الصلاحية وسجل الزيارات",
+  },
   {
     id: "gyms" as const,
     label: "الجيمات والفروع",
@@ -92,7 +107,15 @@ export function Dashboard() {
     [password, setPassword] = useState(false);
   function loggedIn(person: Identity) {
     setUser(person);
-    setTab(person.role === "PLATFORM_ADMIN" ? "reviews" : "gyms");
+    setTab(
+      person.role === "PLATFORM_ADMIN"
+        ? "reviews"
+        : person.role === "TRAINEE"
+          ? "trainee"
+          : ["CASHIER", "BRANCH_MANAGER"].includes(person.role)
+            ? "cashier"
+            : "gyms",
+    );
     setError("");
   }
   async function check() {
@@ -153,7 +176,10 @@ export function Dashboard() {
     );
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
-      admin ? t.id !== "purchases" : ["purchases", "gyms"].includes(t.id),
+      admin
+        ? !["purchases", "cashier", "trainee"].includes(t.id)
+        : ["purchases", "gyms", "cashier"].includes(t.id) ||
+          (user.role === "TRAINEE" && t.id === "trainee"),
     ),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   return (
@@ -254,7 +280,11 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "gyms" ? (
+          {current.id === "cashier" ? (
+            <Cashier />
+          ) : current.id === "trainee" ? (
+            <TraineeQr />
+          ) : current.id === "gyms" ? (
             <GymManagement admin={admin} />
           ) : current.id === "branch-prices" ? (
             <PriceReviews />

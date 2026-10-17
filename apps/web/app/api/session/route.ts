@@ -34,13 +34,15 @@ export async function POST(request: Request) {
     if (
       !input ||
       typeof input !== "object" ||
-      !["admin", "staff", "invite"].includes(String(input.mode))
+      !["admin", "staff", "invite", "trainee"].includes(String(input.mode))
     )
       throw new GatewayError("INVALID_INPUT", 400);
     const route =
       input.mode === "invite"
         ? "auth/invitations/accept"
-        : `auth/${input.mode}/login`;
+        : input.mode === "trainee"
+          ? "auth/login"
+          : `auth/${input.mode}/login`;
     const body =
       input.mode === "invite"
         ? { token: input.token, password: input.password }

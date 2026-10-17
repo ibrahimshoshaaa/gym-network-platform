@@ -53,6 +53,12 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  QR_INVALID:
+    "الرمز انتهى أو تم تغييره أو انتهت جلسته. اطلب رمزًا جديدًا من المتدرب.",
+  QR_ALREADY_USED: "الرمز استُخدم بالفعل. راجع سجل الزيارات ولا تكرر الخصم.",
+  TRAINEE_UNAVAILABLE: "لا يوجد متدرب نشط بهذه البيانات.",
+  INSUFFICIENT_POINTS: "رصيد النقاط غير كافٍ. لم تُنفّذ العملية.",
+
   ACCOUNT_UNAVAILABLE:
     "الحساب غير متاح بهذه البيانات. لو موجود بالفعل استخدم بريده ورقمه المسجلين معًا.",
   BRANCH_NOT_READY:

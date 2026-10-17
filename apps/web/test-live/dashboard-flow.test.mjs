@@ -521,6 +521,167 @@ test(
         },
       });
       assert.equal(acceptedStaff.status, 200);
+
+      // Real cashier sale and visit postings through the same-origin gateway.
+      const cashierCookie = sessionCookie(acceptedStaff);
+      const traineeBody = {
+        displayName: "Synthetic Visiting Trainee",
+        email: `visiting-${id}@example.test`,
+        phone: "01500000005",
+        password,
+      };
+      const registration = await fetch(backend + "/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(traineeBody),
+      });
+      assert.equal(registration.status, 201);
+      const traineeIdentity = await registration.json();
+      const traineeLogin = await request("/api/session", {
+        method: "POST",
+        body: { mode: "trainee", identifier: traineeBody.email, password },
+      });
+      assert.equal(traineeLogin.status, 200);
+      const traineeCookie = sessionCookie(traineeLogin);
+      assert.ok(traineeCookie);
+      const optionResponse = await request(
+        "/api/backend/topup-options?kind=BRANCH_STOCK",
+        { cookie: invitedOwnerCookie },
+      );
+      const config = await optionResponse.json();
+      const stockReceipt = await db.receiptEvidence.create({
+        data: {
+          ownerUserId: newGym.owner.id,
+          objectKey: `synthetic-stock/${id}`,
+          assetId: `stock-${id}`,
+          contentHash: `stock-${id}`,
+          mimeType: "image/jpeg",
+          bytes: 10,
+        },
+      });
+      const stockSubmission = await request("/api/backend/topups", {
+        cookie: invitedOwnerCookie,
+        method: "POST",
+        headers: { "idempotency-key": randomUUID() },
+        body: {
+          kind: "BRANCH_STOCK",
+          receivingBranchId: newBranch.branch.id,
+          points: 100,
+          pricingVersion: config.policy.version,
+          receiptId: stockReceipt.id,
+          paymentMethod: "INSTAPAY",
+          paymentMethodVersion: config.paymentMethods.find(
+            (m) => m.type === "INSTAPAY",
+          ).version,
+        },
+      });
+      assert.equal(stockSubmission.status, 201);
+      const stockRequest = await stockSubmission.json();
+      assert.equal(
+        (
+          await request(`/api/backend/admin/topups/${stockRequest.id}/review`, {
+            cookie,
+            method: "POST",
+            body: {
+              decision: "APPROVED",
+              reason: "Synthetic cashier stock funding",
+              paymentReference: `CASHIER-${id}`,
+              receivedAmountPiasters: "11250",
+              fundsReceived: true,
+              receiptReviewed: true,
+            },
+          })
+        ).status,
+        200,
+      );
+      const customer = await request(
+        `/api/backend/cashier/branches/${newBranch.branch.id}/trainee-lookup`,
+        {
+          cookie: cashierCookie,
+          method: "POST",
+          body: { phone: traineeBody.phone },
+        },
+      );
+      assert.equal(customer.status, 200);
+      const matched = await customer.json();
+      assert.equal(matched.id, traineeIdentity.user.id);
+      assert.equal(JSON.stringify(matched).includes(traineeBody.phone), false);
+      const quoteSale = await request(
+        `/api/backend/cashier/branches/${newBranch.branch.id}/sale-quotes`,
+        {
+          cookie: cashierCookie,
+          method: "POST",
+          body: { traineeId: matched.id, points: 60 },
+        },
+      );
+      assert.equal(quoteSale.status, 200);
+      const saleQuote = await quoteSale.json();
+      const sell = await request(
+        `/api/backend/cashier/branches/${newBranch.branch.id}/sales`,
+        {
+          cookie: cashierCookie,
+          method: "POST",
+          headers: { "idempotency-key": randomUUID() },
+          body: {
+            traineeId: matched.id,
+            points: 60,
+            pricingVersion: saleQuote.pricingVersion,
+            receivedAmountPiasters: saleQuote.chargePiasters,
+            fundsReceived: true,
+          },
+        },
+      );
+      assert.equal(sell.status, 201);
+      const ticketResponse = await request("/api/backend/trainee/qr", {
+        cookie: traineeCookie,
+        method: "POST",
+        body: {},
+      });
+      assert.equal(ticketResponse.status, 200);
+      const ticket = await ticketResponse.json();
+      const visitPreview = await request(
+        `/api/backend/cashier/branches/${newBranch.branch.id}/visit-previews`,
+        {
+          cookie: cashierCookie,
+          method: "POST",
+          body: { token: ticket.token },
+        },
+      );
+      assert.equal(visitPreview.status, 200);
+      const entryQuote = await visitPreview.json();
+      const entryKey = randomUUID(),
+        entryBody = {
+          token: ticket.token,
+          pricingVersion: entryQuote.pricingVersion,
+          branchPricingVersion: entryQuote.branchPricingVersion,
+          presenceConfirmed: true,
+        };
+      const enter = () =>
+        request(`/api/backend/cashier/branches/${newBranch.branch.id}/visits`, {
+          cookie: cashierCookie,
+          method: "POST",
+          headers: { "idempotency-key": entryKey },
+          body: entryBody,
+        });
+      const entryResponse = await enter();
+      assert.equal(entryResponse.status, 201);
+      const entered = await entryResponse.json();
+      assert.equal((await (await enter()).json()).visit.id, entered.visit.id);
+      const traineeWallet = await request("/api/backend/trainee/wallet", {
+        cookie: traineeCookie,
+      });
+      assert.equal((await traineeWallet.json()).balance, 30);
+      const receivables = await request(
+        `/api/backend/gyms/${newGym.gym.id}/receivables`,
+        { cookie: invitedOwnerCookie },
+      );
+      assert.equal(receivables.status, 200);
+      assert.equal(
+        (await receivables.json()).accounts.find(
+          (a) => a.type === "GYM_AVAILABLE",
+        ).balancePiasters,
+        "3000",
+      );
       const inviteLog = await request(
         `/api/backend/gyms/${newGym.gym.id}/invitations`,
         { cookie: invitedOwnerCookie },

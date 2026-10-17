@@ -12,7 +12,7 @@ import {
   CirclePause,
   CircleCheck,
 } from "lucide-react";
-import { api, date, message } from "../../lib/client";
+import { api, date, decimal, message } from "../../lib/client";
 import { Busy, Empty, Field, Notice } from "../ui";
 import {
   BranchFields,
@@ -225,6 +225,9 @@ function GymDetails({
     [invitation, setInvitation] = useState<NewInvite | null>(null),
     [history, setHistory] = useState<Branch | null>(null),
     [success, setSuccess] = useState("");
+  const [receivables, setReceivables] = useState<
+    { type: string; balancePiasters: string }[]
+  >([]);
   const branches = usePage<Branch>(`${prefix}/branches`),
     staff = usePage<Staff>(admin ? null : `gyms/${id}/staff`),
     invites = usePage<Invite>(`${prefix}/invitations`);
@@ -232,7 +235,14 @@ function GymDetails({
     setLoading(true);
     setError("");
     try {
-      setGym(await api<Gym>(prefix));
+      const [profile, money] = await Promise.all([
+        api<Gym>(prefix),
+        api<{ accounts: { type: string; balancePiasters: string }[] }>(
+          `${prefix}/receivables`,
+        ),
+      ]);
+      setGym(profile);
+      setReceivables(money.accounts);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -305,6 +315,20 @@ function GymDetails({
                 </span>
               </div>
             )}
+            <div className="owner-summary">
+              <strong>
+                المستحق المتاح للجيم:{" "}
+                {decimal(
+                  receivables.find((a) => a.type === "GYM_AVAILABLE")
+                    ?.balancePiasters ?? "0",
+                )}{" "}
+                ج.م
+              </strong>
+              <small>
+                مستحقات الزيارات مستقلة عن مخزون النقاط. السحب والتسوية في
+                المرحلة التالية.
+              </small>
+            </div>
             <div className="actions">
               {admin ? (
                 <>

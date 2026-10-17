@@ -147,6 +147,7 @@ export function reverseLedger(db: PrismaClient, input: {
         (!p && await tx.pointTransaction.findUnique({ where: { idempotencyKey: key } }))) throw new DomainError('INCOMPLETE_REVERSAL');
     // Visit/sale policy approvals have not been implemented; the low-level
     // reversal primitive cannot bypass those pending workflows.
+    if (p && await tx.pointSale.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     if (p && await tx.topupRequest.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     if (p && ['VISIT', 'VISIT_REVERSAL', 'SALE_REVERSAL', 'EXPIRY'].includes(p.kind) ||
         m && m.kind !== 'ADJUSTMENT') throw new DomainError('DOMAIN_APPROVAL_REQUIRED');

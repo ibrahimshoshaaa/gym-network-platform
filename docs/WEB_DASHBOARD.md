@@ -26,8 +26,9 @@ hosted deployment. Merge prerequisite gym management/topup branches first.
   assignments, and revoke/reissue invitations. Every branch shows its stock balance.
 - Password change and session revocation; logout waits for server confirmation.
 
-Staff with no owned gyms see an explanatory empty state. Cashier sales, trainee
-mobile UI, QR visits, payouts and settlements remain later increments. The current owner selector shows at most 100 gyms/branches;
+Cashiers and managers now have scoped operation screens, and trainees have a
+temporary web QR/wallet panel; see [CASHIER_VISITS.md](CASHIER_VISITS.md). Flutter,
+cancellation review and payout/settlement workflows remain later increments. The current owner selector shows at most 100 gyms/branches;
 admin package settings show the first 100 packages. Request histories paginate.
 
 ## Operator setup
