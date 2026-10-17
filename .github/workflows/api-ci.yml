@@ -77,3 +77,12 @@ jobs:
         env:
           DATABASE_URL: postgresql://gym_app:gym_app@localhost:5432/gym_ci?schema=public
         run: pnpm --filter @gym/web test:live
+
+      - name: Build and verify Neon ARM64 deployment archive
+        run: pnpm build:neon
+      - name: Keep reviewed Neon deployment bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: gym-api-neon
+          path: build/neon/gym-api-neon.zip
+          retention-days: 7
