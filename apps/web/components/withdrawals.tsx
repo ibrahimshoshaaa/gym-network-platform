@@ -228,7 +228,7 @@ function RequestForm({
         <>
           <Notice
             success
-            text={`تم حجز ${decimal(done.amountPiasters)} ج.م. مرجع الطلب: ${done.id}`}
+            text={`طلب ${done.id}: ${stateName(done.status)} · ${decimal(done.amountPiasters)} ج.م`}
           />
           <button className="primary full" onClick={close}>
             تم

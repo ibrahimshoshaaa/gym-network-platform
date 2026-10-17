@@ -937,10 +937,10 @@ test(
       );
       const pendingResponse = await makeWithdrawal();
       assert.equal(pendingResponse.status, 200);
-      const pending = await pendingResponse.json();
+      const pendingWithdrawal = await pendingResponse.json();
       const cancelKey = randomUUID();
       const cancelWithdrawal = () =>
-        request(`/api/backend/withdrawals/${pending.id}/cancel`, {
+        request(`/api/backend/withdrawals/${pendingWithdrawal.id}/cancel`, {
           cookie: invitedOwnerCookie,
           method: "POST",
           headers: { "idempotency-key": cancelKey },
