@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "test": "node --import tsx --test test/*.test.ts",
     "test:db": "node --import tsx --test --test-concurrency=1 test-db/*.test.ts",
-    "admin:provision": "node --import tsx src/cli/provision-admin.ts"
+    "admin:provision": "node --import tsx src/cli/provision-admin.ts",
+    "vercel-build": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
