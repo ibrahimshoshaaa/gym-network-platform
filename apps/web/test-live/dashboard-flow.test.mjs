@@ -1070,10 +1070,13 @@ test(
         { cookie: invitedOwnerCookie },
       );
       assert.equal(ownWithdrawalDetail.status, 200);
-      assert.equal(
-        (await ownWithdrawalDetail.json()).withdrawal.proofReceiptId,
-        transferProof.id,
-      );
+      const withdrawalSnapshot = await ownWithdrawalDetail.json();
+      assert.equal(withdrawalSnapshot.withdrawal.proofReceiptId,transferProof.id);
+      assert.equal(withdrawalSnapshot.balances.consistent,true);
+      assert.ok(withdrawalSnapshot.balances.visitCount > 0);
+      assert.ok(withdrawalSnapshot.balances.latestVisits.length > 0);
+      assert.equal(withdrawalSnapshot.balances.currentReservedPiasters,"0");
+      assert.equal(withdrawalSnapshot.balances.availableAfterPaymentPiasters,null);
       assert.equal(
         (
           await request(`/api/backend/withdrawals/${withdrawal.id}`, {

@@ -1,3 +1,4 @@
+import { withdrawalBalances } from "./balances.js";
 import type { PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -89,6 +90,7 @@ export function registerWithdrawalRoutes(
       return {
         withdrawal: withdrawalView(row),
         gymName: gym.name,
+        balances: await withdrawalBalances(tx, row),
         feedback: await tx.withdrawalFeedback.findUnique({
           where: { withdrawalId: id },
         }),
@@ -105,7 +107,7 @@ export function registerWithdrawalRoutes(
           },
         }),
       };
-    });
+    }, { isolationLevel: "RepeatableRead", timeout: 10000 });
   });
   for (const action of ["cancel", "feedback", "review", "payment"] as const)
     app.post(

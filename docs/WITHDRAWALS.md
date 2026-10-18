@@ -119,3 +119,21 @@ forged state/ledger guards. The HTTP flow earns actual synthetic visit receivabl
 reserves/cancels/retries, accepts with a calendar, records a synthetic proof,
 opens a dispute and checks balances/cancellation protection through the BFF.
 No live funds, real customer records, provider upload or physical browser QA used.
+
+## Withdrawal detail balance snapshot
+
+Authorized owners and admins now receive one RepeatableRead snapshot of current
+available/reserved/disputed/paid accounts alongside the immutable request and its
+state. Posted ledger totals are compared with cached balances, and aggregate open
+withdrawals must equal RESERVED. The screen distinguishes this request's existing
+reservation from other reservations. It never subtracts the request again on
+approval or payment: payment moves RESERVED to PAID, leaving AVAILABLE unchanged.
+Net accumulated entitlements include recorded adjustments/reversals and prior
+payments; they are not asserted to be gross visit revenue or bank cash. The view
+is current at asOf, not a reconstruction of balances at submission. Explicit refresh
+reloads status and balances. Existing atomic server checks remain authoritative.
+No debt policy, refund, dispute-hold mutation or external transfer is introduced.
+
+The snapshot also separates non-cancelled visit earnings from net recorded other
+adjustments, with the latest five visit references, hosting branch, points and
+historical settlement amount. It does not invent per-visit payout allocation.
