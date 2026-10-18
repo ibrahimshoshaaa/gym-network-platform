@@ -24,6 +24,7 @@ export async function upstream(
   path: string,
   init: RequestInit = {},
   token?: string,
+  remoteAddress?: string,
 ) {
   try {
     if (process.env.GYM_EMBEDDED_API === "true") {
@@ -33,7 +34,7 @@ export async function upstream(
         ? init.body
         : init.body instanceof Uint8Array ? init.body
         : new Uint8Array(await new Response(init.body).arrayBuffer());
-      return await internalRequest(path, { method: init.method, headers, body });
+      return await internalRequest(path, { method: init.method, headers, body, remoteAddress });
     }
     return await fetch(`${apiOrigin()}/${path}`, {
       ...init,

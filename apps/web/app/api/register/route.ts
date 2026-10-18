@@ -1,3 +1,4 @@
+import { trustedClientAddress } from "../../../lib/client-address";
 import { cookies } from "next/headers";
 import { boundedBody, checkOrigin, GatewayError } from "../../../lib/security";
 import { cookieName, cookieOptions, failure, json, upstream } from "../../../lib/gateway";
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     const response = await upstream("auth/register", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
-    });
+    }, undefined, trustedClientAddress(request));
     const result = await response.json();
     if (!response.ok) return json({ code: result.code ?? "INVALID_INPUT" }, response.status);
     if (!result.accessToken || !result.user || result.user.role !== "TRAINEE")

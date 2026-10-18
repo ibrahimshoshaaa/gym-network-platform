@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import { PrismaClient } from '@prisma/client';
 import { buildApp } from './app.js';
 
@@ -16,6 +17,7 @@ export async function internalRequest(path: string, init: {
   method?: string;
   headers: Record<string, string>;
   body?: Uint8Array | string;
+  remoteAddress?: string;
 }) {
   if (!/^[a-z][a-z0-9/-]*(?:\?.*)?$/.test(path) || path.includes('..')) {
     throw new Error('Invalid internal API path');
@@ -31,7 +33,7 @@ export async function internalRequest(path: string, init: {
     url: '/' + path,
     headers,
     ...(init.body !== undefined ? { payload: typeof init.body === 'string' ? init.body : Buffer.from(init.body) } : {}),
-    remoteAddress: '127.0.0.1',
+    remoteAddress: init.remoteAddress && isIP(init.remoteAddress) ? init.remoteAddress : '127.0.0.1',
   });
   const output = new Headers();
   for (const [key, value] of Object.entries(result.headers)) {
