@@ -9,5 +9,10 @@
     "db:generate": "pnpm --filter @gym/api db:generate",
     "db:validate": "pnpm --filter @gym/api db:validate",
     "dev:web": "pnpm --filter @gym/web dev"
+  },
+  "pnpm": {
+    "overrides": {
+      "light-my-request": "6.6.0"
+    }
   }
 }
