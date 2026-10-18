@@ -39,3 +39,10 @@ The owner selected “محفظة واحدة للجيم” with branch-level deta
 separate monetary wallet per branch. Each visit stores its hosting branch;
 receivables aggregate into the hosting gym's accounts. Branch point inventories
 remain independent. Migration and operational details: [CASHIER_VISITS.md](CASHIER_VISITS.md).
+
+
+## Phone-based direct point topups and gym wallet
+
+The platform owner can credit a trainee or an accepted active gym owner by exact mobile number, with recipient name review and explicit confirmation of collected funds. Gym owner sends are sales at the current retail point price, with received-money confirmation (owner decision, 2026-10-18). Wallet PIN is deferred.
+
+The gym wallet aggregates existing branch stocks; sending automatically consumes only active, price-approved branch inventories in the selected gym. Frozen branch points remain in the displayed total. Historical stock accounts and postings remain intact. A sale belongs to the gym rather than a fictitious single branch. Admin gym funding credits one eligible real branch internally. Every dispatch is immutable, idempotent and linked to its balanced ledger and policy snapshot. Admin dispatch collections join platform receipts; gym sales do not double count platform receipts. Transfer references are shared with existing reviewed topups to reject duplicate collection references.
