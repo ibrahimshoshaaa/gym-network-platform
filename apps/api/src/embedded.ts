@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import type { HTTPMethods } from 'fastify';
 import { buildApp } from './app.js';
 
 let app: ReturnType<typeof buildApp> | undefined;
@@ -21,10 +20,14 @@ export async function internalRequest(path: string, init: {
   if (!/^[a-z][a-z0-9/-]*(?:\?.*)?$/.test(path) || path.includes('..')) {
     throw new Error('Invalid internal API path');
   }
+  const method = init.method ?? 'GET';
+  if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'].includes(method)) {
+    throw new Error('Unsupported internal API method');
+  }
   const headers = { ...init.headers };
   delete headers['x-gym-origin-secret'];
   const result = await backend().inject({
-    method: (init.method ?? 'GET') as HTTPMethods,
+    method: method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS',
     url: '/' + path,
     headers,
     ...(init.body !== undefined ? { payload: typeof init.body === 'string' ? init.body : Buffer.from(init.body) } : {}),
