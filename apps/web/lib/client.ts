@@ -77,7 +77,7 @@ const errors: Record<string, string> = {
   INSUFFICIENT_POINTS: "رصيد النقاط غير كافٍ. لم تُنفّذ العملية.",
 
   ACCOUNT_UNAVAILABLE:
-    "الحساب غير متاح بهذه البيانات. لو موجود بالفعل استخدم بريده ورقمه المسجلين معًا.",
+    "البريد الإلكتروني أو رقم الموبايل مسجل بالفعل. جرّب تسجيل الدخول، أو استخدم بيانات مختلفة لحسابك الجديد.",
   BRANCH_NOT_READY:
     "الفرع يحتاج جيمًا نشطًا وسعرًا معتمدًا وبيانات موقع مكتملة قبل التفعيل.",
   PENDING_REQUEST_EXISTS:
@@ -98,7 +98,7 @@ const errors: Record<string, string> = {
   STORAGE_NOT_CONFIGURED: "رفع الإيصالات لم يُفعّل بعد. تواصل مع مسؤول المنصة.",
   STORAGE_UNAVAILABLE: "تعذر رفع الإيصال. حاول مرة أخرى.",
   INVALID_RECEIPT: "ارفع صورة واضحة بصيغة JPG أو PNG أو WebP.",
-  BODY_TOO_LARGE: "حجم الصورة أكبر من 5 ميجابايت.",
+  BODY_TOO_LARGE: "حجم الصورة كبير. اختار صورة أقل من 4 ميجابايت.",
   RECEIPT_ALREADY_USED: "الإيصال مرتبط بطلب آخر أو سبق رفعه من حساب آخر.",
   RECEIPT_ACCESS_DENIED: "لا يمكنك عرض هذا الإيصال.",
   PAYMENT_REFERENCE_USED:

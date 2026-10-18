@@ -54,9 +54,11 @@ function useDeadline(deadline: number | null) {
 export function TraineeWallet({
   revision,
   children,
+  view = "all",
 }: {
   revision: number;
-  children: ReactNode;
+  children?: ReactNode;
+  view?: "all" | "wallet" | "history";
 }) {
   const [version, setVersion] = useState(0),
     [historyVersion, setHistoryVersion] = useState(0),
@@ -77,7 +79,7 @@ export function TraineeWallet({
     <>
       <div className="section-toolbar">
         <p className="muted">
-          تُحدّث المحفظة والسيشنات كل ٣٠ ثانية أثناء فتح الصفحة.
+          تُحدّث المحفظة والزيارات كل ٣٠ ثانية أثناء فتح الصفحة.
         </p>
         <button
           className="secondary compact"
@@ -89,12 +91,12 @@ export function TraineeWallet({
           تحديث المحفظة والسجلات
         </button>
       </div>
-      <div className="settings-grid">
+      {view !== "history" && <div className="settings-grid">
         <WalletCard refresh={refresh} />
         {children}
-      </div>
+      </div>}
       <ActiveSessions refresh={refresh} />
-      <section className="card">
+      {view !== "wallet" && <><section className="card">
         <div className="section-toolbar">
           <h2>حركات نقاطك</h2>
           <label className="field">
@@ -121,7 +123,7 @@ export function TraineeWallet({
           operation={operation}
         />
       </section>
-      <VisitHistory key={`${revision}:${historyVersion}`} />
+      <VisitHistory key={`${revision}:${historyVersion}`} /></>}
     </>
   );
 }
@@ -240,12 +242,12 @@ function ActiveSessions({ refresh }: { refresh: string }) {
   }, [refresh]);
   return (
     <section className="card">
-      <h2>السيشنات الجارية</h2>
+      <h2>زياراتك الحالية</h2>
       <Notice text={error} />
       {loading && !rows.length ? (
         <Busy />
       ) : !rows.length ? (
-        <Empty title="لا توجد سيشنات جارية" />
+        <Empty title="لا توجد زيارات جارية" />
       ) : (
         <div className="settings-grid">
           {rows.map((v) => (
@@ -259,7 +261,7 @@ function ActiveSessions({ refresh }: { refresh: string }) {
           disabled={loading}
           onClick={() => void load(cursor)}
         >
-          {loading ? <Busy /> : "تحميل سيشنات إضافية"}
+          {loading ? <Busy /> : "تحميل زيارات إضافية"}
         </button>
       )}
       <p className="muted">

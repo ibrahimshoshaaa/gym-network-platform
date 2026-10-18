@@ -531,13 +531,28 @@ test(
         phone: "01500000005",
         password,
       };
-      const registration = await fetch(backend + "/auth/register", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(traineeBody),
+      const badRegisterOrigin = await request("/api/register", {
+        method: "POST", crossOrigin: true, body: traineeBody,
       });
+      assert.equal(badRegisterOrigin.status, 403);
+      const roleEscalation = await request("/api/register", {
+        method: "POST", body: { ...traineeBody, role: "PLATFORM_ADMIN" },
+      });
+      assert.equal(roleEscalation.status, 400);
+      const registration = await request("/api/register", { method: "POST", body: traineeBody });
       assert.equal(registration.status, 201);
       const traineeIdentity = await registration.json();
+      assert.equal(traineeIdentity.user.role, "TRAINEE");
+      assert.equal("accessToken" in traineeIdentity, false);
+      const registeredCookie = sessionCookie(registration);
+      assert.ok(registeredCookie);
+      assert.match(registration.headers.getSetCookie().join(";"), /HttpOnly/i);
+      const firstWallet = await request("/api/backend/trainee/wallet", { cookie: registeredCookie });
+      assert.equal(firstWallet.status, 200);
+      assert.equal((await firstWallet.json()).balance, 0);
+      assert.equal((await request("/api/backend/admin/topup-settings", { cookie: registeredCookie })).status, 403);
+      const duplicateRegistration = await request("/api/register", { method: "POST", body: traineeBody });
+      assert.equal(duplicateRegistration.status, 409);
       const traineeLogin = await request("/api/session", {
         method: "POST",
         body: { mode: "trainee", identifier: traineeBody.email, password },

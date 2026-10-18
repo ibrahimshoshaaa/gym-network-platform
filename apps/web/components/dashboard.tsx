@@ -24,6 +24,7 @@ import {
   ApiError,
 } from "../lib/client";
 import { Login } from "./login";
+import { TraineePortal } from "./trainee-portal";
 import { SettingsPanel } from "./settings";
 import { Cashier, TraineeQr } from "./operations";
 import { OperationReviews } from "./operation-reviews";
@@ -214,6 +215,10 @@ export function Dashboard() {
     ) : (
       <Login onLogin={loggedIn} />
     );
+  if (user.role === "TRAINEE") return <>
+    <TraineePortal user={user} logout={logout} loggingOut={loggingOut} onPassword={() => setPassword(true)} error={error} />
+    {password && <PasswordChange onClose={() => setPassword(false)} />}
+  </>;
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter((t) =>
       t.id === "directory"
