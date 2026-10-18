@@ -280,3 +280,5 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
 .branch-setup-card > .actions { margin:18px 0; flex-wrap:wrap; } .branch-setup-card > small { display:block; }
 .branch-setup-ready { display:flex; align-items:center; gap:8px; color:var(--teal); font-size:13px; margin-top:16px; }
 @media(max-width:700px){ .setup-progress { grid-template-columns:1fr; gap:8px; } .setup-progress > div { padding:13px 16px; } .branch-setup-list { padding:12px; } .branch-setup-card { padding:16px; } .branch-setup-proposal { gap:8px; } .branch-setup-proposal > div { padding:12px 9px; } .branch-setup-proposal strong { font-size:15px; } .branch-setup-card > .actions > button { width:100%; justify-content:center; } }
+
+.branch-setup-card h3,.branch-setup-proposal strong { overflow-wrap:anywhere; } .branch-setup-card .section-toolbar > div { min-width:0; }

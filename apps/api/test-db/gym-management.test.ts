@@ -337,7 +337,7 @@ test('incomplete branch data rolls back the entire combined approval and rejecti
  const f=await fixture();try{
   const owner=(await f.request('POST','/auth/invitations/accept',undefined,{token:f.created.invitation.token,password})).json();
   const c=(await f.request('POST',`/gyms/${f.created.gym.id}/branches`,owner.accessToken,branchData())).json();
-  await db.branch.update({where:{id:c.branch.id},data:{latitude:null}});
+  await db.branch.update({where:{id:c.branch.id},data:{latitude:null,longitude:null}});
   const b=await db.branch.findUniqueOrThrow({where:{id:c.branch.id}}),g=await db.gym.findUniqueOrThrow({where:{id:f.created.gym.id}});
   const body={pricingRequestId:c.pricingRequest.id,expectedGymUpdatedAt:g.updatedAt.toISOString(),expectedBranchUpdatedAt:b.updatedAt.toISOString(),expectedPricingVersion:0,mode:'APPROVE_AND_ACTIVATE',reviewed:true,reason:'Synthetic incomplete setup review'};
   assert.equal((await f.request('POST',`/admin/gyms/${g.id}/branches/${b.id}/approve-setup`,f.adminToken,body)).statusCode,409);
