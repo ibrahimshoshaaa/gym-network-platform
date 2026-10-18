@@ -1671,7 +1671,14 @@ test(
           const setupLedgerBefore=[await db.pointTransaction.count(),await db.moneyTransaction.count()];
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
           await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الجيمات والفروع',exact:true}).click();
-          await page.locator('.gym-list-item').filter({has:page.getByRole('heading',{name:'Synthetic Onboarding Gym',exact:true})}).getByRole('button',{name:'الفروع وتفاصيل الجيم',exact:true}).click();
+          await expect(page.locator('.gym-list-item').first()).toBeVisible();
+          const setupGymCard=page.locator('.gym-list-item').filter({has:page.getByRole('heading',{name:'Synthetic Onboarding Gym',exact:true})});
+          for(let n=0;n<30&&await setupGymCard.count()===0;n++){
+            const beforeCount=await page.locator('.gym-list-item').count();
+            await page.getByRole('button',{name:'تحميل المزيد',exact:true}).click();
+            await expect(page.locator('.gym-list-item')).not.toHaveCount(beforeCount);
+          }
+          await setupGymCard.getByRole('button',{name:'الفروع وتفاصيل الجيم',exact:true}).click();
           const setupCard=page.locator('.branch-setup-card').filter({has:page.getByRole('heading',{name:'Synthetic Unified Browser Branch',exact:true})});
           await expect(setupCard).toContainText('19 نقطة');
           await expect(setupCard).toContainText('75 دقيقة');
