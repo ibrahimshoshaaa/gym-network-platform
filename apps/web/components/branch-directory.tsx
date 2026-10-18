@@ -4,7 +4,9 @@ import { MapPin, Clock, Phone, Search, Navigation, QrCode, SlidersHorizontal, X 
 import { api, date, message } from "../lib/client";
 import { branchDirections, branchPhone } from "../lib/branch-links";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
+import { BranchMap } from "./branch-map";
 export type DirectoryBranch = {
+  images?:{id:string;url:string;purpose:string}[];
   distanceKm?: number;
   id: string;
   name: string;
@@ -25,9 +27,10 @@ type Page = { items: DirectoryBranch[]; nextCursor: string | null; asOf: string 
 type Position = { latitude: number; longitude: number };
 export function BranchDirectory({onShowQr}:{onShowQr?:()=>void}) {
  const [q,setQ]=useState(""),[governorate,setGovernorate]=useState(""),[city,setCity]=useState(""),[applied,setApplied]=useState(""),[result,setResult]=useState<Page|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[selected,setSelected]=useState<DirectoryBranch|null>(null),[position,setPosition]=useState<Position|null>(null),[locating,setLocating]=useState(false),[locationError,setLocationError]=useState("");
+ const [showMap,setShowMap]=useState(false),[minPrice,setMinPrice]=useState(""),[maxPrice,setMaxPrice]=useState("");
  const generation=useRef(0), locationGeneration=useRef(0);
  function query(at:Position|null=position) {
-  return new URLSearchParams({limit:"12",...(q.trim()?{q:q.trim()}:{}),...(governorate.trim()?{governorate:governorate.trim()}:{}),...(city.trim()?{city:city.trim()}:{}),...(at?{latitude:String(at.latitude),longitude:String(at.longitude)}:{})}).toString();
+  return new URLSearchParams({limit:"12",...(q.trim()?{q:q.trim()}:{}),...(governorate.trim()?{governorate:governorate.trim()}:{}),...(city.trim()?{city:city.trim()}:{}),...(minPrice?{minPrice}:{}),...(maxPrice?{maxPrice}:{}),...(at?{latitude:String(at.latitude),longitude:String(at.longitude)}:{})}).toString();
  }
  async function load(value:string,cursor?:string) {
   const current=++generation.current;setBusy(true);setError("");setApplied(value);
@@ -54,13 +57,15 @@ export function BranchDirectory({onShowQr}:{onShowQr?:()=>void}) {
    <Notice text={locationError}/>
    <form onSubmit={search}><fieldset disabled={busy||locating}>
     <div className="directory-search-row"><Field label="ابحث عن جيم أو منطقة" value={q} maxLength={80} onChange={e=>setQ(e.target.value)} placeholder="اسم الجيم، المدينة أو المنطقة"/><button className="secondary" aria-label="بحث عن الجيمات"><Search size={20}/></button></div>
-    <details className="directory-filters"><summary><SlidersHorizontal size={16}/>تحديد المحافظة والمدينة</summary><div className="form-grid"><Field label="المحافظة" value={governorate} maxLength={80} onChange={e=>setGovernorate(e.target.value)}/><Field label="المدينة" value={city} maxLength={80} onChange={e=>setCity(e.target.value)}/></div><button className="secondary compact">تطبيق التحديد</button></details>
+    <details className="directory-filters"><summary><SlidersHorizontal size={16}/>تحديد المنطقة وسعر الزيارة</summary><div className="form-grid"><Field label="المحافظة" value={governorate} maxLength={80} onChange={e=>setGovernorate(e.target.value)}/><Field label="المدينة" value={city} maxLength={80} onChange={e=>setCity(e.target.value)}/><Field label="أقل سعر بالنقاط" type="number" value={minPrice} min={1} onChange={e=>setMinPrice(e.target.value)}/><Field label="أعلى سعر بالنقاط" type="number" value={maxPrice} min={Number(minPrice)||1} onChange={e=>setMaxPrice(e.target.value)}/></div><button className="secondary compact">تطبيق التحديد</button></details>
    </fieldset></form>
   </section>
   <Notice text={error}/>
   {result&&<div className="section-toolbar"><p className="muted">{new URLSearchParams(applied).has("latitude")?"مرتّبة من الأقرب ليك · المسافة بخط مستقيم تقريبًا":"الفروع المتاحة"} · {result.items.length} فرع</p>{position&&<button className="text-button" disabled={busy||locating} onClick={()=>{setPosition(null);setResult(null);void load(query(null));}}><X size={15}/>إلغاء الموقع</button>}</div>}
-  {busy&&!result?<section className="card"><Busy>بنجيب الجيمات</Busy></section>:result&&!result.items.length?<section className="card"><Empty title="مفيش فروع مطابقة حاليًا">جرّب منطقة تانية أو امسح التحديد. الجيم يظهر بعد تفعيل الفرع واعتماد سعره.</Empty><button className="secondary full" onClick={()=>{setQ("");setGovernorate("");setCity("");setPosition(null);setResult(null);void load("limit=12");}}>عرض كل الجيمات</button></section>:null}
+  {busy&&!result?<section className="card"><Busy>بنجيب الجيمات</Busy></section>:result&&!result.items.length?<section className="card"><Empty title="مفيش فروع مطابقة حاليًا">جرّب منطقة تانية أو امسح التحديد. الجيم يظهر بعد تفعيل الفرع واعتماد سعره.</Empty><button className="secondary full" onClick={()=>{setQ("");setGovernorate("");setCity("");setPosition(null);setMinPrice("");setMaxPrice("");setResult(null);void load("limit=12");}}>عرض كل الجيمات</button></section>:null}
   {error&&<button className="secondary full" disabled={busy} onClick={()=>void load(applied||query())}>إعادة المحاولة</button>}
+  {result&&result.items.length>0&&<button className="secondary full" aria-pressed={showMap} onClick={()=>setShowMap(v=>!v)}>{showMap?"إخفاء الخريطة":"اعرض الفروع على الخريطة"}</button>}
+  {showMap&&result&&<BranchMap branches={result.items} onSelect={setSelected}/>}
   <div className="directory-grid">{result?.items.map(branch=><DirectoryCard key={branch.id} branch={branch} onOpen={()=>setSelected(branch)}/>)}</div>
   {result?.nextCursor&&<button className="secondary full" disabled={busy||locating} onClick={()=>void load(applied,result.nextCursor!)}>{busy?<Busy/>:"جيمات أكتر"}</button>}
   {selected&&<BranchDetails key={selected.id} initial={selected} onClose={()=>setSelected(null)} onShowQr={onShowQr}/>}
@@ -69,6 +74,7 @@ export function BranchDirectory({onShowQr}:{onShowQr?:()=>void}) {
 export function DirectoryCard({branch:b,onOpen}:{branch:DirectoryBranch;onOpen:()=>void}) {
  const directions=branchDirections(b.latitude,b.longitude);
  return <article className="card directory-card">
+  {b.images?.length ? <img className="directory-cover" src={(b.images.find(i=>i.purpose==="PHOTO")??b.images[0])!.url} alt={`صورة ${b.gym.name} · ${b.name}`} loading="lazy"/>:null}
   <div className="section-toolbar"><span className="eyebrow">{b.gym.name}</span>{b.distanceKm!==undefined&&<span className="distance-badge"><Navigation size={14}/>{b.distanceKm<1?`${Math.round(b.distanceKm*1000)} متر`:`${b.distanceKm.toFixed(1)} كم`}</span>}</div>
   <h3>{b.name}</h3><p className="muted"><MapPin size={16}/>{b.city} · {b.governorate}</p><p className="directory-address">{b.address}</p>
   <div className="directory-price"><strong>{b.visitPricePoints}<small> نقطة / زيارة</small></strong><span><Clock size={15}/>{b.sessionMinutes} دقيقة</span></div>
@@ -119,6 +125,7 @@ function BranchDetails({
           <p className="eyebrow">{branch.gym.name}</p>
           {branch.gym.description && <p>{branch.gym.description}</p>}
           <h3>{branch.name}</h3>
+          {branch.images?.length ? <div className="branch-gallery">{branch.images.map(i=><img key={i.id} src={i.url} alt={i.purpose==="LOGO"?"لوجو الجيم":"صورة من الفرع"} loading="lazy"/>)}</div>:null}
           <p>
             {branch.governorate} · {branch.city}
           </p>

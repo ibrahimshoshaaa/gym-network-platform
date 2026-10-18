@@ -12,26 +12,27 @@
     "test:live": "node --test test-live/*.test.mjs"
   },
   "dependencies": {
+    "@gym/api": "workspace:*",
+    "@prisma/client": "^6.16.0",
     "@zxing/browser": "^0.2.1",
+    "cloudinary": "^2.11.0",
+    "fastify": "^5.6.1",
+    "leaflet": "1.9.4",
     "lucide-react": "^1.58.0",
     "next": "^16.4.2",
     "qrcode.react": "^4.2.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "@gym/api": "workspace:*",
-    "@prisma/client": "^6.16.0",
-    "cloudinary": "^2.11.0",
-    "fastify": "^5.6.1",
     "sharp": "^0.35.5",
-    "zod": "^4.1.11",
-    "leaflet": "1.9.4"
+    "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tsx": "^4",
-    "typescript": "^5",
-    "@types/leaflet": "^1.9.21"
+    "typescript": "^5"
   }
 }

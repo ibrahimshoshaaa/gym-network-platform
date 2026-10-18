@@ -1912,3 +1912,54 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
 .withdrawal-balance-grid dt { font-size:11px; color:var(--muted); }
 .withdrawal-balance-grid dd { margin:6px 0 0; font-size:18px; font-weight:700; color:var(--teal-dark); overflow-wrap:anywhere; }
 @media(max-width:450px) { .withdrawal-balance-card { padding:12px; } .withdrawal-balance-grid { grid-template-columns:1fr; } }
+
+/* Support, account tools and operational summaries */
+.account-tools { display:flex; align-items:center; gap:5px; }
+.account-tools .icon-button { width:40px; height:40px; min-width:40px; }
+.notification-toggle { position:relative; }
+.notification-dot { width:8px; height:8px; position:absolute; top:6px; right:6px; border:2px solid white; border-radius:50%; background:#bf405b; }
+.notification-list,.support-messages { display:grid; gap:12px; margin:20px 0; }
+.notification-list article,.support-messages article { border:1px solid var(--line); border-radius:12px; padding:16px; overflow-wrap:anywhere; }
+.notification-list article.unread { border-inline-start:4px solid var(--teal); background:var(--mint); }
+.notification-list p,.support-messages p { margin:8px 0; white-space:pre-wrap; font-size:13px; line-height:1.9; }
+.notification-list small,.support-messages small { color:var(--muted); font-size:11px; }
+.notification-list .text-button { display:block; margin-top:10px; }
+.support-messages article.support-answer { background:var(--mint); }
+.role-summary { margin-bottom:28px; }
+.role-summary > small { display:block; margin-top:12px; }
+.summary-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:15px; }
+.summary-task { text-align:start; border:1px solid var(--line); border-radius:14px; padding:18px; background:white; color:var(--ink); }
+.summary-task > span { display:block; color:var(--muted); font-size:12px; }
+.summary-task strong { display:block; margin-top:10px; font-size:25px; color:var(--teal-dark); }
+.summary-task small { font-size:11px; }
+.recovery-card { max-width:500px; width:100%; }
+.login-recovery-help { text-align:start; font-size:12px; line-height:1.9; }
+.login-recovery-help summary { padding:10px 0; cursor:pointer; }
+.directory-map { margin:18px 0; }
+.branch-map-shell { height:390px; position:relative; isolation:isolate; margin-top:16px; }
+.branch-map { width:100%; height:100%; border-radius:14px; direction:ltr; }
+.branch-price-pin { background:transparent; border:0; }
+.branch-price-pin span { display:grid; place-items:center; height:32px; padding:4px 10px; border:2px solid white; background:var(--teal); color:white; font-size:13px; font-weight:700; border-radius:12px 12px 12px 0; box-shadow:0 2px 9px #0003; }
+.directory-cover { width:100%; height:170px; object-fit:cover; border-radius:12px; }
+.branch-gallery { display:flex; gap:10px; overflow-x:auto; margin:16px 0; padding-bottom:8px; }
+.branch-gallery img { width:230px; height:170px; border-radius:12px; object-fit:cover; }
+.business-gallery { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:20px 0; }
+.business-gallery img { width:100%; height:170px; border-radius:12px; object-fit:cover; }
+.business-gallery article { min-width:0; }
+.business-gallery button { margin-top:8px; }
+@media(max-width:700px) {
+ .topbar { flex-wrap:wrap; gap:8px; }
+ .topbar-start { flex:1; min-width:0; }
+ .topbar .profile > div { display:none; }
+ .topbar .profile .avatar { width:34px; height:34px; }
+ .topbar .account-tools { margin-inline-start:auto; }
+ .trainee-header { flex-wrap:wrap; gap:10px; }
+ .trainee-header .brand { flex:1; }
+ .trainee-account { width:100%; justify-content:flex-end; }
+ .trainee-account > span { margin-inline-end:auto; }
+ .summary-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .summary-task { padding:14px; }
+ .summary-task strong { font-size:22px; }
+ .business-gallery { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .branch-map-shell { height:330px; }
+}

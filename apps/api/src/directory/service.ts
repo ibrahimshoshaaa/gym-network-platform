@@ -26,6 +26,10 @@ type Branch = {
 // stock, ledger balances, receipts or private operational records.
 const projection = Prisma.sql`SELECT b.id,b.name,b.address,b.governorate,b.city,coalesce(b."contactPhone",g."contactPhone") AS "contactPhone",b."openingHours",b.latitude::text AS latitude,b.longitude::text AS longitude,b."visitPricePoints",b."sessionMinutes",b."pricingVersion",g.id AS "gymId",g.name AS "gymName",g.description FROM "Branch" b JOIN "Gym" g ON g.id=b."gymId" JOIN "User" u ON u.id=g."ownerId"`;
 const eligible = Prisma.sql`b.status='ACTIVE' AND g.status='ACTIVE' AND g."ownerAcceptedAt" IS NOT NULL AND u."isActive" AND b."pricingVersion">0 AND b."priceApprovedAt" IS NOT NULL AND b."visitPricePoints">0 AND b."sessionMinutes">0 AND length(btrim(b.address))>0 AND length(btrim(b.governorate))>0 AND length(btrim(b.city))>0 AND b.latitude BETWEEN -90 AND 90 AND b.longitude BETWEEN -180 AND 180`;
+export async function directoryImages<T extends {id:string;gym:{id:string}}>(tx: Tx, branches: T[]) {
+ const images=await tx.businessImage.findMany({where:{OR:[{branchId:{in:branches.map(b=>b.id)}},{gymId:{in:branches.map(b=>b.gym.id)},purpose:"LOGO",branchId:null}]},select:{id:true,branchId:true,gymId:true,purpose:true,publicUrl:true}});
+ return branches.map(b=>({...b,images:images.filter(i=>i.branchId===b.id||(i.gymId===b.gym.id&&i.purpose==="LOGO")).map(i=>({id:i.id,url:i.publicUrl,purpose:i.purpose}))}));
+}
 const view = ({ gymId, gymName, description, ...branch }: Branch) => ({
   ...branch,
   gym: { id: gymId, name: gymName, description },
@@ -62,7 +66,7 @@ export async function browseBranches(
 ) {
   const q = parse(directoryQuery, input);
   return read(db, actorId, async (tx) => {
-    const filters = Prisma.sql`${q.q ? Prisma.sql`AND (strpos(lower(concat_ws(' ',b.name,g.name,b.address,b.governorate,b.city)),lower(${q.q}))>0)` : Prisma.empty} ${q.governorate ? Prisma.sql`AND lower(b.governorate)=lower(${q.governorate})` : Prisma.empty} ${q.city ? Prisma.sql`AND lower(b.city)=lower(${q.city})` : Prisma.empty}`;
+    const filters = Prisma.sql`${q.minPrice!==undefined?Prisma.sql`AND b."visitPricePoints">=${q.minPrice}`:Prisma.empty} ${q.maxPrice!==undefined?Prisma.sql`AND b."visitPricePoints"<=${q.maxPrice}`:Prisma.empty} ${q.q ? Prisma.sql`AND (strpos(lower(concat_ws(' ',b.name,g.name,b.address,b.governorate,b.city)),lower(${q.q}))>0)` : Prisma.empty} ${q.governorate ? Prisma.sql`AND lower(b.governorate)=lower(${q.governorate})` : Prisma.empty} ${q.city ? Prisma.sql`AND lower(b.city)=lower(${q.city})` : Prisma.empty}`;
     const nearby = q.latitude !== undefined && q.longitude !== undefined;
     const rows = await tx.$queryRaw<Branch[]>(nearby ? Prisma.sql`
       WITH candidates AS (${projection} WHERE ${eligible} ${filters}),
@@ -76,7 +80,7 @@ export async function browseBranches(
     ` : Prisma.sql`${projection} WHERE ${eligible} ${filters} ${q.cursor ? Prisma.sql`AND b.id>${q.cursor}::uuid` : Prisma.empty} ORDER BY b.id ASC LIMIT ${q.limit + 1}`);
     return {
       asOf: new Date(),
-      items: rows.slice(0, q.limit).map(view),
+      items: await directoryImages(tx,rows.slice(0, q.limit).map(view)),
       nextCursor: rows.length > q.limit ? rows[q.limit - 1]!.id : null,
     };
   });
@@ -91,6 +95,6 @@ export async function branchDetails(
       Prisma.sql`${projection} WHERE ${eligible} AND b.id=${id}::uuid`,
     );
     if (!b) throw new DomainError("NOT_FOUND");
-    return { asOf: new Date(), branch: view(b) };
+    return { asOf: new Date(), branch: (await directoryImages(tx,[view(b)]))[0]! };
   });
 }

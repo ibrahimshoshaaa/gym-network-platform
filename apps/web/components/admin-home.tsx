@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Building2, CheckCircle2, Circle, Coins, CreditCard, FileCheck2, RefreshCw } from "lucide-react";
 import { api, decimal, message, type Settings } from "../lib/client";
+import { RoleSummary } from "./updates";
 import { Busy, Notice } from "./ui";
 
-export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages";
+export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit";
 export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDestination) => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState("");
@@ -30,6 +31,7 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
   const ready = settings?.policy && settings.paymentMethods.some(method => method.enabled === true);
   return <>
     <div className="work-welcome"><span className="eyebrow">إدارة المنصة</span><h1>مهامك اليومية</h1><p>اختار المهمة اللي محتاجة قرارك.</p></div>
+    <RoleSummary onNavigate={destination=>onNavigate(destination as AdminDestination)}/>
     <div className="work-task-grid admin-daily">
       <button className="work-task featured" onClick={() => onNavigate("reviews")}><span className="work-task-icon"><FileCheck2 size={25}/></span><strong>راجع طلبات الشحن</strong><span>افتح الإيصال وأكد وصول التحويل لإضافة النقاط.</span><ArrowLeft size={18}/></button>
       <button className="work-task" onClick={() => onNavigate("gyms")}><span className="work-task-icon"><Building2 size={25}/></span><strong>الجيمات والفروع</strong><span>فعّل جيمًا أو تابع الفروع والدعوات.</span><ArrowLeft size={18}/></button>
@@ -46,7 +48,10 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
        ["inventory","أرصدة الفروع","اختار جيمًا وفرعًا لمتابعة النقاط وحركتها."],
        ["pricing","تسعير النقاط والنسب","حدد سعر النقطة وخصم الجيم ونسبته."],
        ["payments","حسابات استقبال التحويل","حدّث الحسابات وفعّل وسائل التحويل."],
-       ["packages","باقات الشحن","أضف وعدّل الباقات المتاحة للمتدربين والجيمات."]
+       ["packages","باقات الشحن","أضف وعدّل الباقات المتاحة للمتدربين والجيمات."],
+       ["support","الدعم والشكاوى","راجع الطلبات والرسائل واضبط رقم واتساب."],
+       ["users","المستخدمون والحسابات","إدارة الإتاحة واستعادة الحسابات."],
+       ["audit","سجل التغييرات","راجع القرارات والعمليات المنفذة."]
       ] as const).map(([id,title,description])=><button className="card" key={id} onClick={()=>onNavigate(id)}><ArrowLeft size={19}/><strong>{title}</strong><span>{description}</span></button>)}
       </div>
     </section>
