@@ -20,6 +20,34 @@ class MemoryStore implements TokenStore {
 }
 
 void main() {
+  test(
+    'wrong current password does not revoke a valid device session',
+    () async {
+      final store = MemoryStore();
+      store.values['session'] = 'old-token';
+      final api =
+          ApiClient(
+              storage: store,
+              transport: MockClient(
+                (r) async =>
+                    http.Response('{"code":"INVALID_CREDENTIALS"}', 401),
+              ),
+            )
+            ..user = {'id': 'one'}
+            ..token = 'old-token';
+      await expectLater(
+        api.authenticate('auth/password/change', {
+          'currentPassword': 'incorrect',
+          'newPassword': 'new long synthetic password',
+        }),
+        throwsA(isA<ApiFailure>()),
+      );
+      expect(api.user?['id'], 'one');
+      expect(api.token, 'old-token');
+      expect(store.values['session'], 'old-token');
+    },
+  );
+
   test('money and Arabic digits never use floating point', () {
     expect(money('900719925474099312'), '9007199254740993.12');
     expect(money('-105'), '-1.05');

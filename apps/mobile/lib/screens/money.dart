@@ -261,15 +261,13 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                     if (busy) return;
                     setState(() => busy = true);
                     try {
-                      await widget.api.transact(
-                        'gyms/${widget.gymId}/withdrawals',
-                        {
-                          'paymentMethod': method,
-                          'destinationAccount': account.text,
-                          'destinationName': name.text,
-                          'amountPiasters': piasters(amount.text),
-                        },
-                      );
+                      await widget.api
+                          .transact('gyms/${widget.gymId}/withdrawals', {
+                            'paymentMethod': method,
+                            'destinationAccount': account.text,
+                            'destinationName': name.text,
+                            'amountPiasters': piasters(amount.text),
+                          });
                       if (context.mounted) Navigator.pop(context, true);
                     } catch (e) {
                       if (mounted) setState(() => error = e);

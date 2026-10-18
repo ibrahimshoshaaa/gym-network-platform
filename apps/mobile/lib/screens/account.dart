@@ -106,7 +106,7 @@ class _AccountScreenState extends State<AccountScreen> {
       ),
       const SizedBox(height: 26),
       const Text(
-        'GYM NETWORK\nنسخة 0.2.0 · ShoTech Solutions',
+        'GYM NETWORK\nنسخة 0.2.1 · ShoTech Solutions',
         textAlign: TextAlign.center,
         style: TextStyle(color: muted, fontSize: 11),
       ),
@@ -339,7 +339,8 @@ class SupportScreen extends StatelessWidget {
         children: [
           const EmptyState(
             'إحنا معاك',
-            detail: 'اسأل عن حسابك أو الشحن أو الزيارات. فريق الإدارة هيرد عليك هنا.',
+            detail:
+                'اسأل عن حسابك أو الشحن أو الزيارات. فريق الإدارة هيرد عليك هنا.',
             icon: Icons.support_agent_rounded,
           ),
           const SizedBox(height: 20),

@@ -40,8 +40,7 @@ const messages = {
   'INVALID_CREDENTIALS': 'الإيميل أو رقم الموبايل أو كلمة السر غير صحيح.',
   'ACCOUNT_UNAVAILABLE':
       'الإيميل أو رقم الموبايل مسجل بالفعل. جرّب تسجيل الدخول.',
-  'INVALID_INPUT':
-      'راجع البيانات المطلوبة. كلمة السر الجديدة 15 حرفًا على الأقل.',
+  'INVALID_INPUT': 'راجع الحقول المطلوبة والقيم المدخلة.',
   'UNAUTHENTICATED': 'انتهت الجلسة. سجّل الدخول مرة تانية.',
   'ACCESS_DENIED': 'حسابك غير مسموح له بالخطوة دي.',
   'RATE_LIMITED': 'محاولات كتير في وقت قصير. انتظر قليلًا وحاول تاني.',
@@ -166,11 +165,18 @@ class ApiClient extends ChangeNotifier {
         );
       }
       if (r.statusCode >= 400) {
-        if (r.statusCode == 401 && auth && currentToken == token) {
+        if (r.statusCode == 401 &&
+            data is Map &&
+            data['code'] == 'UNAUTHENTICATED' &&
+            auth &&
+            currentToken == token) {
           token = null;
           user = null;
-          await storage.remove('session');
-          notifyListeners();
+          try {
+            await storage.remove('session');
+          } finally {
+            notifyListeners();
+          }
         }
         throw ApiFailure(
           data is Map ? '${data['code']}' : 'SERVICE_UNAVAILABLE',
@@ -231,8 +237,11 @@ class ApiClient extends ChangeNotifier {
       token = null;
       user = null;
       pending = null;
-      await storage.remove('session');
-      notifyListeners();
+      try {
+        await storage.remove('session');
+      } finally {
+        notifyListeners();
+      }
     }
   }
 

@@ -23,6 +23,58 @@ http.Response response(String body, int status) => http.Response(
 );
 void main() {
   testWidgets(
+    'offline startup retry restores saved financial command before allowing another action',
+    (t) async {
+      final store = MemoryStore();
+      store.values['session'] = 'synthetic-session';
+      store.values['pending.one'] = jsonEncode({
+        'path': 'topups',
+        'body': {'points': 10},
+        'key': newKey(),
+        'actorId': 'one',
+      });
+      var offline = true;
+      final api = ApiClient(
+        storage: store,
+        transport: MockClient((r) async {
+          if (offline) throw http.ClientException('offline');
+          final path = r.url.path;
+          if (path.endsWith('/me'))
+            return response(
+              jsonEncode({
+                'id': 'one',
+                'role': 'TRAINEE',
+                'displayName': 'متدرب تجريبي',
+              }),
+              200,
+            );
+          if (path.endsWith('/trainee/wallet'))
+            return response(
+              jsonEncode({
+                'spendablePoints': 0,
+                'unavailablePoints': 0,
+                'expiresAt': null,
+              }),
+              200,
+            );
+          return response('{"items":[]}', 200);
+        }),
+      );
+      await t.pumpWidget(GymNetworkApp(api: api));
+      await t.pumpAndSettle();
+      expect(find.text('إعادة المحاولة'), findsOneWidget);
+      expect(api.pending, isNull);
+      offline = false;
+      await t.tap(find.text('إعادة المحاولة'));
+      await t.pumpAndSettle();
+      expect(api.user?['id'], 'one');
+      expect(api.pending?['path'], 'topups');
+      expect(find.text('إعادة نفس العملية بأمان'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Arabic login and both registration paths fit narrow mobile and retain email entry',
     (t) async {
       t.view.physicalSize = const Size(320, 740);
