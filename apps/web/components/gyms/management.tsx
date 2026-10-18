@@ -102,56 +102,13 @@ export function GymManagement({ admin }: { admin: boolean }) {
               : "تأكد من قبول دعوة صاحب المنصة؛ الموظفون يديرون مهام الفرع حسب صلاحياتهم."}
           </Empty>
         ) : (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>الجيم</th>
-                  {admin && <th>صاحب الجيم</th>}
-                  <th>الحالة</th>
-                  <th>قبول الدعوة</th>
-                  <th>الإدارة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.rows.map((gym) => (
-                  <tr key={gym.id}>
-                    <td>
-                      <strong>{gym.name}</strong>
-                      <small>{gym.contactPhone ?? "بدون رقم تواصل"}</small>
-                    </td>
-                    {admin && (
-                      <td>
-                        <strong>{gym.owner?.displayName}</strong>
-                        <small dir="ltr">{gym.owner?.email}</small>
-                      </td>
-                    )}
-                    <td>
-                      <Status value={gym.status} />
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${gym.ownerAcceptedAt ? "approved" : "pending"}`}
-                      >
-                        {gym.ownerAcceptedAt
-                          ? "تم القبول"
-                          : "بانتظار صاحب الجيم"}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        className="text-button"
-                        onClick={() => setSelected(gym.id)}
-                      >
-                        <Building2 size={16} />
-                        إدارة الجيم
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div className="gym-card-list">{list.rows.map(gym => <article key={gym.id} className="gym-list-item">
+            <div className="section-toolbar"><h3>{gym.name}</h3><Status value={gym.status}/></div>
+            {admin && <p className="muted">صاحب الجيم: {gym.owner?.displayName} · <span dir="ltr">{gym.owner?.email}</span></p>}
+            <p className="muted">{gym.ownerAcceptedAt ? "صاحب الجيم قبل الدعوة" : "في انتظار قبول دعوة صاحب الجيم"}</p>
+            {admin && gym.status === "PENDING" && gym.ownerAcceptedAt && <p className="subtle-box">الخطوة الجاية: فعّل الجيم من التفاصيل، ثم جهّز الفروع.</p>}
+            <button className="primary full" onClick={() => setSelected(gym.id)}><Building2 size={18}/>{admin && gym.status === "PENDING" && gym.ownerAcceptedAt ? "مراجعة وتفعيل الجيم" : "الفروع وتفاصيل الجيم"}</button>
+          </article>)}</div>
         )}
         <More list={list} />
       </section>
@@ -325,8 +282,7 @@ function GymDetails({
                 ج.م
               </strong>
               <small>
-                مستحقات الزيارات مستقلة عن مخزون النقاط. السحب والتسوية في
-                المرحلة التالية.
+                مستحقات الزيارات مستقلة عن مخزون النقاط. تابع صرفها من السحب والتسويات.
               </small>
             </div>
             <div className="actions">

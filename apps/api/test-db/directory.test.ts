@@ -257,3 +257,30 @@ test("HTTP directory requires active trainee authentication, validates input and
   });
   assert.equal((await get("/directory/branches")).statusCode, 401);
 });
+
+test("nearby ranking covers all eligible results with stable distance and UUID pagination", async () => {
+ const f=await fixture();
+ const near=await f.branch(f.gym.id,{name:"Near "+f.tag,latitude:30.5001,longitude:31.0001});
+ const far=await f.branch(f.gym.id,{name:"Far "+f.tag,latitude:31,longitude:32});
+ await f.branch(f.gym.id,{name:"Hidden "+f.tag,latitude:30.5,longitude:31,status:"SUSPENDED"});
+ const query={q:f.tag,latitude:30.5,longitude:31};
+ const all=await browseBranches(db,f.trainee.id,query);
+ assert.equal(all.items.length,4);
+ assert.deepEqual(new Set(all.items.slice(0,2).map(x=>x.id)),new Set([f.a.id,f.b.id]));
+ assert.equal(all.items[2]!.id,near.id);
+ assert.equal(all.items[3]!.id,far.id);
+ assert.ok(all.items[2]!.distanceKm!>0 && all.items[2]!.distanceKm!<0.1);
+ assert.ok(all.items[3]!.distanceKm!>100);
+ const ids:string[]=[];
+ let cursor:string|undefined;
+ do {
+  const page=await browseBranches(db,f.trainee.id,{...query,limit:1,...(cursor?{cursor}:{})});
+  ids.push(...page.items.map(x=>x.id));
+  cursor=page.nextCursor??undefined;
+ } while(cursor);
+ assert.deepEqual(ids,all.items.map(x=>x.id));
+ await db.branch.update({where:{id:f.a.id},data:{city:"مدينة "+f.tag}});
+ const region=await browseBranches(db,f.trainee.id,{q:"مدينة "+f.tag,latitude:30.5,longitude:31});
+ assert.ok(region.items.some(x=>x.id===f.a.id));
+ await code(browseBranches(db,f.owner.id,query),"ACCESS_DENIED");
+});

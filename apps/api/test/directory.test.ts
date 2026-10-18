@@ -24,3 +24,9 @@ test("directory query bounds text, pages and scope without accepting operational
     assert.equal(directoryQuery.safeParse(input).success, false);
   assert.ok(directoryQuery.safeParse({ q: "%' OR 1=1 --" }).success);
 });
+
+test("nearby browsing requires a bounded coordinate pair", () => {
+ assert.ok(directoryQuery.safeParse({ latitude: "30.5", longitude: "31" }).success);
+ for(const input of [{latitude:30},{longitude:31},{latitude:91,longitude:0},{latitude:0,longitude:-181},{latitude:"",longitude:""},{latitude:null,longitude:null},{latitude:"NaN",longitude:0}])
+  assert.equal(directoryQuery.safeParse(input).success,false);
+});

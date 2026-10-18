@@ -24,6 +24,7 @@ import {
   type Identity,
   ApiError,
 } from "../lib/client";
+import { roleTabs, roleQuickTabs, roleName } from "../lib/navigation";
 import { AdminHome } from "./admin-home";
 import { Login } from "./login";
 import { TraineePortal } from "./trainee-portal";
@@ -224,21 +225,10 @@ export function Dashboard() {
     {password && <PasswordChange onClose={() => setPassword(false)} />}
   </>;
   const admin = user.role === "PLATFORM_ADMIN",
-    available = tabs.filter((t) =>
-      t.id === "directory"
-        ? user.role === "TRAINEE"
-        : ["reports", "inventory"].includes(t.id)
-          ? user.role !== "TRAINEE"
-          : t.id === "withdrawals"
-            ? admin || user.role === "GYM_OWNER"
-            : admin
-              ? !["purchases", "cashier", "trainee"].includes(t.id)
-              : ["purchases", "gyms", "cashier", "operation-reviews"].includes(
-                  t.id,
-                ) ||
-                (user.role === "TRAINEE" && t.id === "trainee"),
-    ),
+    available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
+  function navigate(next: Tab) { setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
+  const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
   return (
     <div className="app-shell">
       {mobile && (
@@ -274,10 +264,7 @@ export function Dashboard() {
               key={item.id}
               aria-current={current.id === item.id ? "page" : undefined}
               className={current.id === item.id ? "active" : ""}
-              onClick={() => {
-                setTab(item.id);
-                setMobile(false);
-              }}
+              onClick={() => navigate(item.id)}
             >
               <item.icon size={20} />
               <span>{item.label}</span>
@@ -323,7 +310,7 @@ export function Dashboard() {
           <div className="profile">
             <div>
               <strong>{user.displayName}</strong>
-              <small>{admin ? "صاحب المنصة" : "حساب الجيم"}</small>
+              <small>{roleName(user.role)}</small>
             </div>
             <span className="avatar">{user.displayName.slice(0, 1)}</span>
           </div>
@@ -338,7 +325,7 @@ export function Dashboard() {
           </div>
           <Notice text={error} />
           {current.id === "home" ? (
-            <AdminHome onNavigate={setTab} />
+            <AdminHome onNavigate={navigate} />
           ) : current.id === "directory" ? (
             <BranchDirectory />
           ) : current.id === "inventory" ? (
@@ -369,6 +356,7 @@ export function Dashboard() {
           </footer>
         </main>
       </div>
+      <nav className="role-quick-nav" aria-label="وصول سريع">{quick.map(item => <button key={item.id} aria-current={current.id === item.id ? "page" : undefined} className={current.id === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={21}/><span>{item.label}</span></button>)}<button onClick={() => setMobile(true)} aria-label="كل الأقسام"><Menu size={21}/><span>المزيد</span></button></nav>
       {password && <PasswordChange onClose={() => setPassword(false)} />}
     </div>
   );

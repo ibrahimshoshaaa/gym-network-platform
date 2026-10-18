@@ -5,6 +5,7 @@ import { parse } from "../gyms/validation.js";
 import { directoryQuery } from "./validation.js";
 type Tx = Prisma.TransactionClient;
 type Branch = {
+  distanceKm?: number;
   id: string;
   name: string;
   address: string;
@@ -61,9 +62,18 @@ export async function browseBranches(
 ) {
   const q = parse(directoryQuery, input);
   return read(db, actorId, async (tx) => {
-    const rows = await tx.$queryRaw<Branch[]>(
-      Prisma.sql`${projection} WHERE ${eligible} ${q.q ? Prisma.sql`AND (strpos(lower(b.name),lower(${q.q}))>0 OR strpos(lower(g.name),lower(${q.q}))>0)` : Prisma.empty} ${q.governorate ? Prisma.sql`AND lower(b.governorate)=lower(${q.governorate})` : Prisma.empty} ${q.city ? Prisma.sql`AND lower(b.city)=lower(${q.city})` : Prisma.empty} ${q.cursor ? Prisma.sql`AND b.id>${q.cursor}::uuid` : Prisma.empty} ORDER BY b.id ASC LIMIT ${q.limit + 1}`,
-    );
+    const filters = Prisma.sql`${q.q ? Prisma.sql`AND (strpos(lower(concat_ws(' ',b.name,g.name,b.address,b.governorate,b.city)),lower(${q.q}))>0)` : Prisma.empty} ${q.governorate ? Prisma.sql`AND lower(b.governorate)=lower(${q.governorate})` : Prisma.empty} ${q.city ? Prisma.sql`AND lower(b.city)=lower(${q.city})` : Prisma.empty}`;
+    const nearby = q.latitude !== undefined && q.longitude !== undefined;
+    const rows = await tx.$queryRaw<Branch[]>(nearby ? Prisma.sql`
+      WITH candidates AS (${projection} WHERE ${eligible} ${filters}),
+      ranked AS (SELECT *, 6371.0 * 2 * asin(sqrt(least(1.0, greatest(0.0,
+        power(sin(radians(latitude::double precision - ${q.latitude!}) / 2), 2) +
+        cos(radians(${q.latitude!}::double precision)) * cos(radians(latitude::double precision)) *
+        power(sin(radians(longitude::double precision - ${q.longitude!}) / 2), 2)
+      )))) AS "distanceKm" FROM candidates)
+      SELECT * FROM ranked ${q.cursor ? Prisma.sql`WHERE ("distanceKm",id) > (SELECT "distanceKm",id FROM ranked WHERE id=${q.cursor}::uuid)` : Prisma.empty}
+      ORDER BY "distanceKm" ASC,id ASC LIMIT ${q.limit + 1}
+    ` : Prisma.sql`${projection} WHERE ${eligible} ${filters} ${q.cursor ? Prisma.sql`AND b.id>${q.cursor}::uuid` : Prisma.empty} ORDER BY b.id ASC LIMIT ${q.limit + 1}`);
     return {
       asOf: new Date(),
       items: rows.slice(0, q.limit).map(view),

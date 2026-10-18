@@ -132,7 +132,7 @@ export function Cashier() {
   );
 }
 function BranchOperations({ branch }: { branch: Branch }) {
-  const [tab, setTab] = useState(branch.canSell ? "sale" : "history"),
+  const [tab, setTab] = useState(branch.canSell ? "visit" : "history"),
     [stock, setStock] = useState<number | null>(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
@@ -152,22 +152,22 @@ function BranchOperations({ branch }: { branch: Branch }) {
   return (
     <>
       <div className="management-tabs operation-tabs">
-        <button
+        {branch.canSell && <button
           aria-pressed={tab === "sale"}
           className={tab === "sale" ? "active" : ""}
           onClick={() => setTab("sale")}
         >
           <Coins size={16} />
           بيع نقاط
-        </button>
-        <button
+        </button>}
+        {branch.canSell && <button
           aria-pressed={tab === "visit"}
           className={tab === "visit" ? "active" : ""}
           onClick={() => setTab("visit")}
         >
           <ScanLine size={16} />
           تسجيل زيارة
-        </button>
+        </button>}
         <button
           aria-pressed={tab === "history"}
           className={tab === "history" ? "active" : ""}
@@ -361,6 +361,7 @@ function SaleForm({
                   <Field
                     label="المبلغ المستلم بالجنيه"
                     name="amount"
+                    defaultValue={decimal(quote.chargePiasters)}
                     readOnly={uncertain}
                     inputMode="decimal"
                     required

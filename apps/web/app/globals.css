@@ -1746,3 +1746,54 @@ dialog::backdrop {
  .admin-shortcuts { grid-template-columns:1fr; gap:14px; }
  .admin-next > button { width:100%; justify-content:center; }
 }
+
+/* Direct mobile workflows */
+.review-count { margin:0 0 16px; }
+.review-cards, .directory-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin-bottom:22px; }
+.topup-card { display:flex; flex-direction:column; gap:14px; }
+.topup-card-total { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.topup-card-total > strong { font-size:27px; color:var(--teal-dark); }
+.topup-card-total small { font-size:13px; }
+.topup-card-total > span, .distance-badge { background:var(--mint); color:var(--teal-dark); border-radius:10px; padding:8px 12px; font-size:12px; font-weight:700; }
+.decision-switch { display:grid; grid-template-columns:2fr 1fr; gap:8px; margin:22px 0; }
+.decision-switch button { display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--line); background:white; padding:13px; border-radius:12px; }
+.decision-switch button.active { color:var(--teal-dark); background:var(--mint); border-color:var(--teal); font-weight:700; }
+.decision-switch button.reject { color:var(--danger); background:#fff2f3; border-color:var(--danger); }
+.review-confirm { align-items:flex-start; padding:14px; border-radius:12px; background:var(--mint); }
+.optional-note { margin:16px 0; color:var(--muted); font-size:13px; }
+.optional-note summary { cursor:pointer; padding:8px 0; }
+.receipt-section .receipt-image { max-height:360px; object-fit:contain; }
+.directory-search { margin-bottom:22px; }
+.nearby-button { margin:20px 0 10px; }
+.directory-search-row { display:flex; gap:10px; align-items:flex-end; margin-top:20px; }
+.directory-search-row .field { flex:1; margin:0; }
+.directory-search-row > button { height:48px; min-width:48px; margin:0; }
+.directory-filters { margin-top:18px; }
+.directory-filters summary { display:flex; gap:7px; align-items:center; font-size:13px; color:var(--muted); cursor:pointer; }
+.directory-filters .form-grid { margin-top:16px; }
+.directory-card { display:flex; flex-direction:column; gap:12px; }
+.distance-badge { display:inline-flex; gap:5px; align-items:center; white-space:nowrap; padding:6px 10px; }
+.directory-address { color:var(--muted); font-size:13px; }
+.directory-price { display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--mint); border-radius:12px; padding:15px; margin-top:auto; }
+.directory-price strong { color:var(--teal-dark); font-size:24px; }
+.directory-price small, .directory-price span { font-size:12px; }
+.directory-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.directory-actions > * { justify-content:center; min-height:46px; text-align:center; text-decoration:none; }
+.gym-card-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; padding:20px; }
+.gym-list-item { padding:18px; border:1px solid var(--line); border-radius:14px; display:flex; flex-direction:column; gap:12px; overflow-wrap:anywhere; }
+.gym-list-item > button { margin-top:auto; }
+.role-quick-nav { display:none; }
+@media(max-width:700px) {
+ .review-cards, .directory-grid, .gym-card-list { grid-template-columns:1fr; gap:14px; }
+ .gym-card-list { padding:14px; }
+ .role-quick-nav { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); position:fixed; bottom:0; right:0; left:0; z-index:35; background:#fff; border-top:1px solid var(--line); border-radius:16px 16px 0 0; padding:8px 4px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -4px 20px #102e320c; }
+ .role-quick-nav button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; border:0; border-radius:10px; padding:10px 2px; background:transparent; color:var(--muted); font-size:10px; min-height:58px; }
+ .role-quick-nav button.active { background:var(--mint); color:var(--teal-dark); font-weight:700; }
+ .app-shell .workspace-content { padding-bottom:calc(110px + env(safe-area-inset-bottom)); }
+ .table-scroll:has(td:last-child button) th:last-child, .table-scroll td:last-child:has(button) { position:sticky; left:0; background:white; box-shadow:4px 0 12px #102e3208; z-index:1; }
+ .table-scroll td:last-child button { min-height:44px; }
+ .management-tabs button { min-height:44px; }
+ .directory-actions > * { padding:12px 8px; font-size:12px; }
+ .directory-price strong { font-size:21px; }
+ dialog { max-height:94dvh; width:calc(100% - 16px); }
+}
