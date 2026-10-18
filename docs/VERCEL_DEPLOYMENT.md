@@ -15,7 +15,7 @@ Set server environment variables on that project:
 
 `API_INTERNAL_URL` and `API_ORIGIN_SECRET` are not needed in embedded mode.
 Without embedded mode, the standalone API development workflow is preserved.
-Build: `pnpm build` from `apps/web`; prebuild generates Prisma and builds API.
+Build: `pnpm build` from `apps/web`; the build script generates Prisma and builds API.
 The database migrations are never run as part of a website build.
 
 Use the isolated Neon development database until the deployment and financial

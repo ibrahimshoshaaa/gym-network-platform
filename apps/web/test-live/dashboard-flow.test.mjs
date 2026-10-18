@@ -124,7 +124,7 @@ test(
         env: {
           ...process.env,
           NODE_ENV: "production",
-          API_INTERNAL_URL: backend,
+          API_INTERNAL_URL: "http://127.0.0.1:1",
           GYM_EMBEDDED_API: "true",
           WEB_ORIGIN: origin,
         },
