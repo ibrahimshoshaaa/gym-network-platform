@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { apiOrigin, GatewayError } from "./security";
+import { apiOrigin, apiHeaders, GatewayError } from "./security";
 export const cookieName = () =>
   process.env.NODE_ENV === "production" ? "__Host-gym_session" : "gym_session";
 export const cookieOptions = () => ({
@@ -26,12 +26,18 @@ export async function upstream(
   token?: string,
 ) {
   try {
+    if (process.env.GYM_EMBEDDED_API === "true") {
+      const { internalRequest } = await import("@gym/api");
+      const headers = Object.fromEntries(apiHeaders(init.headers, token));
+      const body = init.body == null ? undefined : typeof init.body === "string"
+        ? init.body
+        : init.body instanceof Uint8Array ? init.body
+        : new Uint8Array(await new Response(init.body).arrayBuffer());
+      return await internalRequest(path, { method: init.method, headers, body });
+    }
     return await fetch(`${apiOrigin()}/${path}`, {
       ...init,
-      headers: {
-        ...init.headers,
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
+      headers: apiHeaders(init.headers, token),
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(25000),
