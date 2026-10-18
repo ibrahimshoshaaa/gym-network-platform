@@ -53,6 +53,8 @@ export type Topup = {
 };
 export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
+  RECOVERY_INVALID: "رابط الاستعادة انتهى أو استُخدم. اطلب رابطًا جديدًا من الإدارة.",
+  IMAGE_LIMIT: "وصلت للحد المسموح للصور. احذف صورة قبل إضافة غيرها.",
   WALLET_BUSY: "تعذر تحميل المحفظة الآن. حاول مرة أخرى بعد قليل.",
   DIRECTORY_BUSY: "دليل الفروع مشغول حاليًا. حاول مرة أخرى أو استخدم بحثًا أدق.",
   REPORT_BUSY: "التقرير كبير أو الخدمة مشغولة. قلّل الفترة أو اختَر جيمًا/فرعًا.",
@@ -66,7 +68,7 @@ const errors: Record<string, string> = {
   OPERATION_REVIEW_EXISTS:
     "يوجد طلب مراجعة سابق لهذه العملية. راجع سجل الطلبات.",
   SETTLEMENT_REVIEW_REQUIRED:
-    "المستحقات تحتاج مراجعة تسوية قبل الإلغاء؛ لم تتغير النقاط أو الأموال.",
+    "المستحقات مرتبطة بحجز أو تسوية سابقة وتحتاج مراجعة؛ لم تتغير النقاط أو الأموال.",
   SALE_REFUND_POLICY_REQUIRED:
     "اعتماد تصحيح البيع متوقف لحين تحديد مسؤولية رد الفلوس.",
   INSUFFICIENT_FUNDS: "المبلغ المتاح لا يكفي لتنفيذ العملية.",
@@ -169,11 +171,11 @@ export function minorUnits(value: string, allowZero = false) {
   return n.toString();
 }
 export function decimal(value: string | number) {
-  const n = BigInt(value),
+  const raw = BigInt(value), n = raw < 0n ? -raw : raw,
     fraction = String(n % 100n)
       .padStart(2, "0")
       .replace(/0+$/, "");
-  return `${n / 100n}${fraction ? `.${fraction}` : ""}`;
+  return `${raw < 0n ? "-" : ""}${n / 100n}${fraction ? `.${fraction}` : ""}`;
 }
 export const methodName = (type: string) =>
   type === "INSTAPAY" ? "إنستا باي" : "محفظة إلكترونية";

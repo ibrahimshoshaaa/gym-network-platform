@@ -10,10 +10,13 @@ export const directoryQuery = z
     q: searchText.optional(),
     governorate: searchText.optional(),
     city: searchText.optional(),
+    minPrice:z.coerce.number().int().min(1).max(2147483647).optional(),
+    maxPrice:z.coerce.number().int().min(1).max(2147483647).optional(),
     limit: z.coerce.number().int().min(1).max(50).default(12),
     cursor: z.string().uuid().optional(),
     latitude: coordinate(-90, 90).optional(),
     longitude: coordinate(-180, 180).optional(),
   })
   .strict()
+  .refine(q=>q.minPrice===undefined||q.maxPrice===undefined||q.minPrice<=q.maxPrice)
   .refine(q => (q.latitude === undefined) === (q.longitude === undefined), "Both coordinates are required");

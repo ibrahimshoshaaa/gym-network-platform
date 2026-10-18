@@ -75,8 +75,11 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
         run: pnpm --filter @gym/web build
+      - name: Install headless browser for mobile viewport verification
+        run: pnpm --filter @gym/web exec playwright install --with-deps chromium
       - name: Test dashboard HTTP flow through API and PostgreSQL
         env:
           NODE_OPTIONS: --no-experimental-require-module
+          GYM_BROWSER_TEST: "1"
           DATABASE_URL: postgresql://gym_app:gym_app@localhost:5432/gym_ci?schema=public
         run: pnpm --filter @gym/web test:live

@@ -187,6 +187,7 @@ function WalletCard({ refresh }: { refresh: string }) {
               الصلاحية حتى {wallet.expiresAt ? date(wallet.expiresAt) : "—"}
             </p>
           )}
+          {!expired && wallet.status === "VALID" && left !== null && left > 0 && left <= 15*86400 && <Notice text={`صلاحية نقاطك تنتهي خلال ${Math.max(1,Math.ceil(left/86400))} يوم. راجع تاريخ الصلاحية قبل التمرين أو الشحن.`}/>}
           <details className="wallet-more"><summary>تفاصيل الرصيد</summary><p>الرصيد المسجل: {wallet.balance} نقطة</p><small>آخر تحديث: {date(wallet.serverTime)}{loading ? " · تحديث…" : ""}</small><p className="muted">المتاح بيتراجع وقت كل عملية، وصلاحية النقاط ظاهرة فوق.</p></details>
         </>
       )}

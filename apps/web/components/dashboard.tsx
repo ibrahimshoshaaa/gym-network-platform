@@ -42,7 +42,13 @@ import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
+import { Disputes } from "./disputes";
+import { Support } from "./support";
+import { Users, AuditLog } from "./users";
+import { AccountTools } from "./updates";
+import { AccountRecovery, recoveryToken } from "./account-recovery";
 type Tab =
+  | "support" | "users" | "audit" | "disputes"
   | "home"
   | "directory"
   | "inventory"
@@ -59,6 +65,10 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"disputes" as const,label:"حجوزات النزاعات",icon:ShieldCheck,description:"حجز المبلغ محل المراجعة وفكّه مع الحفاظ على باقي المستحقات"},
+  {id:"support" as const,label:"الدعم والشكاوى",icon:FileCheck2,description:"طلبات المساعدة والاعتراضات والردود ومرفقاتها"},
+  {id:"users" as const,label:"المستخدمون والحسابات",icon:ShieldCheck,description:"البحث وتعطيل الوصول واستعادة الحسابات"},
+  {id:"audit" as const,label:"سجل التغييرات",icon:ClipboardCheck,description:"القرارات ومن نفذها وتوقيتها ومرجعها"},
   { id: "home" as const, label: "الرئيسية", icon: House, description: "اختار مهمتك وابدأ من هنا" },
   {
     id: "directory" as const,
@@ -153,7 +163,8 @@ export function Dashboard() {
     [mobile, setMobile] = useState(false),
     [loggingOut, setLoggingOut] = useState(false),
     [password, setPassword] = useState(false),
-    [cashierTask, setCashierTask] = useState<CashierTask>("visit");
+    [cashierTask, setCashierTask] = useState<CashierTask>("visit"),
+    [recovery, setRecovery] = useState<string|null>(null);
   function loggedIn(person: Identity) {
     setUser(person);
     setTab(person.role === "TRAINEE" ? "trainee" : "home");
@@ -163,6 +174,8 @@ export function Dashboard() {
   async function check() {
     setLoading(true);
     setError("");
+    const restore=recoveryToken(window.location.hash);
+    if(restore){setRecovery(restore);window.history.replaceState(window.history.state,"",window.location.pathname+window.location.search);setLoading(false);return;}
     if (invitationToken(window.location.hash)) { setUser(null); setLoading(false); return; }
     try {
       const result = await request<{ user: Identity }>("/api/session");
@@ -206,6 +219,7 @@ export function Dashboard() {
         <Busy>بنجهز حسابك</Busy>
       </main>
     );
+  if(recovery)return <AccountRecovery token={recovery} onBack={()=>{setRecovery(null);setUser(null);}}/>;
   if (!user)
     return error ? (
       <main className="startup">
@@ -256,7 +270,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {(admin ? [{label:"ابدأ من هنا",ids:["home"]},{label:"طلبات تحتاج قرارك",ids:["reviews","branch-prices","withdrawals","operation-reviews"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages"]}] : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {(admin ? [{label:"ابدأ من هنا",ids:["home"]},{label:"طلبات تحتاج قرارك",ids:["reviews","branch-prices","withdrawals","disputes","operation-reviews","support"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}] : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}
@@ -306,6 +320,7 @@ export function Dashboard() {
               <strong>{current.label}</strong>
             </span>
           </div>
+          <AccountTools user={user} onNavigate={next=>{const item=available.find(t=>t.id===next);if(item)navigate(item.id);}}/>
           <div className="profile">
             <div>
               <strong>{user.displayName}</strong>
@@ -323,7 +338,7 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>}
           <Notice text={error} />
-          {current.id === "home" ? (
+          {current.id === "disputes" ? <Disputes admin={admin}/> : current.id === "support" ? <Support admin={admin}/> : current.id === "users" ? <Users/> : current.id === "audit" ? <AuditLog/> : current.id === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : current.id === "directory" ? (
             <BranchDirectory />

@@ -69,6 +69,13 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^disputes$/,
+    new RegExp(`^gyms/${uuid}/images$`),
+    /^notifications$/,
+    /^home-summary$/,
+    /^support\/(tickets|contact)$/,
+    new RegExp(`^support/tickets/${uuid}$`),
+    /^admin\/(users|wallet-expiry|audit)$/,
     /^trainee\/(?:wallet\/movements|active-visits)$/,
     /^directory\/branches$/,
     new RegExp(`^directory/branches/${uuid}$`),
@@ -102,6 +109,13 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^admin\/disputes$/,
+    new RegExp(`^admin/disputes/${uuid}/release$`),
+    new RegExp(`^gyms/${uuid}/images(?:/${uuid}/remove)?$`),
+    /^notifications\/read$/,
+    /^support\/tickets$/,
+    new RegExp(`^support/tickets/${uuid}/(messages|status)$`),
+    new RegExp(`^admin/users/${uuid}/recovery$`),
     new RegExp(`^gyms/${uuid}/stock-transfers$`),
     /^admin\/withdrawal-calendar$/,
     new RegExp(`^gyms/${uuid}/withdrawals$`),
@@ -130,6 +144,8 @@ const rules: Record<string, RegExp[]> = {
     /^auth\/password\/change$/,
   ],
   PATCH: [
+    /^me\/profile$/,
+    new RegExp(`^admin/users/${uuid}/access$`),
     new RegExp(`^admin/gyms/${uuid}/status$`),
     new RegExp(`^admin/branches/${uuid}/status$`),
     new RegExp(`^gyms/${uuid}$`),
@@ -137,6 +153,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^gyms/${uuid}/staff/${uuid}$`),
   ],
   PUT: [
+    /^admin\/support-contact$/,
     /^admin\/payment-methods\/(INSTAPAY|WALLET)$/,
     new RegExp(`^admin/topup-packages/${uuid}$`),
   ],

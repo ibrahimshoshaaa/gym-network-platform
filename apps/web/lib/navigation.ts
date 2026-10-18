@@ -1,8 +1,8 @@
 export const roleTabs: Record<string, readonly string[]> = {
- PLATFORM_ADMIN: ["home","reviews","branch-prices","gyms","reports","inventory","withdrawals","operation-reviews","pricing","payments","packages"],
- GYM_OWNER: ["home","gyms","purchases","cashier","inventory","reports","withdrawals","operation-reviews"],
- BRANCH_MANAGER: ["home","cashier","gyms","inventory","reports","operation-reviews"],
- CASHIER: ["home","cashier","reports","operation-reviews"],
+ PLATFORM_ADMIN: ["home","reviews","branch-prices","gyms","reports","inventory","withdrawals","disputes","operation-reviews","pricing","payments","packages","support","users","audit"],
+ GYM_OWNER: ["home","gyms","purchases","cashier","inventory","reports","withdrawals","disputes","operation-reviews","support"],
+ BRANCH_MANAGER: ["home","cashier","gyms","inventory","reports","operation-reviews","support"],
+ CASHIER: ["home","cashier","reports","operation-reviews","support"],
  TRAINEE: [],
 };
 export const roleQuickTabs: Record<string, readonly string[]> = {

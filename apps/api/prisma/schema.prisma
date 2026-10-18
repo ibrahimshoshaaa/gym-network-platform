@@ -83,6 +83,8 @@ enum MoneyAccountType {
 }
 
 enum MoneyTxKind {
+  DISPUTE_HOLD
+  DISPUTE_RELEASE
   VISIT_SETTLEMENT
   VISIT_REVERSAL
   WITHDRAWAL_RESERVE
@@ -120,9 +122,16 @@ model User {
   invitations     StaffInvitation[]
   receipts        ReceiptEvidence[]
   topupRequests   TopupRequest[]    @relation("TopupRequestor")
+  supportTickets SupportTicket[]
+  supportMessages SupportMessage[]
+  notificationReads NotificationRead[]
+  recoveryTokens AccountRecovery[] @relation("RecoveryUser")
+  issuedRecoveryTokens AccountRecovery[] @relation("RecoveryIssuer")
+  businessImages BusinessImage[]
 }
 
 model Gym {
+  businessImages BusinessImage[]
   id              String              @id @default(uuid()) @db.Uuid
   name            String
   ownerId         String              @db.Uuid
@@ -142,6 +151,7 @@ model Gym {
 }
 
 model Branch {
+  businessImages BusinessImage[]
   id                String                 @id @default(uuid()) @db.Uuid
   gymId             String                 @db.Uuid
   gym               Gym                    @relation(fields: [gymId], references: [id])
@@ -532,6 +542,7 @@ model TopupPackage {
 }
 
 model ReceiptEvidence {
+  supportMessages SupportMessage[]
   id          String        @id @default(uuid()) @db.Uuid
   ownerUserId String        @db.Uuid
   owner       User          @relation(fields: [ownerUserId], references: [id])
@@ -626,4 +637,93 @@ model FinancialEvidenceUse {
   topupId      String?  @unique @db.Uuid
   withdrawalId String?  @unique @db.Uuid
   createdAt    DateTime @default(now())
+}
+
+model SupportTicket {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id])
+  subject String
+  category String
+  operationId String? @db.Uuid
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  messages SupportMessage[]
+  @@index([userId,updatedAt,id])
+  @@index([status,updatedAt,id])
+}
+model SupportMessage {
+  id String @id @default(uuid()) @db.Uuid
+  ticketId String @db.Uuid
+  ticket SupportTicket @relation(fields:[ticketId],references:[id])
+  authorId String @db.Uuid
+  author User @relation(fields:[authorId],references:[id])
+  body String
+  receiptId String? @db.Uuid
+  receipt ReceiptEvidence? @relation(fields:[receiptId],references:[id])
+  clientKey String @unique @db.Uuid
+  createdAt DateTime @default(now())
+  @@index([ticketId,createdAt,id])
+}
+model NotificationRead {
+  userId String @db.Uuid
+  user User @relation(fields:[userId],references:[id])
+  eventId String
+  readAt DateTime @default(now())
+  @@id([userId,eventId])
+}
+model PlatformContact {
+  id String @id @default("support")
+  whatsapp String?
+  updatedAt DateTime @default(now())
+}
+model AccountRecovery {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation("RecoveryUser",fields:[userId],references:[id])
+  issuedById String @db.Uuid
+  issuedBy User @relation("RecoveryIssuer",fields:[issuedById],references:[id])
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId,createdAt])
+}
+model BusinessImage {
+  id String @id @default(uuid()) @db.Uuid
+  ownerId String @db.Uuid
+  owner User @relation(fields:[ownerId],references:[id])
+  gymId String @db.Uuid
+  gym Gym @relation(fields:[gymId],references:[id])
+  branchId String? @db.Uuid
+  branch Branch? @relation(fields:[branchId,gymId],references:[id,gymId])
+  purpose String
+  publicUrl String
+  objectKey String @unique
+  assetId String @unique
+  createdAt DateTime @default(now())
+  @@index([gymId,branchId,purpose])
+}
+
+model FinancialHold {
+ id String @id @default(uuid()) @db.Uuid
+ gymId String @db.Uuid
+ visitId String @db.Uuid
+ amountPiasters BigInt
+ reason String
+ state String @default("OPEN")
+ createdById String @db.Uuid
+ createdAt DateTime @default(now())
+ holdTransactionId String @unique @db.Uuid
+ releaseTransactionId String? @unique @db.Uuid
+ releasedById String? @db.Uuid
+ releasedAt DateTime?
+ releaseReason String?
+ idempotencyKey String @unique
+ requestHash String
+ releaseKey String? @unique
+ @@index([gymId,state,createdAt])
+ @@index([visitId])
 }

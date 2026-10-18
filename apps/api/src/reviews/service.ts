@@ -121,13 +121,14 @@ async function reverseVisit(
   // Aggregated available cash does not prove this particular visit was unpaid.
   // Until payouts allocate settlement lots, any intervening non-reversal debit
   // requires an explicit settlement review, even if later visits refilled cash.
+  if(await tx.financialHold.count({where:{visitId:v.id,state:"OPEN"}}))throw new DomainError("SETTLEMENT_REVIEW_REQUIRED");
   const outflow = await tx.moneyPosting.findFirst({
     where: {
       accountId: available.accountId,
       deltaPiasters: { lt: 0n },
       transaction: {
         createdAt: { gte: originalMoney.createdAt },
-        kind: { not: "VISIT_REVERSAL" },
+        kind: { notIn: ["VISIT_REVERSAL","DISPUTE_HOLD","DISPUTE_RELEASE"] },
       },
     },
   });

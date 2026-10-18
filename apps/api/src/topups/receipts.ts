@@ -71,6 +71,6 @@ export async function accessReceipt(db: PrismaClient, storage: ReceiptStorage, a
   if (!receipt) throw new DomainError('RECEIPT_ACCESS_DENIED');
   if (receipt.ownerUserId !== actorId && user.role !== 'PLATFORM_ADMIN' && !await db.withdrawalRequest.findFirst({
     where: { proofReceiptId: id, status: { in: ['PAID', 'DISPUTED'] }, gym: { ownerId: actorId, ownerAcceptedAt: { not: null } } }, select: { id: true }
-  })) throw new DomainError('RECEIPT_ACCESS_DENIED');
+  }) && !await db.supportMessage.findFirst({where:{receiptId:id,ticket:{userId:actorId}},select:{id:true}})) throw new DomainError('RECEIPT_ACCESS_DENIED');
   return { url: storage.readUrl(receipt.objectKey), expiresInSeconds: 60 };
 }

@@ -23,7 +23,7 @@ async function handle(request: Request, context: Context) {
     if (request.method !== "GET") checkOrigin(request);
     const token = await sessionToken();
     if (!token) return json({ code: "UNAUTHENTICATED" }, 401);
-    const upload = path === "receipts",
+    const upload = path === "receipts" || /^gyms\/[^/]+\/images$/.test(path),
       headers: Record<string, string> = {};
     let body: Uint8Array | undefined;
     if (request.method !== "GET") {
@@ -35,7 +35,7 @@ async function handle(request: Request, context: Context) {
       )
         throw new GatewayError("INVALID_INPUT", 400);
       headers["content-type"] = type;
-      body = await boundedBody(request, upload ? 5242880 : 8192);
+      body = await boundedBody(request, upload ? 4194304 : 8192);
       if (
         /^(?:gyms\/[^/]+\/(?:withdrawals|stock-transfers)|(?:admin\/)?withdrawals\/[^/]+\/(?:cancel|feedback|review|payment))$/.test(
           path,

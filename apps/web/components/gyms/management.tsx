@@ -34,6 +34,7 @@ import {
   type NewInvite,
 } from "./shared";
 import { useListTools } from "../list-tools";
+import { BusinessMedia } from "./business-media";
 import { PriceHistory } from "./pricing";
 export function GymManagement({ admin }: { admin: boolean }) {
   const list = usePage<Gym>(admin ? "admin/gyms" : "gyms"),
@@ -360,6 +361,7 @@ function GymDetails({
           <div className="management-tabs" aria-label="إدارة الجيم">
             {[
               ["branches", "الفروع"],
+              ["photos", "اللوجو والصور"],
               ...(!admin ? [["staff", "الموظفون"]] : []),
               ["invites", "الدعوات"],
             ].map(([key, label]) => (
@@ -374,6 +376,7 @@ function GymDetails({
               </button>
             ))}
           </div>
+          {tab === "photos" && <BusinessMedia gymId={id} branches={branches.rows} more={Boolean(branches.cursor)} onMore={()=>void branches.more()}/>}
           {tab === "branches" && (
             <section
               id="management-branches"

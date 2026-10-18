@@ -61,7 +61,7 @@ const sessionCookie = (response) =>
 
 test(
   "dashboard HTTP → gateway → API → restricted Postgres flow",
-  { timeout: 90000 },
+  { timeout: 180000 },
   async () => {
     const password = "Synthetic dashboard flow passphrase!";
     const id = randomUUID(),
@@ -1634,6 +1634,32 @@ test(
         ).status,
         403,
       );
+      // Real mobile viewport check uses only synthetic local identities.
+      if(process.env.GYM_BROWSER_TEST === '1') {
+        const {chromium,expect}=await import('@playwright/test');
+        const browser=await chromium.launch({headless:true});
+        try {
+          const context=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
+          const separator=cookie.indexOf('=');
+          await context.addCookies([{name:cookie.slice(0,separator),value:cookie.slice(separator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
+          const page=await context.newPage();
+          const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
+          await page.goto(origin);
+          await expect(page.getByRole('heading',{name:'مهامك اليومية'})).toBeVisible();
+          await expect(page.getByRole('heading',{name:'نظرة سريعة'})).toBeVisible();
+          await page.getByRole('button',{name:'الدعم والمساعدة',exact:true}).click();
+          await expect(page.getByRole('heading',{name:'مركز الدعم والشكاوى'})).toBeVisible();
+          await page.getByRole('button',{name:'طلب مساعدة جديد',exact:true}).click();
+          await page.getByLabel('عنوان مختصر').fill('Synthetic browser support');
+          await page.getByLabel('اشرح المشكلة').fill('Synthetic support message from mobile viewport');
+          await page.getByRole('button',{name:'إرسال الطلب',exact:true}).click();
+          await expect(page.getByRole('dialog')).toContainText('Synthetic support message from mobile viewport');
+          await page.getByRole('button',{name:'إغلاق',exact:true}).click();
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'mobile support layout must fit viewport');
+          assert.deepEqual(pageErrors,[]);
+          await context.close();
+        } finally {await browser.close();}
+      }
       const changed = await request("/api/backend/auth/password/change", {
         cookie,
         method: "POST",
