@@ -35,10 +35,11 @@ import {
 } from "./shared";
 import { useListTools } from "../list-tools";
 import { BusinessMedia } from "./business-media";
+import { BranchSetup } from "./branch-setup";
 import { PriceHistory } from "./pricing";
-export function GymManagement({ admin }: { admin: boolean }) {
+export function GymManagement({ admin,initialGym }: { admin: boolean;initialGym?:string|null }) {
   const list = usePage<Gym>(admin ? "admin/gyms" : "gyms"),
-    [selected, setSelected] = useState<string | null>(null),
+    [selected, setSelected] = useState<string | null>(initialGym??null),
     [creating, setCreating] = useState(false),
     [invitation, setInvitation] = useState<NewInvite | null>(null),
     [success, setSuccess] = useState("");
@@ -110,8 +111,8 @@ export function GymManagement({ admin }: { admin: boolean }) {
             <div className="section-toolbar"><h3>{gym.name}</h3><Status value={gym.status}/></div>
             {admin && <p className="muted">صاحب الجيم: {gym.owner?.displayName} · <span dir="ltr">{gym.owner?.email}</span></p>}
             <p className="muted">{gym.ownerAcceptedAt ? "صاحب الجيم قبل الدعوة" : "في انتظار قبول دعوة صاحب الجيم"}</p>
-            {admin && gym.status === "PENDING" && gym.ownerAcceptedAt && <p className="subtle-box">الخطوة الجاية: فعّل الجيم من التفاصيل، ثم جهّز الفروع.</p>}
-            <button className="primary full" onClick={() => { setSelected(gym.id); window.scrollTo({top:0,behavior:"auto"}); }}><Building2 size={18}/>{admin && gym.status === "PENDING" && gym.ownerAcceptedAt ? "مراجعة وتفعيل الجيم" : "الفروع وتفاصيل الجيم"}</button>
+            {admin && gym.status === "PENDING" && gym.ownerAcceptedAt && <p className="subtle-box">راجع الجيم وفروعه وأسعار الزيارات واعتمدهم من نفس الشاشة.</p>}
+            <button className="primary full" onClick={() => { setSelected(gym.id); window.scrollTo({top:0,behavior:"auto"}); }}><Building2 size={18}/>{admin && gym.status === "PENDING" && gym.ownerAcceptedAt ? "مراجعة الجيم والفروع" : "الفروع وتفاصيل الجيم"}</button>
           </article>)}</div>
         )}
         <More list={list} />
@@ -292,7 +293,7 @@ function GymDetails({
             <div className="actions">
               {admin ? (
                 <>
-                  {["PENDING", "SUSPENDED"].includes(gym.status) && (
+                  {(gym.status === "SUSPENDED" || (gym.status === "PENDING" && !branches.rows.length)) && (
                     <button
                       className="primary compact"
                       disabled={!gym.ownerAcceptedAt || !gym.owner?.isActive}
@@ -358,6 +359,7 @@ function GymDetails({
               </p>
             )}
           </section>
+          {admin&&<section className="setup-progress" aria-label="خطوات اعتماد الجيم"><div className={gym.ownerAcceptedAt?'complete':''}><strong>١ · دعوة صاحب الجيم</strong><span>{gym.ownerAcceptedAt?'تم قبول الدعوة':'بانتظار صاحب الجيم'}</span></div><div className={gym.status==='ACTIVE'?'complete':''}><strong>٢ · تفعيل الجيم</strong><span>{gym.status==='ACTIVE'?'الجيم مفعّل':'يتم مع اعتماد أول فرع'}</span></div><div><strong>٣ · اعتماد الفروع</strong><span>راجع الموقع والنقاط والمدة، ثم اعتمد الفرع من هنا</span></div></section>}
           <div className="management-tabs" aria-label="إدارة الجيم">
             {[
               ["branches", "الفروع"],
@@ -384,7 +386,7 @@ function GymDetails({
               className="card table-card"
             >
               <div className="table-heading">
-                <h2>فروع الجيم</h2>
+                <h2>{admin ? "مراجعة الفروع وتفعيلها" : "فروع الجيم"}</h2>
                 {!admin && (
                   <button
                     className="primary compact"
@@ -409,7 +411,7 @@ function GymDetails({
                     ? "صاحب الجيم يضيف الفرع ويقترح سعر الزيارة، ثم تراجع السعر وتفعّل الفرع."
                     : "أضف بيانات الفرع وسعر الزيارة المقترح لبدء مراجعته."}
                 </Empty>
-              ) : (
+              ) : admin ? (<div className="branch-setup-list">{branches.rows.map(branch=><BranchSetup key={branch.id} gym={gym} branch={branch} onDone={result=>{setSuccess(result==='rejected'?'تم رفض مقترح السعر، وحالة تشغيل الفرع لم تتغير.':'تم اعتماد البيانات وتحديث حالة الجيم والفرع.');refresh();}} onSuspend={()=>setAction({kind:'branchStatus',branch,status:'SUSPENDED'})} onResume={()=>setAction({kind:'branchStatus',branch,status:'ACTIVE'})}/>)}</div>) : (
                 <div className="table-scroll">
                   <table className="mobile-records">
                     <thead>

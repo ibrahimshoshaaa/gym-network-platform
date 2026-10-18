@@ -266,3 +266,17 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
 @media(max-width:700px){ .finance-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .finance-metric { padding:15px; } .finance-metric strong { font-size:23px; } .finance-lines > div { flex-wrap:wrap; gap:6px; } .finance-lines dd { white-space:normal; overflow-wrap:anywhere; } }
 
 .finance-projection { margin:18px 0; } .finance-projection > strong { display:block; font-size:26px; margin:12px 0; } .finance-projection p { font-size:12px; color:var(--muted); }
+
+.setup-progress { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:22px 0; }
+.setup-progress > div { border:1px solid var(--line); background:white; border-radius:15px; padding:16px; }
+.setup-progress strong { display:block; font-size:12px; } .setup-progress span { display:block; font-size:11px; color:var(--muted); margin-top:7px; }
+.setup-progress .complete { background:var(--mint); border-color:#cbdcb6; }
+.branch-setup-list { display:grid; gap:18px; padding:20px; }
+.branch-setup-card { border:1px solid var(--line); border-radius:18px; padding:22px; min-width:0; }
+.branch-setup-address { display:flex; align-items:flex-start; gap:8px; font-size:12px; color:var(--muted); margin:14px 0 0; overflow-wrap:anywhere; }
+.branch-setup-proposal { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.branch-setup-proposal > div { background:#f2f6ec; border-radius:12px; padding:15px; }
+.branch-setup-proposal svg { color:var(--teal); margin-bottom:8px; } .branch-setup-proposal span { display:block; font-size:11px; color:var(--muted); } .branch-setup-proposal strong { display:block; font-size:18px; margin-top:8px; }
+.branch-setup-card > .actions { margin:18px 0; flex-wrap:wrap; } .branch-setup-card > small { display:block; }
+.branch-setup-ready { display:flex; align-items:center; gap:8px; color:var(--teal); font-size:13px; margin-top:16px; }
+@media(max-width:700px){ .setup-progress { grid-template-columns:1fr; gap:8px; } .setup-progress > div { padding:13px 16px; } .branch-setup-list { padding:12px; } .branch-setup-card { padding:16px; } .branch-setup-proposal { gap:8px; } .branch-setup-proposal > div { padding:12px 9px; } .branch-setup-proposal strong { font-size:15px; } .branch-setup-card > .actions > button { width:100%; justify-content:center; } }
