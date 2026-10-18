@@ -1904,3 +1904,11 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
  .admin-workspace .mobile-records td button { min-height:44px; }
  .admin-workspace .mobile-records td > button { width:100%; justify-content:center; }
 }
+
+.withdrawal-balance-card { padding:18px; border:1px solid var(--line); border-radius:14px; margin:20px 0 12px; }
+.withdrawal-balance-card > p, .withdrawal-balance-card > small { margin-top:12px; font-size:12px; }
+.withdrawal-balance-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0; }
+.withdrawal-balance-grid > div { padding:12px; border-radius:10px; background:var(--mint); }
+.withdrawal-balance-grid dt { font-size:11px; color:var(--muted); }
+.withdrawal-balance-grid dd { margin:6px 0 0; font-size:18px; font-weight:700; color:var(--teal-dark); overflow-wrap:anywhere; }
+@media(max-width:450px) { .withdrawal-balance-card { padding:12px; } .withdrawal-balance-grid { grid-template-columns:1fr; } }

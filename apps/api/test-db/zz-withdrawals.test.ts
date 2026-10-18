@@ -10,6 +10,7 @@ import {
   payWithdrawal,
   feedbackWithdrawal,
 } from "../src/withdrawals/service.js";
+import { withdrawalBalances } from "../src/withdrawals/balances.js";
 import { postLedger, postInTransaction } from "../src/ledger/service.js";
 import { accessReceipt, type ReceiptStorage } from "../src/topups/receipts.js";
 import { buildApp } from "../src/app.js";
@@ -688,4 +689,45 @@ test("concurrent receipt acknowledgements with one key replay without duplicate 
     }),
     1,
   );
+});
+
+async function snapshot(id:string) {
+ return db.$transaction(async tx=>withdrawalBalances(tx,await tx.withdrawalRequest.findUniqueOrThrow({where:{id}})),{isolationLevel:"RepeatableRead"});
+}
+test("withdrawal balance snapshot distinguishes this reservation, other requests, releases and paid money without a second deduction",async()=>{
+ const f=await fixture(10000n), a=await f.request("1000"), b=await f.request("2000");
+ let view=await snapshot(a.id);
+ assert.equal(view.consistent,true);
+ assert.equal(view.netEntitlementsPiasters,"10000");
+ assert.equal(view.outstandingPiasters,"10000");
+ assert.equal(view.availablePiasters,"7000");
+ assert.equal(view.currentReservedPiasters,"1000");
+ assert.equal(view.otherReservedPiasters,"2000");
+ assert.equal(view.availableAfterPaymentPiasters,"7000");
+ await approve(f,a.id);
+ assert.equal((await snapshot(a.id)).availablePiasters,"7000");
+ await payWithdrawal(db,f.admin.id,a.id,randomUUID(),payment((await proof(f.admin.id)).id));
+ view=await snapshot(a.id);
+ assert.equal(view.consistent,true);
+ assert.equal(view.paidPiasters,"1000");
+ assert.equal(view.currentReservedPiasters,"0");
+ assert.equal(view.otherReservedPiasters,"2000");
+ assert.equal(view.outstandingPiasters,"9000");
+ assert.equal(view.netEntitlementsPiasters,"10000");
+ assert.equal(view.availableAfterPaymentPiasters,null);
+ await cancelWithdrawal(db,f.owner.id,b.id,randomUUID(),{reason:"Synthetic release of other reservation"});
+ assert.equal((await snapshot(a.id)).availablePiasters,"9000");
+});
+test("detail balance snapshot is private to the actual owner and admin",async()=>{
+ const f=await fixture(), w=await f.request(), app=buildApp(db);
+ try {
+  for(const [actor,expected] of [[f.admin,200],[f.owner,200],[f.outsider,403],[f.cashier,403]] as const){
+   const bearer=await createSession(db,actor.id,new Date(Date.now()+60000));
+   const r=await app.inject({method:"GET",url:`/withdrawals/${w.id}`,headers:{authorization:`Bearer ${bearer}`}});
+   assert.equal(r.statusCode,expected);
+   assert.equal(r.headers["cache-control"],"no-store");
+   if(expected===200){assert.equal(r.json().balances.currentReservedPiasters,"1000");assert.equal(r.json().balances.consistent,true);}
+   else assert.equal(r.json().balances,undefined);
+  }
+ } finally {await app.close();}
 });

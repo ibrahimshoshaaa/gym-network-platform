@@ -12,6 +12,7 @@ import { useCommand } from "../lib/use-financial-command";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
 import { More, usePage } from "./gyms/shared";
 import { useListTools } from "./list-tools";
+import { WithdrawalBalanceCard, type WithdrawalBalances } from "./withdrawal-balances";
 import { CalendarPanel, type Calendar } from "./withdrawal-calendar";
 type Withdrawal = {
   id: string;
@@ -35,6 +36,7 @@ type Withdrawal = {
 type Detail = {
   withdrawal: Withdrawal;
   gymName: string;
+  balances: WithdrawalBalances;
   feedback: { kind: string; reason: string; createdAt: string } | null;
   actions: { id: string; kind: string; reason: string; createdAt: string }[];
 };
@@ -403,7 +405,8 @@ function WithdrawalDetail({
     [action, setAction] = useState(""),
     [proof, setProof] = useState(""),
     [fileName, setFileName] = useState(""),
-    [receipt, setReceipt] = useState("");
+    [receipt, setReceipt] = useState(""),
+    [refreshing, setRefreshing] = useState(false);
   const { call, uncertain } = useCommand();
   useEffect(() => {
     let active = true;
@@ -438,6 +441,13 @@ function WithdrawalDetail({
       active = false;
     };
   }, [id, admin]);
+  async function refreshBalances() {
+    if (busy || uploading || uncertain || refreshing) return;
+    setRefreshing(true); setError("");
+    try { const d=await api<Detail>(`withdrawals/${id}`); setDetail(d); setAction(admin ? d.withdrawal.status==="REQUESTED"?"APPROVE":"PAY" : d.withdrawal.status==="REQUESTED"?"CANCEL":"RECEIVED"); }
+    catch(e) { setError(message(e)); }
+    finally { setRefreshing(false); }
+  }
   async function upload(file?: File) {
     if (!file || busy || uncertain) return;
     setUploading(true);
@@ -447,9 +457,9 @@ function WithdrawalDetail({
     try {
       if (
         !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 5242880
+        file.size > 4194304
       )
-        throw new Error("ارفع صورة JPG أو PNG أو WebP حتى ٥ ميجابايت.");
+        throw new Error("ارفع صورة JPG أو PNG أو WebP حتى ٤ ميجابايت.");
       const r = await api<{ id: string }>("receipts", {
         method: "POST",
         headers: { "content-type": file.type },
@@ -479,7 +489,7 @@ function WithdrawalDetail({
   }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (busy || uploading) return;
+    if (busy || uploading || refreshing) return;
     const f = new FormData(e.currentTarget);
     setBusy(true);
     setError("");
@@ -519,10 +529,9 @@ function WithdrawalDetail({
         path = `withdrawals/${id}/feedback`;
         body = { kind: action, reason };
       }
-      const saved = await call<Withdrawal>(path, body);
-      setDetail((current) =>
-        current ? { ...current, withdrawal: saved } : current,
-      );
+      await call<Withdrawal>(path, body);
+      setDetail(null);
+      setLoading(true);
       setSuccess("تم تسجيل الإجراء. راجع الحالة والسجل قبل أي خطوة أخرى.");
       try {
         setDetail(await api<Detail>(`withdrawals/${id}`));
@@ -535,6 +544,7 @@ function WithdrawalDetail({
       setError(message(e));
     } finally {
       setBusy(false);
+      setLoading(false);
     }
   }
   const w = detail?.withdrawal;
@@ -569,6 +579,8 @@ function WithdrawalDetail({
               {detail.gymName} · {decimal(w.amountPiasters)} ج.م
             </h3>
             <p>{stateName(w.status)}</p>
+            <WithdrawalBalanceCard balances={detail.balances} amount={w.amountPiasters} status={w.status}/>
+            <button className="secondary full" disabled={busy || uploading || uncertain || refreshing} onClick={()=>void refreshBalances()}>{refreshing?<Busy>جاري تحديث المستحقات</Busy>:"تحديث المستحقات وحالة الطلب"}</button>
             <div className="subtle-box">
               <p>
                 {methodName(w.paymentMethod)} · {w.destinationName}
@@ -621,7 +633,7 @@ function WithdrawalDetail({
             )}
             {!success && options.length > 0 && (
               <form onSubmit={submit}>
-                <fieldset disabled={busy || uploading}>
+                <fieldset disabled={busy || uploading || refreshing}>
                   <label className="field">
                     الإجراء
                     <select
@@ -665,6 +677,7 @@ function WithdrawalDetail({
                         name="amount"
                         required
                         inputMode="decimal"
+                        defaultValue={decimal(w.amountPiasters)}
                         readOnly={uncertain}
                       />
                       <Field
@@ -728,7 +741,8 @@ function WithdrawalDetail({
                     className="primary full"
                     disabled={
                       (action === "PAY" && !proof) ||
-                      (action === "APPROVE" && !calendar)
+                      (action === "APPROVE" && !calendar) ||
+                      (["APPROVE","PAY"].includes(action) && !detail.balances.consistent)
                     }
                   >
                     {busy ? (
