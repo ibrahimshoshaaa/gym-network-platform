@@ -4,8 +4,11 @@ import { RefreshCw, Eye, CheckCircle2, XCircle } from "lucide-react";
 import { api, send, message, decimal, methodName, date, type Page, type Topup } from "../lib/client";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
 
+import { useListTools } from "./list-tools";
+
 export function Reviews() {
  const [rows,setRows]=useState<Topup[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[success,setSuccess]=useState(""),[selected,setSelected]=useState<Topup|null>(null);
+ const filtered=useListTools(rows,row=>[row.id,row.requestor?.displayName,row.requestor?.email,row.requestor?.phoneE164,row.branch?.gym.name,row.branch?.name,methodName(row.paymentMethod)].filter(Boolean).join(" "),row=>row.kind,{TRAINEE:"شحن متدرب",BRANCH_STOCK:"مخزون فرع"});
  const generation=useRef(0);
  async function load(next?:string) {
   const current=++generation.current; setLoading(true);setError("");
@@ -17,9 +20,10 @@ export function Reviews() {
  return <>
   <div className="section-toolbar"><div><h2>طلبات الشحن</h2><p className="muted">افتح الطلب، طابق التحويل، ثم اعتمد إضافة النقاط.</p></div><button className="secondary compact" disabled={loading} onClick={()=>void load()}><RefreshCw size={17}/>تحديث</button></div>
   <Notice text={error}/><Notice text={success} success/>
+  {filtered.controls}
   <p className="muted review-count">{rows.length} طلب محمّل للمراجعة{cursor ? " · توجد طلبات إضافية" : ""}</p>
   {loading&&!rows.length?<section className="card"><Busy/></section>:!rows.length&&!error?<section className="card"><Empty title="مفيش طلبات شحن معلقة">أي طلب جديد هيظهر هنا.</Empty></section>:null}
-  <div className="review-cards">{rows.map(row=><TopupCard key={row.id} row={row} onOpen={()=>{setSelected(row);setSuccess("");}}/>)}</div>
+  <div className="review-cards">{filtered.visible.map(row=><TopupCard key={row.id} row={row} onOpen={()=>{setSelected(row);setSuccess("");}}/>)}</div>
   {cursor&&<button className="secondary full" disabled={loading} onClick={()=>void load(cursor)}>{loading?<Busy/>:"تحميل طلبات إضافية"}</button>}
   {selected&&<Review key={selected.id} request={selected} onClose={()=>setSelected(null)} onDone={decision=>{setRows(old=>old.filter(row=>row.id!==selected.id));setSelected(null);setSuccess(decision==="APPROVED"?"تم قبول الشحن وإضافة النقاط.":"تم رفض الطلب، بدون إضافة نقاط.");}}/>}
  </>;

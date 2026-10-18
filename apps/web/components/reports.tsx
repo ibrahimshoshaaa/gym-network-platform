@@ -241,6 +241,8 @@ export function Reports({ admin }: { admin: boolean }) {
       <section className="card">
         <form onSubmit={submit}>
           <fieldset disabled={busy}>
+            <h2>اختار الفترة</h2>
+            <p className="muted">اعرض الملخص أولًا، واستخدم فلاتر الجيم ونوع العملية عند الحاجة.</p>
             <div className="settings-grid">
               <Field
                 label="من يوم — بتوقيت القاهرة"
@@ -257,6 +259,8 @@ export function Reports({ admin }: { admin: boolean }) {
                 min={from}
                 onChange={(e) => setTo(e.target.value)}
               />
+            </div>
+            <details className="report-filters" open={!admin || undefined}><summary>تحديد الجيم والفرع ونوع العملية والحالة</summary><div className="settings-grid">
               <label className="field">
                 الجيم
                 <select
@@ -340,6 +344,7 @@ export function Reports({ admin }: { admin: boolean }) {
                 </select>
               </label>
             </div>
+            </details>
             <p className="muted">
               حد الفترة ٣٦٦ يومًا. فلتر نوع العملية والحالة يخص الجدول والتصدير؛
               ملخص الفترة يشمل كل الحركات.
@@ -555,7 +560,7 @@ export function Reports({ admin }: { admin: boolean }) {
             <Empty title="لا توجد سجلات في النطاق المختار" />
           ) : (
             <div className="table-scroll">
-              <table>
+              <table className="mobile-records">
                 <thead>
                   <tr>
                     <th>التاريخ</th>
@@ -569,15 +574,15 @@ export function Reports({ admin }: { admin: boolean }) {
                 <tbody>
                   {rows.items.map((r) => (
                     <tr key={r.id}>
-                      <td>{date(r.eventAt)}</td>
-                      <td>
+                      <td data-label="التاريخ">{date(r.eventAt)}</td>
+                      <td data-label="الجيم / الفرع">
                         {r.gymName ?? "شحن متدرب مباشر"}
                         {r.branchName && ` / ${r.branchName}`}
                       </td>
-                      <td>{stateName(r.status)}</td>
-                      <td>{r.points ?? "—"}</td>
-                      <td>{money(r.amountPiasters)}</td>
-                      <td>
+                      <td data-label="الحالة">{stateName(r.status)}</td>
+                      <td data-label="النقاط">{r.points ?? "—"}</td>
+                      <td data-label="القيمة بالجنيه">{money(r.amountPiasters)}</td>
+                      <td data-label="المراجع">
                         <small>العملية: {r.referenceId}</small>
                         {r.actorId && (
                           <p>

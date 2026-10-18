@@ -432,11 +432,11 @@ export function SettingsPanel({
                     </div>
                     <button
                       aria-label={`تعديل ${pack.label}`}
-                      className="icon-button"
+                      className="secondary compact"
                       disabled={busy}
                       onClick={() => setEditing(pack)}
                     >
-                      <Pencil size={18} />
+                      <Pencil size={18} /> تعديل
                     </button>
                   </article>
                 ))}

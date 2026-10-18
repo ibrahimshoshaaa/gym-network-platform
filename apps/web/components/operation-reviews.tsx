@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api, message, decimal, date } from "../lib/client";
 import { useCommand } from "../lib/use-financial-command";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
+import { useListTools } from "./list-tools";
 import { More, Status, usePage } from "./gyms/shared";
 type Kind = "VISIT_CANCEL" | "SALE_CORRECTION";
 type Review = {
@@ -340,6 +341,7 @@ export function OperationReviews({ admin }: { admin: boolean }) {
       admin ? "admin/operation-reviews" : "operation-reviews",
     ),
     [selected, setSelected] = useState<string | null>(null);
+  const filtered=useListTools(list.rows,r=>[r.id,r.targetId,r.reason,r.evidenceText,kindName(r.kind)].join(" "),r=>r.status,{PENDING:"قيد المراجعة",APPROVED:"معتمد",REJECTED:"مرفوض"});
   return (
     <>
       <div className="section-toolbar">
@@ -358,6 +360,7 @@ export function OperationReviews({ admin }: { admin: boolean }) {
         </button>
       </div>
       <Notice text={list.error} />
+      {filtered.controls}
       <section className="card">
         {list.loading && !list.rows.length ? (
           <Busy />
@@ -365,7 +368,7 @@ export function OperationReviews({ admin }: { admin: boolean }) {
           <Empty title="لا توجد طلبات مراجعة" />
         ) : (
           <div className="timeline">
-            {list.rows.map((r) => (
+            {filtered.visible.map((r) => (
               <article key={r.id}>
                 <div className="section-toolbar">
                   <strong>{kindName(r.kind)}</strong>
@@ -387,7 +390,7 @@ export function OperationReviews({ admin }: { admin: boolean }) {
                     className="secondary compact"
                     onClick={() => setSelected(r.id)}
                   >
-                    عرض العملية والأدلة
+                    {r.status === "PENDING" ? "مراجعة واتخاذ قرار" : "عرض القرار والأدلة"}
                   </button>
                 )}
               </article>

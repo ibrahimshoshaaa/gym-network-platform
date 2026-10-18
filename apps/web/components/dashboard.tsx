@@ -86,7 +86,7 @@ const tabs = [
   },
   {
     id: "operation-reviews" as const,
-    label: "الإلغاء والتصحيح",
+    label: "طلبات الإلغاء والتصحيح",
     icon: ClipboardCheck,
     description: "طلبات مراجعة الزيارات وتصحيح مبيعات النقاط",
   },
@@ -110,13 +110,13 @@ const tabs = [
   },
   {
     id: "branch-prices" as const,
-    label: "أسعار الزيارات",
+    label: "اعتماد أسعار الزيارات",
     icon: ClipboardCheck,
     description: "مراجعة أسعار الزيارة ومدد الجلسات المقترحة",
   },
   {
     id: "reviews" as const,
-    label: "مراجعة الشحن",
+    label: "طلبات الشحن",
     icon: FileCheck2,
     description: "طلبات التحويل التي تحتاج قرارك",
   },
@@ -128,7 +128,7 @@ const tabs = [
   },
   {
     id: "payments" as const,
-    label: "حسابات التحويل",
+    label: "حسابات استقبال التحويل",
     icon: CreditCard,
     description: "إدارة بيانات إنستا باي والمحفظة الإلكترونية",
   },
@@ -227,7 +227,7 @@ export function Dashboard() {
   function navigate(next: Tab, task?: CashierTask) { if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
   const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${admin ? "admin-workspace" : ""}`}>
       {mobile && (
         <button
           className="nav-backdrop"
@@ -256,7 +256,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {[{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {(admin ? [{label:"ابدأ من هنا",ids:["home"]},{label:"طلبات تحتاج قرارك",ids:["reviews","branch-prices","withdrawals","operation-reviews"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages"]}] : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}
