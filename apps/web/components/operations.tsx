@@ -1,4 +1,5 @@
 "use client";
+import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Camera, RefreshCw, ScanLine, Coins, CheckCircle2 } from "lucide-react";
 import { useCommand } from "../lib/use-financial-command";
@@ -479,7 +480,7 @@ function VisitForm({ branchId }: { branchId: string }) {
               : "تم تسجيل الزيارة بنجاح"}
           </h3>
           <p>تنتهي الجلسة: {date(result.visit.expiresAt)}</p>
-          <small>المرجع: {result.visit.id}</small>
+          <RecordReference value={result.visit.id} label="مرجع الزيارة" />
         </div>
       )}
       <button
@@ -650,7 +651,7 @@ function OperationHistory({
                 <p>
                   {decimal(s.chargePiasters)} ج.م · {date(s.createdAt)}
                 </p>
-                <small>مرجع: {s.id}</small>
+                <RecordReference value={s.id} />
                 <RequestAction kind="SALE_CORRECTION" targetId={s.id} />
               </article>
             ))}
@@ -678,7 +679,7 @@ function OperationHistory({
                       : "ملغاة"}
                 </strong>
                 <p>حتى {date(v.expiresAt)}</p>
-                <small>مرجع: {v.id}</small>
+                <RecordReference value={v.id} />
                 {v.cancellationReason && (
                   <p className="subtle-box">
                     سبب الإلغاء: {v.cancellationReason}

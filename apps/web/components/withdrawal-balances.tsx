@@ -1,4 +1,5 @@
 "use client";
+import { RecordReference } from "./record-reference";
 import { decimal, date } from "../lib/client";
 import { Notice } from "./ui";
 export type WithdrawalBalances = {
@@ -29,7 +30,7 @@ export function WithdrawalBalanceCard({balances:b, amount, status}:{balances:Wit
   <details className="withdrawal-earnings"><summary>مصدر المستحقات وآخر الزيارات</summary>
    <p>{b.visitCount} زيارة غير ملغاة · مستحقاتها {decimal(b.visitEarningsPiasters)} ج.م</p>
    <p>صافي التسويات الأخرى المسجلة: {decimal(b.otherAdjustmentsPiasters)} ج.م</p>
-   {b.latestVisits.length>0?<div className="timeline">{b.latestVisits.map(v=><article key={v.id}><strong>{v.branchName} · {decimal(v.settlementPiasters)} ج.م</strong><p>{v.points} نقطة · {date(v.startedAt)}</p><small>مرجع الزيارة: {v.id}</small></article>)}</div>:<p className="muted">لا توجد زيارات غير ملغاة لهذا الجيم.</p>}
+   {b.latestVisits.length>0?<div className="timeline">{b.latestVisits.map(v=><article key={v.id}><strong>{v.branchName} · {decimal(v.settlementPiasters)} ج.م</strong><p>{v.points} نقطة · {date(v.startedAt)}</p><RecordReference value={v.id} label="مرجع الزيارة" /></article>)}</div>:<p className="muted">لا توجد زيارات غير ملغاة لهذا الجيم.</p>}
    <small className="muted">آخر ٥ زيارات كحد أقصى. مستحق الزيارة محفوظ بسعر وقت تنفيذها؛ لا نوزّع المدفوعات على زيارات بعينها في هذا العرض.</small>
   </details>
   <small className="muted">لقطة الرصيد: {date(b.asOf)} · قد تتغير الأرصدة مع العمليات الجديدة.</small>

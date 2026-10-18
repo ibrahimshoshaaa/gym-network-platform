@@ -1,4 +1,5 @@
 "use client";
+import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, message, decimal, date, ApiError } from "../lib/client";
 import { Busy, Empty, Field, Notice } from "./ui";
@@ -583,11 +584,9 @@ export function Reports({ admin }: { admin: boolean }) {
                       <td data-label="النقاط">{r.points ?? "—"}</td>
                       <td data-label="القيمة بالجنيه">{money(r.amountPiasters)}</td>
                       <td data-label="المراجع">
-                        <small>العملية: {r.referenceId}</small>
+                        <RecordReference value={r.referenceId} />
                         {r.actorId && (
-                          <p>
-                            <small>الحساب: {r.actorId}</small>
-                          </p>
+                          <RecordReference value={r.actorId} label="مرجع الحساب" />
                         )}
                       </td>
                     </tr>

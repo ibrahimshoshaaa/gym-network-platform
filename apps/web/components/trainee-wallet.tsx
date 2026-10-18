@@ -1,4 +1,5 @@
 "use client";
+import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, date, message } from "../lib/client";
 import { deadlineAt, secondsLeft, duration } from "../lib/server-deadline";
@@ -283,7 +284,7 @@ function ActiveVisit({
           ? "انتهت المدة — جارٍ انتظار تحديث الحالة"
           : "الوقت المتبقي"}
       </p>
-      <small>مرجع الزيارة: {visit.id}</small>
+      <RecordReference value={visit.id} label="مرجع الزيارة" />
     </article>
   );
 }
@@ -300,7 +301,7 @@ function MovementList({ operation }: { operation: string }) {
         <Empty title="لا توجد حركات نقاط مطابقة" />
       ) : (
         <div className="table-scroll">
-          <table>
+          <table className="mobile-records">
             <thead>
               <tr>
                 <th>التاريخ</th>
@@ -313,19 +314,17 @@ function MovementList({ operation }: { operation: string }) {
             <tbody>
               {list.rows.map((m) => (
                 <tr key={m.id}>
-                  <td>{date(m.eventAt)}</td>
-                  <td>{operations[m.operation] ?? m.operation}</td>
-                  <td dir="ltr">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
-                  <td>
+                  <td data-label="التاريخ">{date(m.eventAt)}</td>
+                  <td data-label="الحركة">{operations[m.operation] ?? m.operation}</td>
+                  <td dir="ltr" data-label="النقاط">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
+                  <td data-label="المصدر / الفرع">
                     {m.branch
                       ? `${m.branch.gymName} · ${m.branch.name}`
                       : "المنصة"}
                   </td>
-                  <td>
-                    <small>{m.referenceId}</small>
-                    <p>
-                      <small>قيد النقاط: {m.transactionId}</small>
-                    </p>
+                  <td data-label="المراجع">
+                    <RecordReference value={m.referenceId} />
+                    <RecordReference value={m.transactionId} label="قيد النقاط" />
                   </td>
                 </tr>
               ))}
@@ -365,7 +364,7 @@ function VisitHistory() {
               <p>
                 بدأت: {date(v.startedAt)} · تنتهي: {date(v.expiresAt)}
               </p>
-              <small>مرجع: {v.id}</small>
+              <RecordReference value={v.id} />
               {v.cancellationReason && (
                 <p className="subtle-box">
                   سبب الإلغاء: {v.cancellationReason}
