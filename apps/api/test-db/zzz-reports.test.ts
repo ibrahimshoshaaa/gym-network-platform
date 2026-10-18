@@ -1,3 +1,5 @@
+import { getQuote,submitTopup,reviewTopup } from "../src/topups/service.js";
+import { savePaymentMethod } from "../src/topups/settings.js";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after } from "node:test";
@@ -477,4 +479,45 @@ test("options and export endpoints deny other owners and preserve private downlo
   } finally {
     await app.close();
   }
+});
+
+test('platform finance counts holdings and liabilities once and separates real platform collections from cashier sales',async()=>{
+ const f=await fixture();
+ const snapshot=async()=> (await reportSummary(db,f.admin.id,range)).platformFinance!;
+ const before=await snapshot();
+ await f.sale(10);
+ const sale=await snapshot();
+ assert.equal(BigInt(sale.points.gyms),BigInt(before.points.gyms)-10n);
+ assert.equal(BigInt(sale.points.trainees),BigInt(before.points.trainees)+10n);
+ assert.equal(sale.points.circulating,before.points.circulating);
+ assert.equal(sale.collections.total,before.collections.total);
+ const visit=await f.visit(),earned=BigInt(visit.visit.settlementPiasters),afterVisit=await snapshot();
+ assert.equal(BigInt(afterVisit.liabilities.total),BigInt(before.liabilities.total)+earned);
+ assert.equal(BigInt(afterVisit.points.circulating),BigInt(before.points.circulating)-30n);
+ await requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{amountPiasters:'1',paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic Finance Recipient'});
+ const reserved=await snapshot();
+ assert.equal(reserved.liabilities.total,afterVisit.liabilities.total);
+ assert.equal(BigInt(reserved.liabilities.reserved),BigInt(afterVisit.liabilities.reserved)+1n);
+ assert.equal(BigInt(reserved.liabilities.available),BigInt(afterVisit.liabilities.available)-1n);
+ const method=await db.paymentMethod.findUniqueOrThrow({where:{type:'INSTAPAY'}});
+ await savePaymentMethod(db,f.admin.id,'INSTAPAY',{expectedVersion:method.version,account:'synthetic-finance@instapay',accountName:'Synthetic Receiver',enabled:true});
+ const fresh=await db.paymentMethod.findUniqueOrThrow({where:{type:'INSTAPAY'}});
+ for(const kind of ['TRAINEE','BRANCH_STOCK'] as const){
+  const actor=kind==='TRAINEE'?f.trainee.id:f.owner.id,selection={kind,points:7,...(kind==='BRANCH_STOCK'?{receivingBranchId:f.branch.id}:{})};
+  const quote=await getQuote(db,actor,selection),receipt=await db.receiptEvidence.create({data:{ownerUserId:actor,objectKey:'synthetic/'+randomUUID(),assetId:randomUUID(),contentHash:randomUUID(),mimeType:'image/jpeg',bytes:10}});
+  const b=await snapshot(),pending=await submitTopup(db,actor,randomUUID(),{...selection,pricingVersion:quote.pricingVersion,paymentMethod:'INSTAPAY',paymentMethodVersion:fresh.version,receiptId:receipt.id});
+  assert.equal((await snapshot()).collections.total,b.collections.total);
+  await reviewTopup(db,f.admin.id,pending.id,{decision:'APPROVED',reason:'Synthetic finance receipt checked',paymentReference:randomUUID(),receivedAmountPiasters:quote.chargePiasters,fundsReceived:true,receiptReviewed:true});
+  const a=await snapshot(),source=kind==='TRAINEE'?'trainees':'gyms';
+  assert.equal(BigInt(a.collections[source]),BigInt(b.collections[source])+BigInt(quote.chargePiasters));
+  assert.equal(BigInt(a.collections.total),BigInt(b.collections.total)+BigInt(quote.chargePiasters));
+ }
+ const owner=await reportSummary(db,f.owner.id,{...range,gymId:f.gym.id});assert.equal(owner.platformFinance,null);
+ const app=await buildApp(db);
+ try{
+  assert.equal((await app.inject({method:'GET',url:'/reports/platform-balances?kind=GYMS'})).statusCode,401);
+  for(const actor of [f.owner,f.cashier,f.manager,f.trainee]){const session=await createSession(db,actor.id,new Date(Date.now()+3600000));assert.equal((await app.inject({method:'GET',url:'/reports/platform-balances?kind=GYMS',headers:{authorization:'Bearer '+session}})).statusCode,403);}
+  const session=await createSession(db,f.admin.id,new Date(Date.now()+3600000));
+  const res=await app.inject({method:'GET',url:'/reports/platform-balances?kind=GYMS&limit=1',headers:{authorization:'Bearer '+session}});assert.equal(res.statusCode,200);assert.equal(res.json().items.length,1);assert.ok(res.json().nextCursor);assert.equal(JSON.stringify(res.json()).includes('phoneE164'),false);
+ }finally{await app.close();}
 });

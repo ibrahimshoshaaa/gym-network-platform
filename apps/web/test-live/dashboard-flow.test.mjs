@@ -1658,6 +1658,13 @@ test(
           await page.goto(origin);
           await expect(page.getByRole('heading',{name:'مهامك اليومية'})).toBeVisible();
           await expect(page.getByRole('heading',{name:'نظرة سريعة'})).toBeVisible();
+          await expect(page.getByRole('heading',{name:'الصورة المالية للمنصة',exact:true})).toBeVisible();
+          await expect(page.getByText('إجمالي المستحق للجيمات',{exact:true})).toBeVisible();
+          await page.getByRole('button',{name:'أرصدة الجيمات ومستحقاتها',exact:true}).click();
+          await expect(page.getByRole('heading',{name:'كشف أرصدة الجيمات ومستحقاتها'})).toBeVisible();
+          await expect(page.locator('.platform-finance .mobile-records tbody tr').first()).toBeVisible();
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'platform finance and gym balances must fit mobile');
+
           await page.getByRole('button',{name:'الدعم والمساعدة',exact:true}).click();
           await expect(page.getByRole('heading',{name:'مركز الدعم والشكاوى'})).toBeVisible();
           await page.getByRole('button',{name:'طلب مساعدة جديد',exact:true}).click();
