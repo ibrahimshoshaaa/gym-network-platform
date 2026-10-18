@@ -30,7 +30,7 @@ type Quote = {
   discountBps: number;
   unallocatedPiasters: string;
 };
-export function Purchases() {
+export function Purchases({ trainee = false }: { trainee?: boolean }) {
   const [gyms, setGyms] = useState<Gym[]>([]),
     [branches, setBranches] = useState<Branch[]>([]),
     [gym, setGym] = useState(""),
@@ -61,8 +61,8 @@ export function Purchases() {
     setError("");
     try {
       const [access, config, history] = await Promise.all([
-        api<{ ownedGyms: Gym[] }>("me/access"),
-        api<Settings>("topup-options?kind=BRANCH_STOCK"),
+        trainee ? Promise.resolve({ ownedGyms: [] as Gym[] }) : api<{ ownedGyms: Gym[] }>("me/access"),
+        api<Settings>(`topup-options?kind=${trainee ? "TRAINEE" : "BRANCH_STOCK"}`),
         api<Page<Topup>>("topups?limit=25"),
       ]);
       const active = access.ownedGyms.filter((g) => g.status === "ACTIVE");
@@ -83,7 +83,7 @@ export function Purchases() {
   }
   useEffect(() => {
     void load();
-  }, []);
+  }, [trainee]);
   useEffect(() => {
     let active = true;
     setBranches([]);
@@ -107,8 +107,8 @@ export function Purchases() {
   }, [gym]);
   type BranchPage = Page<Branch>;
   function getSelection() {
-    if (!branch) throw new Error("اختر فرعًا نشطًا أولًا.");
-    const base = { kind: "BRANCH_STOCK", receivingBranchId: branch };
+    if (!trainee && !branch) throw new Error("اختر فرعًا نشطًا أولًا.");
+    const base = trainee ? { kind: "TRAINEE" } : { kind: "BRANCH_STOCK", receivingBranchId: branch };
     if (selection === "package") {
       const pack = options?.packages.find((p) => p.id === packId);
       if (!pack) throw new Error("اختر الباقة.");
@@ -147,9 +147,9 @@ export function Purchases() {
     setReceiptName("");
     if (
       !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-      file.size > 5242880
+      file.size > 4194304
     ) {
-      setError("اختار صورة JPG أو PNG أو WebP بحد أقصى 5 ميجابايت.");
+      setError("اختار صورة JPG أو PNG أو WebP بحد أقصى 4 ميجابايت.");
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
@@ -203,7 +203,7 @@ export function Purchases() {
       command.current = null;
       if (fileRef.current) fileRef.current.value = "";
       setSuccess(
-        "تم إرسال الطلب للمراجعة. النقاط ستُضاف لمخزون الفرع بعد موافقة صاحب المنصة.",
+        trainee ? "تم إرسال إيصالك للمراجعة. نقاطك هتظهر في المحفظة بعد الموافقة، وتقدر تتابع الطلب من هنا." : "تم إرسال الطلب للمراجعة. النقاط ستُضاف لمخزون الفرع بعد موافقة صاحب المنصة.",
       );
     } catch (e) {
       setError(message(e));
@@ -234,7 +234,7 @@ export function Purchases() {
     <>
       <div className="section-toolbar">
         <p className="muted">
-          اشترِ نقاطًا لمخزون أحد فروع الجيم، وتابع حالة المراجعة.
+          {trainee ? "اختار عدد النقاط أو المبلغ، حوّل القيمة وارفع إيصالك. تابع موافقة الإدارة من طلباتك السابقة." : "اشترِ نقاطًا لمخزون أحد فروع الجيم، وتابع حالة المراجعة."}
         </p>
         <button
           className="secondary compact"
@@ -251,7 +251,7 @@ export function Purchases() {
         <section className="card">
           <Busy />
         </section>
-      ) : !gyms.length ? (
+      ) : !trainee && !gyms.length ? (
         <section className="card">
           <Empty title="لا توجد جيمات نشطة مرتبطة بحسابك">
             طلبات شراء النقاط متاحة لصاحب الجيم بعد تفعيل الجيم والفروع.
@@ -260,7 +260,7 @@ export function Purchases() {
       ) : !options?.policy || !options.paymentMethods.length ? (
         <section className="card">
           <Empty title="شراء النقاط غير متاح حاليًا">
-            تواصل مع صاحب المنصة لاستكمال إعداد الأسعار وحسابات التحويل.
+            {trainee ? "الإدارة لسه بتجهّز أسعار النقاط وطرق الدفع. ارجع هنا لاحقًا؛ محفظتك وحسابك جاهزين." : "تواصل مع صاحب المنصة لاستكمال إعداد الأسعار وحسابات التحويل."}
           </Empty>
         </section>
       ) : (
@@ -271,12 +271,13 @@ export function Purchases() {
                 <Building2 size={22} />
               </div>
               <div>
-                <h2>طلب شراء نقاط</h2>
-                <p>الخطوة الأولى: حدد الفرع والكمية</p>
+                <h2>{trainee ? "اشحن محفظتك" : "طلب شراء نقاط"}</h2>
+                <p>{trainee ? "١. اختار النقاط أو المبلغ" : "الخطوة الأولى: حدد الفرع والكمية"}</p>
               </div>
             </div>
             <form onSubmit={calculate}>
               <fieldset disabled={busy}>
+                {!trainee && <>
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="purchase-gym">الجيم</label>
@@ -318,6 +319,7 @@ export function Purchases() {
                 <small className="muted">
                   تظهر الفروع النشطة من أول 100 فرع.
                 </small>
+                </>}
                 <div className="field">
                   <label htmlFor="selection">طريقة تحديد الكمية</label>
                   <select
@@ -369,7 +371,7 @@ export function Purchases() {
                     }}
                   />
                 )}
-                <button className="primary full" disabled={!branch}>
+                <button className="primary full" disabled={!trainee && !branch}>
                   {quoting ? (
                     <Busy>جاري حساب القيمة</Busy>
                   ) : (
@@ -394,7 +396,7 @@ export function Purchases() {
             </div>
             {!quote ? (
               <Empty title="ابدأ بحساب قيمة الطلب">
-                هنوضح لك الخصم والمبلغ الفعلي المطلوب تحويله.
+                {trainee ? "هنوضح لك عدد النقاط والمبلغ المطلوب قبل ما تحوّل أي فلوس." : "هنوضح لك الخصم والمبلغ الفعلي المطلوب تحويله."}
               </Empty>
             ) : (
               <>
@@ -404,7 +406,7 @@ export function Purchases() {
                     {decimal(quote.chargePiasters)} <small>ج.م</small>
                   </strong>
                   <p>
-                    {quote.points} نقطة · خصم {decimal(quote.discountBps)}%
+                    {quote.points} نقطة{!trainee && <> · خصم {decimal(quote.discountBps)}%</>}
                   </p>
                 </div>
                 {quote.unallocatedPiasters !== "0" && (
@@ -475,7 +477,7 @@ export function Purchases() {
                         accept="image/jpeg,image/png,image/webp"
                         onChange={(e) => void upload(e.target.files?.[0])}
                       />
-                      <small>JPG / PNG / WebP · حتى 5 ميجابايت</small>
+                      <small>JPG / PNG / WebP · حتى 4 ميجابايت</small>
                       {uploading && <Busy>جاري رفع الإيصال</Busy>}
                     </div>
                     <button

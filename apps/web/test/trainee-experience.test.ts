@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Login } from "../components/login";
+import { TraineePortal } from "../components/trainee-portal";
+
+test("public login defaults to a trainee and offers self registration", () => {
+  const html = renderToStaticMarkup(createElement(Login, { onLogin: () => {} }));
+  assert.match(html, /إنشاء حساب متدرب/);
+  assert.match(html, /value="trainee" selected/);
+});
+test("trainee area has five personal destinations and no gym administration controls", () => {
+  const html = renderToStaticMarkup(createElement(TraineePortal, {
+    user: { id: "test", displayName: "متدرب اختبار", role: "TRAINEE", email: "test@example.test", phone: "+201500000000" },
+    logout: async () => {}, loggingOut: false, onPassword: () => {}, error: "",
+  }));
+  const nav = html.match(/<nav[\s\S]*?<\/nav>/)?.[0] ?? "";
+  for (const label of ["محفظتي", "اشحن رصيدك", "الجيمات", "رمز الدخول", "زياراتي"]) assert.ok(nav.includes(label));
+  assert.equal((nav.match(/<button/g) ?? []).length, 5);
+  assert.doesNotMatch(html, /الكاشير والزيارات|شراء نقاط الفروع|إدارة المنصة/);
+});

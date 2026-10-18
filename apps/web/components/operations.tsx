@@ -704,7 +704,7 @@ function OperationHistory({
     </div>
   );
 }
-export function TraineeQr() {
+export function TraineeQr({ standalone = false }: { standalone?: boolean }) {
   const [qr, setQr] = useState<{
       token: string;
       expiresAt: string;
@@ -759,8 +759,7 @@ export function TraineeQr() {
       generation.current++;
     };
   }, []);
-  return (
-    <TraineeWallet revision={revision}>
+  const content = (
       <section className="card trainee-code">
         <h2>رمز دخول الجيم</h2>
         <Notice text={error} />
@@ -807,6 +806,6 @@ export function TraineeQr() {
           )}
         </button>
       </section>
-    </TraineeWallet>
   );
+  return standalone ? content : <TraineeWallet revision={revision}>{content}</TraineeWallet>;
 }
