@@ -1,3 +1,4 @@
+import { registerApplicationRoutes } from "./applications/routes.js";
 import { registerPointRoutes } from "./points/routes.js";
 import { registerDisputeRoutes } from './disputes/routes.js';
 import { registerMediaRoutes } from './media/routes.js';
@@ -48,6 +49,7 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
   }));
 
   if (db) {
+    registerApplicationRoutes(app,db);
     registerPointRoutes(app,db);
     registerMediaRoutes(app, db);
     registerDisputeRoutes(app, db);
@@ -78,4 +80,5 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
   // Contact verification/OTP remains deferred.
   return app;
 }
+
 

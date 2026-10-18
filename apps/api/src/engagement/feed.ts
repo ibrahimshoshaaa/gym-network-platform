@@ -49,6 +49,7 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
  const cards:{label:string;value:string;destination:string;unit?:string}[]=[];
  const add=(label:string,value:number|string,destination:string,unit?:string)=>cards.push({label,value:String(value),destination,...(unit?{unit}:{})});
  if(admin){
+  add('طلبات انضمام الجيمات',await tx.gymApplication.count({where:{status:'PENDING'}}),'gym-applications');
   add('شحن ينتظر المراجعة',await tx.topupRequest.count({where:{status:'PENDING'}}),'reviews');
   add('سحب ينتظر المراجعة',await tx.withdrawalRequest.count({where:{status:'REQUESTED'}}),'withdrawals');
   add('تحويلات متأخرة',await tx.withdrawalRequest.count({where:{status:'APPROVED',dueAt:{lt:now}}}),'withdrawals');
@@ -75,3 +76,4 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
  }
  return {asOf:now,today,cards};
  },{isolationLevel:'RepeatableRead',timeout:20000});}
+

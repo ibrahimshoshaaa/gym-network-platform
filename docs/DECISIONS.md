@@ -46,3 +46,12 @@ remain independent. Migration and operational details: [CASHIER_VISITS.md](CASHI
 The platform owner can credit a trainee or an accepted active gym owner by exact mobile number, with recipient name review and explicit confirmation of collected funds. Gym owner sends are sales at the current retail point price, with received-money confirmation (owner decision, 2026-10-18). Wallet PIN is deferred.
 
 The gym wallet aggregates existing branch stocks; sending automatically consumes only active, price-approved branch inventories in the selected gym. Frozen branch points remain in the displayed total. Historical stock accounts and postings remain intact. A sale belongs to the gym rather than a fictitious single branch. Admin gym funding credits one eligible real branch internally. Every dispatch is immutable, idempotent and linked to its balanced ledger and policy snapshot. Admin dispatch collections join platform receipts; gym sales do not double count platform receipts. Transfer references are shared with existing reviewed topups to reject duplicate collection references.
+
+
+## Native application and owner self-registration (2026-10-19)
+
+The mobile application now uses native Flutter screens for trainees and gym owners. The platform administrator continues in the web dashboard. Self-registering owners receive a session to track a scoped application, but receive no gym, stock, staff access, or financial capability before approval. Administrator review atomically creates one accepted active gym without issuing points or money. Branch location and visit-price approvals remain separate operational checks in the existing unified branch setup. Rejected applications may be edited and resubmitted with an optimistic version; prior reasons remain in immutable audit events. Existing administrator invitations remain supported.
+
+Trainee email/password registration remains immediate under the previously approved verification deferral. Phone and email verification flags remain false. OTP will later control automatic activation; it is not simulated in this release. Wallet PIN and background push remain deferred.
+
+The native bridge accepts only explicit paths and Bearer tokens, never web session cookies; admin paths remain web-only. Financial envelopes are encrypted on-device, actor-scoped, and survive uncertain responses and application restart, with exact-key explicit retry before another financial request. Android APKs are testing builds; production store signing and Apple distribution still need owner identities.

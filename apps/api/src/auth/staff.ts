@@ -50,15 +50,16 @@ export async function loginStaff(db: PrismaClient, input: unknown) {
   if (!parsed.success) throw new DomainError('INVALID_INPUT');
   const { identifier, password } = parsed.data;
   const user = await db.user.findUnique({ where: identifier.includes('@') ? { email: identifier } : { phoneE164: identifier }, include: { password: true } });
-  const eligible = Boolean(user?.isActive && user.role !== 'PLATFORM_ADMIN' && user.password && await hasStaffAccess(db, user.id));
+  const eligible = Boolean(user?.isActive && user.role !== 'PLATFORM_ADMIN' && user.password && (await hasStaffAccess(db, user.id) || (user.role==='GYM_OWNER' && Boolean(await db.gymApplication.findUnique({where:{ownerId:user.id}})))));
   const hash = eligible ? user!.password!.passwordHash : undefined;
   if (!await verifyPassword(password, hash) || !eligible || !user) throw new DomainError('INVALID_CREDENTIALS');
   return serializable(db, async tx => {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${user.id}::uuid FOR UPDATE`;
     const current = await tx.user.findUnique({ where: { id: user.id }, include: { password: true } });
-    if (!current?.isActive || current.role === 'PLATFORM_ADMIN' || current.password?.passwordHash !== hash || !await hasStaffAccess(tx, user.id)) throw new DomainError('INVALID_CREDENTIALS');
+    if (!current?.isActive || current.role === 'PLATFORM_ADMIN' || current.password?.passwordHash !== hash || !(await hasStaffAccess(tx, user.id) || (current.role==='GYM_OWNER' && Boolean(await tx.gymApplication.findUnique({where:{ownerId:user.id}}))))) throw new DomainError('INVALID_CREDENTIALS');
     const result = await sessionResult(tx, current);
     await audit(tx, current.id, 'STAFF_LOGIN', current.id, 'Password sign-in with live owner or branch assignment checks');
     return result;
   });
 }
+
