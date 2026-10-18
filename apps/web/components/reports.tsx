@@ -1,4 +1,5 @@
 "use client";
+import { FinanceSnapshot,type PlatformFinanceData } from "./platform-finance";
 import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, message, decimal, date, ApiError } from "../lib/client";
@@ -8,6 +9,7 @@ type Gym = { id: string; name: string; canFinance: boolean };
 type Branch = { id: string; gymId: string; name: string };
 type Metric = { count: string; points: string; amountPiasters: string };
 type Summary = {
+  platformFinance: PlatformFinanceData|null;
   period: { from: string; to: string };
   asOf: string;
   scope: { finance: boolean };
@@ -368,6 +370,7 @@ export function Reports({ admin }: { admin: boolean }) {
         {gymId && <More list={branches} />}
       </section>
       <Notice text={error} />
+      {summary?.platformFinance && <section className="platform-finance"><h2>الصورة المالية للمنصة — كل الفترات</h2><FinanceSnapshot data={summary.platformFinance} asOf={summary.asOf}/></section>}
       {summary && (
         <>
           <div className="section-toolbar">

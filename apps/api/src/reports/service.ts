@@ -1,3 +1,4 @@
+import { platformFinance } from "./platform.js";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { requireActor, requireGymOwner } from "../auth/authorization.js";
 import { DomainError } from "../domain/errors.js";
@@ -210,6 +211,7 @@ export async function reportSummary(
       };
     }
     return {
+      platformFinance: s.admin && !s.gymId && !s.branchId ? await platformFinance(tx,asOf) : null,
       asOf,
       period: {
         from: f.from,

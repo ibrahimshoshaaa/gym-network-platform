@@ -81,6 +81,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^directory/branches/${uuid}$`),
     new RegExp(`^inventory/branches/${uuid}(?:/movements)?$`),
     /^reports\/(gyms|summary|rows|export)$/,
+    /^reports\/platform-balances$/,
     new RegExp(`^reports/gyms/${uuid}/branches$`),
     /^admin\/withdrawal-calendar$/,
     /^admin\/withdrawals$/,
