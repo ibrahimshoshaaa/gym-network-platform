@@ -1,3 +1,4 @@
+import { trustedClientAddress } from "../../../lib/client-address";
 import { cookies } from "next/headers";
 import { boundedBody, checkOrigin, GatewayError } from "../../../lib/security";
 import {
@@ -34,11 +35,14 @@ export async function POST(request: Request) {
     if (
       !input ||
       typeof input !== "object" ||
-      !["admin", "staff", "invite", "trainee"].includes(String(input.mode))
+      Array.isArray(input) ||
+      (input.mode !== undefined && !["auto", "admin", "staff", "invite", "trainee"].includes(String(input.mode)))
     )
       throw new GatewayError("INVALID_INPUT", 400);
     const route =
-      input.mode === "invite"
+      input.mode === undefined || input.mode === "auto"
+        ? "auth/signin"
+        : input.mode === "invite"
         ? "auth/invitations/accept"
         : input.mode === "trainee"
           ? "auth/login"
@@ -51,7 +55,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
-    });
+    }, undefined, trustedClientAddress(request));
     const result = await response.json();
     if (!response.ok)
       return json(

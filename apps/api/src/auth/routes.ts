@@ -3,12 +3,17 @@ import type { PrismaClient } from '@prisma/client';
 import { DomainError } from '../domain/errors.js';
 import { authenticate } from './sessions.js';
 import { consumeAuthLimit } from './throttle.js';
+import { signIn } from './signin.js';
 import { loginAdmin } from './admin.js';
 import { loginSchema } from './validation.js';
 import { changeTraineePassword, loginTrainee, registerTrainee } from './trainees.js';
 import { acceptInvitation, invitationAcceptSchema, loginStaff } from './staff.js';
 
 export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
+  app.post('/auth/signin', {
+    bodyLimit: 8192,
+    onRequest: async request => { await consumeAuthLimit(db, 'login-ip', request.ip, 30, 900); },
+  }, async request => signIn(db, request.body, request.ip));
   app.post('/auth/admin/login', {
     bodyLimit: 8192,
     onRequest: async request => { await consumeAuthLimit(db, 'admin-login-ip', request.ip, 20, 900); },

@@ -1,4 +1,5 @@
 "use client";
+import { invitationLink } from "../../lib/invitation-link";
 import { LocationPicker } from "./location-picker";
 import { requiredLocation } from "../../lib/location-point";
 import {
@@ -285,18 +286,19 @@ export function Invitation({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState(false),
+    [link, setLink] = useState(""),
     [error, setError] = useState("");
+  useEffect(() => { setLink(invitationLink(window.location.origin, data.token)); }, [data.token]);
   return (
-    <Modal title="رمز تفعيل الحساب" onClose={onClose}>
+    <Modal title="دعوة تفعيل الحساب" onClose={onClose}>
       <p className="muted">
-        الرمز يظهر هنا مرة واحدة. انسخه وأرسله لصاحب الحساب بشكل خاص؛ يدخل من
-        شاشة «تفعيل دعوة» ويحدد كلمة مروره بنفسه.
+        انسخ الرابط وابعته لصاحب الحساب بشكل خاص. هيفتح على شاشة التفعيل مباشرة، وبعدها يدخل على مهامه.
       </p>
       <div className="field invite-secret">
-        <label htmlFor="invite-secret">رمز الدعوة</label>
+        <label htmlFor="invite-secret">رابط الدعوة</label>
         <textarea
           id="invite-secret"
-          value={data.token}
+          value={link}
           readOnly
           dir="ltr"
           rows={2}
@@ -308,12 +310,13 @@ export function Invitation({
       <Notice text={error} />
       <button
         className="primary full"
+        disabled={!link}
         onClick={async () => {
           try {
-            await navigator.clipboard.writeText(data.token);
+            await navigator.clipboard.writeText(link);
             setCopied(true);
           } catch {
-            setError("تعذر النسخ تلقائيًا؛ حدد الرمز وانسخه من الحقل.");
+            setError("تعذر النسخ تلقائيًا؛ حدد الرابط وانسخه من الحقل.");
           }
         }}
       >
@@ -325,7 +328,7 @@ export function Invitation({
         ) : (
           <>
             <Copy size={17} />
-            نسخ رمز الدعوة
+            نسخ رابط الدعوة
           </>
         )}
       </button>

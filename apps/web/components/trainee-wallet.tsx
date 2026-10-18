@@ -79,7 +79,7 @@ export function TraineeWallet({
     <>
       <div className="section-toolbar">
         <p className="muted">
-          تُحدّث المحفظة والزيارات كل ٣٠ ثانية أثناء فتح الصفحة.
+          رصيدك وزياراتك بيتحدّثوا تلقائيًا.
         </p>
         <button
           className="secondary compact"
@@ -88,7 +88,7 @@ export function TraineeWallet({
             setHistoryVersion((v) => v + 1);
           }}
         >
-          تحديث المحفظة والسجلات
+          تحديث
         </button>
       </div>
       {view !== "history" && <div className="settings-grid">
@@ -172,10 +172,8 @@ function WalletCard({ refresh }: { refresh: string }) {
       ) : (
         <>
           <p className="muted">متاح للاستخدام</p>
-          <h2>{available} نقطة</h2>
-          <p>
-            الرصيد المسجل: <strong>{wallet.balance} نقطة</strong>
-          </p>
+          <h2 className="wallet-balance">{available} <small>نقطة</small></h2>
+
           {expired ? (
             <Notice
               text={`انتهت الصلاحية. ${wallet.balance} نقطة غير متاحة للاستخدام وتحتاج مراجعة؛ لم تُحذف تلقائيًا.`}
@@ -189,14 +187,7 @@ function WalletCard({ refresh }: { refresh: string }) {
               الصلاحية حتى {wallet.expiresAt ? date(wallet.expiresAt) : "—"}
             </p>
           )}
-          <small>
-            آخر تحقق: {date(wallet.serverTime)}
-            {loading ? " · تحديث…" : ""}
-          </small>
-          <p className="muted">
-            الأرصدة لحظة آخر تحديث، والخادم يفحص الرصيد والصلاحية عند كل عملية.
-            لا يمكن تحويل النقاط نقديًا من هذه الشاشة.
-          </p>
+          <details className="wallet-more"><summary>تفاصيل الرصيد</summary><p>الرصيد المسجل: {wallet.balance} نقطة</p><small>آخر تحديث: {date(wallet.serverTime)}{loading ? " · تحديث…" : ""}</small><p className="muted">المتاح بيتراجع وقت كل عملية، وصلاحية النقاط ظاهرة فوق.</p></details>
         </>
       )}
     </section>

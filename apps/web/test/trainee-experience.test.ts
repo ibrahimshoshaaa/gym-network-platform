@@ -5,10 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Login } from "../components/login";
 import { TraineePortal } from "../components/trainee-portal";
 
-test("public login defaults to a trainee and offers self registration", () => {
+test("public login has one sign-in path and offers trainee registration", () => {
   const html = renderToStaticMarkup(createElement(Login, { onLogin: () => {} }));
   assert.match(html, /إنشاء حساب متدرب/);
-  assert.match(html, /value="trainee" selected/);
+  assert.match(html, /name="identifier"/);
+  assert.match(html, /name="password"/);
+  assert.doesNotMatch(html, /login-mode|نوع الدخول|<select/);
 });
 test("trainee area has five personal destinations and no gym administration controls", () => {
   const html = renderToStaticMarkup(createElement(TraineePortal, {

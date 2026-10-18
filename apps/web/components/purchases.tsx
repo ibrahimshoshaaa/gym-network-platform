@@ -30,7 +30,7 @@ type Quote = {
   discountBps: number;
   unallocatedPiasters: string;
 };
-export function Purchases({ trainee = false }: { trainee?: boolean }) {
+export function Purchases({ trainee = false, onWallet }: { trainee?: boolean; onWallet?: () => void }) {
   const [gyms, setGyms] = useState<Gym[]>([]),
     [branches, setBranches] = useState<Branch[]>([]),
     [gym, setGym] = useState(""),
@@ -38,7 +38,8 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
     [options, setOptions] = useState<Settings | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [success, setSuccess] = useState("");
+    [success, setSuccess] = useState(""),
+    [completed, setCompleted] = useState<number | null>(null);
   const [selection, setSelection] = useState("points"),
     [quantity, setQuantity] = useState(""),
     [packId, setPackId] = useState(""),
@@ -74,7 +75,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
         active.some((g) => g.id === old) ? old : (active[0]?.id ?? ""),
       );
       setQuote(null);
-      setMethod("");
+      setMethod(config.paymentMethods.length === 1 ? config.paymentMethods[0]!.type : "");
     } catch (e) {
       setError(message(e));
     } finally {
@@ -133,6 +134,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
     setSuccess("");
     try {
       setQuote(await api<Quote>("topup-quotes", send(getSelection())));
+      setReceiptId(""); setReceiptName(""); setCopied(false);
     } catch (e) {
       setError(message(e));
       setQuote(null);
@@ -197,6 +199,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
         },
       });
       setRows((old) => [result, ...old.filter((r) => r.id !== result.id)]);
+      setCompleted(result.points);
       setReceiptId("");
       setReceiptName("");
       setQuote(null);
@@ -246,8 +249,9 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
         </button>
       </div>
       <Notice text={error} />
-      <Notice text={success} success />
-      {loading ? (
+      {!completed && <Notice text={success} success />}
+      <ol className="purchase-steps" aria-label="خطوات الشحن">{["اختار النقاط", "حوّل وارفع الإيصال", "تابع الطلب"].map((label,index) => <li key={label} aria-current={(completed !== null ? 2 : quote ? 1 : 0) === index ? "step" : undefined}><span>{index + 1}</span>{label}</li>)}</ol>
+      {completed !== null ? <section className="card purchase-complete"><Check size={32}/><h2>طلبك وصل للمراجعة</h2><p>طلب شحن {completed} نقطة اتبعت. النقاط هتظهر بعد موافقة الإدارة؛ تابع الحالة من «طلباتي» تحت.</p><div className="actions">{onWallet && <button className="primary" onClick={onWallet}>افتح محفظتي</button>}<button className="secondary" onClick={() => { setCompleted(null); setSuccess(""); }}>طلب شحن جديد</button></div></section> : loading ? (
         <section className="card">
           <Busy />
         </section>
@@ -264,7 +268,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
           </Empty>
         </section>
       ) : (
-        <div className="settings-grid">
+        <div className={quote ? "settings-grid" : "purchase-first-step"}>
           <section className="card">
             <div className="card-heading">
               <div className="card-icon">
@@ -384,7 +388,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
               </fieldset>
             </form>
           </section>
-          <section className="card">
+          {quote && <section className="card">
             <div className="card-heading">
               <div className="card-icon">
                 <UploadCloud size={22} />
@@ -417,6 +421,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
                 )}
                 <form onSubmit={submit}>
                   <fieldset disabled={busy}>
+                    {options.paymentMethods.length > 1 && <>
                     <div className="field">
                       <label htmlFor="payment-channel">طريقة التحويل</label>
                       <select
@@ -436,6 +441,7 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
                         ))}
                       </select>
                     </div>
+                    </>}
                     {channel && (
                       <div className="receiver">
                         <span>حوّل إلى الحساب التالي</span>
@@ -494,52 +500,16 @@ export function Purchases({ trainee = false }: { trainee?: boolean }) {
                 </form>
               </>
             )}
-          </section>
+          </section>}
         </div>
       )}
       <section className="card table-card history">
         <div className="table-heading">
-          <h2>طلباتك السابقة</h2>
+          <h2>طلباتي</h2>
           <span className="muted">النقاط تُضاف بعد الاعتماد</span>
         </div>
         {rows.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>الطلب</th>
-                  <th>النقاط</th>
-                  <th>القيمة</th>
-                  <th>الحالة</th>
-                  <th>ملاحظة المراجعة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <strong dir="ltr">{row.id.slice(0, 8)}</strong>
-                      <small>{date(row.createdAt)}</small>
-                    </td>
-                    <td>{row.points}</td>
-                    <td>{decimal(row.chargePiasters)} ج.م</td>
-                    <td>
-                      <span
-                        className={`badge ${row.status === "APPROVED" ? "approved" : row.status === "REJECTED" ? "rejected" : "pending"}`}
-                      >
-                        {row.status === "APPROVED"
-                          ? "معتمد"
-                          : row.status === "REJECTED"
-                            ? "مرفوض"
-                            : "قيد المراجعة"}
-                      </span>
-                    </td>
-                    <td>{row.reviewReason ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div className="purchase-history">{rows.map(row => <article className="purchase-history-item" key={row.id}><div><strong>{row.points} نقطة · {decimal(row.chargePiasters)} ج.م</strong><small className="muted">{date(row.createdAt)}</small></div><span className={`badge ${row.status === "APPROVED" ? "approved" : row.status === "REJECTED" ? "rejected" : "pending"}`}>{row.status === "APPROVED" ? "تم الشحن" : row.status === "REJECTED" ? "مرفوض" : "بانتظار المراجعة"}</span>{row.reviewReason && <p className="muted">{row.reviewReason}</p>}</article>)}</div>
         ) : (
           !loading && (
             <Empty title="لسه مفيش طلبات">

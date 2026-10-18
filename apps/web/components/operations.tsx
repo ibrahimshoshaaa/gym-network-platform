@@ -51,7 +51,7 @@ type SaleQuote = {
   traineeLabel: string;
   phoneLast4: string;
 };
-export function Cashier() {
+export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale" | "history"}) {
   const [branches, setBranches] = useState<Branch[]>([]),
     [branch, setBranch] = useState(""),
     [loading, setLoading] = useState(true),
@@ -124,6 +124,7 @@ export function Cashier() {
             <BranchOperations
               key={branch}
               branch={branches.find((b) => b.id === branch)!}
+              initialTask={initialTask}
             />
           )}
         </>
@@ -131,8 +132,8 @@ export function Cashier() {
     </>
   );
 }
-function BranchOperations({ branch }: { branch: Branch }) {
-  const [tab, setTab] = useState(branch.canSell ? "visit" : "history"),
+function BranchOperations({ branch, initialTask }: { branch: Branch; initialTask: "visit" | "sale" | "history" }) {
+  const [tab, setTab] = useState(branch.canSell ? initialTask : "history"),
     [stock, setStock] = useState<number | null>(null),
     [error, setError] = useState(""),
     [revision, setRevision] = useState(0);
