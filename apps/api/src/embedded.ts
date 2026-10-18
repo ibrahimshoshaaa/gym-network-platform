@@ -19,7 +19,7 @@ export async function internalRequest(path: string, init: {
   body?: Uint8Array | string;
   remoteAddress?: string;
 }) {
-  if (!/^[a-z][a-z0-9/-]*(?:\?.*)?$/.test(path) || path.includes('..')) {
+  if (!/^[a-z][a-zA-Z0-9/-]*(?:\?.*)?$/.test(path) || path.includes('..')) {
     throw new Error('Invalid internal API path');
   }
   const method = init.method ?? 'GET';
