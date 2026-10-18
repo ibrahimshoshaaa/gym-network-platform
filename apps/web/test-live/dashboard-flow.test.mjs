@@ -125,6 +125,7 @@ test(
           ...process.env,
           NODE_ENV: "production",
           API_INTERNAL_URL: backend,
+          GYM_EMBEDDED_API: "true",
           WEB_ORIGIN: origin,
         },
         stdio: "ignore",

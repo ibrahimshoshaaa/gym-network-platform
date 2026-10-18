@@ -26,6 +26,15 @@ export async function upstream(
   token?: string,
 ) {
   try {
+    if (process.env.GYM_EMBEDDED_API === "true") {
+      const { internalRequest } = await import("@gym/api");
+      const headers = Object.fromEntries(apiHeaders(init.headers, token));
+      const body = init.body == null ? undefined : typeof init.body === "string"
+        ? init.body
+        : init.body instanceof Uint8Array ? init.body
+        : new Uint8Array(await new Response(init.body).arrayBuffer());
+      return await internalRequest(path, { method: init.method, headers, body });
+    }
     return await fetch(`${apiOrigin()}/${path}`, {
       ...init,
       headers: apiHeaders(init.headers, token),

@@ -14,8 +14,7 @@
     "db:deploy": "prisma migrate deploy",
     "test": "node --import tsx --test test/*.test.ts",
     "test:db": "node --import tsx --test --test-concurrency=1 test-db/*.test.ts",
-    "admin:provision": "node --import tsx src/cli/provision-admin.ts",
-    "vercel-build": "prisma generate"
+    "admin:provision": "node --import tsx src/cli/provision-admin.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
@@ -29,5 +28,11 @@
     "prisma": "^6.16.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/embedded.ts",
+      "default": "./dist/embedded.js"
+    }
   }
 }
