@@ -36,7 +36,7 @@ test('owner sends from aggregate eligible stock without cashier assignment; repl
  const remaining=await db.pointAccount.findMany({where:{id:{in:[f.x.id,f.y.id]}}});assert.equal(remaining.reduce((s,a)=>s+a.balance,0),10);assert.equal(await db.moneyTransaction.count(),before);
  assert.equal((await db.$transaction(tx=>platformFinance(tx,new Date()))).collections.total,collectionBefore.collections.total);
  const movement=(await walletMovements(db,f.trainee.id,{})).items.find(r=>r.referenceId===row.id);assert.equal(movement?.operation,'SALE');assert.equal(movement?.branch,null);assert.match(movement?.sourceLabel??'',/Synthetic Dispatch Gym/);
- const date=new Date().toISOString().slice(0,10),report=await reportRows(db,f.owner.id,{gymId:f.gym.id,kind:'SALES',from:date,to:date});assert.equal(report.items.find(r=>r.id===row.id)?.branchId,null);
+ const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),report=await reportRows(db,f.owner.id,{gymId:f.gym.id,kind:'SALES',from:date,to:date});assert.equal(report.items.find(r=>r.id===row.id)?.branchId,null);
  await code(dispatchPoints(db,f.owner.id,key,{...payload,points:41},f.gym.id),'IDEMPOTENCY_CONFLICT');
  await assert.rejects(db.pointDispatch.update({where:{id:row.id},data:{points:41}}));
  await code(reverseLedger(db,{actorId:f.admin.id,idempotencyKey:randomUUID(),reason:'Cannot bypass immutable direct dispatch',pointTransactionId:row.pointTransactionId}),'DOMAIN_APPROVAL_REQUIRED');
@@ -71,3 +71,4 @@ test('same payment reference cannot be approved in old topups and direct topups 
  await code(reviewTopup(db,f.admin.id,p.id,approve(ref)),'PAYMENT_REFERENCE_USED');
  const ref2='SYNTH-'+randomUUID(),p2=await pending();await reviewTopup(db,f.admin.id,p2.id,approve(ref2));await code(dispatchPoints(db,f.admin.id,randomUUID(),{...body,paymentReference:ref2}),'PAYMENT_REFERENCE_USED');
 });
+

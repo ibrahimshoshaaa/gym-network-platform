@@ -50,7 +50,9 @@ import { Users, AuditLog } from "./users";
 import { AccountTools } from "./updates";
 import { AccountRecovery, recoveryToken } from "./account-recovery";
 import { PointWallet } from "./point-wallet";
+import { GymApplications } from "./gym-applications";
 type Tab =
+  | "gym-applications"
   | "direct-topup" | "point-wallet"
   | "support" | "users" | "audit" | "disputes"
   | "home"
@@ -69,6 +71,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"gym-applications" as const,label:"طلبات الانضمام",icon:Building2,description:"مراجعة بيانات أصحاب الجيمات المسجلين من التطبيق وقبول أو رفض انضمامهم"},
   {id:"direct-topup" as const,label:"شحن مباشر بالرقم",icon:Send,description:"شحن المتدرب أو الجيم برقم الموبايل بعد تأكيد التحصيل"},
   {id:"point-wallet" as const,label:"محفظة الجيم والإرسال",icon:Wallet,description:"رصيد جيمك وإرسال النقاط للمتدربين برقم الموبايل"},
   {id:"disputes" as const,label:"حجوزات النزاعات",icon:ShieldCheck,description:"حجز المبلغ محل المراجعة وفكّه مع الحفاظ على باقي المستحقات"},
@@ -278,7 +281,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {(admin ? [{label:"ابدأ من هنا",ids:["home","direct-topup"]},{label:"طلبات تحتاج قرارك",ids:["reviews","branch-prices","withdrawals","disputes","operation-reviews","support"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}] : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {(admin ? [{label:"ابدأ من هنا",ids:["home","direct-topup"]},{label:"طلبات تحتاج قرارك",ids:["gym-applications","reviews","branch-prices","withdrawals","disputes","operation-reviews","support"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}] : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}
@@ -346,7 +349,7 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>}
           <Notice text={error} />
-          {current.id === "direct-topup" || current.id === "point-wallet" ? <PointWallet admin={admin}/> : current.id === "disputes" ? <Disputes admin={admin}/> : current.id === "support" ? <Support admin={admin}/> : current.id === "users" ? <Users/> : current.id === "audit" ? <AuditLog/> : current.id === "home" ? (
+          {current.id === "gym-applications" ? <GymApplications/> : current.id === "direct-topup" || current.id === "point-wallet" ? <PointWallet admin={admin}/> : current.id === "disputes" ? <Disputes admin={admin}/> : current.id === "support" ? <Support admin={admin}/> : current.id === "users" ? <Users/> : current.id === "audit" ? <AuditLog/> : current.id === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : current.id === "directory" ? (
             <BranchDirectory />
@@ -462,3 +465,4 @@ function PasswordChange({ onClose }: { onClose: () => void }) {
     </Modal>
   );
 }
+

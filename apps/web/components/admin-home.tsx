@@ -7,7 +7,7 @@ import { api, decimal, message, type Settings } from "../lib/client";
 import { RoleSummary } from "./updates";
 import { Busy, Notice } from "./ui";
 
-export type AdminDestination = "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
+export type AdminDestination = "gym-applications" | "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
 export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDestination) => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState("");
@@ -46,6 +46,7 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
       <p className="muted">كل قسم له مهمة واضحة، اختار اللي محتاجه.</p>
       <div className="admin-shortcuts">
       {([
+       ["gym-applications","طلبات انضمام الجيمات","راجع بيانات صاحب الجيم ووافق أو ارفض من مكان واحد."],
        ["branch-prices","اعتماد أسعار الزيارات","راجع سعر الزيارة ومدتها قبل تفعيل الفرع."],
        ["withdrawals","طلبات سحب الجيمات","قبول الطلبات ومتابعة موعد التحويل والإثبات."],
        ["operation-reviews","طلبات الإلغاء والتصحيح","راجع الأدلة وتأثير القرار على الرصيد."],
@@ -88,3 +89,4 @@ export function AdminSetup({ settings, onNavigate }: { settings: Settings; onNav
     </ol>
   </section>;
 }
+

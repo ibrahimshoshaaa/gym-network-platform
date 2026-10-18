@@ -12,8 +12,12 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -42,8 +46,17 @@ jobs:
       - name: Build optimized Android APKs
         working-directory: apps/mobile
         run: flutter build apk --release --split-per-abi
+      - name: Attach installable APKs to private release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view mobile-v0.2.0 >/dev/null 2>&1 || gh release create mobile-v0.2.0 --target "$GITHUB_SHA" --title "Gym Network Android 0.2.0" --notes "Native trainee and gym owner application. OTP, wallet PIN and background push remain deferred. Testing build; store signing is separate."
+          gh release upload mobile-v0.2.0 apps/mobile/build/app/outputs/flutter-apk/*.apk --clobber
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: gym-network-android-apks
           path: apps/mobile/build/app/outputs/flutter-apk/*.apk
           retention-days: 30
+

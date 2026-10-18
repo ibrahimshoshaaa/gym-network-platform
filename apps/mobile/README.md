@@ -1,26 +1,25 @@
-# Gym Network Android client
+# Gym Network native mobile application
 
-A Flutter Android host for the production mobile web application. It intentionally
-shares the authenticated web screens and authoritative API rather than duplicating
-financial logic. This is a working hybrid client, not a separately native-rendered
-wallet or an offline financial app. Wallet, topup receipts, directory, QR, support,
-notifications and role-specific dashboards follow the deployed web version.
+Flutter 3.47.7 / Dart, Material 3, Arabic RTL. Native screens replace the previous WebView client. Uses the existing production API through `/api/mobile/*` with Bearer sessions; web cookies never authorize the mobile bridge. No database, Cloudinary, signing or backend credentials are embedded.
 
-Only the exact production HTTPS origin stays inside the authenticated WebView.
-Maps, business telephone, WhatsApp and business/evidence images open externally
-through a fixed allowlist. No JavaScript/native token bridge exists. Session
-cookies stay in WebView's cookie store; account logout revokes them server-side.
-Camera and location are requested only when the web screen requests them. File
-selection accepts image files without requesting blanket storage permission.
-Offline failures offer retry and do not create offline financial operations.
+## Experiences
+- Trainee sign-in/email registration; wallet and point history; recharge by points or amount with exact server quote and receipt upload; directory with manual search, nearby order and map; one-time QR with server-relative countdown that hides on background; visit history; notifications, support chat, account and password.
+- Gym owner self-registration and pending/rejected application tracking with resubmission. Admin decisions remain in web dashboard. Existing invited owners also use their existing credentials.
+- Owner dashboard, aggregate eligible stock wallet, phone → recipient → points → confirmed cash sale; branch create/edit with an explicit map/GPS point; stock purchase, staff invitation, activity reports, receivables and withdrawals.
+- Other work roles use the web dashboard for now. OTP, wallet PIN, background push and app-store distribution remain deferred. Contacts are not falsely marked verified.
 
-`mobile-ci.yml` creates the Android host using Flutter 3.47.7, applies checked-in
-permissions, analyzes/tests navigation and builds split release APKs. The artifacts
-are installable evaluation builds signed with Flutter's development signing setup;
-store publication requires the owner's app identity, signing key and store account.
-No Firebase/FCM project or background-push credentials are invented. Notifications
-currently appear inside the authenticated application while it is opened.
+## Build
+```
+flutter create --platforms=android,ios --org net.shotech --project-name gym_network .
+# Preserve this repo's pubspec, lib and test when generating hosts.
+python3 tool/prepare_platforms.py
+flutter pub get
+flutter analyze lib test --no-fatal-infos
+flutter test
+flutter build apk --release --split-per-abi
+```
+The CI workflow generates the Android host while preserving the sources, then analyzes, tests and builds. Main builds attach APKs to the private `mobile-v0.2.0` GitHub release; Actions artifact upload is optional because artifact storage may be exhausted. These are testing APKs with generated template signing, not a Play Store signing identity.
 
-Local build: install Flutter 3.47.7, run the same commands in the CI workflow.
-Android minimum API 24. iOS publication and a separate native Flutter interface
-are not claimed by this Android increment.
+`GYM_API_ORIGIN` is an optional compile-time HTTPS origin for staging, e.g. `--dart-define=GYM_API_ORIGIN=https://...`. It contains no credential. Local HTTP is permitted only in debug builds on explicit loopback/emulator hosts.
+
+Sessions and financial retry envelopes use encrypted device storage. A pending mutation is bound to its user, path, body and UUID and survives restart. New financial actions remain blocked until that original request returns a definitive result. Never clear a pending mutation to bypass an uncertain response. Uploading an image or requesting a quote does not change financial balances.

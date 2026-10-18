@@ -69,6 +69,8 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^admin\/gym-applications$/,
+    /^me\/gym-application$/,
     /^admin\/point-transfers$/,
     new RegExp(`^gyms/${uuid}/(?:point-wallet|point-transfers)$`),
     /^disputes$/,
@@ -112,6 +114,8 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^admin\/gym-applications\/[^/]+\/review$/,
+    /^me\/gym-application\/resubmit$/,
     /^admin\/point-transfers(?:\/(?:lookup|quotes))?$/,
     new RegExp(`^gyms/${uuid}/point-transfers(?:/(?:lookup|quotes))?$`),
     new RegExp(`^admin/gyms/${uuid}/branches/${uuid}/approve-setup$`),
@@ -200,3 +204,4 @@ export async function boundedBody(
   }
   return result;
 }
+

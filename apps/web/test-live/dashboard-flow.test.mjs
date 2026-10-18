@@ -1634,6 +1634,23 @@ test(
         ).status,
         403,
       );
+      // Native bridge is Bearer-only and self-registered owners remain unprivileged until review.
+      assert.equal((await request('/api/mobile/me',{cookie})).status,401);
+      const nativeOwnerBody={displayName:'Synthetic Native Owner',email:`native-owner-${id}@example.test`,phone:'01500000008',password,gymName:'Synthetic Native Application',description:'Synthetic mobile application',governorate:'Menofia',city:'Synthetic City',address:'Synthetic application address'};
+      const nativeRegister=await request('/api/mobile/auth/owners/register',{method:'POST',body:nativeOwnerBody});
+      assert.equal(nativeRegister.status,201,await nativeRegister.clone().text());
+      const nativeOwner=await nativeRegister.json();
+      assert.equal(nativeOwner.user.role,'GYM_OWNER');assert.equal(nativeOwner.user.phoneVerified,false);
+      const nativeHeaders={authorization:'Bearer '+nativeOwner.accessToken};
+      assert.equal((await request('/api/mobile/me',{headers:nativeHeaders})).status,200);
+      const nativeGyms=await request('/api/mobile/gyms',{headers:nativeHeaders});assert.deepEqual((await nativeGyms.json()).items,[]);
+      assert.equal((await request('/api/mobile/admin/gym-applications',{headers:nativeHeaders})).status,404);
+      assert.equal((await request('/api/mobile/me/gym-application/resubmit',{headers:nativeHeaders,method:'POST',crossOrigin:true,body:{}})).status,403);
+      const nativeLogin=await request('/api/mobile/auth/signin',{method:'POST',body:{identifier:nativeOwnerBody.email,password}});assert.equal(nativeLogin.status,200);
+      const nativeTrainee=await request('/api/mobile/auth/register',{method:'POST',body:{displayName:'Synthetic Native Trainee',email:`native-trainee-${id}@example.test`,phone:'01500000009',password}});assert.equal(nativeTrainee.status,201);assert.equal((await nativeTrainee.json()).user.role,'TRAINEE');
+      if(process.env.GYM_BROWSER_TEST!=='1'){
+        const reviewed=await request(`/api/backend/admin/gym-applications/${nativeOwner.application.id}/review`,{cookie,method:'POST',body:{decision:'APPROVED',expectedVersion:1,reason:'Synthetic mobile HTTP applicant approved'}});assert.equal(reviewed.status,200);
+      }
       // Real mobile viewport check uses only synthetic local identities.
       if(process.env.GYM_BROWSER_TEST === '1') {
         const {chromium,expect}=await import('@playwright/test');
@@ -1658,6 +1675,19 @@ test(
           await page.goto(origin);
           await expect(page.getByRole('heading',{name:'مهامك اليومية'})).toBeVisible();
           await expect(page.getByRole('heading',{name:'نظرة سريعة'})).toBeVisible();
+          await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'طلبات الانضمام',exact:true}).click();
+          const applicationCard=page.locator('article.card').filter({has:page.getByRole('heading',{name:'Synthetic Native Application',exact:true})});
+          await expect(applicationCard).toContainText('Synthetic Native Owner');
+          await applicationCard.getByRole('button',{name:'قبول الانضمام',exact:true}).click();
+          await page.getByRole('button',{name:'تأكيد القرار',exact:true}).click();
+          await expect(page.getByRole('dialog')).toHaveCount(0);
+          const approvedNative=(await (await request('/api/mobile/me/gym-application',{headers:nativeHeaders})).json()).application;
+          assert.equal(approvedNative.status,'APPROVED');assert.ok(approvedNative.gymId);
+          assert.equal((await db.gym.findUniqueOrThrow({where:{id:approvedNative.gymId}})).ownerId,nativeOwner.user.id);
+          await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الرئيسية',exact:true}).click();
+
           await expect(page.getByRole('heading',{name:'الصورة المالية للمنصة',exact:true})).toBeVisible();
           await expect(page.getByText('إجمالي المستحق للجيمات',{exact:true})).toBeVisible();
           await page.getByRole('button',{name:'أرصدة الجيمات ومستحقاتها',exact:true}).click();
@@ -1807,3 +1837,4 @@ test(
     }
   },
 );
+
