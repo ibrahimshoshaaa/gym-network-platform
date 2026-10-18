@@ -161,8 +161,8 @@ function WalletCard({ refresh }: { refresh: string }) {
       (wallet?.status === "VALID" && left === 0),
     available = wallet && !expired ? wallet.spendablePoints : 0;
   return (
-    <section className="card">
-      <h2>محفظة النقاط</h2>
+    <section className="card wallet-signature">
+      <div className="wallet-signature-top"><h2>محفظة النقاط</h2><span dir="ltr">GN / WALLET</span></div>
       <Notice text={error} />
       {!wallet ? (
         loading ? (

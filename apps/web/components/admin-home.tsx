@@ -1,4 +1,5 @@
 "use client";
+import { PlatformHero } from "./platform-identity";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Building2, CheckCircle2, Circle, Coins, CreditCard, FileCheck2, RefreshCw } from "lucide-react";
 import { api, decimal, message, type Settings } from "../lib/client";
@@ -30,7 +31,7 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
   }, []);
   const ready = settings?.policy && settings.paymentMethods.some(method => method.enabled === true);
   return <>
-    <div className="work-welcome"><span className="eyebrow">إدارة المنصة</span><h1>مهامك اليومية</h1><p>اختار المهمة اللي محتاجة قرارك.</p></div>
+    <PlatformHero eyebrow="إدارة المنصة · كل حاجة تحت عينك" title="مهامك اليومية">قرارات أوضح، متابعة أسرع. ابدأ بالمهمة اللي محتاجة اهتمامك.</PlatformHero>
     <RoleSummary onNavigate={destination=>onNavigate(destination as AdminDestination)}/>
     <div className="work-task-grid admin-daily">
       <button className="work-task featured" onClick={() => onNavigate("reviews")}><span className="work-task-icon"><FileCheck2 size={25}/></span><strong>راجع طلبات الشحن</strong><span>افتح الإيصال وأكد وصول التحويل لإضافة النقاط.</span><ArrowLeft size={18}/></button>

@@ -1639,6 +1639,17 @@ test(
         const {chromium,expect}=await import('@playwright/test');
         const browser=await chromium.launch({headless:true});
         try {
+          const publicContext=await browser.newContext({ignoreHTTPSErrors:true});
+          const publicPage=await publicContext.newPage();
+          await publicPage.goto(origin);
+          await expect(publicPage.getByRole('heading',{name:'أهلًا بيك',exact:true})).toBeVisible();
+          await publicPage.evaluate(()=>document.fonts.ready);
+          for(const width of [320,768,1440]) {
+            await publicPage.setViewportSize({width,height:1000});
+            await expect(publicPage.getByRole('button',{name:'تسجيل الدخول',exact:true})).toBeVisible();
+            assert.equal(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'login must fit every viewport');
+          }
+          await publicContext.close();
           const context=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const separator=cookie.indexOf('=');
           await context.addCookies([{name:cookie.slice(0,separator),value:cookie.slice(separator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);

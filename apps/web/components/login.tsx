@@ -1,6 +1,7 @@
 "use client";
+import { NetworkMark, NetworkArt } from "./platform-identity";
 import { useEffect, useState, type FormEvent } from "react";
-import { Dumbbell, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { type Identity, request, send, message } from "../lib/client";
 import { invitationToken } from "../lib/invitation-link";
 import { Busy, Field, Notice } from "./ui";
@@ -20,9 +21,9 @@ export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
   catch(e){setError(message(e));}finally{setBusy(false);}
  }
  return <main className="login-page">
-  <section className="login-story"><div className="brand"><span className="brand-icon"><Dumbbell size={25}/></span><span>GYM<span className="brand-light">NETWORK</span></span></div><div className="story-copy"><span className="eyebrow light">شبكتك للتمرين</span><h1>افتح حسابك.<br/>وكمّل يومك.</h1><p>محفظتك وجيماتك ومهامك اليومية، كل حاجة في مكانها حسب حسابك.</p><div className="story-lines"><span/><span/><span/></div></div><div className="story-footer">رصيد واحد · جيمات أكتر · خطوات أقل</div></section>
+  <section className="login-story"><div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">NETWORK</span></span></div><div className="story-copy"><span className="eyebrow light">شبكتك للتمرين</span><h1>تمرينتك.<br/><em>على مزاجك.</em></h1><p>شبكة واحدة تجمعك بالجيمات. اختار مكانك، اشحن نقاطك، وانطلق لتمرينتك الجاية.</p><div className="login-brand-art"><NetworkArt/><span dir="ltr">YOUR NEXT MOVE.</span></div><div className="login-perks"><span>01 · محفظة واحدة</span><span>02 · جيمات أكتر</span><span>03 · دخول برمزك</span></div></div><div className="story-footer">رصيد واحد · جيمات أكتر · خطوات أقل</div></section>
   <section className="login-panel"><form className="login-form" onSubmit={submit} key={view}>
-   <span className="eyebrow">GYM NETWORK</span><h2>{view==="signin"?"أهلًا بيك":view==="register"?"اعمل حساب متدرب":"فعّل حسابك"}</h2>
+   <div className="login-form-mark"><NetworkMark/><span dir="ltr">GYM NETWORK</span></div><span className="eyebrow">خطوتك الجاية بتبدأ هنا</span><h2>{view==="signin"?"أهلًا بيك":view==="register"?"اعمل حساب متدرب":"فعّل حسابك"}</h2>
    <p className="muted">{view==="signin"?"ادخل بإيميلك أو رقم موبايلك. حسابك هيفتح على المهام الخاصة بيك تلقائيًا.":view==="register"?"سجّل بياناتك، وابدأ بمحفظة وجيمات قريبة منك.":"لو ده حساب جديد، اختار كلمة مرور من 15 حرفًا على الأقل. لو عندك حساب، استخدم كلمة مرورك الحالية."}</p>
    <fieldset disabled={busy}>
     {view==="register"?<><Field label="اسمك" name="displayName" required minLength={2} maxLength={100} autoComplete="name"/><Field label="رقم الموبايل" name="phone" type="tel" required maxLength={40} autoComplete="tel" dir="ltr"/><Field label="البريد الإلكتروني" name="email" type="email" required maxLength={254} autoComplete="email" dir="ltr"/></>:view==="signin"?<Field label="الإيميل أو رقم الموبايل" name="identifier" required maxLength={254} autoComplete="username" dir="ltr"/>:linkedInvite?<p className="invite-ready">الدعوة جاهزة؛ اكتب كلمة المرور لتفعيل حسابك.</p>:null}
@@ -35,4 +36,4 @@ export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
  </main>;
 }
 
-function ForgotHelp(){const [phone,setPhone]=useState<string|null>(null),[error,setError]=useState("");return <details className="login-recovery-help" onToggle={e=>{if(e.currentTarget.open)request<{whatsapp:string|null}>("/api/support-contact").then(r=>setPhone(r.whatsapp)).catch(e=>setError(message(e)));}}><summary>نسيت كلمة المرور؟</summary><p>تواصل مع إدارة المنصة للتحقق من هويتك واستلام رابط استعادة مؤقت. الاستعادة بالإيميل أو الهاتف غير المتحقق منهما مؤجّلة.</p>{phone&&<a className="secondary full" href={"https://wa.me/"+phone.replace("+","")} target="_blank" rel="noopener noreferrer">تواصل مع الدعم على واتساب</a>}<Notice text={error}/></details>;}
+function ForgotHelp(){const [phone,setPhone]=useState<string|null>(null),[error,setError]=useState("");return <details className="login-recovery-help" onToggle={e=>{if(e.currentTarget.open)request<{whatsapp:string|null}>("/api/support-contact").then(r=>setPhone(r.whatsapp)).catch(e=>setError(message(e)));}}><summary>نسيت كلمة المرور؟</summary><p>تواصل مع إدارة المنصة للتحقق من هويتك واستلام رابط استعادة مؤقت. الدعم هيساعدك ترجع لحسابك بعد التأكد من هويتك.</p>{phone&&<a className="secondary full" href={"https://wa.me/"+phone.replace("+","")} target="_blank" rel="noopener noreferrer">تواصل مع الدعم على واتساب</a>}<Notice text={error}/></details>;}

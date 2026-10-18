@@ -1,6 +1,7 @@
 "use client";
+import { NetworkMark, PlatformHero } from "./platform-identity";
 import { useState } from "react";
-import { Dumbbell, Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound, ArrowLeft } from "lucide-react";
+import { Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound, ArrowLeft } from "lucide-react";
 import type { Identity } from "../lib/client";
 import { BranchDirectory } from "./branch-directory";
 import { Purchases } from "./purchases";
@@ -30,7 +31,7 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
   return (
     <div className="trainee-portal">
       <header className="trainee-header">
-        <div className="brand"><span className="brand-icon"><Dumbbell size={23} /></span><span>GYM<span className="brand-light">NETWORK</span></span></div>
+        <div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">NETWORK</span></span></div>
         <AccountTools user={user} onNavigate={next=>{if(next==="support"||sections.some(s=>s.id===next))navigate(next as Section);}}/>
         <div className="trainee-account">
           <span><strong>{user.displayName}</strong><small>حساب متدرب</small></span>
@@ -39,7 +40,7 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
         </div>
       </header>
       <main className="trainee-content">
-        <div className="trainee-heading"><span className="eyebrow">{current.label}</span><h1>{section === "wallet" ? `أهلًا يا ${user.displayName.split(" ")[0]}` : current.label}</h1><p>{current.title}</p></div>
+        <PlatformHero eyebrow={section === "wallet" ? "جاهز لتمرينتك؟" : current.label} title={section === "wallet" ? `أهلًا يا ${user.displayName.split(" ")[0]}` : current.label}>{current.title}</PlatformHero>
         <Notice text={error} />
         <nav className="trainee-navigation" aria-label="قائمة المتدرب">
           {sections.map(item => <button key={item.id} aria-current={section === item.id ? "page" : undefined} className={section === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={22} /><span>{item.label}</span></button>)}

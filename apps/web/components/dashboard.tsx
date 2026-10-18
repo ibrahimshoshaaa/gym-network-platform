@@ -1,7 +1,7 @@
 "use client";
+import { NetworkMark } from "./platform-identity";
 import { useEffect, useState, type FormEvent } from "react";
 import {
-  Dumbbell,
   FileCheck2,
   Coins,
   CreditCard,
@@ -214,7 +214,7 @@ export function Dashboard() {
     return (
       <main className="startup">
         <span className="brand-icon">
-          <Dumbbell size={28} />
+          <NetworkMark />
         </span>
         <Busy>بنجهز حسابك</Busy>
       </main>
@@ -252,7 +252,7 @@ export function Dashboard() {
       <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
         <div className="brand">
           <span className="brand-icon">
-            <Dumbbell size={24} />
+            <NetworkMark />
           </span>
           <span>
             GYM<span className="brand-light">NETWORK</span>
