@@ -410,8 +410,9 @@ class _QrScreenState extends State<QrScreen> with WidgetsBindingObserver {
         await widget.api.request('trainee/qr', method: 'POST'),
       );
       validity =
-          DateTime.parse(r['expiresAt'])
-              .difference(DateTime.parse(r['serverTime'])) -
+          DateTime.parse(
+            r['expiresAt'],
+          ).difference(DateTime.parse(r['serverTime'])) -
           requestClock.elapsed;
       clock
         ..reset()

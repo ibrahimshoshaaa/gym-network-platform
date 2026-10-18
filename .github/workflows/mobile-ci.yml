@@ -31,9 +31,11 @@ jobs:
         working-directory: apps/mobile
         run: |
           cp pubspec.yaml /tmp/gym-pubspec.yaml
+          cp pubspec.lock /tmp/gym-pubspec.lock
           cp -r lib /tmp/gym-mobile-lib
           flutter create --platforms=android --org net.shotech --project-name gym_network .
           cp /tmp/gym-pubspec.yaml pubspec.yaml
+          cp /tmp/gym-pubspec.lock pubspec.lock
           cp -r /tmp/gym-mobile-lib/. lib/
           rm -f test/widget_test.dart
           python3 tool/prepare_platforms.py
@@ -51,8 +53,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view mobile-v0.2.0 >/dev/null 2>&1 || gh release create mobile-v0.2.0 --target "$GITHUB_SHA" --title "Gym Network Android 0.2.0" --notes "Native trainee and gym owner application. OTP, wallet PIN and background push remain deferred. Testing build; store signing is separate."
-          gh release upload mobile-v0.2.0 apps/mobile/build/app/outputs/flutter-apk/*.apk --clobber
+          gh release view mobile-v0.2.1 >/dev/null 2>&1 || gh release create mobile-v0.2.1 --target "$GITHUB_SHA" --title "Gym Network Android 0.2.1" --notes "Native trainee and gym owner application. OTP, wallet PIN and background push remain deferred. Testing build; store signing is separate."
+          gh release upload mobile-v0.2.1 apps/mobile/build/app/outputs/flutter-apk/*.apk --clobber
       - uses: actions/upload-artifact@v4
         continue-on-error: true
         with:

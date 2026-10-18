@@ -98,6 +98,21 @@ class _AuthScreenState extends State<AuthScreen> {
           : null,
       decoration: InputDecoration(
         labelText: label,
+        filled: true,
+        fillColor: Colors.white,
+        prefixIcon: Icon(
+          k == 'password'
+              ? Icons.lock_outline_rounded
+              : k == 'identifier' || k == 'email'
+              ? Icons.alternate_email_rounded
+              : k == 'phone'
+              ? Icons.phone_iphone_rounded
+              : k == 'displayName'
+              ? Icons.person_outline_rounded
+              : Icons.location_on_outlined,
+          size: 20,
+          color: muted,
+        ),
         suffixIcon: k == 'password'
             ? IconButton(
                 tooltip: hidden ? 'إظهار كلمة السر' : 'إخفاء كلمة السر',
@@ -128,34 +143,9 @@ class _AuthScreenState extends State<AuthScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 30, 24, 28),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
             children: [
-              const Brand(large: true),
-              const SizedBox(height: 30),
-              Container(
-                height: 126,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: ink,
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'مساحة واحدة.\nكل جيماتك.',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 25,
-                          fontWeight: FontWeight.w900,
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                    Icon(Icons.fitness_center_rounded, color: lime, size: 66),
-                  ],
-                ),
-              ),
+              const _AuthIdentity(),
               const SizedBox(height: 28),
               Text(
                 register ? 'خطوتك الأولى تبدأ هنا' : 'أهلًا بيك من جديد',
@@ -251,7 +241,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   register ? 'عندك حساب؟ سجّل دخولك' : 'جديد معانا؟ أنشئ حساب',
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 2),
               TextButton(
                 onPressed: busy
                     ? null
@@ -270,6 +260,138 @@ class _AuthScreenState extends State<AuthScreen> {
       ),
     ),
   );
+}
+
+class _AuthIdentity extends StatelessWidget {
+  const _AuthIdentity();
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Row(
+        children: [
+          Brand(),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'MOVE. CONNECT.',
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.left,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 8,
+                letterSpacing: .6,
+                fontWeight: FontWeight.w800,
+                color: muted,
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 24),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: SizedBox(
+          height: 190,
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: CustomPaint(painter: _TrackPainter()),
+              ),
+              Positioned(
+                left: 20,
+                top: 21,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: lime,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'YOUR NEXT LEVEL',
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                      color: ink,
+                    ),
+                  ),
+                ),
+              ),
+              const Positioned(
+                right: 23,
+                bottom: 24,
+                left: 55,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'كل تمرينة.\nبداية أقوى.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 31,
+                        height: 1.2,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'جيمات أكتر. حرية أكبر.',
+                      style: TextStyle(color: Color(0xffc9d9d5), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const Positioned(
+                left: 22,
+                bottom: 23,
+                child: Icon(Icons.north_west_rounded, color: lime, size: 34),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _TrackPainter extends CustomPainter {
+  const _TrackPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = ink);
+    for (var i = 0; i < 5; i++) {
+      final path = Path()
+        ..moveTo(size.width * .12 + i * 19, -30)
+        ..cubicTo(
+          size.width * .72 + i * 19,
+          35,
+          -85 + i * 19,
+          size.height * .85,
+          size.width * .62 + i * 19,
+          size.height + 65,
+        );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = const Color(0xff557a72).withValues(alpha: .32)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3,
+      );
+    }
+    canvas.drawCircle(
+      Offset(size.width - 15, -25),
+      85,
+      Paint()..color = const Color(0xff244b49),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrackPainter oldDelegate) => false;
 }
 
 class ApplicationScreen extends StatefulWidget {

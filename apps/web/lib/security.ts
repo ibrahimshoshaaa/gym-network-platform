@@ -114,7 +114,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
-    /^admin\/gym-applications\/[^/]+\/review$/,
+    new RegExp(`^admin/gym-applications/${uuid}/review$`),
     /^me\/gym-application\/resubmit$/,
     /^admin\/point-transfers(?:\/(?:lookup|quotes))?$/,
     new RegExp(`^gyms/${uuid}/point-transfers(?:/(?:lookup|quotes))?$`),

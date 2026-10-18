@@ -131,6 +131,29 @@ class OwnerHome extends StatelessWidget {
                 style: TextStyle(color: muted, fontSize: 12),
               ),
             ),
+          if (wallet['total'] == '0') ...[
+            const SizedBox(height: 16),
+            Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ابدأ بتجهيز رصيد جيمك',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'لو أول مرة، أضف فرعك وحدد مكانه وسعر الزيارة. بعد اعتماده تقدر تشتري نقاط للفرع وتبعتها للمتدربين من هنا.',
+                    style: TextStyle(color: muted, fontSize: 12),
+                  ),
+                  TextButton(
+                    onPressed: showBranches,
+                    child: const Text('الفروع وشراء النقاط'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SectionTitle('شغلك تحت عينك'),
           Row(
             children: [
@@ -938,7 +961,8 @@ class _InviteStaffState extends State<InviteStaff> {
         ] else ...[
           const EmptyState(
             'الدعوة جاهزة',
-            detail: 'شارك الرابط مع الموظف ليختار كلمة السر ويقبل الدعوة. الرابط مؤقت وسري.',
+            detail:
+                'شارك الرابط مع الموظف ليختار كلمة السر ويقبل الدعوة. الرابط مؤقت وسري.',
             icon: Icons.mark_email_read_outlined,
           ),
           const SizedBox(height: 18),

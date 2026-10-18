@@ -42,12 +42,10 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
       error = null;
     });
     try {
-      if (!widget.api.restored)
+      if (!widget.api.restored ||
+          (widget.api.token != null && widget.api.user == null)) {
+        // A startup retry must restore both identity and its saved financial envelope.
         await widget.api.restore();
-      else if (widget.api.token != null && widget.api.user == null) {
-        widget.api.user = Map<String, dynamic>.from(
-          await widget.api.request('me'),
-        );
       }
     } catch (e) {
       error = const ApiFailure('SERVICE_UNAVAILABLE');
