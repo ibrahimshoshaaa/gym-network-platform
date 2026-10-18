@@ -14,3 +14,8 @@ export function branchMap(latitude: string, longitude: string) {
 }
 export const branchPhone = (phone: string | null) =>
   phone && /^\+[1-9]\d{7,14}$/.test(phone) ? `tel:${phone}` : null;
+
+export function branchDirections(latitude: string, longitude: string) {
+  if (!branchMap(latitude, longitude)) return null;
+  return `https://www.google.com/maps/dir/?api=1&destination=${Number(latitude)},${Number(longitude)}`;
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { branchMap, branchPhone } from "../lib/branch-links";
+import { branchMap, branchPhone, branchDirections } from "../lib/branch-links";
 test("branch map links use only bounded coordinates and a fixed external host", () => {
   const link = branchMap("30.5", "31.0");
   assert.ok(link);
@@ -31,4 +31,12 @@ test("business phone links cannot inject a URL scheme or expose a guessed contac
     "private invalid",
   ])
     assert.equal(branchPhone(input), null);
+});
+
+test("directions pass only validated destination coordinates and no trainee location", () => {
+ const url=new URL(branchDirections("30.5","31")!);
+ assert.equal(url.hostname,"www.google.com");
+ assert.equal(url.searchParams.get("destination"),"30.5,31");
+ assert.equal(url.searchParams.has("origin"),false);
+ assert.equal(branchDirections("invalid","0"),null);
 });

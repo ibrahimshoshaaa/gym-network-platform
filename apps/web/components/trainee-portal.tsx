@@ -54,7 +54,7 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
                 <button className="secondary full" onClick={() => navigate("gyms")}>اكتشف الجيمات<MapPin size={18} /></button>
               </section>
             </TraineeWallet>
-          </> : section === "topup" ? <Purchases trainee /> : section === "gyms" ? <BranchDirectory /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
+          </> : section === "topup" ? <Purchases trainee /> : section === "gyms" ? <BranchDirectory onShowQr={() => navigate("qr")} /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
         </div>
         <footer className="page-footer">Gym Network · ShoTech Solutions</footer>
       </main>
