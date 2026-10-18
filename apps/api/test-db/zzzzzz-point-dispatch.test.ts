@@ -13,7 +13,7 @@ if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.t
 const db=new PrismaClient();after(()=>db.$disconnect());
 const code=(p:Promise<unknown>,c:string)=>assert.rejects(p,(e:unknown)=>!!e&&typeof e==='object'&&'code' in e&&e.code===c);
 async function fixture(){
- const user=(role:'PLATFORM_ADMIN'|'GYM_OWNER'|'TRAINEE'|'CASHIER')=>db.user.create({data:{role,displayName:'Synthetic Dispatch '+role,phoneE164:'+201'+String(BigInt('0x'+randomUUID().replaceAll('-','').slice(0,12))%1000000000n).padStart(9,'0')}});
+ const user=(role:'PLATFORM_ADMIN'|'GYM_OWNER'|'TRAINEE'|'CASHIER')=>db.user.create({data:{role,displayName:'Synthetic Dispatch '+role,phoneE164:'+2010'+String(BigInt('0x'+randomUUID().replaceAll('-','').slice(0,12))%100000000n).padStart(8,'0')}});
  const admin=await user('PLATFORM_ADMIN'),owner=await user('GYM_OWNER'),other=await user('GYM_OWNER'),trainee=await user('TRAINEE'),cashier=await user('CASHIER');
  const gym=await db.gym.create({data:{ownerId:owner.id,name:'Synthetic Dispatch Gym',ownerAcceptedAt:new Date(),status:'ACTIVE'}});
  const branch=(status:'ACTIVE'|'SUSPENDED')=>db.branch.create({data:{gymId:gym.id,name:'Synthetic Dispatch Branch',status,visitPricePoints:20,sessionMinutes:60,priceApprovedAt:new Date(),pricingVersion:1}});
