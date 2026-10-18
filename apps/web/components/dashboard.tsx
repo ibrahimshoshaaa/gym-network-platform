@@ -14,6 +14,7 @@ import {
   Building2,
   MapPin,
   ClipboardCheck,
+  House,
 } from "lucide-react";
 import {
   request,
@@ -23,6 +24,7 @@ import {
   type Identity,
   ApiError,
 } from "../lib/client";
+import { AdminHome } from "./admin-home";
 import { Login } from "./login";
 import { TraineePortal } from "./trainee-portal";
 import { SettingsPanel } from "./settings";
@@ -38,6 +40,7 @@ import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
 type Tab =
+  | "home"
   | "directory"
   | "inventory"
   | "reports"
@@ -53,6 +56,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  { id: "home" as const, label: "الرئيسية", icon: House, description: "خطوات تجهيز المنصة والوصول السريع لمهام التشغيل" },
   {
     id: "directory" as const,
     label: "دليل الجيمات",
@@ -142,7 +146,7 @@ export function Dashboard() {
   const [user, setUser] = useState<Identity | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
-    [tab, setTab] = useState<Tab>("reviews"),
+    [tab, setTab] = useState<Tab>("home"),
     [mobile, setMobile] = useState(false),
     [loggingOut, setLoggingOut] = useState(false),
     [password, setPassword] = useState(false);
@@ -150,7 +154,7 @@ export function Dashboard() {
     setUser(person);
     setTab(
       person.role === "PLATFORM_ADMIN"
-        ? "reviews"
+        ? "home"
         : person.role === "TRAINEE"
           ? "trainee"
           : ["CASHIER", "BRANCH_MANAGER"].includes(person.role)
@@ -333,7 +337,9 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>
           <Notice text={error} />
-          {current.id === "directory" ? (
+          {current.id === "home" ? (
+            <AdminHome onNavigate={setTab} />
+          ) : current.id === "directory" ? (
             <BranchDirectory />
           ) : current.id === "inventory" ? (
             <Inventory admin={admin} />
