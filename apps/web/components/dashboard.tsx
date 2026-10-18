@@ -25,6 +25,8 @@ import {
   ApiError,
 } from "../lib/client";
 import { roleTabs, roleQuickTabs, roleName } from "../lib/navigation";
+import { WorkHome, type CashierTask } from "./work-home";
+import { invitationToken } from "../lib/invitation-link";
 import { AdminHome } from "./admin-home";
 import { Login } from "./login";
 import { TraineePortal } from "./trainee-portal";
@@ -57,7 +59,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
-  { id: "home" as const, label: "الرئيسية", icon: House, description: "خطوات تجهيز المنصة والوصول السريع لمهام التشغيل" },
+  { id: "home" as const, label: "الرئيسية", icon: House, description: "اختار مهمتك وابدأ من هنا" },
   {
     id: "directory" as const,
     label: "دليل الجيمات",
@@ -150,23 +152,18 @@ export function Dashboard() {
     [tab, setTab] = useState<Tab>("home"),
     [mobile, setMobile] = useState(false),
     [loggingOut, setLoggingOut] = useState(false),
-    [password, setPassword] = useState(false);
+    [password, setPassword] = useState(false),
+    [cashierTask, setCashierTask] = useState<CashierTask>("visit");
   function loggedIn(person: Identity) {
     setUser(person);
-    setTab(
-      person.role === "PLATFORM_ADMIN"
-        ? "home"
-        : person.role === "TRAINEE"
-          ? "trainee"
-          : ["CASHIER", "BRANCH_MANAGER"].includes(person.role)
-            ? "cashier"
-            : "gyms",
-    );
+    setTab(person.role === "TRAINEE" ? "trainee" : "home");
+    setCashierTask("visit");
     setError("");
   }
   async function check() {
     setLoading(true);
     setError("");
+    if (invitationToken(window.location.hash)) { setUser(null); setLoading(false); return; }
     try {
       const result = await request<{ user: Identity }>("/api/session");
       loggedIn(result.user);
@@ -206,7 +203,7 @@ export function Dashboard() {
         <span className="brand-icon">
           <Dumbbell size={28} />
         </span>
-        <Busy>جاري فتح لوحة التحكم</Busy>
+        <Busy>بنجهز حسابك</Busy>
       </main>
     );
   if (!user)
@@ -227,7 +224,7 @@ export function Dashboard() {
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
-  function navigate(next: Tab) { setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
+  function navigate(next: Tab, task?: CashierTask) { if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
   const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
   return (
     <div className="app-shell">
@@ -318,16 +315,16 @@ export function Dashboard() {
           </div>
         </header>
         <main className="workspace-content">
-          <div className="page-heading">
+          {current.id !== "home" && <div className="page-heading">
             <span className="eyebrow">
               GYM NETWORK / {admin ? "إدارة المنصة" : "الجيمات"}
             </span>
             <h1>{current.label}</h1>
             <p>{current.description}</p>
-          </div>
+          </div>}
           <Notice text={error} />
           {current.id === "home" ? (
-            <AdminHome onNavigate={navigate} />
+            admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : current.id === "directory" ? (
             <BranchDirectory />
           ) : current.id === "inventory" ? (
@@ -339,7 +336,7 @@ export function Dashboard() {
           ) : current.id === "operation-reviews" ? (
             <OperationReviews admin={admin} />
           ) : current.id === "cashier" ? (
-            <Cashier />
+            <Cashier initialTask={cashierTask} />
           ) : current.id === "trainee" ? (
             <TraineeQr />
           ) : current.id === "gyms" ? (

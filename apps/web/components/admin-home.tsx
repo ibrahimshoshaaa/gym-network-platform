@@ -27,24 +27,17 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
     void load();
     return () => { generation.current++; };
   }, []);
+  const ready = settings?.policy && settings.paymentMethods.some(method => method.enabled === true);
   return <>
-    <div className="section-toolbar">
-      <p className="muted">ابدأ بتجهيز الشحن، ثم أضف الجيمات وتابع التشغيل من هنا.</p>
-      <button className="secondary compact" disabled={loading} onClick={() => void load()}><RefreshCw size={16} />تحديث الحالة</button>
+    <div className="work-welcome"><span className="eyebrow">إدارة المنصة</span><h1>مهامك اليومية</h1><p>اختار المهمة اللي محتاجة قرارك.</p></div>
+    <div className="work-task-grid admin-daily">
+      <button className="work-task featured" onClick={() => onNavigate("reviews")}><span className="work-task-icon"><FileCheck2 size={25}/></span><strong>راجع طلبات الشحن</strong><span>افتح الإيصال وأكد وصول التحويل لإضافة النقاط.</span><ArrowLeft size={18}/></button>
+      <button className="work-task" onClick={() => onNavigate("gyms")}><span className="work-task-icon"><Building2 size={25}/></span><strong>الجيمات والفروع</strong><span>فعّل جيمًا أو تابع الفروع والدعوات.</span><ArrowLeft size={18}/></button>
+      <button className="work-task" onClick={() => onNavigate("reports")}><span className="work-task-icon"><Coins size={25}/></span><strong>التقارير والمتابعة</strong><span>تابع الأرصدة والزيارات وحركة التشغيل.</span><ArrowLeft size={18}/></button>
     </div>
-    <Notice text={error} />
-    {loading ? <section className="card"><Busy>جاري فحص إعدادات الشحن</Busy></section> : settings && !error ? <AdminSetup settings={settings} onNavigate={onNavigate} /> : null}
-    <section className="card admin-next">
-      <span className="eyebrow">بعد تجهيز الشحن</span>
-      <h2>ابدأ بأول جيم</h2>
-      <p className="muted">أضف الجيم وبيانات صاحبه، وشاركه دعوة التفعيل. بعد قبول الدعوة، جهّز الفرع وموقعه وسعر الزيارة ومدتها، ثم فعّل الجيم والفرع.</p>
-      <button className="primary" onClick={() => onNavigate("gyms")}><Building2 size={18} />إدارة الجيمات والفروع<ArrowLeft size={17} /></button>
-      <p className="subtle-box">إنشاء الجيم وحده لا يتيح الزيارات؛ الفرع يحتاج بيانات مكتملة وسعرًا معتمدًا وحالة نشطة.</p>
-    </section>
-    <div className="admin-shortcuts">
-      <button className="card" onClick={() => onNavigate("reviews")}><FileCheck2 size={24} /><strong>مراجعة طلبات الشحن</strong><span>راجع الإيصال والتحويل قبل اعتماد إضافة النقاط.</span><ArrowLeft size={18} /></button>
-      <button className="card" onClick={() => onNavigate("reports")}><Coins size={24} /><strong>التقارير والمتابعة</strong><span>تابع الأرصدة والزيارات والطلبات التي تحتاج إجراء.</span><ArrowLeft size={18} /></button>
-    </div>
+    <Notice text={error}/>
+    {loading ? <p className="muted"><Busy>بنفحص إعدادات الشحن</Busy></p> : settings && !error ? ready ? <details className="card setup-disclosure"><summary>إعدادات الشحن جاهزة · عرض الإعدادات</summary><AdminSetup settings={settings} onNavigate={onNavigate}/></details> : <AdminSetup settings={settings} onNavigate={onNavigate}/> : null}
+    <button className="text-button" disabled={loading} onClick={() => void load()}><RefreshCw size={16}/>تحديث حالة الإعدادات</button>
   </>;
 }
 

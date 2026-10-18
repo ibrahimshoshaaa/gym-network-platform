@@ -49,12 +49,12 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
             </div>
             <TraineeWallet revision={0} view="wallet">
               <section className="card trainee-start">
-                <span className="eyebrow">أول مرة معانا؟</span><h2>تمرينتك الجاية في 3 خطوات</h2>
+                <span className="eyebrow">تمرينتك الجاية</span><h2>هتتمرّن فين النهارده؟</h2><p className="muted">شوف الجيمات القريبة وسعر الزيارة قبل ما تتحرك.</p><button className="primary full" onClick={() => navigate("gyms")}>اختار جيم قريب<MapPin size={18}/></button><details className="getting-started"><summary>أول مرة تستخدم المنصة؟</summary>
                 <ol><li><strong>اشحن نقاطك</strong><p>اختار الكمية، حوّل المبلغ وارفع الإيصال. الرصيد يظهر بعد موافقة الإدارة.</p></li><li><strong>اختار جيمك</strong><p>شوف الفروع المشاركة وسعر الزيارة ومكان كل فرع.</p></li><li><strong>اعرض رمز الدخول</strong><p>عند وصولك، الكاشير يؤكد الزيارة ويخصم نقاطها من محفظتك.</p></li></ol>
-                <button className="secondary full" onClick={() => navigate("gyms")}>اكتشف الجيمات<MapPin size={18} /></button>
+                </details>
               </section>
             </TraineeWallet>
-          </> : section === "topup" ? <Purchases trainee /> : section === "gyms" ? <BranchDirectory onShowQr={() => navigate("qr")} /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
+          </> : section === "topup" ? <Purchases trainee onWallet={() => navigate("wallet")} /> : section === "gyms" ? <BranchDirectory onShowQr={() => navigate("qr")} /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
         </div>
         <footer className="page-footer">Gym Network · ShoTech Solutions</footer>
       </main>

@@ -143,12 +143,12 @@ test(
       const forbiddenOrigin = await request("/api/session", {
         method: "POST",
         crossOrigin: true,
-        body: { mode: "admin", identifier: admin.email, password },
+        body: { mode: "auto", identifier: admin.email, password },
       });
       assert.equal(forbiddenOrigin.status, 403);
       const login = await request("/api/session", {
         method: "POST",
-        body: { mode: "admin", identifier: admin.email, password },
+        body: { mode: "auto", identifier: admin.email, password },
       });
       assert.equal(login.status, 200);
       const cookie = sessionCookie(login);
@@ -210,7 +210,7 @@ test(
       );
       const ownerLogin = await request("/api/session", {
         method: "POST",
-        body: { mode: "staff", identifier: owner.email, password },
+        body: { mode: "auto", identifier: owner.email, password },
       });
       assert.equal(ownerLogin.status, 200);
       const ownerCookie = sessionCookie(ownerLogin);
@@ -541,6 +541,10 @@ test(
         },
       });
       assert.equal(acceptedStaff.status, 200);
+      const staffPerson = (await acceptedStaff.clone().json()).user;
+      const automaticStaff = await request("/api/session", { method: "POST", body: { mode: "auto", identifier: staffPerson.email, password } });
+      assert.equal(automaticStaff.status, 200);
+      assert.equal((await automaticStaff.json()).user.role, staffPerson.role);
 
       // Real cashier sale and visit postings through the same-origin gateway.
       const cashierCookie = sessionCookie(acceptedStaff);
@@ -574,7 +578,7 @@ test(
       assert.equal(duplicateRegistration.status, 409);
       const traineeLogin = await request("/api/session", {
         method: "POST",
-        body: { mode: "trainee", identifier: traineeBody.email, password },
+        body: { identifier: traineeBody.email, password },
       });
       assert.equal(traineeLogin.status, 200);
       const traineeCookie = sessionCookie(traineeLogin);
@@ -747,6 +751,10 @@ test(
         },
       });
       assert.equal(managerLogin.status, 200);
+      const managerPerson = (await managerLogin.clone().json()).user;
+      const automaticManager = await request("/api/session", { method: "POST", body: { mode: "auto", identifier: managerPerson.email, password } });
+      assert.equal(automaticManager.status, 200);
+      assert.equal((await automaticManager.json()).user.role, managerPerson.role);
       const managerCookie = sessionCookie(managerLogin);
       const managedBranches = await request(
         "/api/backend/operations/branches",

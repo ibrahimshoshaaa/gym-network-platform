@@ -1,82 +1,36 @@
 "use client";
-import { useState, type FormEvent } from "react";
-import { Dumbbell, ArrowLeft, ShieldCheck, UserPlus } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { Dumbbell, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { type Identity, request, send, message } from "../lib/client";
+import { invitationToken } from "../lib/invitation-link";
 import { Busy, Field, Notice } from "./ui";
-
-export function Login({ onLogin }: { onLogin: (user: Identity) => void }) {
-  const [mode, setMode] = useState("trainee");
-  const [creating, setCreating] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true); setError("");
-    const form = new FormData(e.currentTarget);
-    try {
-      if (creating && form.get("password") !== form.get("confirm"))
-        throw new Error("تأكيد كلمة المرور غير مطابق.");
-      const body = creating ? {
-        displayName: form.get("displayName"), email: form.get("email"),
-        phone: form.get("phone"), password: form.get("password"),
-      } : { mode, identifier: form.get("identifier"), token: form.get("token"), password: form.get("password") };
-      const result = await request<{ user: Identity }>(
-        creating ? "/api/register" : "/api/session", send(body),
-      );
-      onLogin(result.user);
-    } catch (e) { setError(message(e)); }
-    finally { setBusy(false); }
-  }
-  function changeView(create: boolean) {
-    setCreating(create); setMode("trainee"); setError("");
-  }
-  return (
-    <main className="login-page">
-      <section className="login-story">
-        <div className="brand"><span className="brand-icon"><Dumbbell size={25} /></span><span>GYM<span className="brand-light">NETWORK</span></span></div>
-        <div className="story-copy">
-          <span className="eyebrow light">رصيد واحد. اختيارات أكتر.</span>
-          <h1>تمرّن في جيمك.<br />واكتشف غيره.</h1>
-          <p>اعمل حسابك، اشحن نقاطك، واختار من الجيمات المشاركة. رمز دخولك ومحفظتك وزياراتك في مكان واحد.</p>
-          <div className="story-lines"><span /><span /><span /></div>
-        </div>
-        <div className="story-footer"><ShieldCheck size={18} />حسابك ونقاطك تحت إيدك</div>
-      </section>
-      <section className="login-panel">
-        <form className="login-form" onSubmit={submit} key={creating ? "register" : mode}>
-          <span className="eyebrow">GYM NETWORK</span>
-          <h2>{creating ? "ابدأ رحلتك معانا" : mode === "invite" ? "تفعيل دعوة حسابك" : "أهلًا برجوعك"}</h2>
-          <p className="muted">{creating ? "أنشئ حساب متدرب، ومحفظتك هتكون جاهزة فورًا." : mode === "trainee" ? "ادخل لمحفظتك وشوف الجيمات ورمز الدخول." : mode === "invite" ? "أدخل رمز الدعوة وحدد كلمة مرور لحسابك." : "سجّل الدخول إلى مساحة الإدارة الخاصة بحسابك."}</p>
-          <div className="auth-switch" aria-label="الدخول أو إنشاء حساب">
-            <button type="button" className={!creating ? "active" : ""} aria-pressed={!creating} disabled={busy} onClick={() => changeView(false)}>تسجيل الدخول</button>
-            <button type="button" className={creating ? "active" : ""} aria-pressed={creating} disabled={busy} onClick={() => changeView(true)}>إنشاء حساب متدرب</button>
-          </div>
-          <fieldset disabled={busy}>
-            {creating ? <>
-              <Field label="الاسم" name="displayName" required minLength={2} maxLength={100} autoComplete="name" placeholder="اسمك بالكامل" />
-              <Field label="رقم الموبايل" name="phone" type="tel" required maxLength={40} autoComplete="tel" dir="ltr" placeholder="01xxxxxxxxx" />
-              <Field label="البريد الإلكتروني" name="email" type="email" required maxLength={254} autoComplete="email" dir="ltr" placeholder="name@example.com" />
-            </> : <>
-              <div className="field">
-                <label htmlFor="login-mode">نوع الدخول</label>
-                <select id="login-mode" value={mode} onChange={e => { setMode(e.target.value); setError(""); }}>
-                  <option value="trainee">متدرب</option><option value="admin">صاحب المنصة</option><option value="staff">صاحب جيم / موظف</option><option value="invite">تفعيل دعوة</option>
-                </select>
-              </div>
-              {mode === "invite" ? <Field label="رمز الدعوة" name="token" required minLength={43} maxLength={43} dir="ltr" autoComplete="off" /> : <Field label="البريد الإلكتروني أو رقم الهاتف" name="identifier" required maxLength={254} autoComplete="username" dir="ltr" placeholder="البريد أو رقم الموبايل" />}
-            </>}
-            <Field label="كلمة المرور" name="password" type="password" required minLength={creating ? 15 : undefined} maxLength={creating ? 128 : 256} autoComplete={creating || mode === "invite" ? "new-password" : "current-password"} hint={creating || mode === "invite" ? "للحساب الجديد: 15 حرفًا على الأقل. ممكن تستخدم جملة سهلة تفتكرها." : undefined} />
-            {creating && <Field label="تأكيد كلمة المرور" name="confirm" type="password" required minLength={15} maxLength={128} autoComplete="new-password" />}
-            <Notice text={error} />
-            <button className="primary full">
-              {busy ? <Busy>{creating ? "جاري إنشاء حسابك" : "جاري تسجيل الدخول"}</Busy> : <>{creating ? <UserPlus size={18} /> : <ArrowLeft size={18} />}{creating ? "إنشاء حسابي وفتح المحفظة" : mode === "invite" ? "تفعيل الحساب" : "تسجيل الدخول"}</>}
-            </button>
-          </fieldset>
-          <small className="login-note">{creating ? "هذا التسجيل للمتدربين فقط. حسابات إدارة الجيم تُفعّل بدعوة من الإدارة." : "جديد معانا؟ اختار «إنشاء حساب متدرب» علشان تبدأ."}</small>
-        </form>
-        <footer className="powered">Powered by <strong>ShoTech Solutions</strong></footer>
-      </section>
-    </main>
-  );
+type View = "signin" | "register" | "invite";
+export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
+ const [view,setView]=useState<View>("signin"),[token,setToken]=useState(""),[linkedInvite,setLinkedInvite]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[show,setShow]=useState(false);
+ useEffect(()=>{
+  const invite=invitationToken(window.location.hash);
+  if(invite){setToken(invite);setLinkedInvite(true);setView("invite");window.history.replaceState(window.history.state,"",window.location.pathname+window.location.search);}
+ },[]);
+ function change(next:View){setView(next);setError("");setShow(false);}
+ async function submit(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();if(busy)return;setBusy(true);setError("");
+  const form=new FormData(e.currentTarget);
+  const body=view==="register"?{displayName:form.get("displayName"),phone:form.get("phone"),email:form.get("email"),password:form.get("password")}:view==="invite"?{mode:"invite",token,password:form.get("password")}:{mode:"auto",identifier:form.get("identifier"),password:form.get("password")};
+  try{const result=await request<{user:Identity}>(view==="register"?"/api/register":"/api/session",send(body));onLogin(result.user);}
+  catch(e){setError(message(e));}finally{setBusy(false);}
+ }
+ return <main className="login-page">
+  <section className="login-story"><div className="brand"><span className="brand-icon"><Dumbbell size={25}/></span><span>GYM<span className="brand-light">NETWORK</span></span></div><div className="story-copy"><span className="eyebrow light">شبكتك للتمرين</span><h1>افتح حسابك.<br/>وكمّل يومك.</h1><p>محفظتك وجيماتك ومهامك اليومية، كل حاجة في مكانها حسب حسابك.</p><div className="story-lines"><span/><span/><span/></div></div><div className="story-footer">رصيد واحد · جيمات أكتر · خطوات أقل</div></section>
+  <section className="login-panel"><form className="login-form" onSubmit={submit} key={view}>
+   <span className="eyebrow">GYM NETWORK</span><h2>{view==="signin"?"أهلًا بيك":view==="register"?"اعمل حساب متدرب":"فعّل حسابك"}</h2>
+   <p className="muted">{view==="signin"?"ادخل بإيميلك أو رقم موبايلك. حسابك هيفتح على المهام الخاصة بيك تلقائيًا.":view==="register"?"سجّل بياناتك، وابدأ بمحفظة وجيمات قريبة منك.":"لو ده حساب جديد، اختار كلمة مرور من 15 حرفًا على الأقل. لو عندك حساب، استخدم كلمة مرورك الحالية."}</p>
+   <fieldset disabled={busy}>
+    {view==="register"?<><Field label="اسمك" name="displayName" required minLength={2} maxLength={100} autoComplete="name"/><Field label="رقم الموبايل" name="phone" type="tel" required maxLength={40} autoComplete="tel" dir="ltr"/><Field label="البريد الإلكتروني" name="email" type="email" required maxLength={254} autoComplete="email" dir="ltr"/></>:view==="signin"?<Field label="الإيميل أو رقم الموبايل" name="identifier" required maxLength={254} autoComplete="username" dir="ltr"/>:linkedInvite?<p className="invite-ready">الدعوة جاهزة؛ اكتب كلمة المرور لتفعيل حسابك.</p>:null}
+    {view==="invite"&&!linkedInvite&&<Field label="رمز الدعوة" required minLength={43} maxLength={43} value={token} onChange={e=>setToken(e.target.value.trim())} dir="ltr" autoComplete="off"/>}
+    <div className="password-entry"><Field label="كلمة المرور" name="password" type={show?"text":"password"} required minLength={view==="register"?15:undefined} maxLength={view==="register"?128:256} autoComplete={view==="signin"?"current-password":"new-password"} hint={view==="register"?"15 حرفًا على الأقل؛ ممكن تكون جملة سهلة تفتكرها.":undefined}/><button className="password-toggle" type="button" aria-label={show?"إخفاء كلمة المرور":"إظهار كلمة المرور"} aria-pressed={show} onClick={()=>setShow(old=>!old)}>{show?<EyeOff size={19}/>:<Eye size={19}/>}</button></div>
+    <Notice text={error}/><button className="primary full">{busy?<Busy>{view==="register"?"بنجهز حسابك":"جاري الدخول"}</Busy>:<>{view==="signin"?"تسجيل الدخول":view==="register"?"إنشاء حسابي":"تفعيل وفتح حسابي"}<ArrowLeft size={18}/></>}</button>
+   </fieldset>
+   <div className="login-links">{view==="signin"?<><p>أول مرة تتمرّن معانا؟ <button type="button" disabled={busy} onClick={()=>change("register")}>إنشاء حساب متدرب</button></p><button type="button" disabled={busy} onClick={()=>change("invite")}>معاك دعوة لجيم أو موظف؟</button></>:<button type="button" disabled={busy} onClick={()=>change("signin")}>رجوع لتسجيل الدخول</button>}</div>
+  </form><footer className="powered">Powered by <strong>ShoTech Solutions</strong></footer></section>
+ </main>;
 }
