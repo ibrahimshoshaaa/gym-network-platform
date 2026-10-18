@@ -1,4 +1,6 @@
 "use client";
+import { LocationPicker } from "./location-picker";
+import { requiredLocation } from "../../lib/location-point";
 import {
   useCallback,
   useEffect,
@@ -366,31 +368,7 @@ export function BranchFields({ branch }: { branch?: Branch }) {
           defaultValue={branch?.city ?? ""}
         />
       </div>
-      <div className="form-grid">
-        <Field
-          label="خط العرض"
-          name="latitude"
-          type="number"
-          required
-          min={-90}
-          max={90}
-          step="any"
-          dir="ltr"
-          defaultValue={branch?.latitude ?? ""}
-        />
-        <Field
-          label="خط الطول"
-          name="longitude"
-          type="number"
-          required
-          min={-180}
-          max={180}
-          step="any"
-          dir="ltr"
-          defaultValue={branch?.longitude ?? ""}
-        />
-      </div>
-      <p className="field-hint">يمكنك نسخ إحداثيات موقع الفرع من الخريطة.</p>
+      <LocationPicker latitude={branch?.latitude} longitude={branch?.longitude} />
       <Field
         label="رقم التواصل (اختياري)"
         name="contactPhone"
@@ -437,13 +415,13 @@ export function PriceFields({ branch }: { branch?: Branch }) {
 }
 export function branchBody(form: FormData, editing: boolean) {
   const phone = String(form.get("contactPhone") ?? "").trim();
+  const point = requiredLocation(form.get("latitude"), form.get("longitude"));
   return {
     name: form.get("name"),
     address: form.get("address"),
     governorate: form.get("governorate"),
     city: form.get("city"),
-    latitude: Number(form.get("latitude")),
-    longitude: Number(form.get("longitude")),
+    ...point,
     ...(phone
       ? { contactPhone: phone }
       : editing
