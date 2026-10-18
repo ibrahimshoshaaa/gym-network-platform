@@ -1892,17 +1892,17 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
  .admin-shortcuts > button { min-height:100px; padding:18px; }
  .admin-workspace .section-toolbar { align-items:flex-start; }
  .admin-workspace .timeline article > button { width:100%; justify-content:center; }
- .admin-workspace .table-scroll:has(.mobile-records) { overflow:visible; }
- .admin-workspace .mobile-records { display:block; min-width:0; width:100%; }
- .admin-workspace .mobile-records thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
- .admin-workspace .mobile-records tbody { display:grid; gap:14px; padding:12px; }
- .admin-workspace .mobile-records tr { display:block; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:white; }
- .admin-workspace .mobile-records td { display:block; padding:12px 14px; min-width:0; width:auto; max-width:none; white-space:normal; overflow-wrap:anywhere; border-bottom:1px solid var(--line); text-align:start; }
- .admin-workspace .mobile-records td::before { content:attr(data-label); display:block; color:var(--muted); font-size:11px; margin-bottom:6px; direction:rtl; text-align:right; }
- .admin-workspace .mobile-records td:last-child { position:static; box-shadow:none; border-bottom:0; }
- .admin-workspace .mobile-records td .actions { display:flex; flex-wrap:wrap; gap:8px; }
- .admin-workspace .mobile-records td button { min-height:44px; }
- .admin-workspace .mobile-records td > button { width:100%; justify-content:center; }
+ .table-scroll:has(.mobile-records) { overflow:visible; }
+ .mobile-records { display:block; min-width:0; width:100%; }
+ .mobile-records thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+ .mobile-records tbody { display:grid; gap:14px; padding:12px; }
+ .mobile-records tr { display:block; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:white; }
+ .mobile-records td { display:block; padding:12px 14px; min-width:0; width:auto; max-width:none; white-space:normal; overflow-wrap:anywhere; border-bottom:1px solid var(--line); text-align:start; }
+ .mobile-records td::before { content:attr(data-label); display:block; color:var(--muted); font-size:11px; margin-bottom:6px; direction:rtl; text-align:right; }
+ .mobile-records td:last-child { position:static; box-shadow:none; border-bottom:0; }
+ .mobile-records td .actions { display:flex; flex-wrap:wrap; gap:8px; }
+ .mobile-records td button { min-height:44px; }
+ .mobile-records td > button { width:100%; justify-content:center; }
 }
 
 .withdrawal-balance-card { padding:18px; border:1px solid var(--line); border-radius:14px; margin:20px 0 12px; }
@@ -1962,4 +1962,20 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
  .summary-task strong { font-size:22px; }
  .business-gallery { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .branch-map-shell { height:330px; }
+}
+
+/* Technical references stay compact until explicitly expanded. */
+.record-reference { margin:8px 0; min-width:0; max-width:100%; font-size:12px; }
+.record-reference summary { cursor:pointer; min-height:44px; display:flex; align-items:center; flex-wrap:wrap; gap:8px; color:var(--muted); }
+.record-reference summary code { white-space:nowrap; unicode-bidi:isolate; }
+.record-reference-body { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px; background:var(--bg); border-radius:8px; }
+.record-reference-body code { min-width:0; max-width:100%; overflow-wrap:anywhere; user-select:all; }
+.timeline article,.subtle-box,.card { min-width:0; }
+.timeline article { overflow-wrap:anywhere; }
+@media(max-width:700px) {
+ .mobile-records tbody { padding:0; }
+ .mobile-records td[dir="ltr"] { text-align:right; }
+ .mobile-records td p { margin:6px 0; }
+ .mobile-records td small { max-width:100%; }
+ .record-reference summary { font-size:12px; }
 }

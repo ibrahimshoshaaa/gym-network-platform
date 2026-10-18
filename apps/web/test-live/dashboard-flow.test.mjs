@@ -1658,6 +1658,31 @@ test(
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'mobile support layout must fit viewport');
           assert.deepEqual(pageErrors,[]);
           await context.close();
+          // Real trainee ledger rows reproduce the narrow-column UUID regression.
+          const traineeContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
+          const traineeSeparator=traineeCookie.indexOf('=');
+          await traineeContext.addCookies([{name:traineeCookie.slice(0,traineeSeparator),value:traineeCookie.slice(traineeSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
+          const traineePage=await traineeContext.newPage();
+          await traineePage.goto(origin);
+          await traineePage.getByRole('button',{name:'زياراتي',exact:true}).click();
+          await expect(traineePage.getByRole('heading',{name:'حركات نقاطك'})).toBeVisible();
+          const records=traineePage.locator('.mobile-records tbody tr');
+          await expect(records.first()).toBeVisible();
+          for(const width of [320,393,700]) {
+            await traineePage.setViewportSize({width,height:851});
+            const bounds=await records.first().boundingBox();
+            assert.ok(bounds.width>width*0.65,'ledger card must use the available width');
+            assert.ok(bounds.height<650,'closed references must not inflate ledger rows');
+            assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'ledger must fit mobile viewport');
+            assert.equal(await records.first().locator('td').first().evaluate(el=>getComputedStyle(el).display),'block');
+          }
+          const ref=records.first().locator('.record-reference').first();
+          await ref.locator('summary').click();
+          await expect(ref.locator('.record-reference-body code')).toHaveText(/^[a-f0-9-]{36}$/);
+          assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'expanded UUID must not overflow');
+          await traineePage.setViewportSize({width:1280,height:900});
+          assert.equal(await records.first().locator('td').first().evaluate(el=>getComputedStyle(el).display),'table-cell');
+          await traineeContext.close();
         } finally {await browser.close();}
       }
       const changed = await request("/api/backend/auth/password/change", {

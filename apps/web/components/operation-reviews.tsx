@@ -1,4 +1,5 @@
 "use client";
+import { RecordReference } from "./record-reference";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, message, decimal, date } from "../lib/client";
 import { useCommand } from "../lib/use-financial-command";
@@ -299,7 +300,7 @@ function CancelForm({
       ) : (
         <form onSubmit={submit}>
           <fieldset disabled={busy}>
-            <p>المرجع: {visitId}</p>
+            <RecordReference value={visitId} label="مرجع الزيارة" />
             <div className="subtle-box">
               <p>رد {impact.pointsCharged} نقطة للمتدرب</p>
               <p>عكس مستحق الجيم: {decimal(impact.settlementPiasters)} ج.م</p>

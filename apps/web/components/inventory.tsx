@@ -1,4 +1,5 @@
 "use client";
+import { RecordReference } from "./record-reference";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, date, message } from "../lib/client";
 import { useCommand } from "../lib/use-financial-command";
@@ -193,7 +194,7 @@ function BranchStock({
                       : "—"}
                   </td>
                   <td data-label="المرجع">
-                    <small>{m.transactionId}</small>
+                    <RecordReference value={m.transactionId} label="قيد النقاط" />
                     <p>
                       <small>الحساب: {m.actorId}</small>
                     </p>
