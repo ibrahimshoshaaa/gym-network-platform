@@ -1,3 +1,4 @@
+import { approveBranchSetup } from "./setup.js";
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { Prisma, PrismaClient } from '@prisma/client';
@@ -46,7 +47,7 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
     return db.$transaction(async tx => {
       await requireAdmin(tx, userId);
       if (!await tx.gym.findUnique({ where: { id: gymId }, select: { id: true } })) throw new DomainError('NOT_FOUND');
-      return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pointAccounts: { where: { type: 'BRANCH_INVENTORY' }, select: { balance: true } } } }), args.take);
+      return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pointAccounts: { where: { type: 'BRANCH_INVENTORY' }, select: { balance: true } },pricingRequests:{where:{status:'PENDING'},orderBy:{createdAt:'desc'},take:1} } }), args.take);
     });
   });
   app.get('/admin/gyms/:gymId/invitations', async r => {
@@ -56,6 +57,7 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
       return page(await tx.staffInvitation.findMany({ ...args, where: { gymId, type: 'OWNER' }, select: { id: true, userId: true, branchId: true, type: true, role: true, expiresAt: true, acceptedAt: true, revokedAt: true, createdAt: true, user: { select: { displayName: true, email: true, phoneE164: true } }, branch: { select: { name: true } } } }), args.take);
     });
   });
+  app.post('/admin/gyms/:gymId/branches/:branchId/approve-setup',async r=>approveBranchSetup(db,await actorId(db,r),id(r,'gymId'),id(r,'branchId'),r.body));
   app.patch('/admin/gyms/:gymId/status', async r => setGymStatus(db, await actorId(db, r), id(r, 'gymId'), r.body));
   app.post('/admin/gyms/:gymId/owner-invitations', async r => reissueOwnerInvitation(db, await actorId(db, r), id(r, 'gymId')));
   app.patch('/admin/branches/:branchId/status', async r => setBranchStatus(db, await actorId(db, r), id(r, 'branchId'), r.body));

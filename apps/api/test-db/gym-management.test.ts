@@ -305,3 +305,45 @@ test('owner can clear optional contact phones without altering branch pricing or
     assert.equal(clearedBranch.json().visitPricePoints, f.branch.visitPricePoints); assert.equal(clearedBranch.json().pricingVersion, 1);
   } finally { await f.app.close(); }
 });
+
+test('one reviewed decision activates the pending gym, approves price and activates only the selected branch atomically',async()=>{
+ const f=await fixture();try{
+  const owner=(await f.request('POST','/auth/invitations/accept',undefined,{token:f.created.invitation.token,password})).json();
+  const created=(await f.request('POST',`/gyms/${f.created.gym.id}/branches`,owner.accessToken,branchData())).json();
+  const other=(await f.request('POST',`/gyms/${f.created.gym.id}/branches`,owner.accessToken,branchData())).json();
+  const gym=await db.gym.findUniqueOrThrow({where:{id:f.created.gym.id}}),branch=await db.branch.findUniqueOrThrow({where:{id:created.branch.id}});
+  const body={pricingRequestId:created.pricingRequest.id,expectedGymUpdatedAt:gym.updatedAt.toISOString(),expectedBranchUpdatedAt:branch.updatedAt.toISOString(),expectedPricingVersion:0,mode:'APPROVE_AND_ACTIVATE',reviewed:true,reason:'Synthetic unified setup review'};
+  const path=`/admin/gyms/${gym.id}/branches/${branch.id}/approve-setup`;
+  assert.equal((await f.request('POST',path,undefined,body)).statusCode,401);
+  assert.equal((await f.request('POST',path,owner.accessToken,body)).statusCode,403);
+  assert.equal((await f.request('POST',path,f.adminToken,{...body,reviewed:false})).statusCode,400);
+  assert.equal((await f.request('POST',path,f.adminToken,{...body,expectedBranchUpdatedAt:'2000-01-01T00:00:00.000Z'})).statusCode,409);
+  assert.equal((await db.gym.findUniqueOrThrow({where:{id:gym.id}})).status,'PENDING');
+  assert.equal((await db.branchPricingRequest.findUniqueOrThrow({where:{id:created.pricingRequest.id}})).status,'PENDING');
+  const before=[await db.pointTransaction.count(),await db.moneyTransaction.count()];
+  const results=await Promise.all([f.request('POST',path,f.adminToken,body),f.request('POST',path,f.adminToken,body)]);
+  assert.ok(results.every(r=>r.statusCode===200),results.map(r=>r.body).join(' | '));
+  const saved=await db.branch.findUniqueOrThrow({where:{id:branch.id}});
+  assert.equal(saved.status,'ACTIVE');assert.equal(saved.pricingVersion,1);assert.equal(saved.visitPricePoints,25);
+  assert.equal((await db.gym.findUniqueOrThrow({where:{id:gym.id}})).status,'ACTIVE');
+  assert.equal((await db.branch.findUniqueOrThrow({where:{id:other.branch.id}})).status,'PENDING');
+  assert.equal(await db.auditLog.count({where:{entityId:created.pricingRequest.id,action:'PRICE_CHANGE_APPROVED'}}),1);
+  assert.deepEqual([await db.pointTransaction.count(),await db.moneyTransaction.count()],before);
+  const rows=(await f.request('GET',`/admin/gyms/${gym.id}/branches`,f.adminToken)).json().items;
+  assert.equal(rows.find((r:{id:string})=>r.id===other.branch.id).pricingRequests[0].id,other.pricingRequest.id);
+ }finally{await f.app.close();}
+});
+test('incomplete branch data rolls back the entire combined approval and rejection works without activating a pending gym',async()=>{
+ const f=await fixture();try{
+  const owner=(await f.request('POST','/auth/invitations/accept',undefined,{token:f.created.invitation.token,password})).json();
+  const c=(await f.request('POST',`/gyms/${f.created.gym.id}/branches`,owner.accessToken,branchData())).json();
+  await db.branch.update({where:{id:c.branch.id},data:{latitude:null,longitude:null}});
+  const b=await db.branch.findUniqueOrThrow({where:{id:c.branch.id}}),g=await db.gym.findUniqueOrThrow({where:{id:f.created.gym.id}});
+  const body={pricingRequestId:c.pricingRequest.id,expectedGymUpdatedAt:g.updatedAt.toISOString(),expectedBranchUpdatedAt:b.updatedAt.toISOString(),expectedPricingVersion:0,mode:'APPROVE_AND_ACTIVATE',reviewed:true,reason:'Synthetic incomplete setup review'};
+  assert.equal((await f.request('POST',`/admin/gyms/${g.id}/branches/${b.id}/approve-setup`,f.adminToken,body)).statusCode,409);
+  assert.equal((await db.gym.findUniqueOrThrow({where:{id:g.id}})).status,'PENDING');
+  assert.equal((await db.branch.findUniqueOrThrow({where:{id:b.id}})).pricingVersion,0);
+  assert.equal((await f.request('POST',`/admin/price-change-requests/${c.pricingRequest.id}/review`,f.adminToken,{decision:'REJECTED',reason:'Synthetic missing location correction requested'})).statusCode,200);
+  assert.equal((await db.gym.findUniqueOrThrow({where:{id:g.id}})).status,'PENDING');
+ }finally{await f.app.close();}
+});

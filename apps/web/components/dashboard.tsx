@@ -163,9 +163,11 @@ export function Dashboard() {
     [mobile, setMobile] = useState(false),
     [loggingOut, setLoggingOut] = useState(false),
     [password, setPassword] = useState(false),
+    [reviewGym,setReviewGym]=useState<string|null>(null),
     [cashierTask, setCashierTask] = useState<CashierTask>("visit"),
     [recovery, setRecovery] = useState<string|null>(null);
   function loggedIn(person: Identity) {
+    setReviewGym(null);
     setUser(person);
     setTab(person.role === "TRAINEE" ? "trainee" : "home");
     setCashierTask("visit");
@@ -238,7 +240,7 @@ export function Dashboard() {
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
-  function navigate(next: Tab, task?: CashierTask) { if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
+  function navigate(next: Tab, task?: CashierTask) { if(next!=="gyms")setReviewGym(null); if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
   const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
   return (
     <div className={`app-shell ${admin ? "admin-workspace" : ""}`}>
@@ -355,9 +357,9 @@ export function Dashboard() {
           ) : current.id === "trainee" ? (
             <TraineeQr />
           ) : current.id === "gyms" ? (
-            <GymManagement admin={admin} />
+            <GymManagement admin={admin} initialGym={reviewGym} />
           ) : current.id === "branch-prices" ? (
-            <PriceReviews />
+            <PriceReviews onOpenGym={gymId=>{setReviewGym(gymId);navigate("gyms");}} />
           ) : current.id === "reviews" ? (
             <Reviews />
           ) : current.id === "purchases" ? (

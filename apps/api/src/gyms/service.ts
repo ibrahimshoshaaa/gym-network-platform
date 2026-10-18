@@ -147,7 +147,7 @@ export function reviewPricing(db: PrismaClient, actorId: string, requestId: stri
       throw new DomainError('INVALID_STATE');
     }
     const branch = await tx.branch.findUniqueOrThrow({ where: { id: request.branchId }, include: { gym: true } });
-    if (branch.gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
+    if (data.decision === 'APPROVED' && branch.gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
     if (data.decision === 'APPROVED' && request.baseVersion !== branch.pricingVersion) throw new DomainError('STALE_PRICE_REQUEST');
     if (data.decision === 'APPROVED') await tx.branch.update({ where: { id: branch.id }, data: {
       visitPricePoints: request.visitPricePoints, sessionMinutes: request.sessionMinutes, pricingVersion: { increment: 1 }, priceApprovedAt: new Date(), priceApprovedById: actorId,

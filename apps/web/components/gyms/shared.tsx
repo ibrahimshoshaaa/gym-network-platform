@@ -14,6 +14,7 @@ import { Copy, Check } from "lucide-react";
 import { api, send, message, date, type Page } from "../../lib/client";
 import { Busy, Field, Modal, Notice } from "../ui";
 export type Gym = {
+  updatedAt: string;
   id: string;
   name: string;
   description: string | null;
@@ -28,6 +29,8 @@ export type Gym = {
   };
 };
 export type Branch = {
+  updatedAt: string;
+  pricingRequests?: Pricing[];
   id: string;
   name: string;
   status: string;
@@ -75,7 +78,7 @@ export type Pricing = {
   reason: string;
   reviewReason: string | null;
   createdAt: string;
-  branch?: { name: string; gym: { name: string; status: string } };
+  branch?: { name: string; gymId?:string; gym: { name: string; status: string } };
 };
 export const statusText = (status: string) =>
   ({

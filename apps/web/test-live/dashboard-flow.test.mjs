@@ -1665,6 +1665,30 @@ test(
           await expect(page.locator('.platform-finance .mobile-records tbody tr').first()).toBeVisible();
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'platform finance and gym balances must fit mobile');
 
+          const setupBranchResponse=await request(`/api/backend/gyms/${newGym.gym.id}/branches`,{cookie:invitedOwnerCookie,method:'POST',body:{name:'Synthetic Unified Browser Branch',address:'Synthetic unified setup address',governorate:'Menofia',city:'Synthetic City',latitude:30.5,longitude:31,visitPricePoints:19,sessionMinutes:75}});
+          assert.equal(setupBranchResponse.status,201);
+          const setupBranch=await setupBranchResponse.json();
+          const setupLedgerBefore=[await db.pointTransaction.count(),await db.moneyTransaction.count()];
+          await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الجيمات والفروع',exact:true}).click();
+          await expect(page.locator('.gym-list-item').first()).toBeVisible();
+          const setupGymCard=page.locator('.gym-list-item').filter({has:page.getByRole('heading',{name:'Synthetic Onboarding Gym',exact:true})});
+          for(let n=0;n<30&&await setupGymCard.count()===0;n++){
+            const beforeCount=await page.locator('.gym-list-item').count();
+            await page.getByRole('button',{name:'تحميل المزيد',exact:true}).click();
+            await expect(page.locator('.gym-list-item')).not.toHaveCount(beforeCount);
+          }
+          await setupGymCard.getByRole('button',{name:'الفروع وتفاصيل الجيم',exact:true}).click();
+          const setupCard=page.locator('.branch-setup-card').filter({has:page.getByRole('heading',{name:'Synthetic Unified Browser Branch',exact:true})});
+          await expect(setupCard).toContainText('19 نقطة');
+          await expect(setupCard).toContainText('75 دقيقة');
+          await setupCard.getByRole('button',{name:'اعتماد وتفعيل الفرع',exact:true}).click();
+          await page.getByRole('checkbox',{name:'راجعت بيانات الفرع والموقع والنقاط ومدة الزيارة',exact:true}).check();
+          await page.getByRole('button',{name:'تأكيد الاعتماد',exact:true}).click();
+          await expect(setupCard).toContainText('الفرع معتمد ومفعّل');
+          assert.equal((await db.branch.findUniqueOrThrow({where:{id:setupBranch.branch.id}})).pricingVersion,1);
+          assert.deepEqual([await db.pointTransaction.count(),await db.moneyTransaction.count()],setupLedgerBefore);
+          assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'unified branch review must fit mobile');
           await page.getByRole('button',{name:'الدعم والمساعدة',exact:true}).click();
           await expect(page.getByRole('heading',{name:'مركز الدعم والشكاوى'})).toBeVisible();
           await page.getByRole('button',{name:'طلب مساعدة جديد',exact:true}).click();

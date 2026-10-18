@@ -12,7 +12,7 @@ import {
   usePage,
   type Pricing,
 } from "./shared";
-export function PriceReviews() {
+export function PriceReviews({onOpenGym}:{onOpenGym?:(gymId:string)=>void}={}) {
   const list = usePage<Pricing>("admin/price-change-requests"),
     [selected, setSelected] = useState<Pricing | null>(null),
     [success, setSuccess] = useState("");
@@ -21,7 +21,7 @@ export function PriceReviews() {
     <>
       <div className="section-toolbar">
         <p className="muted">
-          اعتماد السعر لا يفعّل الفرع تلقائيًا؛ تفعيل الفرع خطوة منفصلة.
+          افتح ملف الجيم لمراجعة بياناته واعتماد سعر الزيارة وتفعيل الفرع في نفس المكان.
         </p>
         <button
           className="secondary compact"
@@ -89,7 +89,7 @@ export function PriceReviews() {
                     <td data-label="القرار">
                       <button
                         className="text-button"
-                        onClick={() => setSelected(row)}
+                        onClick={() => row.branch?.gymId&&onOpenGym?onOpenGym(row.branch.gymId):setSelected(row)}
                       >
                         <FileCheck2 size={16} />
                         مراجعة
@@ -134,7 +134,7 @@ export function PriceReviews() {
             <p>سبب الطلب: {selected.reason}</p>
           </div>
           {selected.branch?.gym.status !== "ACTIVE" && (
-            <Notice text="الجيم غير نشط حاليًا. فعّله من إدارة الجيمات قبل مراجعة السعر." />
+            <Notice text="الجيم غير نشط حاليًا. اعتماد السعر يحتاج تفعيل الجيم؛ رفض المقترح متاح دون تفعيل." />
           )}
           <div className="field">
             <label htmlFor="price-review-decision">القرار</label>

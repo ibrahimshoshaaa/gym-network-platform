@@ -110,6 +110,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    new RegExp(`^admin/gyms/${uuid}/branches/${uuid}/approve-setup$`),
     /^admin\/disputes$/,
     new RegExp(`^admin/disputes/${uuid}/release$`),
     new RegExp(`^gyms/${uuid}/images(?:/${uuid}/remove)?$`),
