@@ -2,7 +2,12 @@ import type { NextConfig } from "next";
 import path from "node:path";
 const config: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["@gym/api"],
+  transpilePackages: ["@gym/api"],
+  serverExternalPackages: ["@prisma/client", "fastify", "sharp", "cloudinary"],
+  webpack(config) {
+    config.resolve.extensionAlias = { ...config.resolve.extensionAlias, ".js": [".ts", ".tsx", ".js"] };
+    return config;
+  },
   outputFileTracingRoot: path.resolve(process.cwd(), "../.."),
   experimental: { cpus: 1 },
   async headers() {
