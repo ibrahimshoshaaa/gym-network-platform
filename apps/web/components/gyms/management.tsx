@@ -33,6 +33,7 @@ import {
   type Invite,
   type NewInvite,
 } from "./shared";
+import { useListTools } from "../list-tools";
 import { PriceHistory } from "./pricing";
 export function GymManagement({ admin }: { admin: boolean }) {
   const list = usePage<Gym>(admin ? "admin/gyms" : "gyms"),
@@ -40,6 +41,7 @@ export function GymManagement({ admin }: { admin: boolean }) {
     [creating, setCreating] = useState(false),
     [invitation, setInvitation] = useState<NewInvite | null>(null),
     [success, setSuccess] = useState("");
+  const filtered = useListTools(list.rows, g => [g.name,g.contactPhone,g.owner?.displayName,g.owner?.email,g.owner?.phoneE164].filter(Boolean).join(" "), g => g.status, {PENDING:"قيد المراجعة",ACTIVE:"نشط",SUSPENDED:"موقوف",REJECTED:"مرفوض"});
   if (selected)
     return (
       <GymDetails
@@ -82,6 +84,7 @@ export function GymManagement({ admin }: { admin: boolean }) {
       </div>
       <Notice text={list.error} />
       <Notice text={success} success />
+      {filtered.controls}
       <section className="card table-card">
         <div className="table-heading">
           <h2>{admin ? "الجيمات على المنصة" : "الجيمات الخاصة بك"}</h2>
@@ -102,7 +105,7 @@ export function GymManagement({ admin }: { admin: boolean }) {
               : "تأكد من قبول دعوة صاحب المنصة؛ الموظفون يديرون مهام الفرع حسب صلاحياتهم."}
           </Empty>
         ) : (
-          <div className="gym-card-list">{list.rows.map(gym => <article key={gym.id} className="gym-list-item">
+          <div className="gym-card-list">{filtered.visible.map(gym => <article key={gym.id} className="gym-list-item">
             <div className="section-toolbar"><h3>{gym.name}</h3><Status value={gym.status}/></div>
             {admin && <p className="muted">صاحب الجيم: {gym.owner?.displayName} · <span dir="ltr">{gym.owner?.email}</span></p>}
             <p className="muted">{gym.ownerAcceptedAt ? "صاحب الجيم قبل الدعوة" : "في انتظار قبول دعوة صاحب الجيم"}</p>
@@ -405,7 +408,7 @@ function GymDetails({
                 </Empty>
               ) : (
                 <div className="table-scroll">
-                  <table>
+                  <table className="mobile-records">
                     <thead>
                       <tr>
                         <th>الفرع</th>
@@ -430,17 +433,17 @@ function GymDetails({
                           branch.governorate;
                         return (
                           <tr key={branch.id}>
-                            <td>
+                            <td data-label="الفرع">
                               <strong>{branch.name}</strong>
                               <small>
                                 {branch.governorate} · {branch.city}
                               </small>
                               <small>{branch.address}</small>
                             </td>
-                            <td>
+                            <td data-label="الحالة">
                               <Status value={branch.status} />
                             </td>
-                            <td>
+                            <td data-label="سعر الزيارة">
                               {branch.visitPricePoints} نقطة
                               <small>
                                 {branch.sessionMinutes} دقيقة ·{" "}
@@ -449,12 +452,12 @@ function GymDetails({
                                   : "السعر غير معتمد"}
                               </small>
                             </td>
-                            <td>
+                            <td data-label="رصيد المخزون">
                               <span className="points-pill">
                                 {branch.pointAccounts[0]?.balance ?? 0} نقطة
                               </span>
                             </td>
-                            <td>
+                            <td data-label="الإجراءات">
                               <div className="row-actions">
                                 {admin ? (
                                   <>
@@ -577,7 +580,7 @@ function GymDetails({
                 </Empty>
               ) : (
                 <div className="table-scroll">
-                  <table>
+                  <table className="mobile-records">
                     <thead>
                       <tr>
                         <th>الموظف</th>
@@ -590,20 +593,20 @@ function GymDetails({
                     <tbody>
                       {staff.rows.map((person) => (
                         <tr key={person.id}>
-                          <td>
+                          <td data-label="الموظف">
                             <strong>{person.user.displayName}</strong>
                             <small dir="ltr">{person.user.email}</small>
                           </td>
-                          <td>{person.branch.name}</td>
-                          <td>{roleText(person.role)}</td>
-                          <td>
+                          <td data-label="الفرع">{person.branch.name}</td>
+                          <td data-label="الدور">{roleText(person.role)}</td>
+                          <td data-label="الصلاحية">
                             <span
                               className={`badge ${person.active ? "approved" : "neutral"}`}
                             >
                               {person.active ? "مفعّلة" : "موقوفة"}
                             </span>
                           </td>
-                          <td>
+                          <td data-label="الإجراء">
                             <button
                               className="text-button"
                               disabled={!editable}
@@ -649,7 +652,7 @@ function GymDetails({
                 <Empty title="لا توجد دعوات" />
               ) : (
                 <div className="table-scroll">
-                  <table>
+                  <table className="mobile-records">
                     <thead>
                       <tr>
                         <th>صاحب الدعوة</th>
@@ -665,15 +668,15 @@ function GymDetails({
                           new Date(invite.expiresAt) <= new Date();
                         return (
                           <tr key={invite.id}>
-                            <td>
+                            <td data-label="صاحب الدعوة">
                               <strong>{invite.user.displayName}</strong>
                               <small dir="ltr">{invite.user.email}</small>
                             </td>
-                            <td>
+                            <td data-label="الدور والفرع">
                               {roleText(invite.role)}
                               <small>{invite.branch?.name ?? "الجيم"}</small>
                             </td>
-                            <td>
+                            <td data-label="الحالة">
                               <span
                                 className={`badge ${invite.acceptedAt ? "approved" : invite.revokedAt || expired ? "neutral" : "pending"}`}
                               >
@@ -686,10 +689,10 @@ function GymDetails({
                                       : "بانتظار القبول"}
                               </span>
                             </td>
-                            <td className="date-cell">
+                            <td className="date-cell" data-label="تنتهي في">
                               {date(invite.expiresAt)}
                             </td>
-                            <td>
+                            <td data-label="الإجراءات">
                               <div className="row-actions">
                                 {!invite.acceptedAt &&
                                   !invite.revokedAt &&

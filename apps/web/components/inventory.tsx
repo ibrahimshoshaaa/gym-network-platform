@@ -48,8 +48,7 @@ export function Inventory({ admin }: { admin: boolean }) {
       <section className="card">
         <h2>مخزون الفروع</h2>
         <p className="muted">
-          النقل متاح لصاحب الجيم بين فروعه الفعالة فقط. كل حركة لها قيد مرجعي؛
-          النقل لا يصدر نقاطًا جديدة.
+          {admin ? "اختار الجيم ثم الفرع لعرض رصيد النقاط وحركة البيع والزيارات." : "النقل متاح بين فروع الجيم الفعالة فقط. كل حركة مسجلة، والنقل لا يصدر نقاطًا جديدة."}
         </p>
         <Notice text={gyms.error || branches.error} />
         <div className="form-grid">
@@ -97,7 +96,7 @@ export function Inventory({ admin }: { admin: boolean }) {
             نقل نقاط بين فرعين
           </button>
         )}
-        {options.length < 2 && gym?.canFinance && (
+        {!admin && options.length < 2 && gym?.canFinance && (
           <p className="muted">حمّل الفروع المتاحة؛ يلزم وجود فرعين للنقل.</p>
         )}
       </section>
@@ -171,7 +170,7 @@ function BranchStock({
         <Empty title="لا توجد حركات مخزون" />
       ) : (
         <div className="table-scroll">
-          <table>
+          <table className="mobile-records">
             <thead>
               <tr>
                 <th>التاريخ</th>
@@ -184,16 +183,16 @@ function BranchStock({
             <tbody>
               {movements.rows.map((m) => (
                 <tr key={m.id}>
-                  <td>{date(m.createdAt)}</td>
-                  <td>{names[m.operation] ?? m.operation}</td>
-                  <td dir="ltr">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
-                  <td>
+                  <td data-label="التاريخ">{date(m.createdAt)}</td>
+                  <td data-label="النوع">{names[m.operation] ?? m.operation}</td>
+                  <td dir="ltr" data-label="النقاط">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
+                  <td data-label="الفرع المقابل">
                     {m.otherBranchId
                       ? (branches.find((b) => b.id === m.otherBranchId)?.name ??
                         m.otherBranchId)
                       : "—"}
                   </td>
-                  <td>
+                  <td data-label="المرجع">
                     <small>{m.transactionId}</small>
                     <p>
                       <small>الحساب: {m.actorId}</small>

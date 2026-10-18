@@ -1868,3 +1868,39 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
 }
 
 .purchase-first-step { max-width:640px; margin:0 auto 24px; }
+
+/* Consistent administration lists, filters and mobile record cards. */
+.admin-section-index { margin:28px 0; }
+.admin-section-index > p { margin:8px 0 18px; }
+.admin-shortcuts strong { font-size:14px; }
+.list-tools { border:1px solid var(--line); border-radius:14px; padding:18px; background:white; margin:16px 0; }
+.list-tools-fields { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+.list-tools-fields .field { flex:1; min-width:160px; margin:0; }
+.list-tools-fields > button { min-height:46px; }
+.list-tools > p { margin:12px 0 0; font-size:12px; }
+.report-filters { margin:12px 0 20px; }
+.report-filters summary { padding:12px 0; cursor:pointer; color:var(--teal-dark); font-size:14px; }
+.report-filters .settings-grid { margin-top:12px; }
+.admin-workspace .timeline article { overflow-wrap:anywhere; }
+.admin-workspace .timeline article > button { margin-top:14px; min-height:46px; }
+.admin-workspace .workspace-content > .subtle-box { margin-bottom:20px; }
+.admin-workspace details > summary { min-height:44px; cursor:pointer; }
+@media(max-width:700px) {
+ .list-tools { padding:14px; }
+ .list-tools-fields { display:grid; grid-template-columns:1fr; }
+ .list-tools-fields .field { min-width:0; }
+ .admin-shortcuts > button { min-height:100px; padding:18px; }
+ .admin-workspace .section-toolbar { align-items:flex-start; }
+ .admin-workspace .timeline article > button { width:100%; justify-content:center; }
+ .admin-workspace .table-scroll:has(.mobile-records) { overflow:visible; }
+ .admin-workspace .mobile-records { display:block; min-width:0; width:100%; }
+ .admin-workspace .mobile-records thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+ .admin-workspace .mobile-records tbody { display:grid; gap:14px; padding:12px; }
+ .admin-workspace .mobile-records tr { display:block; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:white; }
+ .admin-workspace .mobile-records td { display:block; padding:12px 14px; min-width:0; width:auto; max-width:none; white-space:normal; overflow-wrap:anywhere; border-bottom:1px solid var(--line); text-align:start; }
+ .admin-workspace .mobile-records td::before { content:attr(data-label); display:block; color:var(--muted); font-size:11px; margin-bottom:6px; direction:rtl; text-align:right; }
+ .admin-workspace .mobile-records td:last-child { position:static; box-shadow:none; border-bottom:0; }
+ .admin-workspace .mobile-records td .actions { display:flex; flex-wrap:wrap; gap:8px; }
+ .admin-workspace .mobile-records td button { min-height:44px; }
+ .admin-workspace .mobile-records td > button { width:100%; justify-content:center; }
+}

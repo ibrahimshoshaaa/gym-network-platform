@@ -4,7 +4,7 @@ import { ArrowLeft, Building2, CheckCircle2, Circle, Coins, CreditCard, FileChec
 import { api, decimal, message, type Settings } from "../lib/client";
 import { Busy, Notice } from "./ui";
 
-export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports";
+export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages";
 export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDestination) => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState("");
@@ -35,6 +35,21 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
       <button className="work-task" onClick={() => onNavigate("gyms")}><span className="work-task-icon"><Building2 size={25}/></span><strong>الجيمات والفروع</strong><span>فعّل جيمًا أو تابع الفروع والدعوات.</span><ArrowLeft size={18}/></button>
       <button className="work-task" onClick={() => onNavigate("reports")}><span className="work-task-icon"><Coins size={25}/></span><strong>التقارير والمتابعة</strong><span>تابع الأرصدة والزيارات وحركة التشغيل.</span><ArrowLeft size={18}/></button>
     </div>
+    <section className="admin-section-index" aria-label="كل أقسام الإدارة">
+      <h2>باقي مهام الإدارة</h2>
+      <p className="muted">كل قسم له مهمة واضحة، اختار اللي محتاجه.</p>
+      <div className="admin-shortcuts">
+      {([
+       ["branch-prices","اعتماد أسعار الزيارات","راجع سعر الزيارة ومدتها قبل تفعيل الفرع."],
+       ["withdrawals","طلبات سحب الجيمات","قبول الطلبات ومتابعة موعد التحويل والإثبات."],
+       ["operation-reviews","طلبات الإلغاء والتصحيح","راجع الأدلة وتأثير القرار على الرصيد."],
+       ["inventory","أرصدة الفروع","اختار جيمًا وفرعًا لمتابعة النقاط وحركتها."],
+       ["pricing","تسعير النقاط والنسب","حدد سعر النقطة وخصم الجيم ونسبته."],
+       ["payments","حسابات استقبال التحويل","حدّث الحسابات وفعّل وسائل التحويل."],
+       ["packages","باقات الشحن","أضف وعدّل الباقات المتاحة للمتدربين والجيمات."]
+      ] as const).map(([id,title,description])=><button className="card" key={id} onClick={()=>onNavigate(id)}><ArrowLeft size={19}/><strong>{title}</strong><span>{description}</span></button>)}
+      </div>
+    </section>
     <Notice text={error}/>
     {loading ? <p className="muted"><Busy>بنفحص إعدادات الشحن</Busy></p> : settings && !error ? ready ? <details className="card setup-disclosure"><summary>إعدادات الشحن جاهزة · عرض الإعدادات</summary><AdminSetup settings={settings} onNavigate={onNavigate}/></details> : <AdminSetup settings={settings} onNavigate={onNavigate}/> : null}
     <button className="text-button" disabled={loading} onClick={() => void load()}><RefreshCw size={16}/>تحديث حالة الإعدادات</button>

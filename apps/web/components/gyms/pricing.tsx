@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { RefreshCw, FileCheck2 } from "lucide-react";
+import { useListTools } from "../list-tools";
 import { date } from "../../lib/client";
 import { Busy, Empty, Modal, Notice } from "../ui";
 import {
@@ -15,6 +16,7 @@ export function PriceReviews() {
   const list = usePage<Pricing>("admin/price-change-requests"),
     [selected, setSelected] = useState<Pricing | null>(null),
     [success, setSuccess] = useState("");
+  const filtered=useListTools(list.rows,r=>[r.id,r.branch?.gym.name,r.branch?.name,r.reason,String(r.visitPricePoints)].filter(Boolean).join(" "));
   return (
     <>
       <div className="section-toolbar">
@@ -32,6 +34,7 @@ export function PriceReviews() {
       </div>
       <Notice text={list.error} />
       <Notice text={success} success />
+      {filtered.controls}
       <section className="card table-card">
         <div className="table-heading">
           <h2>طلبات أسعار الزيارات</h2>
@@ -47,7 +50,7 @@ export function PriceReviews() {
           </Empty>
         ) : (
           <div className="table-scroll">
-            <table>
+            <table className="mobile-records">
               <thead>
                 <tr>
                   <th>الجيم والفرع</th>
@@ -58,13 +61,13 @@ export function PriceReviews() {
                 </tr>
               </thead>
               <tbody>
-                {list.rows.map((row) => (
+                {filtered.visible.map((row) => (
                   <tr key={row.id}>
-                    <td>
+                    <td data-label="الجيم والفرع">
                       <strong>{row.branch?.gym.name}</strong>
                       <small>{row.branch?.name}</small>
                     </td>
-                    <td>
+                    <td data-label="سعر الزيارة">
                       {row.visitPricePoints} نقطة
                       <small>
                         {row.baseVersion
@@ -72,7 +75,7 @@ export function PriceReviews() {
                           : "سعر أولي للفرع"}
                       </small>
                     </td>
-                    <td>
+                    <td data-label="مدة الجلسة">
                       {row.sessionMinutes} دقيقة
                       <small>
                         {row.baseVersion
@@ -80,10 +83,10 @@ export function PriceReviews() {
                           : "مدة مقترحة"}
                       </small>
                     </td>
-                    <td>
+                    <td data-label="حالة الجيم">
                       <Status value={row.branch?.gym.status ?? "PENDING"} />
                     </td>
-                    <td>
+                    <td data-label="القرار">
                       <button
                         className="text-button"
                         onClick={() => setSelected(row)}

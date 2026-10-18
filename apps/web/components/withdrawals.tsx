@@ -11,6 +11,7 @@ import {
 import { useCommand } from "../lib/use-financial-command";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
 import { More, usePage } from "./gyms/shared";
+import { useListTools } from "./list-tools";
 import { CalendarPanel, type Calendar } from "./withdrawal-calendar";
 type Withdrawal = {
   id: string;
@@ -58,8 +59,9 @@ const actionName = (s: string) =>
 export function Withdrawals({ admin }: { admin: boolean }) {
   return admin ? (
     <>
-      <CalendarPanel />
+      <div className="subtle-box"><strong>طلبات السحب من المراجعة للتحويل</strong><p>راجع الطلب، اقبله لحجز موعد التنفيذ، ثم سجّل التحويل وإثباته بعد تنفيذه فعليًا.</p></div>
       <WithdrawalList admin path="admin/withdrawals" />
+      <CalendarPanel />
     </>
   ) : (
     <OwnerWithdrawals />
@@ -310,6 +312,7 @@ function WithdrawalList({
 }) {
   const list = usePage<Withdrawal>(path),
     [selected, setSelected] = useState<string | null>(null);
+  const filtered=useListTools(list.rows,w=>[w.id,w.gymId,w.destinationName,w.destinationAccount,w.transferReference].filter(Boolean).join(" "),w=>w.status,{REQUESTED:stateName("REQUESTED"),APPROVED:stateName("APPROVED"),PAID:stateName("PAID"),REJECTED:stateName("REJECTED"),CANCELLED:stateName("CANCELLED"),DISPUTED:stateName("DISPUTED")});
   return (
     <>
       <div className="section-toolbar">
@@ -326,6 +329,7 @@ function WithdrawalList({
         </button>
       </div>
       <Notice text={list.error} />
+      {filtered.controls}
       <section className="card">
         {list.loading && !list.rows.length ? (
           <Busy />
@@ -333,7 +337,7 @@ function WithdrawalList({
           <Empty title="لا توجد طلبات سحب" />
         ) : (
           <div className="timeline">
-            {list.rows.map((w) => (
+            {filtered.visible.map((w) => (
               <article key={w.id}>
                 <div className="section-toolbar">
                   <strong>{decimal(w.amountPiasters)} ج.م</strong>
@@ -357,7 +361,7 @@ function WithdrawalList({
                   className="secondary compact"
                   onClick={() => setSelected(w.id)}
                 >
-                  تفاصيل الطلب والإجراءات
+                  {admin ? w.status === "REQUESTED" ? "مراجعة وقبول الطلب" : w.status === "APPROVED" ? "تسجيل التحويل والإثبات" : w.status === "DISPUTED" ? "مراجعة الاعتراض" : "عرض تفاصيل التحويل" : "تفاصيل الطلب والإجراءات"}
                 </button>
               </article>
             ))}
