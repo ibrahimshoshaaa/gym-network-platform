@@ -259,7 +259,8 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {available.map((item) => (
+          {[{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {group.items.map((item) => (
             <button
               key={item.id}
               aria-current={current.id === item.id ? "page" : undefined}
@@ -271,6 +272,7 @@ export function Dashboard() {
               {current.id === item.id && <ChevronLeft size={16} />}
             </button>
           ))}
+          </div>)}
         </nav>
         <div className="sidebar-bottom">
           <button onClick={() => setPassword(true)}>

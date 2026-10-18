@@ -107,7 +107,7 @@ export function GymManagement({ admin }: { admin: boolean }) {
             {admin && <p className="muted">صاحب الجيم: {gym.owner?.displayName} · <span dir="ltr">{gym.owner?.email}</span></p>}
             <p className="muted">{gym.ownerAcceptedAt ? "صاحب الجيم قبل الدعوة" : "في انتظار قبول دعوة صاحب الجيم"}</p>
             {admin && gym.status === "PENDING" && gym.ownerAcceptedAt && <p className="subtle-box">الخطوة الجاية: فعّل الجيم من التفاصيل، ثم جهّز الفروع.</p>}
-            <button className="primary full" onClick={() => setSelected(gym.id)}><Building2 size={18}/>{admin && gym.status === "PENDING" && gym.ownerAcceptedAt ? "مراجعة وتفعيل الجيم" : "الفروع وتفاصيل الجيم"}</button>
+            <button className="primary full" onClick={() => { setSelected(gym.id); window.scrollTo({top:0,behavior:"auto"}); }}><Building2 size={18}/>{admin && gym.status === "PENDING" && gym.ownerAcceptedAt ? "مراجعة وتفعيل الجيم" : "الفروع وتفاصيل الجيم"}</button>
           </article>)}</div>
         )}
         <More list={list} />

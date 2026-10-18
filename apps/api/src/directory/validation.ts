@@ -4,7 +4,7 @@ const searchText = z
   .trim()
   .max(80)
   .refine((v) => !/[\u0000-\u001f\u007f]/.test(v));
-const coordinate = (min: number, max: number) => z.union([z.number(), z.string().trim().min(1)]).pipe(z.coerce.number().min(min).max(max));
+const coordinate = (min: number, max: number) => z.union([z.number(), z.string().trim().min(1)]).transform(Number).pipe(z.number().min(min).max(max));
 export const directoryQuery = z
   .object({
     q: searchText.optional(),
