@@ -168,6 +168,25 @@ test(
       assert.equal(settingsResponse.status, 200);
       assert.match(settingsResponse.headers.get("cache-control"), /no-store/);
       const settings = await settingsResponse.json();
+      // Uppercase enum segments must pass the embedded adapter and persist.
+      for (const type of ["INSTAPAY", "WALLET"]) {
+        const existing = settings.paymentMethods.find(method => method.type === type);
+        const saved = await request(`/api/backend/admin/payment-methods/${type}`, {
+          cookie, method: "PUT",
+          body: { expectedVersion: existing?.version ?? 0, account: "01500000009", accountName: "Synthetic HTTP Receiver", enabled: true },
+        });
+        assert.equal(saved.status, 200, `saving ${type} through embedded gateway`);
+        const stored = await saved.json();
+        assert.equal(stored.type, type);
+        assert.equal(stored.enabled, true);
+        assert.equal(stored.version, (existing?.version ?? 0) + 1);
+        const reloaded = await request("/api/backend/admin/topup-settings", { cookie });
+        assert.equal(reloaded.status, 200);
+        const method = (await reloaded.json()).paymentMethods.find(method => method.type === type);
+        assert.equal(method.account, "01500000009");
+        assert.equal(method.accountName, "Synthetic HTTP Receiver");
+        assert.equal(method.enabled, true);
+      }
       const update = await request("/api/backend/admin/pricing-policies", {
         cookie,
         method: "POST",
