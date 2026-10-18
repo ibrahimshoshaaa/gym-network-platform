@@ -2,6 +2,8 @@
 import { decimal, date } from "../lib/client";
 import { Notice } from "./ui";
 export type WithdrawalBalances = {
+ visitCount:number; visitEarningsPiasters:string; otherAdjustmentsPiasters:string;
+ latestVisits:{id:string;startedAt:string;branchName:string;points:number;settlementPiasters:string}[];
  asOf:string; consistent:boolean; netEntitlementsPiasters:string;
  outstandingPiasters:string; availablePiasters:string; reservedPiasters:string;
  currentReservedPiasters:string; otherReservedPiasters:string|null;
@@ -24,6 +26,12 @@ export function WithdrawalBalanceCard({balances:b, amount, status}:{balances:Wit
   <dl className="withdrawal-balance-grid">{values.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value===null?"غير متاح":decimal(value!)+ " ج.م"}</dd></div>)}</dl>
   {!b.consistent?<Notice text="بيانات الحجز أو الأرصدة غير متطابقة. لا تعتمد صرف الطلب قبل مراجعة السجل."/>:held?<div className="subtle-box"><strong>مبلغ الطلب محجوز بالفعل من مستحقات الجيم.</strong><p>قبول الطلب يبدأ مهلة التنفيذ ولا يخصم المبلغ مرة أخرى. بعد تسجيل التحويل يظل المتاح {decimal(b.availableAfterPaymentPiasters!)} ج.م، ويتحول حجز هذا الطلب إلى مدفوع. الرفض يعيد حجز هذا الطلب فقط إلى المتاح.</p></div>:<p className="muted">{["PAID","DISPUTED"].includes(status)?"مبلغ هذا الطلب مسجل ضمن المدفوع، وليس محجوزًا حاليًا.":"هذا الطلب مغلق ومبلغه غير محجوز حاليًا."}</p>}
   <p className="muted">الصافي يجمع المتاح والمحجوز والمدفوع بعد التسويات المسجلة؛ ليس مخزون نقاط الفرع أو كشفًا بنكيًا.</p>
+  <details className="withdrawal-earnings"><summary>مصدر المستحقات وآخر الزيارات</summary>
+   <p>{b.visitCount} زيارة غير ملغاة · مستحقاتها {decimal(b.visitEarningsPiasters)} ج.م</p>
+   <p>صافي التسويات الأخرى المسجلة: {decimal(b.otherAdjustmentsPiasters)} ج.م</p>
+   {b.latestVisits.length>0?<div className="timeline">{b.latestVisits.map(v=><article key={v.id}><strong>{v.branchName} · {decimal(v.settlementPiasters)} ج.م</strong><p>{v.points} نقطة · {date(v.startedAt)}</p><small>مرجع الزيارة: {v.id}</small></article>)}</div>:<p className="muted">لا توجد زيارات غير ملغاة لهذا الجيم.</p>}
+   <small className="muted">آخر ٥ زيارات كحد أقصى. مستحق الزيارة محفوظ بسعر وقت تنفيذها؛ لا نوزّع المدفوعات على زيارات بعينها في هذا العرض.</small>
+  </details>
   <small className="muted">لقطة الرصيد: {date(b.asOf)} · قد تتغير الأرصدة مع العمليات الجديدة.</small>
  </section>;
 }

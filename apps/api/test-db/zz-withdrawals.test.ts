@@ -698,6 +698,9 @@ test("withdrawal balance snapshot distinguishes this reservation, other requests
  const f=await fixture(10000n), a=await f.request("1000"), b=await f.request("2000");
  let view=await snapshot(a.id);
  assert.equal(view.consistent,true);
+ assert.equal(view.visitCount,0);
+ assert.equal(view.visitEarningsPiasters,"0");
+ assert.equal(view.otherAdjustmentsPiasters,"10000");
  assert.equal(view.netEntitlementsPiasters,"10000");
  assert.equal(view.outstandingPiasters,"10000");
  assert.equal(view.availablePiasters,"7000");

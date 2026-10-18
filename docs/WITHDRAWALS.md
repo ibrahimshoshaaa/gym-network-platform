@@ -133,3 +133,7 @@ payments; they are not asserted to be gross visit revenue or bank cash. The view
 is current at asOf, not a reconstruction of balances at submission. Explicit refresh
 reloads status and balances. Existing atomic server checks remain authoritative.
 No debt policy, refund, dispute-hold mutation or external transfer is introduced.
+
+The snapshot also separates non-cancelled visit earnings from net recorded other
+adjustments, with the latest five visit references, hosting branch, points and
+historical settlement amount. It does not invent per-visit payout allocation.
