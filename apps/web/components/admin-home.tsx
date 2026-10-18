@@ -7,7 +7,7 @@ import { api, decimal, message, type Settings } from "../lib/client";
 import { RoleSummary } from "./updates";
 import { Busy, Notice } from "./ui";
 
-export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
+export type AdminDestination = "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
 export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDestination) => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState("");
@@ -36,7 +36,8 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
     <AdminFinance/>
     <RoleSummary onNavigate={destination=>onNavigate(destination as AdminDestination)}/>
     <div className="work-task-grid admin-daily">
-      <button className="work-task featured" onClick={() => onNavigate("reviews")}><span className="work-task-icon"><FileCheck2 size={25}/></span><strong>راجع طلبات الشحن</strong><span>افتح الإيصال وأكد وصول التحويل لإضافة النقاط.</span><ArrowLeft size={18}/></button>
+      <button className="work-task featured" onClick={() => onNavigate("direct-topup")}><span className="work-task-icon"><Coins size={25}/></span><strong>شحن مباشر بالرقم</strong><span>اكتب رقم الموبايل، تأكد من الاسم واشحن بعد التحصيل.</span><ArrowLeft size={18}/></button>
+      <button className="work-task" onClick={() => onNavigate("reviews")}><span className="work-task-icon"><FileCheck2 size={25}/></span><strong>راجع طلبات الشحن</strong><span>افتح الإيصال وأكد وصول التحويل لإضافة النقاط.</span><ArrowLeft size={18}/></button>
       <button className="work-task" onClick={() => onNavigate("gyms")}><span className="work-task-icon"><Building2 size={25}/></span><strong>الجيمات والفروع</strong><span>فعّل جيمًا أو تابع الفروع والدعوات.</span><ArrowLeft size={18}/></button>
       <button className="work-task" onClick={() => onNavigate("reports")}><span className="work-task-icon"><Coins size={25}/></span><strong>التقارير والمتابعة</strong><span>تابع الأرصدة والزيارات وحركة التشغيل.</span><ArrowLeft size={18}/></button>
     </div>

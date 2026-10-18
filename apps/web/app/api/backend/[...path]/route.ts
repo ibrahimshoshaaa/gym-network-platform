@@ -40,6 +40,7 @@ async function handle(request: Request, context: Context) {
         /^(?:gyms\/[^/]+\/(?:withdrawals|stock-transfers)|(?:admin\/)?withdrawals\/[^/]+\/(?:cancel|feedback|review|payment))$/.test(
           path,
         ) ||
+        path === "admin/point-transfers" || /^gyms\/[^/]+\/point-transfers$/.test(path) ||
         path === "topups" ||
         path === "operation-reviews" ||
         /^operations\/branches\/[^/]+\/visits\/[^/]+\/cancel$/.test(path) ||

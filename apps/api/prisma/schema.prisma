@@ -727,3 +727,29 @@ model FinancialHold {
  @@index([gymId,state,createdAt])
  @@index([visitId])
 }
+
+model PointDispatch {
+  id String @id @default(uuid()) @db.Uuid
+  kind String
+  actorId String @db.Uuid
+  recipientId String @db.Uuid
+  recipientLabel String
+  phoneLast4 String
+  gymId String? @db.Uuid
+  branchId String? @db.Uuid
+  points Int
+  chargePiasters BigInt
+  unitPricePiasters BigInt
+  discountBps Int
+  pricingVersion Int
+  policyId String @db.Uuid
+  paymentMethod String
+  paymentReference String? @unique
+  pointTransactionId String @unique @db.Uuid
+  idempotencyKey String @unique
+  requestHash String
+  createdAt DateTime @default(now())
+  @@index([kind,createdAt,id])
+  @@index([gymId,createdAt,id])
+  @@index([recipientId,createdAt,id])
+}

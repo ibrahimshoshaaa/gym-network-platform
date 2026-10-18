@@ -119,7 +119,8 @@ export async function reviewTopup(db: PrismaClient, actorId: string, requestId: 
       if (BigInt(data.receivedAmountPiasters) !== request.chargePiasters) throw new DomainError('PAYMENT_AMOUNT_MISMATCH');
       await eligibility(tx, request.requestorUserId, { kind: request.kind, receivingBranchId: request.receivingBranchId ?? undefined });
       const paymentReference = data.paymentReference.toUpperCase();
-      if (await tx.topupRequest.findUnique({ where: { paymentReference } })) throw new DomainError('PAYMENT_REFERENCE_USED');
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'payment-reference:'+paymentReference},0))`;
+      if (await tx.topupRequest.findUnique({ where: { paymentReference } }) || await tx.pointDispatch.findUnique({where:{paymentReference}})) throw new DomainError('PAYMENT_REFERENCE_USED');
       const issuance = await tx.pointAccount.findFirst({ where: { type: 'ISSUANCE' } });
       const destination = request.kind === 'TRAINEE' ? await tx.pointAccount.findUnique({ where: { type_ownerUserId: { type: 'TRAINEE_WALLET', ownerUserId: request.requestorUserId } } }) : await tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: request.receivingBranchId! } } });
       if (!issuance || !destination) throw new DomainError('ACCOUNT_NOT_FOUND');

@@ -25,6 +25,7 @@ type Visit = {
   branch: { id: string; name: string; gym: { id: string; name: string } };
 };
 type Movement = {
+  sourceLabel?:string|null;
   id: string;
   transactionId: string;
   referenceId: string;
@@ -318,9 +319,9 @@ function MovementList({ operation }: { operation: string }) {
                   <td data-label="الحركة">{operations[m.operation] ?? m.operation}</td>
                   <td dir="ltr" data-label="النقاط">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
                   <td data-label="المصدر / الفرع">
-                    {m.branch
+                    {m.sourceLabel ?? (m.branch
                       ? `${m.branch.gymName} · ${m.branch.name}`
-                      : "المنصة"}
+                      : "المنصة")}
                   </td>
                   <td data-label="المراجع">
                     <RecordReference value={m.referenceId} />

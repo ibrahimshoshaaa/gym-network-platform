@@ -3,11 +3,12 @@ import { PlatformHero } from "./platform-identity";
 import { Building2, QrCode, Coins, Package, FileText, ArrowLeft } from "lucide-react";
 import { RoleSummary } from "./updates";
 import { roleName } from "../lib/navigation";
-export type WorkDestination = "gyms" | "cashier" | "purchases" | "inventory" | "reports" | "withdrawals" | "operation-reviews";
+export type WorkDestination = "point-wallet" | "gyms" | "cashier" | "purchases" | "inventory" | "reports" | "withdrawals" | "operation-reviews";
 export type CashierTask = "visit" | "sale" | "history";
 export function WorkHome({role,name,onNavigate}:{role:string;name:string;onNavigate:(destination:WorkDestination,task?:CashierTask)=>void}){
  const owner=role==="GYM_OWNER",cashier=role==="CASHIER";
  const tasks: {title:string;description:string;destination:WorkDestination;task?:CashierTask;icon:typeof Building2}[]=owner?[
+  {title:"محفظتي وإرسال النقاط",description:"شوف رصيد جيمك وابعت للمتدرب برقم الموبايل.",destination:"point-wallet",icon:Coins},
   {title:"الجيم والفروع",description:"جهّز بيانات جيمك، الفروع والموظفين.",destination:"gyms" as const,icon:Building2},
   {title:"اشحن نقاط الفرع",description:"اختار الفرع وارفع إيصال شحن مخزونه.",destination:"purchases" as const,icon:Coins},
   {title:"رصيد الفروع",description:"شوف النقاط المتاحة وحركة المخزون.",destination:"inventory" as const,icon:Package},
