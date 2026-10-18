@@ -52,7 +52,7 @@ test('admin-issued recovery is one-time, revokes sessions and cannot bypass disa
  await rejects(completeRecovery(db,{token:issued.token,password:newPassword}),'RECOVERY_INVALID');
  const other=await issueRecovery(db,f.admin.id,f.user.id,{password,reason:'Synthetic second verified reset',identityVerified:true});await changeUserAccess(db,f.admin.id,f.user.id,{active:false,password,reason:'Synthetic user suspended before reset'});await rejects(completeRecovery(db,{token:other.token,password:newPassword}),'RECOVERY_INVALID');
  await rejects(changeUserAccess(db,f.admin.id,f.admin.id,{active:false,password,reason:'Synthetic prevent removing admin'}),'ACCESS_DENIED');
- const audit=await db.auditLog.findMany({where:{entityId:issued.token}});assert.equal(audit.length,0);
+ const audit=await db.auditLog.findMany({where:{actorId:f.admin.id,action:'RECOVERY_ISSUED'}});assert.ok(!JSON.stringify(audit).includes(issued.token));
 });
 test('new private endpoints require authentication and role scopes',async()=>{const app=buildApp(db),f=await fixture(),token=await createSession(db,f.user.id,new Date(Date.now()+60000));try{for(const path of ['/support/tickets','/notifications','/home-summary','/admin/users','/admin/audit','/admin/wallet-expiry']){assert.equal((await app.inject({method:'GET',url:path})).statusCode,401);if(path.startsWith('/admin'))assert.equal((await app.inject({method:'GET',url:path,headers:{authorization:'Bearer '+token}})).statusCode,403);}}finally{await app.close();}});
 

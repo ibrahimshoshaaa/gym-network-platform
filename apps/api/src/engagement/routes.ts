@@ -9,6 +9,7 @@ import { createTicket,listTickets,ticketDetail,replyTicket,setTicketStatus,setCo
 import { notificationFeed,readNotifications,homeSummary } from './feed.js';
 import { listUsers,changeUserAccess,issueRecovery,completeRecovery } from './accounts.js';
 export function registerEngagementRoutes(app:FastifyInstance,db:PrismaClient){
+ app.get('/public/support-contact',async(_r,reply)=>{reply.header('Cache-Control','no-store');return {whatsapp:(await db.platformContact.findUnique({where:{id:'support'}}))?.whatsapp??null};});
  const id=(p:unknown,key='id')=>parse(z.string().uuid(),(p as Record<string,string>)[key]);
  app.get('/support/tickets',async r=>listTickets(db,await actorId(db,r),r.query));
  app.post('/support/tickets',async r=>{const actor=await actorId(db,r);await consumeAuthLimit(db,'support-create',actor,10,3600);return createTicket(db,actor,r.body);});

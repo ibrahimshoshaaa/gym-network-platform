@@ -42,12 +42,13 @@ import { GymManagement } from "./gyms/management";
 import { PriceReviews } from "./gyms/pricing";
 import { Purchases } from "./purchases";
 import { Busy, Field, Modal, Notice } from "./ui";
+import { Disputes } from "./disputes";
 import { Support } from "./support";
 import { Users, AuditLog } from "./users";
 import { AccountTools } from "./updates";
 import { AccountRecovery, recoveryToken } from "./account-recovery";
 type Tab =
-  | "support" | "users" | "audit"
+  | "support" | "users" | "audit" | "disputes"
   | "home"
   | "directory"
   | "inventory"
@@ -64,6 +65,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"disputes" as const,label:"حجوزات النزاعات",icon:ShieldCheck,description:"حجز المبلغ محل المراجعة وفكّه مع الحفاظ على باقي المستحقات"},
   {id:"support" as const,label:"الدعم والشكاوى",icon:FileCheck2,description:"طلبات المساعدة والاعتراضات والردود ومرفقاتها"},
   {id:"users" as const,label:"المستخدمون والحسابات",icon:ShieldCheck,description:"البحث وتعطيل الوصول واستعادة الحسابات"},
   {id:"audit" as const,label:"سجل التغييرات",icon:ClipboardCheck,description:"القرارات ومن نفذها وتوقيتها ومرجعها"},
@@ -268,7 +270,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {(admin ? [{label:"ابدأ من هنا",ids:["home"]},{label:"طلبات تحتاج قرارك",ids:["reviews","branch-prices","withdrawals","operation-reviews","support"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}] : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {(admin ? [{label:"ابدأ من هنا",ids:["home"]},{label:"طلبات تحتاج قرارك",ids:["reviews","branch-prices","withdrawals","disputes","operation-reviews","support"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}] : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}
@@ -336,7 +338,7 @@ export function Dashboard() {
             <p>{current.description}</p>
           </div>}
           <Notice text={error} />
-          {current.id === "support" ? <Support admin={admin}/> : current.id === "users" ? <Users/> : current.id === "audit" ? <AuditLog/> : current.id === "home" ? (
+          {current.id === "disputes" ? <Disputes admin={admin}/> : current.id === "support" ? <Support admin={admin}/> : current.id === "users" ? <Users/> : current.id === "audit" ? <AuditLog/> : current.id === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : current.id === "directory" ? (
             <BranchDirectory />

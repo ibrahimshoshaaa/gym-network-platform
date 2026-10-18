@@ -1,3 +1,4 @@
+import { registerDisputeRoutes } from './disputes/routes.js';
 import { registerMediaRoutes } from './media/routes.js';
 import { registerEngagementRoutes } from './engagement/routes.js';
 import Fastify from 'fastify';
@@ -47,6 +48,7 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
 
   if (db) {
     registerMediaRoutes(app, db);
+    registerDisputeRoutes(app, db);
     registerEngagementRoutes(app, db);
     registerTraineeRoutes(app, db);
     registerGymRoutes(app, db);

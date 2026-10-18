@@ -83,6 +83,8 @@ enum MoneyAccountType {
 }
 
 enum MoneyTxKind {
+  DISPUTE_HOLD
+  DISPUTE_RELEASE
   VISIT_SETTLEMENT
   VISIT_REVERSAL
   WITHDRAWAL_RESERVE
@@ -703,4 +705,25 @@ model BusinessImage {
   assetId String @unique
   createdAt DateTime @default(now())
   @@index([gymId,branchId,purpose])
+}
+
+model FinancialHold {
+ id String @id @default(uuid()) @db.Uuid
+ gymId String @db.Uuid
+ visitId String @db.Uuid
+ amountPiasters BigInt
+ reason String
+ state String @default("OPEN")
+ createdById String @db.Uuid
+ createdAt DateTime @default(now())
+ holdTransactionId String @unique @db.Uuid
+ releaseTransactionId String? @unique @db.Uuid
+ releasedById String? @db.Uuid
+ releasedAt DateTime?
+ releaseReason String?
+ idempotencyKey String @unique
+ requestHash String
+ releaseKey String? @unique
+ @@index([gymId,state,createdAt])
+ @@index([visitId])
 }

@@ -68,3 +68,19 @@ The exact SQL is tested on an isolated Neon branch before production. CI applies
 all migrations to disposable PostgreSQL, tests scope/retry/recovery/evidence,
 runs the existing financial suite, and executes the HTTP + mobile viewport flow.
 Android hybrid packaging and its limits are documented in apps/mobile/README.md.
+
+## Partial dispute holds
+
+Migration 202610180002 adds documented visit-specific holds. An administrator may
+hold a positive amount within a real, non-cancelled visit's entitlement. Available
+money moves to GYM_DISPUTED; all other available money stays withdrawable. Release
+moves only that amount back. Both commands are atomic/retry-safe and audited.
+An intervening withdrawal/other non-reversal outflow since the original earning
+blocks the hold for settlement review, even if later earnings refill AVAILABLE.
+This avoids inventing per-visit payout allocation or taking money from unrelated
+later earnings. Open holds must be resolved before cancelling their visit.
+Database deferred checks bind hold/release rows to exact posted same-gym legs and
+require GYM_DISPUTED to equal the sum of open holds. History cannot be deleted or
+edited into a different financial claim. Owners can see only their gym's holds;
+trainees/staff cannot create/read these financial cases. No loss allocation,
+repayment, automatic refund or deduction from future earnings is introduced.

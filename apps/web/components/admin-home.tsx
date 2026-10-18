@@ -5,7 +5,7 @@ import { api, decimal, message, type Settings } from "../lib/client";
 import { RoleSummary } from "./updates";
 import { Busy, Notice } from "./ui";
 
-export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit";
+export type AdminDestination = "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
 export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDestination) => void }) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [error, setError] = useState("");
@@ -51,7 +51,8 @@ export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDesti
        ["packages","باقات الشحن","أضف وعدّل الباقات المتاحة للمتدربين والجيمات."],
        ["support","الدعم والشكاوى","راجع الطلبات والرسائل واضبط رقم واتساب."],
        ["users","المستخدمون والحسابات","إدارة الإتاحة واستعادة الحسابات."],
-       ["audit","سجل التغييرات","راجع القرارات والعمليات المنفذة."]
+       ["audit","سجل التغييرات","راجع القرارات والعمليات المنفذة."],
+       ["disputes","حجوزات النزاعات","راجع المبالغ المحجوزة وفك الحجز عند انتهاء المراجعة."]
       ] as const).map(([id,title,description])=><button className="card" key={id} onClick={()=>onNavigate(id)}><ArrowLeft size={19}/><strong>{title}</strong><span>{description}</span></button>)}
       </div>
     </section>

@@ -17,11 +17,13 @@ export async function notificationFeed(db:PrismaClient,id:string){return db.$tra
  const topups=await tx.topupRequest.findMany({where:admin?{status:'PENDING'}:{requestorUserId:id},orderBy:{createdAt:'desc'},take:50,select:{id:true,status:true,points:true,createdAt:true,reviewedAt:true,reviewReason:true}});
  for(const t of topups)add('topup',t.id,t.status,`شحن ${t.points} نقطة · ${names[t.status]??t.status}`,t.reviewedAt??t.createdAt,admin?'reviews':trainee?'topup':'purchases',admin?'يوجد طلب شحن يحتاج قرارك':t.reviewReason??'تابع حالة الطلب');
  const withdrawals=await tx.withdrawalRequest.findMany({where:admin?{status:{in:['REQUESTED','APPROVED','DISPUTED']}}:{gymId:{in:gymIds}},orderBy:{requestedAt:'desc'},take:50,select:{id:true,status:true,requestedAt:true,acceptedAt:true,paidAt:true,closedAt:true,dueAt:true}});
- for(const w of withdrawals)add('withdrawal',w.id,w.status,'طلب سحب · '+names[w.status],w.closedAt??w.paidAt??w.acceptedAt??w.requestedAt,'withdrawals',w.status==='APPROVED'&&w.dueAt&&w.dueAt<new Date()?'تجاوز موعد التنفيذ؛ يحتاج متابعة':'تابع تفاصيل الطلب والمستحقات');
+ for(const w of withdrawals)add('withdrawal',w.id,w.status+(w.status==='APPROVED'&&w.dueAt&&w.dueAt<new Date()?':OVERDUE':''),'طلب سحب · '+names[w.status],w.closedAt??w.paidAt??w.acceptedAt??w.requestedAt,'withdrawals',w.status==='APPROVED'&&w.dueAt&&w.dueAt<new Date()?'تجاوز موعد التنفيذ؛ يحتاج متابعة':'تابع تفاصيل الطلب والمستحقات');
  const reviews=await tx.operationReview.findMany({where:admin?{status:'PENDING'}:{requestorId:id},orderBy:{createdAt:'desc'},take:50});
  for(const r of reviews)add('review',r.id,r.status,'مراجعة عملية · '+names[r.status],r.reviewedAt??r.createdAt,trainee?'support':'operation-reviews',r.reviewReason??'طلب مراجعة مسجل');
  const prices=await tx.branchPricingRequest.findMany({where:admin?{status:'PENDING'}:{OR:[{requestedById:id},{branch:{gymId:{in:gymIds}}}]},orderBy:{createdAt:'desc'},take:50,include:{branch:{select:{name:true}}}});
  for(const p of prices)add('price',p.id,p.status,`سعر ${p.branch.name} · ${names[p.status]}`,p.reviewedAt??p.createdAt,admin?'branch-prices':'gyms');
+ const holds=(admin||gymIds.length)?await tx.financialHold.findMany({where:admin?{}:{gymId:{in:gymIds}},orderBy:{createdAt:'desc'},take:25}):[];
+ for(const h of holds)add('hold',h.id,h.state,h.state==='OPEN'?'مبلغ زيارة محجوز للمراجعة':'تم فك حجز مبلغ زيارة',h.releasedAt??h.createdAt,'disputes',h.reason);
  const tickets=await tx.supportTicket.findMany({where:admin?{status:{not:'CLOSED'}}:{userId:id},orderBy:{updatedAt:'desc'},take:50});
  for(const t of tickets)add('support',t.id,t.status+':'+t.updatedAt.toISOString(),'الدعم · '+names[t.status],t.updatedAt,'support',t.subject);
  if(trainee){
@@ -33,7 +35,7 @@ export async function notificationFeed(db:PrismaClient,id:string){return db.$tra
   if(wallet?.balance && wallet.expiresAt){const days=Math.ceil((wallet.expiresAt.getTime()-Date.now())/86400000);const threshold=days<=0?0:days<=1?1:days<=7?7:days<=15?15:null;
    if(threshold!==null)events.push({id:`expiry:${wallet.expiresAt.toISOString()}:${threshold}`,title:threshold===0?'رصيدك المنتهي يحتاج مراجعة':`صلاحية نقاطك خلال ${Math.max(1,days)} يوم`,description:'راجع المحفظة. التنبيه لا يحذف نقاطًا ولا يغيّر سياسة الرصيد.',at:new Date(),destination:'wallet'});
   }
- } else if(!admin && branchIds.length){const zero=await tx.pointAccount.findMany({where:{type:'BRANCH_INVENTORY',branchId:{in:branchIds},balance:0},include:{branch:{select:{name:true}}},take:25});for(const z of zero)events.push({id:`stock:${z.id}:empty`,title:`مخزون ${z.branch?.name??'الفرع'} صفر`,description:'لا يمكن بيع نقاط من هذا المخزون حتى شحنه.',at:new Date(),destination:actor.role==='GYM_OWNER'?'purchases':'inventory'});}
+ } else if(!admin && branchIds.length){const zero=await tx.pointAccount.findMany({where:{type:'BRANCH_INVENTORY',branchId:{in:branchIds},balance:0},include:{branch:{select:{name:true}}},take:25});for(const z of zero)events.push({id:`stock:${z.id}:empty`,title:`مخزون ${z.branch?.name??'الفرع'} صفر`,description:'لا يمكن بيع نقاط من هذا المخزون حتى شحنه.',at:new Date(),destination:actor.role==='GYM_OWNER'?'purchases':actor.role==='CASHIER'?'cashier':'inventory'});}
  events.sort((a,b)=>b.at.getTime()-a.at.getTime()||a.id.localeCompare(b.id));
  const items=events.slice(0,100),reads=await tx.notificationRead.findMany({where:{userId:id,eventId:{in:items.map(e=>e.id)}},select:{eventId:true}}),seen=new Set(reads.map(r=>r.eventId));
  return {asOf:new Date(),items:items.map(e=>({...e,read:seen.has(e.id)})),unread:items.filter(e=>!seen.has(e.id)).length,limited:events.length>100};
@@ -51,6 +53,7 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
   add('طلبات أسعار',await tx.branchPricingRequest.count({where:{status:'PENDING'}}),'branch-prices');
   add('طلبات تصحيح',await tx.operationReview.count({where:{status:'PENDING'}}),'operation-reviews');
   add('طلبات دعم مفتوحة',await tx.supportTicket.count({where:{status:{not:'CLOSED'}}}),'support');
+  add('جيمات تنتظر التفعيل',await tx.gym.count({where:{status:'PENDING',ownerAcceptedAt:{not:null}}}),'gyms');
   add('جيمات نشطة',await tx.gym.count({where:{status:'ACTIVE'}}),'gyms');
   add('فروع نشطة',await tx.branch.count({where:{status:'ACTIVE',gym:{status:'ACTIVE',owner:{isActive:true},ownerAcceptedAt:{not:null}},priceApprovedAt:{not:null}}}),'gyms');
   add('متدربون نشطون',await tx.user.count({where:{role:'TRAINEE',isActive:true}}),'users');
@@ -66,7 +69,7 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
  }
  if(admin||actor.role==='GYM_OWNER'){
   const balances=await tx.moneyAccount.groupBy({by:['type'],where:{branchId:null,...(!admin?{gymId:{in:gymIds}}:{gymId:{not:null}})},_sum:{balancePiasters:true}});
-  for(const [type,label] of [['GYM_AVAILABLE','مستحقات متاحة'],['GYM_RESERVED','محجوز للسحب'],['GYM_PAID','مدفوع للجيمات']] as const)add(label,(balances.find(b=>b.type===type)?._sum.balancePiasters??0n).toString(),'withdrawals','piasters');
+  for(const [type,label] of [['GYM_AVAILABLE','مستحقات متاحة'],['GYM_RESERVED','محجوز للسحب'],['GYM_DISPUTED','محجوز للنزاعات'],['GYM_PAID','مدفوع للجيمات']] as const)add(label,(balances.find(b=>b.type===type)?._sum.balancePiasters??0n).toString(),'withdrawals','piasters');
  }
  return {asOf:now,today,cards};
  },{isolationLevel:'RepeatableRead',timeout:20000});}

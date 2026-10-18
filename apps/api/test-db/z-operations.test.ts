@@ -1257,3 +1257,28 @@ test("different review keys racing for the same operation return one case and a 
     1,
   );
 });
+
+test('a visit dispute holds only the specified amount and release restores it once without touching points',async()=>{
+ const {createHold,releaseHold,listHolds}=await import('../src/disputes/service.js');
+ const f=await fixture(),q=await f.qr(),v=await confirmVisit(db,f.cashier.id,f.branch.id,randomUUID(),f.entry(q.token));
+ const before=(await db.moneyAccount.findFirstOrThrow({where:{gymId:f.gym.id,type:'GYM_AVAILABLE'}})).balancePiasters;
+ const body={visitId:v.visit.id,amountPiasters:'40',reason:'Synthetic partial amount under review',key:randomUUID(),confirmed:true};
+ const [a,b]=await Promise.all([createHold(db,f.admin.id,body),createHold(db,f.admin.id,body)]);assert.equal(a.id,b.id);
+ assert.equal((await db.moneyAccount.findFirstOrThrow({where:{gymId:f.gym.id,type:'GYM_AVAILABLE'}})).balancePiasters,before-40n);
+ assert.equal((await db.moneyAccount.findFirstOrThrow({where:{gymId:f.gym.id,type:'GYM_DISPUTED'}})).balancePiasters,40n);
+ await code(cancelVisit(db,f.manager.id,f.branch.id,v.visit.id,randomUUID(),{reason:'Synthetic blocked cancellation under dispute'}),'SETTLEMENT_REVIEW_REQUIRED');
+ await code(createHold(db,f.owner.id,{...body,key:randomUUID()}),'ACCESS_DENIED');
+ assert.equal((await listHolds(db,f.owner.id,{})).items.length,1);await code(listHolds(db,f.person.id,{}),'ACCESS_DENIED');
+ const release={key:randomUUID(),reason:'Synthetic investigation completed; release hold',confirmed:true};await releaseHold(db,f.admin.id,a.id,release);await releaseHold(db,f.admin.id,a.id,release);
+ assert.equal((await db.moneyAccount.findFirstOrThrow({where:{gymId:f.gym.id,type:'GYM_AVAILABLE'}})).balancePiasters,before);
+ assert.equal((await db.moneyAccount.findFirstOrThrow({where:{gymId:f.gym.id,type:'GYM_DISPUTED'}})).balancePiasters,0n);
+ assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.wallet.id}})).balance,50);
+ await assert.rejects(db.financialHold.delete({where:{id:a.id}}));
+});
+test('a dispute cannot exceed visit entitlement or silently use later earnings after a withdrawal',async()=>{
+ const {createHold}=await import('../src/disputes/service.js');const {requestWithdrawal}=await import('../src/withdrawals/service.js');
+ const f=await fixture(),q=await f.qr(),v=await confirmVisit(db,f.cashier.id,f.branch.id,randomUUID(),f.entry(q.token));
+ await code(createHold(db,f.admin.id,{visitId:v.visit.id,amountPiasters:(BigInt(v.visit.settlementPiasters)+1n).toString(),reason:'Synthetic over-sized hold rejected',key:randomUUID(),confirmed:true}),'INVALID_INPUT');
+ await requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{amountPiasters:'1',paymentMethod:'WALLET',destinationAccount:'+201000000001',destinationName:'Synthetic owner'});
+ await code(createHold(db,f.admin.id,{visitId:v.visit.id,amountPiasters:'1',reason:'Synthetic intervening payout requires review',key:randomUUID(),confirmed:true}),'SETTLEMENT_REVIEW_REQUIRED');
+});

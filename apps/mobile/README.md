@@ -14,13 +14,13 @@ Camera and location are requested only when the web screen requests them. File
 selection accepts image files without requesting blanket storage permission.
 Offline failures offer retry and do not create offline financial operations.
 
-`mobile-ci.yml` creates the Android host using Flutter 3.41.0, applies checked-in
+`mobile-ci.yml` creates the Android host using Flutter 3.47.7, applies checked-in
 permissions, analyzes/tests navigation and builds split release APKs. The artifacts
 are installable evaluation builds signed with Flutter's development signing setup;
 store publication requires the owner's app identity, signing key and store account.
 No Firebase/FCM project or background-push credentials are invented. Notifications
 currently appear inside the authenticated application while it is opened.
 
-Local build: install Flutter 3.41.0, run the same commands in the CI workflow.
+Local build: install Flutter 3.47.7, run the same commands in the CI workflow.
 Android minimum API 24. iOS publication and a separate native Flutter interface
 are not claimed by this Android increment.

@@ -3,5 +3,5 @@ bool isInternal(Uri? uri) => uri != null && uri.scheme == 'https' && uri.host ==
 bool isExternalAllowed(Uri? uri) {
   if (uri == null || uri.userInfo.isNotEmpty) return false;
   if (uri.scheme == 'tel') return RegExp(r'^\+?[0-9]{7,15}$').hasMatch(uri.path);
-  return uri.scheme == 'https' && uri.port == 443 && {'www.google.com','maps.google.com','wa.me','res.cloudinary.com','www.openstreetmap.org'}.contains(uri.host);
+  return uri.scheme == 'https' && uri.port == 443 && {'www.google.com','maps.google.com','wa.me','res.cloudinary.com','api.cloudinary.com','www.openstreetmap.org'}.contains(uri.host);
 }

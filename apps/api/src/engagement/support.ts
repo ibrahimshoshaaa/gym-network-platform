@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { requireActor, requireAdmin } from '../auth/authorization.js';
@@ -64,8 +65,11 @@ export async function replyTicket(db:PrismaClient,actorId:string,id:string,input
  await audit(tx,actorId,'SUPPORT_REPLIED',id,'Support reply recorded');return {id:message.id};
 });}
 export async function setTicketStatus(db:PrismaClient,actorId:string,id:string,input:unknown){const d=parse(z.object({status:z.enum(['OPEN','CLOSED']),reason:z.string().trim().min(5).max(1000)}).strict(),input);return serializable(db,async tx=>{
- const {actor}=await ticketAccess(tx,actorId,id);
+ await tx.$queryRaw`SELECT id FROM "SupportTicket" WHERE id=${id}::uuid FOR UPDATE`;
+ const {actor,ticket}=await ticketAccess(tx,actorId,id);
  if(d.status==='OPEN' && actor.role!=='PLATFORM_ADMIN')throw new DomainError('ACCESS_DENIED');
+ if(ticket.status===d.status)return {status:d.status};
+ await tx.supportMessage.create({data:{ticketId:id,authorId:actorId,body:(d.status==='CLOSED'?'تم إغلاق الطلب: ':'تمت إعادة فتح الطلب: ')+d.reason,clientKey:randomUUID()}});
  await tx.supportTicket.update({where:{id},data:{status:d.status,updatedAt:new Date()}});
  await audit(tx,actorId,'SUPPORT_'+d.status,id,d.reason);return {status:d.status};
 });}
