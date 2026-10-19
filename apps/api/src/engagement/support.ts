@@ -32,7 +32,8 @@ async function reference(tx:Prisma.TransactionClient,actorId:string,id?:string){
 export async function createTicket(db:PrismaClient,actorId:string,input:unknown){
  const d=parse(ticketSchema,input);
  return serializable(db,async tx=>{
-  await requireActor(tx,actorId);
+  const actor=await requireActor(tx,actorId);
+  if(actor.role==='PLATFORM_ADMIN')throw new DomainError('ACCESS_DENIED');
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${d.clientKey},0))`;
   const old=await tx.supportMessage.findUnique({where:{clientKey:d.clientKey},include:{ticket:true}});
   if(old){if(old.authorId!==actorId || old.body!==d.body || old.receiptId!==(d.receiptId??null) || old.ticket.subject!==d.subject || old.ticket.category!==d.category || old.ticket.operationId!==(d.operationId??null))throw new DomainError('IDEMPOTENCY_CONFLICT');return {id:old.ticketId};}
