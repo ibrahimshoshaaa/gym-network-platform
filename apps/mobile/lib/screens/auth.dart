@@ -338,13 +338,30 @@ class _AuthScreenState extends State<AuthScreen> {
                                   24,
                                   12,
                                   24,
-                                  30,
+                                  22,
                                 ),
                                 child: Column(
                                   children: [
                                     Row(
                                       children: [
-                                        const Spacer(),
+                                        const Icon(
+                                          Icons.hub_rounded,
+                                          color: Color(0xffb5e9dc),
+                                          size: 23,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Expanded(
+                                          child: Text(
+                                            'GYM NETWORK',
+                                            textDirection: TextDirection.ltr,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              letterSpacing: 1,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
                                         TextButton.icon(
                                           key: const ValueKey('auth.language'),
                                           onPressed: busy || savingLanguage
@@ -355,46 +372,23 @@ class _AuthScreenState extends State<AuthScreen> {
                                             backgroundColor: Colors.white
                                                 .withValues(alpha: .1),
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
+                                              horizontal: 10,
                                             ),
                                           ),
                                           icon: const Icon(
                                             Icons.language_rounded,
-                                            size: 17,
+                                            size: 16,
                                           ),
                                           label: Text(
                                             english ? 'العربية' : 'English',
                                             style: const TextStyle(
-                                              fontSize: 12,
+                                              fontSize: 11,
                                             ),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.hub_rounded,
-                                          color: Color(0xffb5e9dc),
-                                          size: 25,
-                                        ),
-                                        SizedBox(width: 9),
-                                        Text(
-                                          'GYM NETWORK',
-                                          textDirection: TextDirection.ltr,
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            letterSpacing: 1.7,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 19),
+                                    const SizedBox(height: 6),
                                     Text(
                                       register
                                           ? tr(
@@ -407,7 +401,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                             ),
                                       textAlign: TextAlign.center,
                                       style: const TextStyle(
-                                        fontSize: 28,
+                                        fontSize: 24,
                                         height: 1.3,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
@@ -442,7 +436,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             constraints: BoxConstraints(
                               minHeight: math.max(
                                 0,
-                                MediaQuery.sizeOf(context).height - 240,
+                                MediaQuery.sizeOf(context).height - 130,
                               ),
                             ),
                             decoration: const BoxDecoration(
@@ -513,7 +507,53 @@ class _AuthScreenState extends State<AuthScreen> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _SocialButton(
+                                        provider: 'Google',
+                                        soon: tr('قريبًا', 'Soon'),
+                                        onPressed: busy
+                                            ? null
+                                            : () => social(context, 'Google'),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _SocialButton(
+                                        provider: 'Apple',
+                                        soon: tr('قريبًا', 'Soon'),
+                                        onPressed: busy
+                                            ? null
+                                            : () => social(context, 'Apple'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Expanded(child: Divider()),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                      child: Text(
+                                        tr(
+                                          'أو باستخدام الإيميل',
+                                          'Or with email',
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: muted,
+                                        ),
+                                      ),
+                                    ),
+                                    const Expanded(child: Divider()),
+                                  ],
+                                ),
+                                const SizedBox(height: 18),
                                 if (register) ...[
                                   IntrinsicHeight(
                                     child: Row(
@@ -737,52 +777,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                       ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 25),
-                                Row(
-                                  children: [
-                                    const Expanded(child: Divider()),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      child: Text(
-                                        tr(
-                                          'أو كمّل باستخدام',
-                                          'Or continue with',
-                                        ),
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: muted,
-                                        ),
-                                      ),
-                                    ),
-                                    const Expanded(child: Divider()),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _SocialButton(
-                                        provider: 'Google',
-                                        soon: tr('قريبًا', 'Soon'),
-                                        onPressed: busy
-                                            ? null
-                                            : () => social(context, 'Google'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _SocialButton(
-                                        provider: 'Apple',
-                                        soon: tr('قريبًا', 'Soon'),
-                                        onPressed: busy
-                                            ? null
-                                            : () => social(context, 'Apple'),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                                 const SizedBox(height: 20),
                                 Wrap(
