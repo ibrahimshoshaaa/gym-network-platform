@@ -2012,7 +2012,7 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
 .trainee-portal .wallet-signature h2 { color:#f2f4f7; }
 .trainee-portal .wallet-signature .wallet-balance { color:#00e6a8; }
 .trainee-portal .wallet-signature .muted,.trainee-portal .wallet-signature-top > span { color:#c3d1cc; }
-.trainee-portal .wallet-signature .subtle-box { background:#ffffff0d; border-color:#ffffff1f; }
+.trainee-portal .wallet-signature .subtle-box { background:#ffffff0d; border-color:#ffffff1f; color:#dde7e3; }
 .trainee-portal .wallet-signature .wallet-more { border-color:#ffffff26; }
 .trainee-portal .wallet-signature .wallet-more summary { color:#c3d1cc; }
 .trainee-portal .trainee-navigation button.active { background:#101719; color:#00e6a8; }
