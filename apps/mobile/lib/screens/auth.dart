@@ -16,6 +16,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool register = false, owner = false, busy = false, hidden = true;
+  bool rememberMe = false;
   bool english = false, languageChosen = false, savingLanguage = false;
   Object? error;
   final form = GlobalKey<FormState>();
@@ -119,6 +120,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ? (owner ? 'auth/owners/register' : 'auth/register')
             : 'auth/signin',
         body,
+        rememberSession: register || rememberMe,
       );
     } catch (e) {
       if (mounted) setState(() => error = e);
@@ -513,32 +515,42 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 if (register) ...[
-                                  SegmentedButton<bool>(
-                                    segments: [
-                                      ButtonSegment(
-                                        value: false,
-                                        label: Text(tr('متدرب', 'Trainee')),
-                                        icon: const Icon(
-                                          Icons.person_outline,
-                                          size: 18,
-                                        ),
-                                      ),
-                                      ButtonSegment(
-                                        value: true,
-                                        label: Text(
-                                          tr('صاحب جيم', 'Gym owner'),
-                                        ),
-                                        icon: const Icon(
-                                          Icons.storefront_outlined,
-                                          size: 18,
-                                        ),
-                                      ),
-                                    ],
-                                    selected: {owner},
-                                    onSelectionChanged: busy
-                                        ? null
-                                        : (v) =>
-                                              setState(() => owner = v.first),
+                                  IntrinsicHeight(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        for (final value in [false, true]) ...[
+                                          if (value) const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _RoleChoice(
+                                              selected: owner == value,
+                                              title: value
+                                                  ? tr('صاحب جيم', 'Gym owner')
+                                                  : tr('متدرب', 'Trainee'),
+                                              detail: value
+                                                  ? tr(
+                                                      'إدارة جيمك وفروعك',
+                                                      'Manage your gyms',
+                                                    )
+                                                  : tr(
+                                                      'اختار جيمك واتمرّن',
+                                                      'Find your next workout',
+                                                    ),
+                                              icon: value
+                                                  ? Icons.storefront_outlined
+                                                  : Icons
+                                                        .fitness_center_rounded,
+                                              onPressed: busy
+                                                  ? null
+                                                  : () => setState(
+                                                      () => owner = value,
+                                                    ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
                                   const SizedBox(height: 22),
                                 ],
@@ -627,6 +639,43 @@ class _AuthScreenState extends State<AuthScreen> {
                                             ),
                                           ),
                                           const SizedBox(height: 16),
+                                        ],
+                                        if (!register) ...[
+                                          Material(
+                                            color: Colors.transparent,
+                                            child: CheckboxListTile(
+                                              key: const ValueKey(
+                                                'auth.remember',
+                                              ),
+                                              value: rememberMe,
+                                              onChanged: busy
+                                                  ? null
+                                                  : (value) => setState(
+                                                      () => rememberMe =
+                                                          value ?? false,
+                                                    ),
+                                              contentPadding: EdgeInsets.zero,
+                                              dense: true,
+                                              controlAffinity:
+                                                  ListTileControlAffinity
+                                                      .leading,
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              activeColor: _authTeal,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              title: Text(
+                                                tr('تذكّرني', 'Remember me'),
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
                                         ],
                                         if (error != null)
                                           Padding(
@@ -735,44 +784,91 @@ class _AuthScreenState extends State<AuthScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 13),
-                                TextButton(
-                                  onPressed: busy
-                                      ? null
-                                      : () => changeMode(!register),
-                                  child: Text(
-                                    register
-                                        ? tr(
-                                            'عندك حساب؟ سجّل دخولك',
-                                            'Already a member? Log in',
-                                          )
-                                        : tr(
-                                            'جديد معانا؟ أنشئ حساب',
-                                            'New here? Create an account',
-                                          ),
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
+                                const SizedBox(height: 20),
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      register
+                                          ? tr(
+                                              'عندك حساب بالفعل؟',
+                                              'Already a member?',
+                                            )
+                                          : tr(
+                                              'لسه معندكش حساب؟',
+                                              "Don't have an account?",
+                                            ),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: muted,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      key: const ValueKey('auth.mode.link'),
+                                      onPressed: busy
+                                          ? null
+                                          : () => changeMode(!register),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 10,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        register
+                                            ? tr('سجّل دخولك', 'Log in')
+                                            : tr(
+                                                'إنشاء حساب',
+                                                'Create account',
+                                              ),
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                TextButton(
+                                const SizedBox(height: 6),
+                                OutlinedButton.icon(
+                                  key: const ValueKey('auth.invitation'),
                                   onPressed: busy
                                       ? null
                                       : () => open(
                                           context,
                                           AcceptInviteScreen(api: widget.api),
                                         ),
-                                  child: Text(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: _authTeal,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    side: const BorderSide(
+                                      color: Color(0xffe1e8eb),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.mark_email_unread_outlined,
+                                    size: 19,
+                                  ),
+                                  label: Text(
                                     tr(
-                                      'عندك دعوة؟ اقبلها من هنا',
-                                      'Have an invitation? Accept it here',
+                                      'وصلك دعوة؟ قبول الدعوة',
+                                      'Got an invitation? Accept invite',
                                     ),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      fontSize: 12,
-                                      color: muted,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 20),
                                 const SizedBox(height: 4),
                                 const Text(
                                   'GYM NETWORK · SHO TECH',
@@ -801,6 +897,62 @@ class _AuthScreenState extends State<AuthScreen> {
   );
 }
 
+class _RoleChoice extends StatelessWidget {
+  final bool selected;
+  final String title, detail;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  const _RoleChoice({
+    required this.selected,
+    required this.title,
+    required this.detail,
+    required this.icon,
+    required this.onPressed,
+  });
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: Material(
+      color: selected ? const Color(0xffedf6f8) : const Color(0xfffafbfc),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(17),
+        side: BorderSide(
+          color: selected ? _authTeal : const Color(0xffe2e8eb),
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(17),
+        child: Padding(
+          padding: const EdgeInsets.all(13),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: selected ? _authTeal : muted, size: 23),
+              const SizedBox(height: 10),
+              Text(
+                title,
+                style: TextStyle(
+                  color: selected ? _authTeal : ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                detail,
+                style: const TextStyle(color: muted, fontSize: 10, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _SocialButton extends StatelessWidget {
   final String provider, soon;
   final VoidCallback? onPressed;
@@ -815,9 +967,9 @@ class _SocialButton extends StatelessWidget {
     onPressed: onPressed,
     style: OutlinedButton.styleFrom(
       foregroundColor: ink,
-      backgroundColor: const Color(0xfff7f8f9),
+      backgroundColor: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-      side: BorderSide.none,
+      side: const BorderSide(color: Color(0xffe1e6e8)),
       shape: const StadiumBorder(),
     ),
     child: Column(
@@ -829,10 +981,12 @@ class _SocialButton extends StatelessWidget {
             if (provider == 'Apple')
               const Icon(Icons.apple, size: 23, color: Colors.black)
             else
-              const SizedBox(
+              Image.asset(
+                'assets/brand/google-g.png',
                 width: 20,
                 height: 20,
-                child: CustomPaint(painter: _GoogleMark()),
+                fit: BoxFit.contain,
+                excludeFromSemantics: true,
               ),
             const SizedBox(width: 8),
             Text(
@@ -846,36 +1000,6 @@ class _SocialButton extends StatelessWidget {
       ],
     ),
   );
-}
-
-class _GoogleMark extends CustomPainter {
-  const _GoogleMark();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Rect.fromLTWH(2, 2, size.width - 4, size.height - 4);
-    final p = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
-    for (final piece in [
-      (0.0, .55, const Color(0xff4285f4)),
-      (.55, .7, const Color(0xff34a853)),
-      (1.25, .4, const Color(0xfffbbc05)),
-      (1.65, .67, const Color(0xffea4335)),
-    ]) {
-      p.color = piece.$3;
-      canvas.drawArc(rect, piece.$1 * math.pi, piece.$2 * math.pi, false, p);
-    }
-    canvas.drawLine(
-      Offset(size.width / 2, size.height / 2),
-      Offset(size.width - 1, size.height / 2),
-      Paint()
-        ..color = const Color(0xff4285f4)
-        ..strokeWidth = 4,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _GoogleMark oldDelegate) => false;
 }
 
 class _AuthBackdrop extends CustomPainter {

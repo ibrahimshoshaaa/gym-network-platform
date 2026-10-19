@@ -21,6 +21,54 @@ class MemoryStore implements TokenStore {
 
 void main() {
   test(
+    'remember me controls persistence and password changes retain that choice',
+    () async {
+      final store = MemoryStore();
+      store.values['session'] = 'previous-session';
+      var issued = 0;
+      ApiClient client() => ApiClient(
+        storage: store,
+        transport: MockClient((r) async {
+          if (r.method == 'GET')
+            return http.Response('{"id":"one","role":"TRAINEE"}', 200);
+          issued++;
+          return http.Response(
+            jsonEncode({
+              'accessToken': 'session-$issued',
+              'user': {'id': 'one', 'role': 'TRAINEE'},
+            }),
+            200,
+          );
+        }),
+      );
+      final api = client();
+      await api.authenticate('auth/signin', {
+        'identifier': 'member@example.test',
+        'password': 'synthetic',
+      }, rememberSession: false);
+      expect(api.token, 'session-1');
+      expect(store.values.containsKey('session'), isFalse);
+      await api.authenticate('auth/password/change', {
+        'currentPassword': 'synthetic',
+        'newPassword': 'another long password',
+      });
+      expect(api.token, 'session-2');
+      expect(store.values.containsKey('session'), isFalse);
+      final cold = client();
+      await cold.restore();
+      expect(cold.token, isNull);
+      await api.authenticate('auth/signin', {}, rememberSession: true);
+      expect(store.values['session'], 'session-3');
+      final remembered = client();
+      await remembered.restore();
+      expect(remembered.user?['id'], 'one');
+      expect(remembered.token, 'session-3');
+      await remembered.logout();
+      expect(store.values.containsKey('session'), isFalse);
+    },
+  );
+
+  test(
     'wrong current password does not revoke a valid device session',
     () async {
       final store = MemoryStore();

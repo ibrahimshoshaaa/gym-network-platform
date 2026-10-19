@@ -106,7 +106,7 @@ class _AccountScreenState extends State<AccountScreen> {
       ),
       const SizedBox(height: 26),
       const Text(
-        'GYM NETWORK\nنسخة 0.2.2 · ShoTech Solutions',
+        'GYM NETWORK\nنسخة 0.2.3 · ShoTech Solutions',
         textAlign: TextAlign.center,
         style: TextStyle(color: muted, fontSize: 11),
       ),

@@ -87,7 +87,7 @@ void main() {
       expect(find.text('تسجيل الدخول'), findsOneWidget);
       await t.drag(find.byType(CustomScrollView).first, const Offset(0, -500));
       await t.pumpAndSettle();
-      await t.tap(find.text('جديد معانا؟ أنشئ حساب'));
+      await t.tap(find.byKey(const ValueKey('auth.mode.link')));
       await t.pumpAndSettle();
       expect(find.text('الإيميل'), findsOneWidget);
       await t.drag(find.byType(CustomScrollView).first, const Offset(0, 900));
