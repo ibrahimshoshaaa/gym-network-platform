@@ -52,6 +52,7 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
   add('طلبات انضمام الجيمات',await tx.gymApplication.count({where:{status:'PENDING'}}),'gym-applications');
   add('شحن ينتظر المراجعة',await tx.topupRequest.count({where:{status:'PENDING'}}),'reviews');
   add('سحب ينتظر المراجعة',await tx.withdrawalRequest.count({where:{status:'REQUESTED'}}),'withdrawals');
+  add('تحويلات تنتظر التنفيذ',await tx.withdrawalRequest.count({where:{status:'APPROVED'}}),'withdrawals');
   add('تحويلات متأخرة',await tx.withdrawalRequest.count({where:{status:'APPROVED',dueAt:{lt:now}}}),'withdrawals');
   add('طلبات أسعار',await tx.branchPricingRequest.count({where:{status:'PENDING'}}),'branch-prices');
   add('طلبات تصحيح',await tx.operationReview.count({where:{status:'PENDING'}}),'operation-reviews');

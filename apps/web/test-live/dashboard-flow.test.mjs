@@ -1037,6 +1037,13 @@ test(
       const acceptedWithdrawal = await acceptWithdrawal.json();
       assert.ok(acceptedWithdrawal.acceptedAt);
       assert.ok(acceptedWithdrawal.dueAt);
+      const adminSummaryResponse = await request("/api/backend/home-summary", {cookie});
+      assert.equal(adminSummaryResponse.status, 200);
+      const adminSummary = await adminSummaryResponse.json();
+      assert.equal(
+        adminSummary.cards.find(card=>card.label==="تحويلات تنتظر التنفيذ")?.value,
+        String(await db.withdrawalRequest.count({where:{status:"APPROVED"}})),
+      );
       const transferProof = await db.receiptEvidence.create({
         data: {
           ownerUserId: admin.id,
@@ -1701,10 +1708,19 @@ test(
           const page=await context.newPage();
           const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
           await page.goto(origin);
-          await expect(page.getByRole('heading',{name:'مهامك اليومية'})).toBeVisible();
-          await expect(page.getByRole('heading',{name:'نظرة سريعة'})).toBeVisible();
+          await expect(page.getByRole('heading',{name:'يومك في المنصة',exact:true})).toBeVisible();
+          await expect(page.getByRole('heading',{name:'محتاج تدخلك',exact:true})).toBeVisible();
+          await expect(page.locator('.platform-finance')).toHaveCount(0);
+          await expect(page.getByRole('navigation',{name:'وصول سريع'}).getByRole('button')).toHaveCount(5);
+          for(const width of [320,393,800,1280]){
+            await page.setViewportSize({width,height:851});
+            assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'admin home must fit phone and desktop');
+          }
+          await page.setViewportSize({width:393,height:851});
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'طلبات الانضمام',exact:true}).click();
+          await expect(page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button')).toHaveCount(5);
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true}).click();
+          await page.getByRole('navigation',{name:'أقسام الطلبات'}).getByRole('button',{name:'طلبات الانضمام',exact:true}).click();
           const applicationCard=page.locator('article.card').filter({has:page.getByRole('heading',{name:'Synthetic Native Application',exact:true})});
           await expect(applicationCard).toContainText('Synthetic Native Owner');
           await applicationCard.getByRole('button',{name:'قبول الانضمام',exact:true}).click();
@@ -1714,7 +1730,7 @@ test(
           assert.equal(approvedNative.status,'APPROVED');assert.ok(approvedNative.gymId);
           assert.equal((await db.gym.findUniqueOrThrow({where:{id:approvedNative.gymId}})).ownerId,nativeOwner.user.id);
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الرئيسية',exact:true}).click();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
 
           await expect(page.getByRole('heading',{name:'الصورة المالية للمنصة',exact:true})).toBeVisible();
           await expect(page.getByText('إجمالي المستحق للجيمات',{exact:true})).toBeVisible();
@@ -1728,7 +1744,7 @@ test(
           const setupBranch=await setupBranchResponse.json();
           const setupLedgerBefore=[await db.pointTransaction.count(),await db.moneyTransaction.count()];
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الجيمات والفروع',exact:true}).click();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الجيمات',exact:true}).click();
           await expect(page.locator('.gym-list-item').first()).toBeVisible();
           const setupGymCard=page.locator('.gym-list-item').filter({has:page.getByRole('heading',{name:'Synthetic Onboarding Gym',exact:true})});
           for(let n=0;n<30&&await setupGymCard.count()===0;n++){
@@ -1750,7 +1766,8 @@ test(
           // The admin and owner use the same phone → name → points → confirmation flow.
           const walletBeforeDispatch=(await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance;
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'شحن مباشر بالرقم',exact:true}).click();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
+          await page.getByRole('navigation',{name:'أقسام المالية'}).getByRole('button',{name:'شحن مباشر بالرقم',exact:true}).click();
           await page.getByLabel('رقم موبايل المتدرب أو صاحب الجيم').fill(traineeBody.phone);
           await page.getByRole('button',{name:'متابعة',exact:true}).click();
           await expect(page.locator('.transfer-recipient')).toContainText(traineeBody.displayName);
@@ -1788,6 +1805,7 @@ test(
           await ownerContext.close();
           await page.getByRole('button',{name:'الدعم والمساعدة',exact:true}).click();
           await expect(page.getByRole('heading',{name:'مركز الدعم والشكاوى'})).toBeVisible();
+          await expect(page.getByRole('navigation',{name:'وصول سريع'}).getByRole('button',{name:'المزيد',exact:true})).toHaveAttribute('aria-current','page');
           await page.getByRole('button',{name:'طلب مساعدة جديد',exact:true}).click();
           await page.getByLabel('عنوان مختصر').fill('Synthetic browser support');
           await page.getByLabel('اشرح المشكلة').fill('Synthetic support message from mobile viewport');

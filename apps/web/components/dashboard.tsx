@@ -17,6 +17,7 @@ import {
   House,
   Send,
   Wallet,
+  MoreHorizontal,
 } from "lucide-react";
 import {
   request,
@@ -26,9 +27,10 @@ import {
   type Identity,
   ApiError,
 } from "../lib/client";
-import { roleTabs, roleQuickTabs, roleName } from "../lib/navigation";
+import { roleTabs, roleQuickTabs, roleName, adminSections, adminSectionFor } from "../lib/navigation";
 import { WorkHome, type CashierTask } from "./work-home";
 import { invitationToken } from "../lib/invitation-link";
+import { AdminFinance } from "./platform-finance";
 import { AdminHome } from "./admin-home";
 import { OwnerJoinAccess } from "./owner-join-access";
 import { Login } from "./login";
@@ -53,6 +55,7 @@ import { AccountRecovery, recoveryToken } from "./account-recovery";
 import { PointWallet } from "./point-wallet";
 import { GymApplications } from "./gym-applications";
 type Tab =
+  | "requests" | "finance" | "more"
   | "gym-applications"
   | "direct-topup" | "point-wallet"
   | "support" | "users" | "audit" | "disputes"
@@ -72,6 +75,9 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"requests" as const,label:"الطلبات",icon:FileCheck2,description:"طلبات الشحن والانضمام والأسعار والإلغاء والسحب"},
+  {id:"finance" as const,label:"المالية",icon:Wallet,description:"التحصيلات والمستحقات وحركة النقاط"},
+  {id:"more" as const,label:"المزيد",icon:MoreHorizontal,description:"الدعم والمستخدمون وإعدادات المنصة"},
   {id:"gym-applications" as const,label:"طلبات الانضمام",icon:Building2,description:"مراجعة بيانات أصحاب الجيمات المسجلين من التطبيق وقبول أو رفض انضمامهم"},
   {id:"direct-topup" as const,label:"شحن مباشر بالرقم",icon:Send,description:"شحن المتدرب أو الجيم برقم الموبايل بعد تأكيد التحصيل"},
   {id:"point-wallet" as const,label:"محفظة الجيم والإرسال",icon:Wallet,description:"رصيد جيمك وإرسال النقاط للمتدربين برقم الموبايل"},
@@ -251,6 +257,8 @@ export function Dashboard() {
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   function navigate(next: Tab, task?: CashierTask) { if(next!=="gyms")setReviewGym(null); if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
+  const adminSection = adminSectionFor(current.id);
+  const contentTab = current.id === "requests" ? "reviews" : current.id === "more" ? "support" : current.id;
   const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
   return (
     <OwnerJoinAccess key={user.id} enabled={user.role === "GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><div className={`app-shell ${admin ? "admin-workspace" : ""}`}>
@@ -282,7 +290,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {(admin ? [{label:"ابدأ من هنا",ids:["home","direct-topup"]},{label:"طلبات تحتاج قرارك",ids:["gym-applications","reviews","branch-prices","withdrawals","disputes","operation-reviews","support"]},{label:"الجيمات والمتابعة",ids:["gyms","inventory","reports"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}] : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}]).map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {admin ? adminSections.map(section=>{const item=available.find(t=>t.id===section.id)!;return <button key={section.id} aria-current={adminSection.id===section.id?"page":undefined} className={adminSection.id===section.id?"active":""} onClick={()=>navigate(section.id)}><item.icon size={20}/><span>{section.label}</span>{adminSection.id===section.id?<ChevronLeft size={16}/>:null}</button>;}) : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}
@@ -329,7 +337,7 @@ export function Dashboard() {
             </button>
             <span className="breadcrumb">
               لوحة التحكم <ChevronLeft size={14} />
-              <strong>{current.label}</strong>
+              <strong>{admin ? adminSection.label : current.label}</strong>
             </span>
           </div>
           <AccountTools user={user} onNavigate={next=>{const item=available.find(t=>t.id===next);if(item)navigate(item.id);}}/>
@@ -343,46 +351,47 @@ export function Dashboard() {
         </header>
         <main className="workspace-content">
           {current.id !== "home" && <div className="page-heading">
-            <span className="eyebrow">
-              GYMBANK / {admin ? "إدارة المنصة" : "الجيمات"}
-            </span>
-            <h1>{current.label}</h1>
-            <p>{current.description}</p>
+            <h1>{admin ? adminSection.label : current.label}</h1>
+            <p>{admin ? adminSection.description : current.description}</p>
           </div>}
+          {admin && adminSection.items.length>0 ? <nav className="admin-section-tabs" aria-label={`أقسام ${adminSection.label}`}>
+            {adminSection.id==="finance"?<button aria-current={current.id==="finance"?"page":undefined} className={current.id==="finance"?"active":""} onClick={()=>navigate("finance")}>نظرة عامة</button>:null}
+            {adminSection.items.map(id=>{const item=available.find(t=>t.id===id)!;return <button key={id} aria-current={contentTab===id?"page":undefined} className={contentTab===id?"active":""} onClick={()=>navigate(id)}>{item.label}</button>;})}
+          </nav>:null}
           <Notice text={error} />
-          {current.id === "gym-applications" ? <GymApplications/> : current.id === "direct-topup" || current.id === "point-wallet" ? <PointWallet admin={admin}/> : current.id === "disputes" ? <Disputes admin={admin}/> : current.id === "support" ? <Support admin={admin}/> : current.id === "users" ? <Users/> : current.id === "audit" ? <AuditLog/> : current.id === "home" ? (
+          {contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" || contentTab === "point-wallet" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
-          ) : current.id === "directory" ? (
+          ) : contentTab === "directory" ? (
             <BranchDirectory />
-          ) : current.id === "inventory" ? (
+          ) : contentTab === "inventory" ? (
             <Inventory admin={admin} />
-          ) : current.id === "reports" ? (
+          ) : contentTab === "reports" ? (
             <Reports admin={admin} />
-          ) : current.id === "withdrawals" ? (
+          ) : contentTab === "withdrawals" ? (
             <Withdrawals admin={admin} />
-          ) : current.id === "operation-reviews" ? (
+          ) : contentTab === "operation-reviews" ? (
             <OperationReviews admin={admin} />
-          ) : current.id === "cashier" ? (
+          ) : contentTab === "cashier" ? (
             <Cashier initialTask={cashierTask} />
-          ) : current.id === "trainee" ? (
+          ) : contentTab === "trainee" ? (
             <TraineeQr />
-          ) : current.id === "gyms" ? (
+          ) : contentTab === "gyms" ? (
             <GymManagement admin={admin} initialGym={reviewGym} />
-          ) : current.id === "branch-prices" ? (
+          ) : contentTab === "branch-prices" ? (
             <PriceReviews onOpenGym={gymId=>{setReviewGym(gymId);navigate("gyms");}} />
-          ) : current.id === "reviews" ? (
+          ) : contentTab === "reviews" ? (
             <Reviews />
-          ) : current.id === "purchases" ? (
+          ) : contentTab === "purchases" ? (
             <Purchases />
           ) : (
-            <SettingsPanel key={current.id} section={current.id} />
+            <SettingsPanel key={contentTab} section={contentTab} />
           )}
           <footer className="page-footer">
             GymBank <span>•</span> ShoTech Solutions
           </footer>
         </main>
       </div>
-      <nav className="role-quick-nav" aria-label="وصول سريع">{quick.map(item => <button key={item.id} aria-current={current.id === item.id ? "page" : undefined} className={current.id === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={21}/><span>{item.label}</span></button>)}<button onClick={() => setMobile(true)} aria-label="كل الأقسام"><Menu size={21}/><span>المزيد</span></button></nav>
+      <nav className="role-quick-nav" aria-label="وصول سريع">{quick.map(item => <button key={item.id} aria-current={(admin?adminSection.id===item.id:current.id===item.id)?"page":undefined} className={(admin?adminSection.id===item.id:current.id===item.id)?"active":""} onClick={() => navigate(item.id)}><item.icon size={21}/><span>{admin?(adminSections.find(section=>section.id===item.id)?.label??item.label):item.label}</span></button>)}<button className={admin&&adminSection.id==="more"?"active":""} aria-current={admin&&adminSection.id==="more"?"page":undefined} onClick={() => admin?navigate("more"):setMobile(true)} aria-label={admin?"المزيد":"كل الأقسام"}>{admin?<MoreHorizontal size={21}/>:<Menu size={21}/>}<span>المزيد</span></button></nav>
       {password && <PasswordChange onClose={() => setPassword(false)} />}
     </div></OwnerJoinAccess>
   );
