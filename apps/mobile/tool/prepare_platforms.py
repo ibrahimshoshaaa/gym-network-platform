@@ -24,3 +24,16 @@ for density in ['mdpi','hdpi','xhdpi','xxhdpi','xxxhdpi']:
     target=Path('android/app/src/main/res')/('mipmap-'+density)/'ic_launcher.png'
     target.parent.mkdir(parents=True,exist_ok=True)
     copyfile(Path('assets/brand/launcher')/(density+'.png'),target)
+
+# Android 8+ launchers mask the icon themselves. An opaque dark adaptive
+# background avoids the white wrapper applied to legacy bitmap icons.
+res=Path('android/app/src/main/res')
+(res/'mipmap-anydpi-v26').mkdir(parents=True,exist_ok=True)
+(res/'values').mkdir(parents=True,exist_ok=True)
+(res/'drawable-nodpi').mkdir(parents=True,exist_ok=True)
+copyfile(Path('assets/brand/gymbank-icon.png'),res/'drawable-nodpi/gymbank_foreground.png')
+(res/'values/gymbank_launcher.xml').write_text('<resources><color name="gymbank_launcher_background">#101719</color></resources>')
+(res/'mipmap-anydpi-v26/ic_launcher.xml').write_text('''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+<background android:drawable="@color/gymbank_launcher_background"/>
+<foreground android:drawable="@drawable/gymbank_foreground"/>
+</adaptive-icon>''')

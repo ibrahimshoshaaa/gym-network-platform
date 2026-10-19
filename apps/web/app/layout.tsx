@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ar" dir="rtl">
-      <body>{children}</body>
+      <body><svg width="0" height="0" aria-hidden="true" style={{position:"absolute"}}><defs><filter id="gymbank-on-dark" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values="0 -1.05217 0 0 .94902 0 -.06087 0 0 .95686 0 -.34348 0 0 .96863 0 0 0 1 0"/></filter></defs></svg>{children}</body>
     </html>
   );
 }

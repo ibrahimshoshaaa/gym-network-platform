@@ -71,7 +71,7 @@ class TraineeHome extends StatelessWidget {
                       style: TextStyle(color: Colors.white70),
                     ),
                     Spacer(),
-                    Icon(Icons.hub_rounded, color: Colors.white24),
+                    Image.asset('assets/brand/gymbank-icon.png', width: 24, height: 24, excludeFromSemantics: true),
                   ],
                 ),
                 const SizedBox(height: 14),
