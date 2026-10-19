@@ -138,7 +138,8 @@ void main() {
     await t.pumpAndSettle();
     expect(posted, isNull);
     expect(find.text('90 نقطة'), findsOneWidget);
-    await t.ensureVisible(find.text('تعديل النقاط'));
+    await t.scrollUntilVisible(find.text('تعديل النقاط'), 150,
+      scrollable: find.byType(Scrollable).first);
     await t.tap(find.text('تعديل النقاط'));
     await t.pumpAndSettle();
     expect(find.text('متدرب تجريبي'), findsOneWidget);
