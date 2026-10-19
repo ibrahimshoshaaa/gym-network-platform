@@ -12,6 +12,25 @@ String? visitTicket(String input) {
   return RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value) ? value : null;
 }
 
+/// Always-visible scope for staff and owner financial/attendance flows.
+class OperationContext extends StatelessWidget {
+ final String title,detail;
+ final IconData icon;
+ const OperationContext({super.key,required this.title,this.detail='',this.icon=Icons.storefront_outlined});
+ @override Widget build(BuildContext context)=>Padding(
+  padding:const EdgeInsets.only(bottom:18),
+  child:Panel(padding:const EdgeInsets.all(14),child:Row(children:[
+   Container(padding:const EdgeInsets.all(9),
+    decoration:BoxDecoration(color:const Color(0xffe3fbf3),borderRadius:BorderRadius.circular(11)),
+    child:Icon(icon,color:green,size:20)),
+   const SizedBox(width:10),
+   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text(title,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800)),
+    if(detail.isNotEmpty)Text(detail,style:const TextStyle(color:muted,fontSize:11)),
+   ])),
+  ])));
+}
+
 class OperationsHome extends StatelessWidget {
   final ApiClient api;
   final String? gymId;
@@ -303,10 +322,11 @@ class _BranchSaleState extends State<BranchSale> {
 
   @override
   Widget build(BuildContext context) => Screen(
-    title: 'شحن متدرب · ${widget.branch['name']}',
+    title: 'بيع نقاط لمتدرب',
     child: ListView(
       padding: const EdgeInsets.all(22),
       children: [
+        OperationContext(title:'${widget.branch['name']}',detail:'بيع من مخزون الفرع بعد تحصيل المبلغ'),
         if (result != null) ...[
           const EmptyState(
             'تم شحن المتدرب',
@@ -338,7 +358,7 @@ class _BranchSaleState extends State<BranchSale> {
           if (person == null)
             TextField(
               controller: phone,
-              enabled: !busy,
+              enabled: !busy && widget.api.pending == null,
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: 'رقم موبايل المتدرب',
@@ -357,7 +377,7 @@ class _BranchSaleState extends State<BranchSale> {
             const SizedBox(height: 16),
             TextField(
               controller: points,
-              enabled: !busy,
+              enabled: !busy && widget.api.pending == null,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'عدد النقاط'),
             ),
@@ -369,12 +389,13 @@ class _BranchSaleState extends State<BranchSale> {
               '${money(quote!['chargePiasters'])} ج.م',
               strong: true,
             ),
-            Fact('رصيد الفرع', '${quote!['stock']} نقطة'),
+            Fact('رصيد الفرع قبل البيع', '${quote!['stock']} نقطة'),
+            Fact('المتبقي بعد البيع', '${BigInt.parse('${quote!['stock']}') - BigInt.from(quote!['points'])} نقطة'),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: confirmed,
               title: const Text('راجعت هوية المتدرب واستلمت المبلغ كاملًا'),
-              onChanged: busy
+              onChanged: busy || widget.api.pending != null
                   ? null
                   : (v) => setState(() => confirmed = v == true),
             ),
@@ -401,12 +422,15 @@ class _BranchSaleState extends State<BranchSale> {
               onPressed: busy || widget.api.pending != null
                   ? null
                   : () => setState(() {
-                      person = null;
-                      quote = null;
+                      if (quote != null) {
+                        quote = null;
+                      } else {
+                        person = null;
+                      }
                       confirmed = false;
                       error = null;
                     }),
-              child: const Text('تعديل بيانات الشحن'),
+              child: Text(quote != null ? 'تعديل النقاط' : 'اختيار متدرب آخر'),
             ),
         ],
       ],
@@ -474,10 +498,11 @@ class _RecordVisitState extends State<RecordVisit> {
 
   @override
   Widget build(BuildContext context) => Screen(
-    title: 'تسجيل زيارة · ${widget.branch['name']}',
+    title: 'تسجيل زيارة',
     child: ListView(
       padding: const EdgeInsets.all(22),
       children: [
+        OperationContext(title:'${widget.branch['name']}',detail:'راجع المتدرب ونقاط الزيارة قبل التأكيد',icon:Icons.qr_code_scanner_rounded),
         if (result != null) ...[
           EmptyState(
             result!['alreadyActive'] == true
@@ -489,7 +514,7 @@ class _RecordVisitState extends State<RecordVisit> {
             icon: Icons.check_circle_rounded,
           ),
           Fact('نقاط الزيارة', '${result!['visit']['pointsCharged']}'),
-          Fact('الخروج التلقائي', shortDate(result!['visit']['expiresAt'])),
+          Fact('نهاية الجلسة', shortDate(result!['visit']['expiresAt'])),
           Reference('${result!['visit']['id']}'),
           ActionButton('تم', onPressed: () => Navigator.pop(context)),
         ] else ...[
@@ -505,7 +530,7 @@ class _RecordVisitState extends State<RecordVisit> {
             ActionButton(
               'مسح رمز المتدرب بالكاميرا',
               icon: Icons.qr_code_scanner_rounded,
-              onPressed: busy
+              onPressed: busy || widget.api.pending != null
                   ? null
                   : () async {
                       final value = await open<String>(
@@ -520,7 +545,7 @@ class _RecordVisitState extends State<RecordVisit> {
             const SizedBox(height: 16),
             TextField(
               controller: token,
-              enabled: !busy,
+              enabled: !busy && widget.api.pending == null,
               textDirection: TextDirection.ltr,
               decoration: const InputDecoration(
                 labelText: 'أو الصق رمز الدخول',
@@ -551,7 +576,7 @@ class _RecordVisitState extends State<RecordVisit> {
               contentPadding: EdgeInsets.zero,
               value: confirmed,
               title: const Text('تأكدت من هوية المتدرب وحضوره في الفرع'),
-              onChanged: busy
+              onChanged: busy || widget.api.pending != null
                   ? null
                   : (v) => setState(() => confirmed = v == true),
             ),
