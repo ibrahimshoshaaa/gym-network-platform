@@ -58,9 +58,9 @@ class TraineeHome extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.account_balance_wallet_outlined,
                       color: lime,
                       size: 20,
