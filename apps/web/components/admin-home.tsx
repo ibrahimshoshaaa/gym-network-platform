@@ -1,70 +1,66 @@
 "use client";
-import { AdminFinance } from "./platform-finance";
-import { PlatformHero } from "./platform-identity";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Building2, CheckCircle2, Circle, Coins, CreditCard, FileCheck2, RefreshCw } from "lucide-react";
-import { api, decimal, message, type Settings } from "../lib/client";
-import { RoleSummary } from "./updates";
+import { ArrowLeft, CheckCircle2, Circle, Coins, CreditCard, RefreshCw } from "lucide-react";
+import { api, date, decimal, message, type Settings } from "../lib/client";
 import { Busy, Notice } from "./ui";
-
-export type AdminDestination = "gym-applications" | "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
-export function AdminHome({ onNavigate }: { onNavigate: (destination: AdminDestination) => void }) {
-  const [settings, setSettings] = useState<Settings | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const generation = useRef(0);
-  async function load() {
-    const current = ++generation.current;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await api<Settings>("admin/topup-settings");
-      if (generation.current === current) setSettings(data);
-    } catch (error) {
-      if (generation.current === current) setError(message(error));
-    } finally {
-      if (generation.current === current) setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void load();
-    return () => { generation.current++; };
-  }, []);
-  const ready = settings?.policy && settings.paymentMethods.some(method => method.enabled === true);
-  return <>
-    <PlatformHero eyebrow="إدارة المنصة · كل حاجة تحت عينك" title="مهامك اليومية">قرارات أوضح، متابعة أسرع. ابدأ بالمهمة اللي محتاجة اهتمامك.</PlatformHero>
-    <AdminFinance/>
-    <RoleSummary onNavigate={destination=>onNavigate(destination as AdminDestination)}/>
-    <div className="work-task-grid admin-daily">
-      <button className="work-task featured" onClick={() => onNavigate("direct-topup")}><span className="work-task-icon"><Coins size={25}/></span><strong>شحن مباشر بالرقم</strong><span>اكتب رقم الموبايل، تأكد من الاسم واشحن بعد التحصيل.</span><ArrowLeft size={18}/></button>
-      <button className="work-task" onClick={() => onNavigate("reviews")}><span className="work-task-icon"><FileCheck2 size={25}/></span><strong>راجع طلبات الشحن</strong><span>افتح الإيصال وأكد وصول التحويل لإضافة النقاط.</span><ArrowLeft size={18}/></button>
-      <button className="work-task" onClick={() => onNavigate("gyms")}><span className="work-task-icon"><Building2 size={25}/></span><strong>الجيمات والفروع</strong><span>فعّل جيمًا أو تابع الفروع والدعوات.</span><ArrowLeft size={18}/></button>
-      <button className="work-task" onClick={() => onNavigate("reports")}><span className="work-task-icon"><Coins size={25}/></span><strong>التقارير والمتابعة</strong><span>تابع الأرصدة والزيارات وحركة التشغيل.</span><ArrowLeft size={18}/></button>
-    </div>
-    <section className="admin-section-index" aria-label="كل أقسام الإدارة">
-      <h2>باقي مهام الإدارة</h2>
-      <p className="muted">كل قسم له مهمة واضحة، اختار اللي محتاجه.</p>
-      <div className="admin-shortcuts">
-      {([
-       ["gym-applications","طلبات انضمام الجيمات","راجع بيانات صاحب الجيم ووافق أو ارفض من مكان واحد."],
-       ["branch-prices","اعتماد أسعار الزيارات","راجع سعر الزيارة ومدتها قبل تفعيل الفرع."],
-       ["withdrawals","طلبات سحب الجيمات","قبول الطلبات ومتابعة موعد التحويل والإثبات."],
-       ["operation-reviews","طلبات الإلغاء والتصحيح","راجع الأدلة وتأثير القرار على الرصيد."],
-       ["inventory","أرصدة الفروع","اختار جيمًا وفرعًا لمتابعة النقاط وحركتها."],
-       ["pricing","تسعير النقاط والنسب","حدد سعر النقطة وخصم الجيم ونسبته."],
-       ["payments","حسابات استقبال التحويل","حدّث الحسابات وفعّل وسائل التحويل."],
-       ["packages","باقات الشحن","أضف وعدّل الباقات المتاحة للمتدربين والجيمات."],
-       ["support","الدعم والشكاوى","راجع الطلبات والرسائل واضبط رقم واتساب."],
-       ["users","المستخدمون والحسابات","إدارة الإتاحة واستعادة الحسابات."],
-       ["audit","سجل التغييرات","راجع القرارات والعمليات المنفذة."],
-       ["disputes","حجوزات النزاعات","راجع المبالغ المحجوزة وفك الحجز عند انتهاء المراجعة."]
-      ] as const).map(([id,title,description])=><button className="card" key={id} onClick={()=>onNavigate(id)}><ArrowLeft size={19}/><strong>{title}</strong><span>{description}</span></button>)}
-      </div>
-    </section>
-    <Notice text={error}/>
-    {loading ? <p className="muted"><Busy>بنفحص إعدادات الشحن</Busy></p> : settings && !error ? ready ? <details className="card setup-disclosure"><summary>إعدادات الشحن جاهزة · عرض الإعدادات</summary><AdminSetup settings={settings} onNavigate={onNavigate}/></details> : <AdminSetup settings={settings} onNavigate={onNavigate}/> : null}
-    <button className="text-button" disabled={loading} onClick={() => void load()}><RefreshCw size={16}/>تحديث حالة الإعدادات</button>
-  </>;
+export type AdminDestination = "requests" | "finance" | "more" | "gym-applications" | "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
+export type AdminSummary = {asOf:string;cards:{label:string;value:string;destination:string;unit?:string}[]};
+const queues = [
+ {label:"شحن ينتظر المراجعة",title:"طلبات الشحن",description:"طابق التحويل وأضف النقاط.",destination:"reviews"},
+ {label:"طلبات انضمام الجيمات",title:"انضمام الجيمات",description:"راجع بيانات صاحب الجيم وطلب الانضمام.",destination:"gym-applications"},
+ {label:"سحب ينتظر المراجعة",title:"طلبات السحب",description:"راجع المبلغ وبيانات استلام الجيم.",destination:"withdrawals"},
+ {label:"تحويلات تنتظر التنفيذ",title:"تحويلات جاهزة للتنفيذ",description:"طلبات سحب مقبولة تنتظر تسجيل التحويل وإثباته.",destination:"withdrawals"},
+ {label:"طلبات أسعار",title:"أسعار الزيارات",description:"راجع السعر والمدة قبل التطبيق.",destination:"branch-prices"},
+ {label:"طلبات تصحيح",title:"الإلغاء والتصحيح",description:"راجع العملية وسبب طلب التصحيح.",destination:"operation-reviews"},
+ {label:"جيمات تنتظر التفعيل",title:"تفعيل الجيمات",description:"راجع الجيمات التي استكملت قبول الدعوة.",destination:"gyms"},
+ {label:"طلبات دعم مفتوحة",title:"رسائل الدعم",description:"تابع المحادثات المفتوحة والردود.",destination:"support"},
+] as const;
+export function AdminHome({onNavigate}:{onNavigate:(destination:AdminDestination)=>void}) {
+ const [summary,setSummary]=useState<AdminSummary|null>(null),[settings,setSettings]=useState<Settings|null>(null);
+ const [error,setError]=useState(""),[setupError,setSetupError]=useState(""),[loading,setLoading]=useState(true);
+ const generation=useRef(0);
+ async function load(){
+  const current=++generation.current;setLoading(true);setError("");setSetupError("");
+  await Promise.allSettled([
+   api<AdminSummary>("home-summary").then(data=>{if(current===generation.current)setSummary(data);}).catch(e=>{if(current===generation.current)setError(message(e));}),
+   api<Settings>("admin/topup-settings").then(data=>{if(current===generation.current)setSettings(data);}).catch(e=>{if(current===generation.current)setSetupError(message(e));})
+  ]);
+  if(current===generation.current)setLoading(false);
+ }
+ useEffect(()=>{void load();return()=>{generation.current++;};},[]);
+ const ready=settings?.policy && settings.paymentMethods.some(method=>method.enabled===true);
+ return <div className="admin-home-simple">
+  <div className="admin-welcome"><div><span className="eyebrow">إدارة GymBank</span><h1>يومك في المنصة</h1><p>راجع المطلوب منك، وكمّل شغلك.</p></div><button className="secondary compact" disabled={loading} onClick={()=>void load()}><RefreshCw size={16}/>تحديث</button></div>
+  <Notice text={error}/>
+  {summary?<AdminOverview data={summary} stale={Boolean(error)} loading={loading} onNavigate={onNavigate}/>:<section className="card admin-inbox"><h2>محتاج تدخلك</h2>{loading?<Busy>بنحمّل الطلبات</Busy>:<p className="muted">تعذر تحميل الطلبات. اضغط تحديث للمحاولة.</p>}</section>}
+  <section className="admin-short-actions" aria-label="مهام سريعة">
+   <button onClick={()=>onNavigate("direct-topup")}><Coins size={21}/><span><strong>شحن مباشر بالرقم</strong><small>بعد تأكيد تحصيل المبلغ</small></span><ArrowLeft size={18}/></button>
+   <button onClick={()=>onNavigate("gyms")}><span><strong>الجيمات والفروع</strong><small>افتح الجيم وتابع بياناته</small></span><ArrowLeft size={18}/></button>
+   <button onClick={()=>onNavigate("reviews")}><span><strong>راجع طلبات الشحن</strong><small>الإيصال والقرار في نفس الطلب</small></span><ArrowLeft size={18}/></button>
+  </section>
+  <Notice text={setupError}/>
+  {settings&&!ready?<AdminSetup settings={settings} onNavigate={onNavigate}/>:null}
+ </div>;
+}
+export function AdminOverview({data,stale=false,loading=false,onNavigate}:{data:AdminSummary;stale?:boolean;loading?:boolean;onNavigate:(destination:AdminDestination)=>void}) {
+ const count=(label:string)=>data.cards.find(card=>card.label===label)?.value;
+ const waiting=queues.map(queue=>({...queue,count:count(queue.label)}));
+ const active=waiting.filter(queue=>queue.count!==undefined && Number(queue.count)>0);
+ const complete=waiting.every(queue=>queue.count!==undefined);
+ const late=count("تحويلات متأخرة");
+ return <>
+  <section className="card admin-inbox" aria-label="طلبات تحتاج تدخلك">
+   <div className="admin-block-title"><div><h2>محتاج تدخلك</h2><p>طلبات تنتظر قرارًا أو متابعة.</p></div><button className="text-button" onClick={()=>onNavigate("requests")}>كل الطلبات<ArrowLeft size={16}/></button></div>
+   {loading?<p className="muted" role="status">جاري تحديث الأعداد…</p>:null}
+   {stale?<p className="notice">الأعداد من آخر تحميل ناجح؛ تعذر تحديثها الآن.</p>:null}
+   {late!==undefined&&Number(late)>0?<button className="admin-overdue" onClick={()=>onNavigate("withdrawals")}><CreditCard size={20}/><span><strong>{late} تحويل متأخر</strong><small>افتح طلبات السحب لمتابعة التنفيذ.</small></span><ArrowLeft size={18}/></button>:null}
+   {active.length?<div className="admin-queue-list">{active.map(queue=><button key={queue.label} onClick={()=>onNavigate(queue.destination)}><span className="admin-queue-count">{queue.count}</span><span><strong>{queue.title}</strong><small>{queue.description}</small></span><ArrowLeft size={18}/></button>)}</div>:!stale&&complete?<div className="admin-inbox-clear"><CheckCircle2 size={26}/><strong>مفيش طلبات منتظرة حاليًا</strong><p>أي طلب جديد هيظهر هنا بعد التحديث.</p></div>:<p className="muted">افتح كل الطلبات لمراجعة الحالة؛ الأعداد غير مكتملة.</p>}
+   <small className="admin-updated">آخر تحميل: {date(data.asOf)}</small>
+  </section>
+  <section className="admin-glance" aria-label="ملخص المنصة">{[
+   ["جيمات نشطة","الجيمات النشطة","gyms"],["فروع نشطة","الفروع النشطة","gyms"],["متدربون نشطون","المتدربون","users"],
+  ].map(([label,title,destination])=><button key={label} onClick={()=>onNavigate(destination as AdminDestination)}><strong>{count(label)??"—"}</strong><span>{title}</span></button>)}</section>
+ </>;
 }
 
 export function AdminSetup({ settings, onNavigate }: { settings: Settings; onNavigate: (destination: AdminDestination) => void }) {

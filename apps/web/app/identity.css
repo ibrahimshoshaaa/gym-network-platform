@@ -355,3 +355,70 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
  .trainee-header .brand-icon { width:26px; height:26px; }
  .trainee-header .account-tools .icon-button { width:32px; min-width:32px; }
 }
+
+/* Platform owner: five destinations and a single decision queue. */
+.admin-workspace .sidebar nav > button { margin:6px 0; }
+.admin-workspace .workspace-content { max-width:1320px; }
+.admin-welcome { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:0 0 24px; }
+.admin-welcome h1 { font-size:28px; line-height:1.6; margin:4px 0; }
+.admin-welcome p { margin:0; color:var(--muted); font-size:13px; }
+.admin-home-simple { display:grid; gap:22px; }
+.admin-home-simple > .admin-welcome { margin:0; }
+.admin-block-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+.admin-block-title h2 { margin:0; font-size:20px; }
+.admin-block-title p { margin:4px 0 0; font-size:12px; color:var(--muted); }
+.admin-inbox { padding:24px; margin:0; }
+.admin-queue-list { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; }
+.admin-queue-list > button,.admin-overdue { display:flex; align-items:center; gap:14px; padding:16px 0; background:transparent; border:0; border-bottom:1px solid var(--line); text-align:start; min-width:0; color:var(--ink); }
+.admin-queue-list > button:hover { background:#f5faf8; }
+.admin-queue-list > button > span:nth-child(2),.admin-overdue > span { flex:1; min-width:0; }
+.admin-queue-list strong,.admin-overdue strong { display:block; font-size:14px; }
+.admin-queue-list small,.admin-overdue small { display:block; font-size:11px; margin-top:4px; color:var(--muted); line-height:1.8; }
+.admin-queue-count { display:grid; place-items:center; min-width:42px; min-height:42px; padding:6px; background:#e3fbf3; color:#006b52; border-radius:12px; font-size:17px; font-weight:750; }
+.admin-queue-list svg,.admin-overdue svg { flex-shrink:0; }
+.admin-overdue { width:100%; padding:14px; background:#fff5e6; border:1px solid #eed6b4; border-radius:14px; margin-bottom:8px; }
+.admin-inbox-clear { display:flex; flex-direction:column; align-items:center; text-align:center; padding:26px 12px; gap:10px; }
+.admin-inbox-clear > svg { color:#006b52; }
+.admin-inbox-clear strong { font-size:16px; }
+.admin-inbox-clear p { font-size:12px; color:var(--muted); margin:0; }
+.admin-updated { display:block; color:var(--muted); font-size:10px; margin-top:16px; }
+.admin-glance { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.admin-glance > button { border:1px solid var(--line); background:white; border-radius:16px; padding:16px; display:flex; align-items:center; gap:12px; color:var(--ink); text-align:start; }
+.admin-glance strong { font-size:23px; }
+.admin-glance span { font-size:12px; color:var(--muted); }
+.admin-short-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.admin-short-actions > button { display:flex; align-items:center; gap:10px; min-width:0; padding:18px; background:#fff; color:var(--ink); text-align:start; border:1px solid var(--line); border-radius:16px; }
+.admin-short-actions > button > span { flex:1; min-width:0; }
+.admin-short-actions strong { display:block; font-size:13px; }
+.admin-short-actions small { display:block; font-size:11px; line-height:1.8; color:var(--muted); margin-top:5px; }
+.admin-short-actions svg { flex-shrink:0; }
+.admin-section-tabs { display:flex; flex-wrap:wrap; gap:8px; padding:6px; background:#fff; border:1px solid var(--line); border-radius:16px; margin-bottom:24px; }
+.admin-section-tabs > button { border:0; background:transparent; color:var(--muted); border-radius:11px; min-height:44px; padding:10px 14px; font-size:12px; }
+.admin-section-tabs > button.active { color:#00533f; background:#e3fbf3; font-weight:700; }
+.admin-workspace .page-heading { padding-bottom:18px; }
+.admin-workspace .page-heading h1 { font-size:26px; margin:0 0 5px; }
+@media(max-width:700px) {
+ .admin-workspace .workspace-content { padding:20px 16px 100px; }
+ .admin-welcome { gap:10px; }
+ .admin-welcome h1 { font-size:23px; }
+ .admin-welcome p { font-size:11px; }
+ .admin-welcome > button { min-height:40px; padding:8px 10px; font-size:11px; }
+ .admin-home-simple { gap:16px; }
+ .admin-inbox { padding:18px; border-radius:18px; }
+ .admin-block-title { align-items:flex-start; }
+ .admin-block-title h2 { font-size:18px; }
+ .admin-block-title .text-button { font-size:11px; padding:0; white-space:nowrap; }
+ .admin-queue-list { grid-template-columns:1fr; }
+ .admin-queue-list > button { padding-block:13px; gap:12px; }
+ .admin-glance { gap:8px; }
+ .admin-glance > button { flex-direction:column; justify-content:center; gap:3px; padding:12px 6px; text-align:center; border-radius:13px; }
+ .admin-glance strong { font-size:21px; }
+ .admin-glance span { font-size:10px; }
+ .admin-short-actions { grid-template-columns:1fr; gap:8px; }
+ .admin-short-actions > button { padding:14px 16px; }
+ .admin-section-tabs { flex-wrap:nowrap; overflow-x:auto; padding:5px; margin-bottom:18px; border-radius:13px; }
+ .admin-section-tabs > button { flex-shrink:0; padding:9px 12px; font-size:11px; }
+ .admin-workspace .role-quick-nav { grid-template-columns:repeat(5,minmax(0,1fr)); }
+ .admin-workspace .role-quick-nav button { font-size:10px; min-width:0; }
+ .admin-workspace .role-quick-nav button.active { background:#e3fbf3; color:#006b52; }
+}

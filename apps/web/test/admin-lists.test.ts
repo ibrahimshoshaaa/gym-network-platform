@@ -12,8 +12,39 @@ test("Arabic search accepts accents, alef variants and Arabic digits",()=>{
  assert.deepEqual(filterRecords(rows,"","ACTIVE",r=>r.name,r=>r.status),[rows[1]]);
  assert.equal(rows.length,2);
 });
-test("admin home exposes every work area without waiting for API data",()=>{
+
+import {AdminOverview,type AdminSummary} from "../components/admin-home";
+import {adminSections,adminSectionFor,roleTabs,roleQuickTabs} from "../lib/navigation";
+const labels=["شحن ينتظر المراجعة","طلبات انضمام الجيمات","سحب ينتظر المراجعة","تحويلات تنتظر التنفيذ","طلبات أسعار","طلبات تصحيح","جيمات تنتظر التفعيل","طلبات دعم مفتوحة"];
+const summary=(values:Record<string,string>={}):AdminSummary=>({asOf:"2026-10-19T12:00:00Z",cards:labels.map(label=>({label,value:values[label]??"0",destination:"reviews"}))});
+test("admin home starts with the decision queue, not a financial report or section directory",()=>{
  const html=renderToStaticMarkup(createElement(AdminHome,{onNavigate:()=>{}}));
- for(const label of ["راجع طلبات الشحن","الجيمات والفروع","التقارير والمتابعة","اعتماد أسعار الزيارات","طلبات سحب الجيمات","طلبات الإلغاء والتصحيح","أرصدة الفروع","تسعير النقاط والنسب","حسابات استقبال التحويل","باقات الشحن"])assert.ok(html.includes(label),label);
- assert.doesNotMatch(html,/0 طلب|لا توجد طلبات/);
+ assert.match(html,/محتاج تدخلك/);
+ assert.match(html,/راجع طلبات الشحن/);
+ assert.doesNotMatch(html,/الصورة المالية|باقي مهام الإدارة|حسابات استقبال التحويل|0 طلب|مفيش طلبات منتظرة/);
+});
+test("every admin destination belongs to exactly one of five sections and mobile tabs remain authorized",()=>{
+ assert.equal(adminSections.length,5);
+ const destinations=adminSections.flatMap(section=>[section.id,...section.items]);
+ assert.equal(new Set(destinations).size,destinations.length);
+ assert.deepEqual([...destinations].sort(),[...roleTabs.PLATFORM_ADMIN!].sort());
+ assert.equal(adminSectionFor("withdrawals").id,"requests");
+ assert.equal(adminSectionFor("pricing").id,"more");
+ assert.equal(adminSectionFor("direct-topup").id,"finance");
+ for(const id of roleQuickTabs.PLATFORM_ADMIN!) assert.ok(roleTabs.PLATFORM_ADMIN!.includes(id));
+ for(const role of ["GYM_OWNER","CASHIER","BRANCH_MANAGER"])for(const id of ["requests","finance","more"])assert.ok(!roleTabs[role]!.includes(id));
+});
+test("approved payouts remain actionable even when no new withdrawal needs review",()=>{
+ const html=renderToStaticMarkup(createElement(AdminOverview,{data:summary({"تحويلات تنتظر التنفيذ":"3","تحويلات متأخرة":"1"}),onNavigate:()=>{}}));
+ assert.match(html,/تحويلات جاهزة للتنفيذ/);
+ assert.doesNotMatch(html,/مفيش طلبات منتظرة/);
+});
+test("missing or stale counts never claim the queue is clear",()=>{
+ for(const data of [{asOf:"2026-10-19T12:00:00Z",cards:[]},summary()]){
+  const html=renderToStaticMarkup(createElement(AdminOverview,{data,stale:true,onNavigate:()=>{}}));
+  assert.doesNotMatch(html,/مفيش طلبات منتظرة/);
+  assert.match(html,/آخر تحميل ناجح/);
+ }
+ const empty=renderToStaticMarkup(createElement(AdminOverview,{data:summary(),onNavigate:()=>{}}));
+ assert.match(empty,/مفيش طلبات منتظرة/);
 });
