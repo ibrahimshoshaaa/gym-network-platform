@@ -374,11 +374,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                     const SizedBox(height: 4),
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
+                                      child: ColorFiltered(
+                                      colorFilter: ColorFilter.matrix([0, -1.05217, 0, 0, 242, 0, -.06087, 0, 0, 244, 0, -.34348, 0, 0, 247, 0, 0, 0, 1, 0]),
                                       child: Image.asset(
                                         'assets/brand/gymbank-wordmark.png',
                                         width: 200,
                                         height: 50,
                                         semanticLabel: 'GymBank',
+                                      ),
                                       ),
                                     ),
                                     const SizedBox(height: 19),
