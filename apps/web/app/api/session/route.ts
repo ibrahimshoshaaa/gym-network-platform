@@ -1,9 +1,8 @@
 import { trustedClientAddress } from "../../../lib/client-address";
-import { cookies } from "next/headers";
+import { rememberChoice } from "../../../lib/session-policy";
 import { boundedBody, checkOrigin, GatewayError } from "../../../lib/security";
 import {
-  cookieName,
-  cookieOptions,
+  setWebSession,
   currentUser,
   failure,
   json,
@@ -39,6 +38,7 @@ export async function POST(request: Request) {
       (input.mode !== undefined && !["auto", "admin", "staff", "invite", "trainee"].includes(String(input.mode)))
     )
       throw new GatewayError("INVALID_INPUT", 400);
+    const remember = rememberChoice(input.remember);
     const route =
       input.mode === undefined || input.mode === "auto"
         ? "auth/signin"
@@ -64,12 +64,10 @@ export async function POST(request: Request) {
       );
     if (!result.accessToken || !result.user)
       throw new GatewayError("ACCESS_DENIED", 403);
-    (await cookies()).set(cookieName(), result.accessToken, {
-      ...cookieOptions(),
-      expires: new Date(result.expiresAt),
-    });
+    await setWebSession(result.accessToken, result.expiresAt, remember);
     return json({ user: result.user });
   } catch (e) {
     return failure(e);
   }
 }
+

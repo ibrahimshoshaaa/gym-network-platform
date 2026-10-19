@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { checkOrigin } from "../../../lib/security";
 import {
   cookieName,
+  rememberCookieName,
   cookieOptions,
   failure,
   json,
@@ -18,8 +19,10 @@ export async function POST(request: Request) {
         return json({ code: "SERVICE_UNAVAILABLE" }, 503);
     }
     (await cookies()).set(cookieName(), "", { ...cookieOptions(), maxAge: 0 });
+    (await cookies()).set(rememberCookieName(), "", { ...cookieOptions(), maxAge: 0 });
     return json({ ok: true });
   } catch (e) {
     return failure(e);
   }
 }
+

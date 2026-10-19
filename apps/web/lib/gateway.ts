@@ -1,3 +1,4 @@
+import { sessionExpiry } from "./session-policy";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { apiOrigin, apiHeaders, GatewayError } from "./security";
@@ -9,6 +10,13 @@ export const cookieOptions = () => ({
   sameSite: "strict" as const,
   path: "/",
 });
+export const rememberCookieName = () => process.env.NODE_ENV === "production" ? "__Host-gym_remember" : "gym_remember";
+export async function setWebSession(token: string, expiresAt: string, remember = true) {
+  const jar = await cookies();
+  const options = { ...cookieOptions(), ...sessionExpiry(expiresAt, remember) };
+  jar.set(cookieName(), token, options);
+  jar.set(rememberCookieName(), remember ? "1" : "0", options);
+}
 export function json(data: unknown, status = 200) {
   return NextResponse.json(data, {
     status,
@@ -65,3 +73,4 @@ export async function currentUser() {
     phone: string;
   };
 }
+

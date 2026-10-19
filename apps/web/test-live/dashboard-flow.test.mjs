@@ -1634,6 +1634,16 @@ test(
         ).status,
         403,
       );
+      // Web registration shares owner review and never issues gym stock on sign-up.
+      const webOwner=await request('/api/register',{method:'POST',body:{accountType:'owner',displayName:'Synthetic Web Applicant',email:`web-applicant-${id}@example.test`,phone:'01500000010',password,gymName:'Synthetic Web Gym',description:'',governorate:'Menofia',city:'Synthetic City',address:'Synthetic web application address'}});
+      assert.equal(webOwner.status,201);const webOwnerUser=(await webOwner.json()).user;assert.equal(webOwnerUser.role,'GYM_OWNER');
+      const webOwnerCookie=sessionCookie(webOwner);
+      const webApplication=await request('/api/backend/me/gym-application',{cookie:webOwnerCookie});assert.equal(webApplication.status,200);assert.equal((await webApplication.json()).application.status,'PENDING');
+      assert.equal(await db.gym.count({where:{ownerId:webOwnerUser.id}}),0);
+      const ephemeral=await request('/api/session',{method:'POST',body:{identifier:webOwnerUser.email,password,remember:false}});assert.equal(ephemeral.status,200);
+      const ephemeralHeader=ephemeral.headers.getSetCookie().find(value=>value.startsWith('__Host-gym_session='));assert.ok(ephemeralHeader);assert.equal(/expires=|max-age=/i.test(ephemeralHeader),false);assert.match(ephemeralHeader,/HttpOnly/i);
+      const persistent=await request('/api/session',{method:'POST',body:{identifier:webOwnerUser.email,password,remember:true}});assert.equal(persistent.status,200);assert.match(persistent.headers.getSetCookie().find(value=>value.startsWith('__Host-gym_session=')),/expires=/i);
+      assert.equal((await request('/api/session',{method:'POST',body:{identifier:webOwnerUser.email,password,remember:'false'}})).status,400);
       // Native bridge is Bearer-only and self-registered owners remain unprivileged until review.
       assert.equal((await request('/api/mobile/me',{cookie})).status,401);
       const nativeOwnerBody={displayName:'Synthetic Native Owner',email:`native-owner-${id}@example.test`,phone:'01500000008',password,gymName:'Synthetic Native Application',description:'Synthetic mobile application',governorate:'Menofia',city:'Synthetic City',address:'Synthetic application address'};
@@ -1659,13 +1669,31 @@ test(
           const publicContext=await browser.newContext({ignoreHTTPSErrors:true});
           const publicPage=await publicContext.newPage();
           await publicPage.goto(origin);
-          await expect(publicPage.getByRole('heading',{name:'أهلًا بيك',exact:true})).toBeVisible();
+          await expect(publicPage.getByRole('heading',{name:'أهلًا بيك من جديد',exact:true})).toBeVisible();
           await publicPage.evaluate(()=>document.fonts.ready);
           for(const width of [320,768,1440]) {
             await publicPage.setViewportSize({width,height:1000});
             await expect(publicPage.getByRole('button',{name:'تسجيل الدخول',exact:true})).toBeVisible();
             assert.equal(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'login must fit every viewport');
           }
+          await publicPage.setViewportSize({width:320,height:900});
+          await publicPage.getByRole('button',{name:'English',exact:true}).click();
+          await expect(publicPage.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
+          await publicPage.getByLabel('Email or mobile number',{exact:true}).fill(webOwnerUser.email);
+          await publicPage.getByRole('button',{name:/Google/}).click();
+          await expect(publicPage.getByRole('status')).toContainText('coming soon');
+          await expect(publicPage.getByLabel('Email or mobile number',{exact:true})).toHaveValue(webOwnerUser.email);
+          const googleMark=publicPage.locator('.web-auth-social img');await expect(googleMark).toBeVisible();assert.equal(await googleMark.evaluate(img=>img.complete&&img.naturalWidth>0),true);
+          await publicPage.getByRole('button',{name:'Sign up',exact:true}).click();
+          await publicPage.getByRole('button',{name:/Gym owner/}).click();
+          await expect(publicPage.getByLabel('Gym name',{exact:true})).toBeVisible();
+          assert.equal(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);
+          await publicPage.reload();await expect(publicPage.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
+          await publicPage.getByLabel('Email or mobile number',{exact:true}).fill(webOwnerUser.email);
+          await publicPage.getByLabel('Password',{exact:true}).fill(password);
+          await expect(publicPage.getByRole('checkbox',{name:'Remember me'})).not.toBeChecked();
+          await publicPage.getByRole('button',{name:'Log in',exact:true}).last().click();
+          await expect(publicPage.getByRole('heading',{name:'طلب انضمامك',exact:true})).toBeVisible();
           await publicContext.close();
           const context=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const separator=cookie.indexOf('=');
