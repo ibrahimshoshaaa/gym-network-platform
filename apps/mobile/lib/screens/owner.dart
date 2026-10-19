@@ -17,13 +17,14 @@ String reportRange() {
 class OwnerHome extends StatelessWidget {
   final ApiClient api;
   final Json gym;
-  final VoidCallback showBranches, showMoney;
+  final VoidCallback showBranches, showMoney, showOperations;
   const OwnerHome({
     super.key,
     required this.api,
     required this.gym,
     required this.showBranches,
     required this.showMoney,
+    required this.showOperations,
   });
   @override
   Widget build(BuildContext context) => DataView(
@@ -154,6 +155,9 @@ class OwnerHome extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 16),
+          ActionButton('تسجيل زيارة وتشغيل الفروع', icon: Icons.qr_code_scanner_rounded,
+            onPressed: showOperations),
           const SectionTitle('شغلك تحت عينك'),
           Row(
             children: [
@@ -1030,3 +1034,4 @@ class OwnerReport extends StatelessWidget {
     ),
   );
 }
+

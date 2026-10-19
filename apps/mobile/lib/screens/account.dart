@@ -36,6 +36,9 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
             const SizedBox(height: 14),
+            Text({'TRAINEE': 'متدرب', 'GYM_OWNER': 'صاحب جيم',
+              'BRANCH_MANAGER': 'مدير فرع', 'CASHIER': 'كاشير'}[widget.api.user!['role']] ?? 'حساب GymBank',
+              style: const TextStyle(color: green, fontWeight: FontWeight.w700)),
             Text(
               '${widget.api.user!['displayName']}',
               style: Theme.of(context).textTheme.titleLarge,
@@ -68,7 +71,7 @@ class _AccountScreenState extends State<AccountScreen> {
               Icons.lock_outline_rounded,
               () => open(context, PasswordScreen(api: widget.api)),
             ),
-            _item(
+            if (['TRAINEE', 'GYM_OWNER'].contains(widget.api.user!['role'])) _item(
               'طلبات الشحن',
               Icons.receipt_long_rounded,
               () => open(context, TopupHistory(api: widget.api)),
@@ -568,3 +571,4 @@ class _TicketChatState extends State<TicketChat> {
     ),
   );
 }
+

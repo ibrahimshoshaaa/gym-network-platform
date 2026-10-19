@@ -10,6 +10,7 @@ import 'screens/directory.dart';
 import 'screens/owner.dart';
 import 'screens/money.dart';
 import 'screens/account.dart';
+import 'screens/operations.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -162,7 +163,8 @@ class _SessionGateState extends State<SessionGate> {
         application: application!,
         refresh: load,
       );
-    if (role == 'TRAINEE' || role == 'GYM_OWNER' && gyms.isNotEmpty)
+    if (role == 'TRAINEE' || role == 'GYM_OWNER' && gyms.isNotEmpty ||
+        role == 'BRANCH_MANAGER' || role == 'CASHIER')
       return NativeShell(api: widget.api, gyms: gyms);
     return Screen(
       title: 'GymBank',
@@ -172,7 +174,7 @@ class _SessionGateState extends State<SessionGate> {
           const EmptyState(
             'مساحة الإدارة على الويب',
             detail:
-                'التطبيق مخصص حاليًا للمتدرب وصاحب الجيم. تقدر تكمل مهام الدور ده من لوحة الويب.',
+                'إدارة المنصة متاحة من لوحة الويب. لو حسابك تابع لجيم، راجع تفعيل الجيم وتعيينات الفروع.',
           ),
           const SizedBox(height: 20),
           ActionButton(
@@ -205,6 +207,7 @@ class _NativeShellState extends State<NativeShell> {
   bool retrying = false;
   Object? error;
   bool get owner => widget.api.user?['role'] == 'GYM_OWNER';
+  bool get staff => ['BRANCH_MANAGER', 'CASHIER'].contains(widget.api.user?['role']);
   @override
   Widget build(BuildContext context) {
     final gym = owner ? widget.gyms[gymIndex] : null;
@@ -212,10 +215,14 @@ class _NativeShellState extends State<NativeShell> {
         ? const [
             (Icons.dashboard_outlined, 'الرئيسية'),
             (Icons.storefront_outlined, 'الفروع'),
+            (Icons.qr_code_scanner_rounded, 'التشغيل'),
             (Icons.payments_outlined, 'مستحقاتي'),
             (Icons.person_outline_rounded, 'حسابي'),
           ]
-        : const [
+        : staff ? const [
+            (Icons.dashboard_outlined, 'شغلي'),
+            (Icons.person_outline_rounded, 'حسابي'),
+          ] : const [
             (Icons.home_outlined, 'الرئيسية'),
             (Icons.near_me_outlined, 'الجيمات'),
             (Icons.qr_code_2_rounded, 'رمز الدخول'),
@@ -229,12 +236,16 @@ class _NativeShellState extends State<NativeShell> {
           api: widget.api,
           gym: gym!,
           showBranches: () => setState(() => index = 1),
-          showMoney: () => setState(() => index = 2),
+          showMoney: () => setState(() => index = 3),
+          showOperations: () => setState(() => index = 2),
         ),
         1 => BranchesScreen(api: widget.api, gym: gym!),
-        2 => MoneyScreen(api: widget.api, gym: gym!),
+        2 => OperationsHome(api: widget.api, gymId: '${gym!['id']}'),
+        3 => MoneyScreen(api: widget.api, gym: gym!),
         _ => AccountScreen(api: widget.api),
       };
+    } else if (staff) {
+      content = index == 0 ? OperationsHome(api: widget.api) : AccountScreen(api: widget.api);
     } else {
       content = switch (index) {
         0 => TraineeHome(
@@ -360,3 +371,4 @@ class _NativeShellState extends State<NativeShell> {
     );
   }
 }
+
