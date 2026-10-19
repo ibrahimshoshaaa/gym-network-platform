@@ -23,6 +23,44 @@ http.Response response(String body, int status) => http.Response(
 );
 void main() {
   testWidgets(
+    'all social methods fit the initial viewport in both auth modes and languages',
+    (t) async {
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.resetPhysicalSize);
+      addTearDown(t.view.resetDevicePixelRatio);
+      for (final size in [const Size(320, 640), const Size(393, 700)]) {
+        t.view.physicalSize = size;
+        for (final language in ['ar', 'en']) {
+          await t.pumpWidget(const SizedBox());
+          final api = fake((_) async => response('{}', 200));
+          await api.storage.write('auth.language', language);
+          await t.pumpWidget(GymNetworkApp(api: api));
+          await t.pumpAndSettle();
+          for (final signup in [false, true]) {
+            if (signup) {
+              await t.tap(find.byKey(const ValueKey('auth.signup.tab')));
+              await t.pumpAndSettle();
+            }
+            for (final provider in ['Google', 'Apple']) {
+              final bounds = t.getRect(
+                find.byKey(ValueKey('auth.social.$provider')),
+              );
+              expect(bounds.top, greaterThanOrEqualTo(0));
+              expect(
+                bounds.bottom,
+                lessThanOrEqualTo(size.height),
+                reason:
+                    '$provider must not need scrolling: $language / $signup / $size',
+              );
+            }
+            expect(t.takeException(), isNull);
+          }
+        }
+      }
+    },
+  );
+
+  testWidgets(
     'offline startup retry restores saved financial command before allowing another action',
     (t) async {
       final store = MemoryStore();
