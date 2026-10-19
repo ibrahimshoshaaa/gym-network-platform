@@ -104,6 +104,7 @@ class ApiClient extends ChangeNotifier {
   Json? user;
   Json? pending;
   bool restored = false;
+  bool _persistSession = true;
   bool _mutationRunning = false;
   ApiClient({
     http.Client? transport,
@@ -216,14 +217,24 @@ class ApiClient extends ChangeNotifier {
     pending = raw == null ? null : Map<String, dynamic>.from(jsonDecode(raw));
   }
 
-  Future<void> authenticate(String path, Json body) async {
+  Future<void> authenticate(
+    String path,
+    Json body, {
+    bool? rememberSession,
+  }) async {
     final r = await request(
       path,
       method: 'POST',
       body: body,
       auth: path == 'auth/password/change',
     );
-    await storage.write('session', r['accessToken']);
+    final persist = rememberSession ?? _persistSession;
+    if (persist) {
+      await storage.write('session', r['accessToken']);
+    } else {
+      await storage.remove('session');
+    }
+    _persistSession = persist;
     token = r['accessToken'];
     user = Map<String, dynamic>.from(r['user']);
     await _readPending();
