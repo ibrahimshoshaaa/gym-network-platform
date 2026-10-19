@@ -446,4 +446,44 @@ void main() {
     }
   });
 
+  testWidgets('owner stock and sale remain usable while reports are delayed',(t)async{
+    t.view.physicalSize=const Size(320,740);
+    t.view.devicePixelRatio=1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final delayed=Completer<http.Response>();
+    final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
+      if(r.url.path.endsWith('/point-wallet'))return reply({'total':'500','available':'450'});
+      return delayed.future;
+    }))..token='synthetic'..user={'id':'owner','role':'GYM_OWNER'};
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:Directionality(
+      textDirection:TextDirection.rtl,child:Scaffold(body:OwnerHome(
+        api:api,gym:gym,showBranches:(){},showMoney:(){},showOperations:(){},
+      )),
+    )));
+    await t.pump();
+    await t.pump(const Duration(milliseconds:100));
+    expect(find.text('450 نقطة'),findsOneWidget);
+    expect(find.text('بيع نقاط لمتدرب').hitTestable(),findsOneWidget);
+    delayed.complete(reply({'currentBalances':[],'visits':{'count':'12'},'sales':{'points':'100'}}));
+    await t.pumpAndSettle();
+    expect(t.takeException(),isNull);
+  });
+  testWidgets('report errors preserve owner stock and do not invent money balances',(t)async{
+    final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
+      if(r.url.path.endsWith('/point-wallet'))return reply({'total':'500','available':'450'});
+      return http.Response('{"code":"SERVICE_UNAVAILABLE"}',503);
+    }))..token='synthetic'..user={'id':'owner','role':'GYM_OWNER'};
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:Directionality(
+      textDirection:TextDirection.rtl,child:Scaffold(body:OwnerHome(
+        api:api,gym:gym,showBranches:(){},showMoney:(){},showOperations:(){},
+      )),
+    )));
+    await t.pumpAndSettle();
+    expect(find.text('450 نقطة'),findsOneWidget);
+    expect(find.text('0 ج.م'),findsNothing);
+    expect(find.text('ملخص آخر ٣٠ يوم'),findsNothing);
+    expect(t.takeException(),isNull);
+  });
+
 }
