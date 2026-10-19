@@ -1037,6 +1037,13 @@ test(
       const acceptedWithdrawal = await acceptWithdrawal.json();
       assert.ok(acceptedWithdrawal.acceptedAt);
       assert.ok(acceptedWithdrawal.dueAt);
+      const adminSummaryResponse = await request("/api/backend/home-summary", {cookie});
+      assert.equal(adminSummaryResponse.status, 200);
+      const adminSummary = await adminSummaryResponse.json();
+      assert.equal(
+        adminSummary.cards.find(card=>card.label==="تحويلات تنتظر التنفيذ")?.value,
+        String(await db.withdrawalRequest.count({where:{status:"APPROVED"}})),
+      );
       const transferProof = await db.receiptEvidence.create({
         data: {
           ownerUserId: admin.id,
