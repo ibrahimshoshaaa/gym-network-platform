@@ -4,7 +4,7 @@ import "@fontsource-variable/noto-sans-arabic";
 import "./globals.css";
 import "./identity.css";
 export const metadata: Metadata = {
-  title: "Gym Network | تمرينك بطريقتك",
+  title: "GymBank | رصيد واحد، كل الجيمات",
   description: "شبكة جيمات، محفظة نقاط واحدة، وتجربة تمرين أسهل.",
   robots: { index: false, follow: false },
 };
@@ -19,3 +19,4 @@ export default function RootLayout({
     </html>
   );
 }
+

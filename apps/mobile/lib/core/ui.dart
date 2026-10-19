@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 
 import 'api.dart';
 
-const ink = Color(0xff122f36),
-    green = Color(0xff087e6e),
-    lime = Color(0xffdcf68a),
-    canvas = Color(0xfff3f6f1),
+const ink = Color(0xff101719),
+    green = Color(0xff006b52),
+    lime = Color(0xff00e6a8),
+    canvas = Color(0xfff2f4f7),
     muted = Color(0xff71837e);
 ThemeData appTheme() => ThemeData(
   useMaterial3: true,
@@ -79,31 +79,12 @@ class Brand extends StatelessWidget {
   final bool large;
   const Brand({super.key, this.large = false});
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: large ? 56 : 40,
-        height: large ? 56 : 40,
-        decoration: BoxDecoration(
-          color: ink,
-          borderRadius: BorderRadius.circular(large ? 19 : 14),
-        ),
-        child: Icon(Icons.hub_rounded, color: lime, size: large ? 32 : 23),
-      ),
-      const SizedBox(width: 11),
-      const Text(
-        'GYM\nNETWORK',
-        textDirection: TextDirection.ltr,
-        style: TextStyle(
-          fontWeight: FontWeight.w900,
-          height: 1.1,
-          letterSpacing: 1.3,
-          color: ink,
-          fontSize: 13,
-        ),
-      ),
-    ],
+  Widget build(BuildContext context) => Image.asset(
+    'assets/brand/gymbank-wordmark.png',
+    width: large ? 224 : 152,
+    height: large ? 56 : 38,
+    fit: BoxFit.contain,
+    semanticLabel: 'GymBank',
   );
 }
 

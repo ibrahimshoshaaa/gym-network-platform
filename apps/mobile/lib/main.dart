@@ -75,7 +75,7 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     navigatorKey: navigator,
-    title: 'Gym Network',
+    title: 'GymBank',
     debugShowCheckedModeBanner: false,
     theme: appTheme(),
     locale: const Locale('ar'),
@@ -165,7 +165,7 @@ class _SessionGateState extends State<SessionGate> {
     if (role == 'TRAINEE' || role == 'GYM_OWNER' && gyms.isNotEmpty)
       return NativeShell(api: widget.api, gyms: gyms);
     return Screen(
-      title: 'Gym Network',
+      title: 'GymBank',
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
