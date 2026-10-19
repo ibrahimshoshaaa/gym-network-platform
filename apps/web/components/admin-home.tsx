@@ -57,9 +57,9 @@ export function AdminOverview({data,stale=false,loading=false,onNavigate}:{data:
    {active.length?<div className="admin-queue-list">{active.map(queue=><button key={queue.label} onClick={()=>onNavigate(queue.destination)}><span className="admin-queue-count">{queue.count}</span><span><strong>{queue.title}</strong><small>{queue.description}</small></span><ArrowLeft size={18}/></button>)}</div>:!stale&&complete?<div className="admin-inbox-clear"><CheckCircle2 size={26}/><strong>مفيش طلبات منتظرة حاليًا</strong><p>أي طلب جديد هيظهر هنا بعد التحديث.</p></div>:<p className="muted">افتح كل الطلبات لمراجعة الحالة؛ الأعداد غير مكتملة.</p>}
    <small className="admin-updated">آخر تحميل: {date(data.asOf)}</small>
   </section>
-  <section className="admin-glance" aria-label="ملخص المنصة">{[
+  <section className="admin-glance" aria-label="ملخص المنصة">{([
    ["جيمات نشطة","الجيمات النشطة","gyms"],["فروع نشطة","الفروع النشطة","gyms"],["متدربون نشطون","المتدربون","users"],
-  ].map(([label,title,destination])=><button key={label} onClick={()=>onNavigate(destination as AdminDestination)}><strong>{count(label)??"—"}</strong><span>{title}</span></button>)}</section>
+  ] as const).map(([label,title,destination])=><button key={label} onClick={()=>onNavigate(destination as AdminDestination)}><strong>{count(label)??"—"}</strong><span>{title}</span></button>)}</section>
  </>;
 }
 
