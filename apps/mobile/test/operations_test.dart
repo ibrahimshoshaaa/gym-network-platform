@@ -133,6 +133,7 @@ void main() {
     await t.tap(find.text('بحث عن المتدرب'));
     await t.pumpAndSettle();
     await t.enterText(find.byType(TextField).first, '10');
+    await t.ensureVisible(find.text('مراجعة الشحن'));
     await t.tap(find.text('مراجعة الشحن'));
     await t.pumpAndSettle();
     expect(posted, isNull);
@@ -177,6 +178,7 @@ void main() {
       await t.pumpWidget(page(RecordVisit(api: api, branch: branch)));
       final token = List.filled(43, 'a').join();
       await t.enterText(find.byType(TextField).first, token);
+      await t.ensureVisible(find.text('مراجعة الزيارة'));
       await t.tap(find.text('مراجعة الزيارة'));
       await t.pumpAndSettle();
       expect(posted, isNull);
@@ -197,4 +199,20 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
+
+  testWidgets('operation scope stays readable on narrow screens with large text', (t) async {
+    t.view.physicalSize = const Size(320, 900);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    await t.pumpWidget(page(Scaffold(body: MediaQuery(
+      data: const MediaQueryData(textScaler: TextScaler.linear(1.8)),
+      child: const OperationContext(
+        title: 'فرع شبين الكوم الرئيسي - جيم التجربة',
+        detail: 'راجع المتدرب ونقاط الزيارة قبل التأكيد',
+      ),
+    ))));
+    expect(find.text('فرع شبين الكوم الرئيسي - جيم التجربة'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
 }

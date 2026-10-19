@@ -173,7 +173,7 @@ class _SendPointsState extends State<SendPoints> {
   }
 
   Future<void> advance() async {
-    if (busy) return;
+    if (busy || widget.api.pending != null) return;
     FocusScope.of(context).unfocus();
     setState(() {
       busy = true;
@@ -221,10 +221,11 @@ class _SendPointsState extends State<SendPoints> {
 
   @override
   Widget build(BuildContext context) => Screen(
-    title: 'إرسال نقاط',
+    title: 'بيع نقاط لمتدرب',
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        OperationContext(title:'${widget.gym['name']}',detail:'من رصيد الجيم، بعد تأكيد التحصيل'),
         if (result != null) ...[
           const EmptyState(
             'تم إرسال النقاط',
@@ -346,7 +347,7 @@ class _SendPointsState extends State<SendPoints> {
               ),
               CheckboxListTile(
                 value: checked,
-                onChanged: busy
+                onChanged: busy || widget.api.pending != null
                     ? null
                     : (v) => setState(() => checked = v ?? false),
                 contentPadding: EdgeInsets.zero,
