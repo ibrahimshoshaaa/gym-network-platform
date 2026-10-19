@@ -1,7 +1,7 @@
 "use client";
 import { NetworkMark, PlatformHero } from "./platform-identity";
 import { useState } from "react";
-import { Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound } from "lucide-react";
+import { Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound, MoreHorizontal } from "lucide-react";
 import type { Identity } from "../lib/client";
 import { BranchDirectory } from "./branch-directory";
 import { Purchases } from "./purchases";
@@ -33,11 +33,11 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
       <header className="trainee-header">
         <div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">BANK</span></span></div>
         <AccountTools user={user} onNavigate={next=>{if(next==="support"||sections.some(s=>s.id===next))navigate(next as Section);}}/>
-        <div className="trainee-account">
+        <details className="trainee-account-menu"><summary aria-label="خيارات الحساب"><MoreHorizontal size={22} /></summary><div className="trainee-account">
           <span><strong>{user.displayName}</strong><small>حساب متدرب</small></span>
-          <button className="icon-button" aria-label="تغيير كلمة المرور" onClick={onPassword}><KeyRound size={20} /></button>
-          <button className="icon-button" aria-label="تسجيل الخروج" disabled={loggingOut} onClick={() => void logout()}>{loggingOut ? <Busy /> : <LogOut size={20} />}</button>
-        </div>
+          <button className="icon-button" aria-label="تغيير كلمة المرور" onClick={onPassword}><KeyRound size={20} /><span>تغيير كلمة المرور</span></button>
+          <button className="icon-button" aria-label="تسجيل الخروج" disabled={loggingOut} onClick={() => void logout()}>{loggingOut ? <Busy /> : <LogOut size={20} />}<span>تسجيل الخروج</span></button>
+        </div></details>
       </header>
       <main className="trainee-content">
         <PlatformHero eyebrow={section === "wallet" ? "جاهز لتمرينتك؟" : current.label} title={section === "wallet" ? `أهلًا يا ${user.displayName.split(" ")[0]}` : current.label}>{current.title}</PlatformHero>
