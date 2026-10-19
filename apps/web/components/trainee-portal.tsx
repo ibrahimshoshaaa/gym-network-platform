@@ -1,7 +1,7 @@
 "use client";
 import { NetworkMark, PlatformHero } from "./platform-identity";
 import { useState } from "react";
-import { Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound, ArrowLeft } from "lucide-react";
+import { Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound } from "lucide-react";
 import type { Identity } from "../lib/client";
 import { BranchDirectory } from "./branch-directory";
 import { Purchases } from "./purchases";
@@ -47,16 +47,18 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
         </nav>
         <div key={section}>
           {section === "support" ? <Support/> : section === "wallet" ? <>
-            <div className="trainee-quick-actions">
-              <button className="primary" onClick={() => navigate("topup")}><PlusCircle size={19} />اشحن محفظتك<ArrowLeft size={17} /></button>
-              <button className="secondary" onClick={() => navigate("qr")}><QrCode size={19} />افتح رمز الدخول</button>
-            </div>
             <TraineeWallet revision={0} view="wallet">
+             <div className="trainee-wallet-next">
+              <div className="trainee-quick-actions">
+                <button className="primary" onClick={() => navigate("qr")}><QrCode size={21} />افتح رمز الدخول</button>
+                <button className="secondary" onClick={() => navigate("topup")}><PlusCircle size={21} />اشحن محفظتك</button>
+              </div>
               <section className="card trainee-start">
                 <span className="eyebrow">تمرينتك الجاية</span><h2>هتتمرّن فين النهارده؟</h2><p className="muted">شوف الجيمات القريبة وسعر الزيارة قبل ما تتحرك.</p><button className="primary full" onClick={() => navigate("gyms")}>اختار جيم قريب<MapPin size={18}/></button><details className="getting-started"><summary>أول مرة تستخدم المنصة؟</summary>
-                <ol><li><strong>اشحن نقاطك</strong><p>اختار الكمية، حوّل المبلغ وارفع الإيصال. الرصيد يظهر بعد موافقة الإدارة.</p></li><li><strong>اختار جيمك</strong><p>شوف الفروع المشاركة وسعر الزيارة ومكان كل فرع.</p></li><li><strong>اعرض رمز الدخول</strong><p>عند وصولك، الكاشير يؤكد الزيارة ويخصم نقاطها من محفظتك.</p></li></ol>
+                <ol><li><strong>اشحن نقاطك</strong><p>اختار الكمية، حوّل المبلغ وارفع الإيصال. الرصيد يظهر بعد موافقة الإدارة.</p></li><li><strong>اختار جيمك</strong><p>شوف الفروع المشاركة وسعر الزيارة ومكان كل فرع.</p></li><li><strong>اعرض رمز الدخول</strong><p>عند وصولك، مسؤول الفرع يؤكد حضورك وتتخصم نقاط الزيارة من محفظتك.</p></li></ol>
                 </details>
               </section>
+             </div>
             </TraineeWallet>
           </> : section === "topup" ? <Purchases trainee onWallet={() => navigate("wallet")} /> : section === "gyms" ? <BranchDirectory onShowQr={() => navigate("qr")} /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
         </div>
@@ -65,4 +67,5 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
     </div>
   );
 }
+
 

@@ -13,8 +13,8 @@ export async function requireAdmin(tx: Prisma.TransactionClient, userId: string)
   return actor;
 }
 
-// Ownership/assignments are authoritative. A global role label never grants
-// access to another tenant, or cashier permissions to an owner/manager.
+// Ownership/assignments are authoritative; global role labels never grant
+// access to another gym or branch.
 export async function requireBranchAccess(
   tx: Prisma.TransactionClient, userId: string, branchId: string,
   permission: 'TRANSFER_STOCK' | 'SELL_POINTS' | 'CANCEL_VISIT',
@@ -22,15 +22,13 @@ export async function requireBranchAccess(
   await requireActor(tx, userId);
   const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: { include: { owner: { select: { isActive: true } } } } } });
   if (!branch || branch.status !== 'ACTIVE' || branch.gym.status !== 'ACTIVE' || !branch.gym.ownerAcceptedAt || !branch.gym.owner.isActive) throw new DomainError('BRANCH_ACCESS_DENIED');
-  if (permission === 'TRANSFER_STOCK') {
-    if (branch.gym.ownerId !== userId || !branch.gym.ownerAcceptedAt) throw new DomainError('BRANCH_ACCESS_DENIED');
-  } else {
-    const role = permission === 'SELL_POINTS' ? 'CASHIER' : 'BRANCH_MANAGER';
-    const membership = await tx.staffAssignment.findUnique({
-      where: { userId_branchId_role: { userId, branchId, role } },
-    });
-    if (!membership?.active) throw new DomainError('BRANCH_ACCESS_DENIED');
-  }
+  if (branch.gym.ownerId === userId) return branch;
+  if (permission === 'TRANSFER_STOCK') throw new DomainError('BRANCH_ACCESS_DENIED');
+  const membership = await tx.staffAssignment.findFirst({
+    where: { userId, branchId, active: true,
+      role: { in: permission === 'SELL_POINTS' ? ['CASHIER', 'BRANCH_MANAGER'] : ['BRANCH_MANAGER'] } },
+  });
+  if (!membership) throw new DomainError('BRANCH_ACCESS_DENIED');
   return branch;
 }
 
@@ -46,3 +44,4 @@ export async function hasStaffAccess(tx: Prisma.TransactionClient, userId: strin
   return Boolean(await tx.gym.findFirst({ where: { ownerId: userId, ownerAcceptedAt: { not: null }, status: { in: ['PENDING', 'ACTIVE'] } }, select: { id: true } }) ||
     await tx.staffAssignment.findFirst({ where: { userId, active: true, branch: { gym: { status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } } }, select: { id: true } }));
 }
+

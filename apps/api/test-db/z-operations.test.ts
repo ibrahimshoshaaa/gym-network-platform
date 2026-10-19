@@ -169,6 +169,63 @@ const code = (promise: Promise<unknown>, code: string) =>
     (e: unknown) =>
       typeof e === "object" && e !== null && "code" in e && e.code === code,
   );
+for (const role of ['owner', 'manager'] as const) {
+  test(`${role} sells points and records attendance in scope without a cashier assignment`, async () => {
+    const f = await fixture(), actor = f[role];
+    const quote = await quoteSale(db, actor.id, f.branch.id, { traineeId: f.person.id, points: 10 });
+    assert.equal(quote.points, 10);
+    const sale = await sellPoints(db, actor.id, f.branch.id, randomUUID(), f.sale(10));
+    assert.equal(sale.cashierId, actor.id);
+    const qr = await f.qr();
+    await previewVisit(db, actor.id, f.branch.id, { token: qr.token });
+    const entry = await confirmVisit(db, actor.id, f.branch.id, randomUUID(), f.entry(qr.token));
+    assert.equal(entry.visit.pointsCharged, 30);
+    assert.equal((await db.visit.findUniqueOrThrow({ where: { id: entry.visit.id } })).cashierId, actor.id);
+    const session = await createSession(db, actor.id, new Date(Date.now() + 3600000));
+    const app = buildApp(db);
+    try {
+      const response = await app.inject({ method: 'GET', url: '/operations/branches', headers: { authorization: `Bearer ${session}` } });
+      assert.equal(response.statusCode, 200);
+      const branch = response.json().items.find((b: { id: string }) => b.id === f.branch.id);
+      assert.equal(branch.gymId, f.gym.id);
+      assert.equal(branch.canSell, true);
+      assert.equal(branch.canCancel, true);
+    } finally { await app.close(); }
+    const other = await fixture();
+    await code(quoteSale(db, actor.id, other.branch.id, { traineeId: other.person.id, points: 1 }), 'BRANCH_ACCESS_DENIED');
+  });
+}
+test('owner cancellation returns original points and records the real actor', async () => {
+  const f = await fixture(), qr = await f.qr();
+  const entry = await confirmVisit(db, f.owner.id, f.branch.id, randomUUID(), f.entry(qr.token));
+  await cancelVisit(db, f.owner.id, f.branch.id, entry.visit.id, randomUUID(), { reason: 'Synthetic owner cancelled incorrect attendance' });
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } })).balance, 80);
+  assert.equal((await db.visit.findUniqueOrThrow({ where: { id: entry.visit.id } })).cancelledById, f.owner.id);
+});
+test('owner staff list filters the selected branch before pagination and does not expose another gym', async () => {
+  const f = await fixture(), other = await fixture();
+  const second = await db.branch.create({ data: { gymId: f.gym.id, name: 'Synthetic second staff branch', status: 'ACTIVE', visitPricePoints: 30, sessionMinutes: 120 } });
+  await db.staffAssignment.create({ data: { userId: f.manager.id, branchId: second.id, role: 'BRANCH_MANAGER' } });
+  const ownerToken = await createSession(db, f.owner.id, new Date(Date.now() + 3600000));
+  const cashierToken = await createSession(db, f.cashier.id, new Date(Date.now() + 3600000));
+  const app = buildApp(db);
+  try {
+    const path = `/gyms/${f.gym.id}/staff`;
+    const get = (query: string, token = ownerToken) => app.inject({ method: 'GET', url: `${path}?${query}`, headers: { authorization: `Bearer ${token}` } });
+    const first = await get(`branchId=${f.branch.id}&limit=1`);
+    assert.equal(first.statusCode, 200);
+    const page = first.json();
+    assert.equal(page.items.length, 1);
+    assert.equal(page.items[0].branchId, f.branch.id);
+    assert.ok(page.nextCursor);
+    const next = (await get(`branchId=${f.branch.id}&limit=1&cursor=${page.nextCursor}`)).json();
+    assert.equal(next.items[0].branchId, f.branch.id);
+    assert.notEqual(next.items[0].id, page.items[0].id);
+    assert.equal((await get(`branchId=${second.id}`)).json().items.length, 1);
+    assert.deepEqual((await get(`branchId=${other.branch.id}`)).json().items, []);
+    assert.equal((await get(`branchId=${f.branch.id}`, cashierToken)).statusCode, 403);
+  } finally { await app.close(); }
+});
 test("cashier sale conserves points, renews expiry and replays once without posting money", async () => {
   const f = await fixture(),
     key = randomUUID(),
@@ -249,7 +306,7 @@ test("two cashiers cannot oversell stock; stale pricing and unconfirmed money is
 });
 test("cashier assignment, trainee activity and expired positive wallets are rechecked", async () => {
   const f = await fixture();
-  for (const user of [f.owner, f.admin, f.manager])
+  for (const user of [f.admin])
     await code(
       quoteSale(db, user.id, f.branch.id, {
         traineeId: f.person.id,
@@ -639,10 +696,10 @@ test("manager cancellation reverses both exact original legs once under concurre
   );
 });
 
-test("direct cancellation requires assigned active manager in the exact branch, never implicit owner/admin/cashier", async () => {
+test("direct cancellation requires owner or assigned active manager in the exact branch, never admin/cashier", async () => {
   const f = await visited(),
     other = await fixture();
-  for (const actor of [f.cashier, f.owner, f.admin, f.person, other.manager])
+  for (const actor of [f.cashier, other.owner, f.admin, f.person, other.manager])
     await code(
       cancelVisit(
         db,
@@ -1282,3 +1339,4 @@ test('a dispute cannot exceed visit entitlement or silently use later earnings a
  await requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{amountPiasters:'1',paymentMethod:'WALLET',destinationAccount:'+201000000001',destinationName:'Synthetic owner'});
  await code(createHold(db,f.admin.id,{visitId:v.visit.id,amountPiasters:'1',reason:'Synthetic intervening payout requires review',key:randomUUID(),confirmed:true}),'SETTLEMENT_REVIEW_REQUIRED');
 });
+

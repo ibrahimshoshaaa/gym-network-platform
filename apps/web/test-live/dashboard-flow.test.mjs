@@ -764,7 +764,7 @@ test(
         (b) => b.id === newBranch.branch.id,
       );
       assert.equal(managerBranch.canCancel, true);
-      assert.equal(managerBranch.canSell, false);
+      assert.equal(managerBranch.canSell, true);
       const cancelPath = `/api/backend/operations/branches/${newBranch.branch.id}/visits/${entered.visit.id}/cancel`;
       const cancellationKey = randomUUID(),
         cancelBody = { reason: "Synthetic duplicate admission cancelled" };

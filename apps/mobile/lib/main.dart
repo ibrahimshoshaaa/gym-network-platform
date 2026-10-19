@@ -10,6 +10,7 @@ import 'screens/directory.dart';
 import 'screens/owner.dart';
 import 'screens/money.dart';
 import 'screens/account.dart';
+import 'screens/operations.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -112,6 +113,7 @@ class _SessionGateState extends State<SessionGate> {
   Object? error;
   Json? application;
   List<Json> gyms = [];
+  bool assignedWork = false;
   @override
   void initState() {
     super.initState();
@@ -133,6 +135,16 @@ class _SessionGateState extends State<SessionGate> {
             ? null
             : Map<String, dynamic>.from(d[0]['application']);
         gyms = rows(d[1]);
+      } else if ([
+        'TRAINEE',
+        'CASHIER',
+        'BRANCH_MANAGER',
+      ].contains(widget.api.user!['role'])) {
+        final access = await widget.api.request('me/access');
+        gyms = rows({'items': access['ownedGyms']});
+        assignedWork =
+            (access['assignments'] as List? ?? []).isNotEmpty ||
+            gyms.isNotEmpty;
       }
     } catch (e) {
       error = e;
@@ -162,8 +174,15 @@ class _SessionGateState extends State<SessionGate> {
         application: application!,
         refresh: load,
       );
-    if (role == 'TRAINEE' || role == 'GYM_OWNER' && gyms.isNotEmpty)
-      return NativeShell(api: widget.api, gyms: gyms);
+    if (role == 'TRAINEE' ||
+        role == 'GYM_OWNER' && gyms.isNotEmpty ||
+        role == 'BRANCH_MANAGER' ||
+        role == 'CASHIER')
+      return NativeShell(
+        api: widget.api,
+        gyms: gyms,
+        assignedWork: assignedWork,
+      );
     return Screen(
       title: 'GymBank',
       child: ListView(
@@ -172,7 +191,7 @@ class _SessionGateState extends State<SessionGate> {
           const EmptyState(
             'مساحة الإدارة على الويب',
             detail:
-                'التطبيق مخصص حاليًا للمتدرب وصاحب الجيم. تقدر تكمل مهام الدور ده من لوحة الويب.',
+                'إدارة المنصة متاحة من لوحة الويب. لو حسابك تابع لجيم، راجع تفعيل الجيم وتعيينات الفروع.',
           ),
           const SizedBox(height: 20),
           ActionButton(
@@ -195,7 +214,13 @@ class _SessionGateState extends State<SessionGate> {
 class NativeShell extends StatefulWidget {
   final ApiClient api;
   final List<Json> gyms;
-  const NativeShell({super.key, required this.api, required this.gyms});
+  final bool assignedWork;
+  const NativeShell({
+    super.key,
+    required this.api,
+    required this.gyms,
+    this.assignedWork = false,
+  });
   @override
   State<NativeShell> createState() => _NativeShellState();
 }
@@ -204,7 +229,15 @@ class _NativeShellState extends State<NativeShell> {
   int index = 0, gymIndex = 0, version = 0;
   bool retrying = false;
   Object? error;
-  bool get owner => widget.api.user?['role'] == 'GYM_OWNER';
+  bool workMode = false;
+  @override
+  void initState() {
+    super.initState();
+    workMode = widget.api.user?['role'] != 'TRAINEE';
+  }
+
+  bool get owner => workMode && widget.gyms.isNotEmpty;
+  bool get staff => workMode && !owner;
   @override
   Widget build(BuildContext context) {
     final gym = owner ? widget.gyms[gymIndex] : null;
@@ -212,7 +245,13 @@ class _NativeShellState extends State<NativeShell> {
         ? const [
             (Icons.dashboard_outlined, 'الرئيسية'),
             (Icons.storefront_outlined, 'الفروع'),
+            (Icons.qr_code_scanner_rounded, 'التشغيل'),
             (Icons.payments_outlined, 'مستحقاتي'),
+            (Icons.person_outline_rounded, 'حسابي'),
+          ]
+        : staff
+        ? const [
+            (Icons.dashboard_outlined, 'شغلي'),
             (Icons.person_outline_rounded, 'حسابي'),
           ]
         : const [
@@ -229,12 +268,18 @@ class _NativeShellState extends State<NativeShell> {
           api: widget.api,
           gym: gym!,
           showBranches: () => setState(() => index = 1),
-          showMoney: () => setState(() => index = 2),
+          showMoney: () => setState(() => index = 3),
+          showOperations: () => setState(() => index = 2),
         ),
         1 => BranchesScreen(api: widget.api, gym: gym!),
-        2 => MoneyScreen(api: widget.api, gym: gym!),
-        _ => AccountScreen(api: widget.api),
+        2 => OperationsHome(api: widget.api, gymId: '${gym!['id']}'),
+        3 => MoneyScreen(api: widget.api, gym: gym!),
+        _ => AccountScreen(api: widget.api, workplace: true, ownerView: true),
       };
+    } else if (staff) {
+      content = index == 0
+          ? OperationsHome(api: widget.api)
+          : AccountScreen(api: widget.api, workplace: true);
     } else {
       content = switch (index) {
         0 => TraineeHome(
@@ -244,7 +289,10 @@ class _NativeShellState extends State<NativeShell> {
         ),
         1 => DirectoryScreen(api: widget.api),
         2 => QrScreen(api: widget.api),
-        3 => VisitsScreen(api: widget.api),
+        3 => VisitsScreen(
+          api: widget.api,
+          showQr: () => setState(() => index = 2),
+        ),
         _ => AccountScreen(api: widget.api),
       };
     }
@@ -252,39 +300,64 @@ class _NativeShellState extends State<NativeShell> {
       appBar: AppBar(
         title: const Brand(),
         actions: [
-          if (owner && widget.gyms.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(left: 14),
-              child: DropdownButton<int>(
-                value: gymIndex,
-                underline: const SizedBox.shrink(),
-                items: [
-                  for (var i = 0; i < widget.gyms.length; i++)
-                    DropdownMenuItem(
-                      value: i,
-                      child: SizedBox(
-                        width: 125,
-                        child: Text(
-                          '${widget.gyms[i]['name']}',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ),
-                ],
-                onChanged: widget.api.pending != null
-                    ? null
-                    : (v) => setState(() {
-                        gymIndex = v!;
-                        version++;
-                      }),
-              ),
+          if (widget.api.user?['role'] == 'TRAINEE' && widget.assignedWork)
+            TextButton(
+              onPressed: widget.api.pending != null
+                  ? null
+                  : () => setState(() {
+                      workMode = !workMode;
+                      index = 0;
+                      version++;
+                    }),
+              child: Text(workMode ? 'حساب المتدرب' : 'عملي في الجيم'),
             ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
+            if (owner && widget.gyms.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.storefront_outlined,
+                      color: green,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Semantics(
+                        label: 'الجيم الحالي',
+                        child: DropdownButton<int>(
+                          value: gymIndex,
+                          isExpanded: true,
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            for (var i = 0; i < widget.gyms.length; i++)
+                              DropdownMenuItem(
+                                value: i,
+                                child: Text(
+                                  '${widget.gyms[i]['name']}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                          ],
+                          onChanged: widget.api.pending != null
+                              ? null
+                              : (v) => setState(() {
+                                  gymIndex = v!;
+                                  version++;
+                                }),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (widget.api.pending != null)
               Container(
                 width: double.infinity,

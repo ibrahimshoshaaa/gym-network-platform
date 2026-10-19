@@ -279,21 +279,37 @@ class _DataViewState extends State<DataView> {
   }
 
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
-    onRefresh: load,
-    child: loading && data == null
-        ? ListView(
-            children: const [
-              SizedBox(height: 150),
-              Center(child: CircularProgressIndicator()),
-            ],
-          )
-        : error != null
-        ? ListView(
-            padding: const EdgeInsets.all(20),
-            children: [ErrorNote(error, retry: load)],
-          )
-        : widget.builder(data, load),
+  Widget build(BuildContext context) => Stack(
+    children: [
+      RefreshIndicator(
+        onRefresh: load,
+        child: loading && data == null
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 150),
+                  Center(child: CircularProgressIndicator()),
+                ],
+              )
+            : error != null
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                children: [ErrorNote(error, retry: load)],
+              )
+            : widget.builder(data, load),
+      ),
+      if (loading && data != null)
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: LinearProgressIndicator(
+            minHeight: 3,
+            semanticsLabel: 'جاري تحديث البيانات',
+          ),
+        ),
+    ],
   );
 }
 
@@ -407,12 +423,17 @@ class PagedRecords extends StatefulWidget {
   final String path;
   final Widget Function(Json) item;
   final String empty;
+  final String emptyDetail;
+  final Widget? header, emptyAction;
   const PagedRecords({
     super.key,
     required this.api,
     required this.path,
     required this.item,
     this.empty = 'لسه مفيش عمليات',
+    this.emptyDetail = '',
+    this.header,
+    this.emptyAction,
   });
   @override
   State<PagedRecords> createState() => _PagedRecordsState();
@@ -455,10 +476,17 @@ class _PagedRecordsState extends State<PagedRecords> {
   Widget build(BuildContext context) => RefreshIndicator(
     onRefresh: () => load(),
     child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
       children: [
+        if (widget.header != null) widget.header!,
         ErrorNote(error, retry: () => load()),
-        if (items.isEmpty && !busy && error == null) EmptyState(widget.empty),
+        if (items.isEmpty && !busy && error == null)
+          EmptyState(
+            widget.empty,
+            detail: widget.emptyDetail,
+            action: widget.emptyAction,
+          ),
         ...items.map(
           (r) => Padding(
             padding: const EdgeInsets.only(bottom: 12),

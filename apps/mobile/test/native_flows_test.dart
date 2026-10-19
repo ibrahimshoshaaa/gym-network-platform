@@ -260,10 +260,18 @@ void main() {
       await t.tap(find.text('مراجعة الإرسال'));
       await t.pumpAndSettle();
       expect(find.text('12.50 ج.م'), findsOneWidget);
-      await t.ensureVisible(find.byType(CheckboxListTile));
+      await t.scrollUntilVisible(
+        find.byType(CheckboxListTile),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       await t.tap(find.byType(CheckboxListTile));
       await t.pumpAndSettle();
-      await t.ensureVisible(find.text('تأكيد الإرسال'));
+      await t.scrollUntilVisible(
+        find.text('تأكيد الإرسال'),
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
       await t.tap(find.text('تأكيد الإرسال'));
       await t.pumpAndSettle();
       expect(posted?['fundsReceived'], true);

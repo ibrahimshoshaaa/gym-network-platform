@@ -79,7 +79,7 @@ export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale"
     <>
       <div className="section-toolbar">
         <p className="muted">
-          البيع وتأكيد الزيارة متاحان للكاشير المكلّف بالفرع فقط.
+          سجّل زيارة أو اشحن متدربًا من رصيد الفرع حسب صلاحيات حسابك.
         </p>
         <button
           className="secondary compact"
@@ -98,8 +98,7 @@ export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale"
       ) : !branches.length ? (
         <section className="card">
           <Empty title="لا توجد تكليفات تشغيل نشطة">
-            اطلب من صاحب الجيم ربط حسابك بفرع نشط؛ الملكية وحدها لا تمنح صلاحية
-            الكاشير.
+            تأكد من تفعيل الجيم والفرع. لو حسابك موظف، اطلب من صاحب الجيم تعيينك على الفرع.
           </Empty>
         </section>
       ) : (
@@ -160,7 +159,7 @@ function BranchOperations({ branch, initialTask }: { branch: Branch; initialTask
           onClick={() => setTab("sale")}
         >
           <Coins size={16} />
-          بيع نقاط
+          شحن متدرب
         </button>}
         {branch.canSell && <button
           aria-pressed={tab === "visit"}
@@ -184,7 +183,7 @@ function BranchOperations({ branch, initialTask }: { branch: Branch; initialTask
       </p>
       {!branch.canSell && tab !== "history" ? (
         <section className="card">
-          <Empty title="العمليات للكاشير فقط">
+          <Empty title="حسابك لا يملك صلاحية تنفيذ العمليات في الفرع">
             يمكنك عرض سجل الفرع من تبويب السجل.
           </Empty>
         </section>
@@ -812,3 +811,4 @@ export function TraineeQr({ standalone = false }: { standalone?: boolean }) {
   );
   return standalone ? content : <TraineeWallet revision={revision}>{content}</TraineeWallet>;
 }
+

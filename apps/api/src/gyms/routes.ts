@@ -92,8 +92,11 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
   });
   app.post('/gyms/:gymId/staff-invitations', { bodyLimit: 8192 }, async (r, reply) => reply.code(201).send(await inviteStaff(db, await actorId(db, r), id(r, 'gymId'), r.body)));
   app.get('/gyms/:gymId/staff', async r => {
-    const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
-    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffAssignment.findMany({ ...args, where: { branch: { gymId } }, select: { id: true, branchId: true, role: true, active: true, branch: { select: { name: true } }, user: { select: { id: true, displayName: true, email: true, phoneE164: true } } } }), args.take); });
+    const userId = await actorId(db, r), gymId = id(r, 'gymId');
+    const query = parse(pageSchema.extend({ branchId: idSchema.optional() }), r.query);
+    const args = { take: query.limit + 1, orderBy: { id: 'asc' as const },
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}) };
+    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffAssignment.findMany({ ...args, where: { branch: { gymId }, ...(query.branchId ? { branchId: query.branchId } : {}) }, select: { id: true, branchId: true, role: true, active: true, branch: { select: { name: true } }, user: { select: { id: true, displayName: true, email: true, phoneE164: true } } } }), args.take); });
   });
   app.patch('/gyms/:gymId/staff/:assignmentId', async r => setStaffActive(db, await actorId(db, r), id(r, 'gymId'), id(r, 'assignmentId'), r.body));
   app.get('/gyms/:gymId/invitations', async r => {
@@ -120,3 +123,4 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
     return page(rows, args.take);
   });
 }
+

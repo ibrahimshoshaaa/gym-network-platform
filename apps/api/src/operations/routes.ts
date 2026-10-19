@@ -72,9 +72,14 @@ export function registerOperationRoutes(
         select: {
           role: true,
           branch: {
-            select: { id: true, name: true, gym: { select: { name: true } } },
+            select: { id: true, name: true, gymId: true, gym: { select: { name: true } } },
           },
         },
+        take: 100,
+      });
+      const owned = await tx.branch.findMany({
+        where: { status: 'ACTIVE', gym: { ownerId: id, status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } },
+        select: { id: true, name: true, gymId: true, gym: { select: { name: true } } },
         take: 100,
       });
       const map = new Map<
@@ -83,17 +88,22 @@ export function registerOperationRoutes(
           id: string;
           name: string;
           gymName: string;
+          gymId: string;
           canSell: boolean;
           canCancel: boolean;
         }
       >();
+      for (const branch of owned) {
+        map.set(branch.id, { id: branch.id, name: branch.name, gymId: branch.gymId, gymName: branch.gym.name, canSell: true, canCancel: true });
+      }
       for (const row of rows) {
         const old = map.get(row.branch.id);
         map.set(row.branch.id, {
           id: row.branch.id,
           name: row.branch.name,
           gymName: row.branch.gym.name,
-          canSell: row.role === "CASHIER" || Boolean(old?.canSell),
+          gymId: row.branch.gymId,
+          canSell: ["CASHIER", "BRANCH_MANAGER"].includes(row.role) || Boolean(old?.canSell),
           canCancel: row.role === "BRANCH_MANAGER" || Boolean(old?.canCancel),
         });
       }
@@ -212,3 +222,4 @@ export function registerOperationRoutes(
       });
     });
 }
+

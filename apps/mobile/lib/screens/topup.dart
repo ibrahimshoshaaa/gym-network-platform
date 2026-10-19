@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
+import '../core/portal_ui.dart';
 
 class TopupScreen extends StatefulWidget {
   final ApiClient api;
@@ -60,6 +61,7 @@ class _TopupScreenState extends State<TopupScreen> {
 
   Future<void> review() async {
     if (busy) return;
+    FocusScope.of(context).unfocus();
     setState(() {
       busy = true;
       error = null;
@@ -183,6 +185,14 @@ class _TopupScreenState extends State<TopupScreen> {
               detail: 'لا توجد وسيلة تحويل مفعّلة حاليًا. تواصل مع الإدارة.',
             )
           else ...[
+            FlowSteps(
+              labels: const ['النقاط', 'التحويل والإيصال', 'المراجعة'],
+              current: quote == null
+                  ? 0
+                  : receipt == null
+                  ? 1
+                  : 2,
+            ),
             Text(
               quote == null
                   ? 'رصيد جديد، خطوة جديدة.'

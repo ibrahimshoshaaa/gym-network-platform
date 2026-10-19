@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
+import '../core/portal_ui.dart';
 
 Future<Position> currentPosition() async {
   if (!await Geolocator.isLocationServiceEnabled())
@@ -113,22 +114,26 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     if (location != null) await load();
   }
 
+  void clearFilters() {
+    if (busy) return;
+    search.clear();
+    maxPrice.clear();
+    setState(() => location = null);
+    load();
+  }
+
   @override
   Widget build(BuildContext context) => RefreshIndicator(
     onRefresh: () => load(),
     child: ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(22, 14, 22, 30),
       children: [
-        Text(
+        const PortalIntro(
           'تمرينك أقرب مما تتخيل',
-          style: Theme.of(context).textTheme.headlineMedium,
+          eyebrow: 'اكتشف الجيمات',
+          detail: 'قارن المكان ونقاط الزيارة، واختار الجيم المناسب ليك.',
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'اختار الجيم المناسب ليك وشوف سعر الزيارة قبل ما تروح.',
-          style: TextStyle(color: muted),
-        ),
-        const SizedBox(height: 20),
         TextField(
           controller: search,
           onSubmitted: (_) => load(),
@@ -193,15 +198,30 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           ],
         ),
         ErrorNote(error, retry: () => load()),
+        if (search.text.isNotEmpty ||
+            maxPrice.text.isNotEmpty ||
+            location != null)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: busy ? null : clearFilters,
+              icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+              label: const Text('مسح الفلاتر'),
+            ),
+          ),
         if (busy && branches.isEmpty)
           const Padding(
             padding: EdgeInsets.all(40),
             child: Center(child: CircularProgressIndicator()),
           ),
         if (!busy && branches.isEmpty && error == null)
-          const EmptyState(
+          EmptyState(
             'مفيش فروع مطابقة',
             detail: 'جرّب منطقة مختلفة أو قلّل الفلاتر.',
+            action: OutlinedButton(
+              onPressed: clearFilters,
+              child: const Text('عرض كل الجيمات'),
+            ),
           ),
         if (map && branches.isNotEmpty)
           SizedBox(

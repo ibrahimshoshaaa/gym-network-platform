@@ -15,7 +15,7 @@ p.write_text(s)
 # iOS uses the same native Dart screens; distribution requires an Apple signing identity.
 plist=Path('ios/Runner/Info.plist')
 if plist.exists():
-    s=plist.read_text().replace('<string>Gym Network</string>','<string>GymBank</string>').replace('</dict>\n</plist>', '<key>NSLocationWhenInUseUsageDescription</key><string>لعرض الجيمات القريبة وتحديد مكان الفرع باختيارك.</string><key>NSPhotoLibraryUsageDescription</key><string>لاختيار صورة إيصال التحويل وصور الجيم.</string></dict>\n</plist>')
+    s=plist.read_text().replace('<string>Gym Network</string>','<string>GymBank</string>').replace('</dict>\n</plist>', '<key>NSLocationWhenInUseUsageDescription</key><string>لعرض الجيمات القريبة وتحديد مكان الفرع باختيارك.</string><key>NSCameraUsageDescription</key><string>لمسح رمز دخول المتدرب وتسجيل حضوره في الجيم.</string><key>NSPhotoLibraryUsageDescription</key><string>لاختيار صورة إيصال التحويل وصور الجيم.</string></dict>\n</plist>')
     plist.write_text(s)
 
 # Use the supplied GymBank artwork at Android's standard launcher densities.
@@ -37,3 +37,4 @@ copyfile(Path('assets/brand/gymbank-icon.png'),res/'drawable-nodpi/gymbank_foreg
 <background android:drawable="@color/gymbank_launcher_background"/>
 <foreground android:drawable="@drawable/gymbank_foreground"/>
 </adaptive-icon>''')
+

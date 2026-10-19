@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
+import '../core/portal_ui.dart';
 import 'owner.dart';
 
 class MoneyScreen extends StatelessWidget {
@@ -19,18 +20,14 @@ class MoneyScreen extends StatelessWidget {
       String get(String t) =>
           '${balances.cast<Map>().where((b) => b['type'] == t).firstOrNull?['balancePiasters'] ?? '0'}';
       return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(22),
         children: [
-          Text(
+          PortalIntro(
             'مستحقاتك واضحة',
-            style: Theme.of(context).textTheme.headlineMedium,
+            eyebrow: '${gym['name']}',
+            detail: 'تابع فلوس زيارات الجيم وحالة كل طلب سحب.',
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'المبالغ دي من الزيارات، ورصيد نقاط الجيم منفصل عنها.',
-            style: TextStyle(color: muted),
-          ),
-          const SizedBox(height: 22),
           Panel(
             color: ink,
             child: Column(
@@ -40,12 +37,16 @@ class MoneyScreen extends StatelessWidget {
                   'متاح للسحب',
                   style: TextStyle(color: Colors.white70),
                 ),
-                Text(
-                  '${money(get('GYM_AVAILABLE'))} ج.م',
-                  style: const TextStyle(
-                    fontSize: 37,
-                    fontWeight: FontWeight.w900,
-                    color: lime,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    '${money(get('GYM_AVAILABLE'))} ج.م',
+                    style: const TextStyle(
+                      fontSize: 37,
+                      fontWeight: FontWeight.w900,
+                      color: lime,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -74,6 +75,10 @@ class MoneyScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          const PortalNote(
+            'طلبات السحب بتتراجع خلال ٣ أيام عمل. النقاط المتاحة لشحن المتدربين منفصلة عن المستحقات دي.',
           ),
           const SizedBox(height: 16),
           Panel(
@@ -261,13 +266,15 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                     if (busy) return;
                     setState(() => busy = true);
                     try {
-                      await widget.api
-                          .transact('gyms/${widget.gymId}/withdrawals', {
-                            'paymentMethod': method,
-                            'destinationAccount': account.text,
-                            'destinationName': name.text,
-                            'amountPiasters': piasters(amount.text),
-                          });
+                      await widget.api.transact(
+                        'gyms/${widget.gymId}/withdrawals',
+                        {
+                          'paymentMethod': method,
+                          'destinationAccount': account.text,
+                          'destinationName': name.text,
+                          'amountPiasters': piasters(amount.text),
+                        },
+                      );
                       if (context.mounted) Navigator.pop(context, true);
                     } catch (e) {
                       if (mounted) setState(() => error = e);
