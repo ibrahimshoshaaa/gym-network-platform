@@ -299,6 +299,7 @@ class _NativeShellState extends State<NativeShell> {
     return Scaffold(
       appBar: AppBar(
         title: const Brand(),
+        centerTitle: !workMode,
         actions: [
           if (widget.api.user?['role'] == 'TRAINEE' && widget.assignedWork)
             TextButton(
@@ -417,13 +418,22 @@ class _NativeShellState extends State<NativeShell> {
             Expanded(
               child: KeyedSubtree(
                 key: ValueKey('$index:$gymIndex:$version'),
-                child: content,
+                child: Theme(
+                  data: !workMode ? Theme.of(context).copyWith(
+                    textTheme: Theme.of(context).textTheme.copyWith(
+                      titleLarge: const TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:ink),
+                      headlineMedium: const TextStyle(fontSize:23,fontWeight:FontWeight.w800,color:ink),
+                    ),
+                  ) : Theme.of(context),
+                  child: content,
+                ),
               ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: NavigationBar(
+        height: workMode ? 80 : 72,
         selectedIndex: index,
         onDestinationSelected: (v) => setState(() => index = v),
         destinations: tabs

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +9,9 @@ import 'package:gym_network/core/api.dart';
 import 'package:gym_network/core/portal_ui.dart';
 import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/screens/owner.dart';
+import 'package:gym_network/screens/trainee.dart';
+import 'package:gym_network/screens/directory.dart';
+import 'package:gym_network/screens/account.dart';
 import 'package:gym_network/screens/topup.dart';
 import 'api_test.dart' show MemoryStore;
 
@@ -304,4 +308,142 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
+  testWidgets('wallet and entry stay usable while movement history is still loading', (t) async {
+    t.view.physicalSize = const Size(320, 740);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final history = Completer<http.Response>();
+    var qrOpened = false;
+    final api = ApiClient(storage: MemoryStore(), transport: MockClient((r) async {
+      if (r.url.path.endsWith('wallet/movements')) return history.future;
+      if (r.url.path.endsWith('trainee/wallet')) return reply({
+        'spendablePoints': 120, 'unavailablePoints': 0,
+        'expiresAt': '2027-01-01T12:00:00Z', 'status': 'VALID',
+      });
+      return reply({'items': []});
+    }))..token = 'synthetic'..user = {'id':'u1','role':'TRAINEE','displayName':'إبراهيم'};
+    await t.pumpWidget(MaterialApp(theme: appTheme(), home: Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(body: TraineeHome(api:api,showGyms:(){},showQr:(){qrOpened=true;})),
+    )));
+    await t.pump();
+    await t.pump(const Duration(milliseconds:100));
+    expect(find.text('120 نقطة'), findsOneWidget);
+    expect(find.text('رمز الدخول').hitTestable(), findsOneWidget);
+    expect(find.text('اشحن رصيدك').hitTestable(), findsOneWidget);
+    await t.tap(find.text('رمز الدخول'));
+    expect(qrOpened,isTrue);
+    history.complete(reply({'items':[]}));
+    await t.pumpAndSettle();
+    expect(t.takeException(),isNull);
+  });
+  testWidgets('history failure does not replace a valid wallet or claim an empty history', (t) async {
+    final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
+      if(r.url.path.endsWith('wallet/movements')) return http.Response('{"code":"SERVICE_UNAVAILABLE"}',503);
+      if(r.url.path.endsWith('trainee/wallet'))return reply({
+        'spendablePoints':120,'unavailablePoints':0,'expiresAt':null,
+      });
+      return reply({'items':[]});
+    }))..token='synthetic'..user={'id':'u1','role':'TRAINEE','displayName':'إبراهيم'};
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:Directionality(
+      textDirection:TextDirection.rtl,child:Scaffold(body:TraineeHome(api:api,showGyms:(){},showQr:(){})),
+    )));
+    await t.pumpAndSettle();
+    expect(find.text('120 نقطة'),findsOneWidget);
+    expect(find.text('أول شحن أو زيارة هتظهر هنا.'),findsNothing);
+    expect(find.byType(ErrorNote),findsOneWidget);
+    expect(t.takeException(),isNull);
+  });
+
+  test('gym thumbnail prefers the logo and ignores invalid image URLs',(){
+    expect(gymThumbnail({'images':[
+      {'url':'https://example.test/photo.jpg','purpose':'PHOTO'},
+      {'url':'https://example.test/logo.png','purpose':'LOGO'},
+    ]}),'https://example.test/logo.png');
+    expect(gymThumbnail({'images':[
+      {'url':'javascript:invalid','purpose':'LOGO'},
+      {'url':'https://example.test/photo.jpg','purpose':'PHOTO'},
+    ]}),'https://example.test/photo.jpg');
+    expect(gymThumbnail({'images':[]} ),isNull);
+  });
+  testWidgets('map marker shows the gym name above the thumbnail and opens its branch', (t)async{
+    var opened=false;
+    final b=<String,dynamic>{
+      'id':'b1','name':'فرع شبين','gym':{'name':'جيم باسم عربي طويل لاختبار الخريطة'},
+      'images':[],
+    };
+    await t.pumpWidget(MaterialApp(home:MediaQuery(
+      data:const MediaQueryData(textScaler:TextScaler.linear(1.8)),
+      child:Directionality(textDirection:TextDirection.rtl,
+        child:Scaffold(body:Center(child:SizedBox(width:124,height:148,
+          child:GymMapMarker(branch:b,onTap:(){opened=true;})))),
+      ),
+    )));
+    await t.pumpAndSettle();
+    final name=find.text('جيم باسم عربي طويل لاختبار الخريطة');
+    expect(t.getRect(name).bottom,lessThanOrEqualTo(t.getRect(find.byType(GymThumbnail)).top));
+    await t.tap(find.byType(GymThumbnail));
+    expect(opened,isTrue);
+    expect(t.takeException(),isNull);
+  });
+  testWidgets('trainee QR fits a narrow screen with larger Arabic text', (t)async{
+    t.view.physicalSize=const Size(320,740);
+    t.view.devicePixelRatio=1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final now=DateTime.now().toUtc();
+    final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async=>reply({
+      'token':'synthetic-entry-token',
+      'expiresAt':now.add(const Duration(seconds:60)).toIso8601String(),
+      'serverTime':now.toIso8601String(),
+    })))..token='synthetic'..user={'id':'u1','role':'TRAINEE'};
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:MediaQuery(
+      data:const MediaQueryData(size:Size(320,740),textScaler:TextScaler.linear(1.8)),
+      child:const Directionality(textDirection:TextDirection.rtl,child:SizedBox()),
+    )));
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:MediaQuery(
+      data:const MediaQueryData(size:Size(320,740),textScaler:TextScaler.linear(1.8)),
+      child:Directionality(textDirection:TextDirection.rtl,child:Scaffold(body:QrScreen(api:api))),
+    )));
+    await t.pump();
+    await t.pump(const Duration(milliseconds:300));
+    expect(find.text('رمزك الشخصي'),findsOneWidget);
+    expect(t.takeException(),isNull);
+    await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('trainee gym, visit and account layouts support narrow screens and large text',(t)async{
+    t.view.physicalSize=const Size(320,740);
+    t.view.devicePixelRatio=1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final api=portalApi('TRAINEE');
+    api.user!['displayName']='إبراهيم محمد إبراهيم شوشة باسم طويل';
+    final pages=<Widget>[
+      BranchTile(branch:{
+        'name':'فرع شبين الكوم','gym':{'name':'جيم باسم طويل للاختبار'},
+        'city':'شبين الكوم','governorate':'المنوفية','images':[],
+        'visitPricePoints':25,'sessionMinutes':120,'distanceKm':0.4,
+      },onTap:(){}),
+      const VisitCard({
+        'id':'synthetic-visit','status':'ACTIVE','pointsCharged':25,
+        'startedAt':'2026-10-20T09:00:00Z','expiresAt':'2026-10-20T11:00:00Z',
+        'branch':{'name':'فرع شبين الكوم','gym':{'name':'جيم باسم طويل للاختبار'}},
+      }),
+      AccountScreen(api:api),
+    ];
+    for(final page in pages){
+      await t.pumpWidget(MaterialApp(theme:appTheme(),home:MediaQuery(
+        data:const MediaQueryData(size:Size(320,740),textScaler:TextScaler.linear(1.8)),
+        child:Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+          body:page is AccountScreen?page:ListView(padding:const EdgeInsets.all(20),children:[page]),
+        )),
+      )));
+      await t.pumpAndSettle();
+      expect(t.takeException(),isNull,reason:'${page.runtimeType} must fit large Arabic text');
+      await t.pumpWidget(const SizedBox());
+    }
+  });
+
 }

@@ -22,8 +22,79 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> {
   bool busy = false;
   Object? error;
+  Future<void> logout() async {
+    if(busy)return;
+    setState((){busy=true;error=null;});
+    try { await widget.api.logout(); }
+    catch(e){if(mounted)setState(()=>error=e);}
+    finally {if(mounted)setState(()=>busy=false);}
+  }
+
+  Widget traineeAccount(BuildContext context) {
+    final user=widget.api.user!;
+    final name='${user['displayName']}';
+    return ListView(padding:const EdgeInsets.fromLTRB(20,8,20,28),children:[
+      const TraineeSectionHeader('حسابك',subtitle:'بياناتك ونشاطك، في مكان واحد.'),
+      Panel(color:ink,padding:const EdgeInsets.all(20),child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Row(children:[
+            CircleAvatar(radius:25,backgroundColor:lime,
+              child:Text(name.trim().isEmpty?'؟':name.characters.first,
+                style:const TextStyle(fontSize:23,fontWeight:FontWeight.w800,color:ink))),
+            const SizedBox(width:12),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(name,style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w800)),
+              const SizedBox(height:4),
+              const Text('حساب المتدرب',style:TextStyle(color:lime,fontSize:11)),
+            ])),
+          ]),
+          const SizedBox(height:16),
+          Text('${user['email']}',textDirection:TextDirection.ltr,
+            style:const TextStyle(color:Colors.white70,fontSize:12)),
+          const SizedBox(height:4),
+          Text('${user['phone']}',textDirection:TextDirection.ltr,
+            style:const TextStyle(color:Colors.white70,fontSize:12)),
+        ])),
+      const SectionTitle('بياناتك والأمان'),
+      Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
+        _item('تعديل الاسم',Icons.person_outline_rounded,()async{
+          await open(context,ProfileEdit(api:widget.api));
+          if(mounted)setState((){});
+        }),
+        const Divider(height:1),
+        _item('كلمة السر والأمان',Icons.lock_outline_rounded,
+          ()=>open(context,PasswordScreen(api:widget.api))),
+      ])),
+      const SectionTitle('نشاطك والمساعدة'),
+      Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
+        _item('طلبات الشحن',Icons.receipt_long_rounded,
+          ()=>open(context,TopupHistory(api:widget.api))),
+        const Divider(height:1),
+        _item('الإشعارات',Icons.notifications_none_rounded,
+          ()=>open(context,NotificationsScreen(api:widget.api))),
+        const Divider(height:1),
+        _item('الدعم والمساعدة',Icons.support_agent_rounded,
+          ()=>open(context,SupportScreen(api:widget.api))),
+      ])),
+      ErrorNote(error),
+      const SizedBox(height:20),
+      OutlinedButton.icon(onPressed:busy?null:logout,
+        icon:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2))
+          :const Icon(Icons.logout_rounded,size:19),
+        label:Text(busy?'جاري تسجيل الخروج…':'تسجيل الخروج'),
+        style:OutlinedButton.styleFrom(foregroundColor:const Color(0xffa33740),
+          minimumSize:const Size(double.infinity,48))),
+      const SizedBox(height:18),
+      const Text('GYMBANK · 0.2.6\nShoTech Solutions',
+        textAlign:TextAlign.center,style:TextStyle(color:muted,fontSize:10)),
+    ]);
+  }
+
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) => !widget.workplace
+    ? traineeAccount(context) : workAccount(context);
+
+  Widget workAccount(BuildContext context) => ListView(
     padding: const EdgeInsets.all(22),
     children: [
       const PortalIntro(
