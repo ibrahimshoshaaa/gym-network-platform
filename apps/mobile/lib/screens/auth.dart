@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
 
-const _authTeal = Color(0xff065466);
+const _authTeal = Color(0xff101719);
 
 class AuthScreen extends StatefulWidget {
   final ApiClient api;
@@ -372,27 +372,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 4),
-                                    const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.hub_rounded,
-                                          color: Color(0xffb5e9dc),
-                                          size: 25,
-                                        ),
-                                        SizedBox(width: 9),
-                                        Text(
-                                          'GYM NETWORK',
-                                          textDirection: TextDirection.ltr,
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            letterSpacing: 1.7,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ],
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.asset(
+                                        'assets/brand/gymbank-wordmark.png',
+                                        width: 200,
+                                        height: 50,
+                                        semanticLabel: 'GymBank',
+                                      ),
                                     ),
                                     const SizedBox(height: 19),
                                     Text(
@@ -871,7 +858,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 const SizedBox(height: 20),
                                 const SizedBox(height: 4),
                                 const Text(
-                                  'GYM NETWORK · SHO TECH',
+                                  'GYMBANK · SHO TECH',
                                   textAlign: TextAlign.center,
                                   textDirection: TextDirection.ltr,
                                   style: TextStyle(

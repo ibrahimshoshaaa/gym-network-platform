@@ -54,8 +54,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view mobile-v0.2.3 >/dev/null 2>&1 || gh release create mobile-v0.2.3 --target "$GITHUB_SHA" --title "Gym Network Android 0.2.3" --notes "Bilingual sign-in and registration with Google and Apple coming-soon buttons. OTP, social provider connections, wallet PIN and background push remain deferred. Testing build; store signing is separate."
-          gh release upload mobile-v0.2.3 apps/mobile/build/app/outputs/flutter-apk/*.apk --clobber
+          gh release view mobile-v0.2.5 >/dev/null 2>&1 || gh release create mobile-v0.2.5 --target "$GITHUB_SHA" --title "GymBank Android 0.2.5" --notes "Bilingual sign-in and registration with Google and Apple coming-soon buttons. OTP, social provider connections, wallet PIN and background push remain deferred. Testing build; store signing is separate."
+          gh release upload mobile-v0.2.5 apps/mobile/build/app/outputs/flutter-apk/*.apk --clobber
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         continue-on-error: true

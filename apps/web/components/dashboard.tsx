@@ -267,7 +267,7 @@ export function Dashboard() {
             <NetworkMark />
           </span>
           <span>
-            GYM<span className="brand-light">NETWORK</span>
+            GYM<span className="brand-light">BANK</span>
           </span>
         </div>
         <div className="workspace">
@@ -344,7 +344,7 @@ export function Dashboard() {
         <main className="workspace-content">
           {current.id !== "home" && <div className="page-heading">
             <span className="eyebrow">
-              GYM NETWORK / {admin ? "إدارة المنصة" : "الجيمات"}
+              GYMBANK / {admin ? "إدارة المنصة" : "الجيمات"}
             </span>
             <h1>{current.label}</h1>
             <p>{current.description}</p>
@@ -378,7 +378,7 @@ export function Dashboard() {
             <SettingsPanel key={current.id} section={current.id} />
           )}
           <footer className="page-footer">
-            Gym Network <span>•</span> ShoTech Solutions
+            GymBank <span>•</span> ShoTech Solutions
           </footer>
         </main>
       </div>

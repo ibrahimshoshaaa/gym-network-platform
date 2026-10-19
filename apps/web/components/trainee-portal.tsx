@@ -31,7 +31,7 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
   return (
     <div className="trainee-portal">
       <header className="trainee-header">
-        <div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">NETWORK</span></span></div>
+        <div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">BANK</span></span></div>
         <AccountTools user={user} onNavigate={next=>{if(next==="support"||sections.some(s=>s.id===next))navigate(next as Section);}}/>
         <div className="trainee-account">
           <span><strong>{user.displayName}</strong><small>حساب متدرب</small></span>
@@ -60,8 +60,9 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
             </TraineeWallet>
           </> : section === "topup" ? <Purchases trainee onWallet={() => navigate("wallet")} /> : section === "gyms" ? <BranchDirectory onShowQr={() => navigate("qr")} /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
         </div>
-        <footer className="page-footer">Gym Network · ShoTech Solutions</footer>
+        <footer className="page-footer">GymBank · ShoTech Solutions</footer>
       </main>
     </div>
   );
 }
+

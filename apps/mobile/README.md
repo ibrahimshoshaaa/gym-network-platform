@@ -1,4 +1,4 @@
-# Gym Network native mobile application
+# GymBank native mobile application
 
 Flutter 3.47.7 / Dart, Material 3, Arabic RTL. Native screens replace the previous WebView client. Uses the existing production API through `/api/mobile/*` with Bearer sessions; web cookies never authorize the mobile bridge. No database, Cloudinary, signing or backend credentials are embedded.
 
@@ -20,7 +20,7 @@ flutter analyze lib test --no-fatal-infos
 flutter test
 flutter build apk --release --split-per-abi
 ```
-The CI workflow generates the Android host while preserving the sources, then analyzes, tests and builds. Main builds attach APKs to the private `mobile-v0.2.3` GitHub release; Actions artifact upload is optional because artifact storage may be exhausted. These are testing APKs with generated template signing, not a Play Store signing identity.
+The CI workflow generates the Android host while preserving the sources, then analyzes, tests and builds. Main builds attach APKs to the private `mobile-v0.2.5` GitHub release; Actions artifact upload is optional because artifact storage may be exhausted. These are testing APKs with generated template signing, not a Play Store signing identity.
 
 `GYM_API_ORIGIN` is an optional compile-time HTTPS origin for staging, e.g. `--dart-define=GYM_API_ORIGIN=https://...`. It contains no credential. Local HTTP is permitted only in debug builds on explicit loopback/emulator hosts.
 

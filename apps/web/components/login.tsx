@@ -29,7 +29,7 @@ export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
   <div className="web-auth-shell">
    <header className="web-auth-header">
     <div className="web-auth-language"><button type="button" onClick={language} disabled={busy}><Globe2 size={17}/>{english?"العربية":"English"}</button></div>
-    <div className="web-auth-brand"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 20 20 5M20 20 34 12M20 20 34 29M20 20 20 36M20 20 6 29M20 20 6 12"/><circle cx="20" cy="20" r="6"/>{[[20,5],[34,12],[34,29],[20,36],[6,29],[6,12]].map(([cx,cy])=><circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="4"/>)}</svg><span dir="ltr">GYM NETWORK</span></div>
+    <div className="web-auth-brand"><img className="gymbank-wordmark" src="/brand/gymbank-wordmark.png" width={200} height={50} alt="GymBank"/></div>
     <h1>{view==="signin"?t("أهلًا بيك من جديد","Welcome back"):view==="register"?t("ابدأ رحلتك معانا","Your next chapter"):t("دعوتك بداية جديدة","You're invited")}</h1>
     <p>{view==="register"?t("حساب واحد يفتح لك عالم الجيمات.","One account. A world of gyms."):view==="invite"?t("فعّل حسابك وانضم لفريقك.","Activate your account and join your team."):t("جيمك، رصيدك، وتمرينتك… في مكان واحد.","Your gyms, your wallet, your next workout.")}</p>
    </header>
@@ -50,7 +50,7 @@ export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
     {view!=="invite"&&<><div className="web-auth-divider"><span>{t("أو كمّل باستخدام","Or continue with")}</span></div><div className="web-auth-social">{["Google","Apple"].map(provider=><button type="button" key={provider} disabled={busy} onClick={()=>setSocial(provider)}><span dir="ltr">{provider==="Google"?<img src="/brand/google-g.png" width={20} height={20} alt=""/>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.1 12.3c0-2.1 1.7-3.1 1.8-3.2-1-1.5-2.5-1.7-3-1.7-1.3-.1-2.6.8-3.2.8-.7 0-1.8-.8-2.9-.7-1.5 0-2.9.9-3.7 2.2-1.6 2.7-.4 6.8 1.1 9 .7 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.7-2.2c.9-1.2 1.3-2.4 1.3-2.5-.1 0-2.9-1.1-2.9-3.9ZM14.9 5.9c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.6-1.2 1.8-1.1 2.8 1.1.1 2.2-.5 2.9-1.2Z"/></svg>}{provider}</span><small>{t("قريبًا","Soon")}</small></button>)}</div>{social&&<p className="web-auth-note" role="status">{t(`الدخول والتسجيل باستخدام ${social} هيتاح قريبًا. استخدم الإيميل حاليًا.`,`${social} sign-in and sign-up are coming soon. Please use email for now.`)}</p>}</>}
     <div className="web-auth-switch"><span>{view==="signin"?t("لسه معندكش حساب؟","Don't have an account?"):t("عندك حساب بالفعل؟","Already a member?")}</span><button type="button" disabled={busy} onClick={()=>change(view==="signin"?"register":"signin")}>{view==="signin"?t("إنشاء حساب","Create account"):t("سجّل دخولك","Log in")}</button></div>
     {view!=="invite"&&<button className="web-auth-invite" type="button" disabled={busy} onClick={()=>change("invite")}><TicketCheck size={19}/>{t("وصلك دعوة؟ قبول الدعوة","Got an invitation? Accept invite")}</button>}
-    <footer dir="ltr">GYM NETWORK · SHO TECH</footer>
+    <footer dir="ltr">GYMBANK · SHO TECH</footer>
    </section>
   </div>
  </main>;
