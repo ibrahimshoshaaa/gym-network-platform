@@ -440,7 +440,8 @@ class _QrScreenState extends State<QrScreen> with WidgetsBindingObserver {
             const Row(mainAxisAlignment:MainAxisAlignment.center,children:[
               Icon(Icons.verified_user_outlined,size:18,color:green),
               SizedBox(width:7),
-              Text('رمزك الشخصي',style:TextStyle(color:green,fontSize:13,fontWeight:FontWeight.w700)),
+              Flexible(child:Text('رمزك الشخصي',textAlign:TextAlign.center,
+                style:TextStyle(color:green,fontSize:13,fontWeight:FontWeight.w700))),
             ]),
             const SizedBox(height:20),
             LayoutBuilder(builder:(context,box){
