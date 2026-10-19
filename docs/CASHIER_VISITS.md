@@ -11,10 +11,13 @@ balances silently. Existing financial fixtures already use gym scope.
 
 ## Cashier sales
 
-An active accepted gym, active branch and explicit active CASHIER assignment are
-required. Ownership, admin role and BRANCH_MANAGER alone do not permit selling or
-confirming visits. `/operations/branches` returns the caller's first 100 active
-assignments, merged by branch with `canSell`. Managers can read scoped history.
+An active accepted gym and active branch are required. Accepted gym owners can
+sell points and confirm visits in their own branches without a cashier assignment.
+Active CASHIER and BRANCH_MANAGER assignments permit sales and attendance only in
+the assigned branch. Owners and assigned managers may cancel within ten minutes;
+cashiers submit review requests. Global admin/owner/manager labels alone never
+grant another gym's operations. `/operations/branches` merges up to 100 assigned
+branches and 100 owned branches, returning `gymId`, `canSell` and `canCancel`.
 
 `POST /cashier/branches/:id/trainee-lookup` accepts a complete phone number in a
 JSON body (never a URL). It returns only trainee ID, first-name/initials and last
@@ -116,3 +119,17 @@ in [OPERATION_REVIEWS.md](OPERATION_REVIEWS.md). Flutter, paid-out reversal
 reconciliation, sale refund execution, withdrawals, devices, fraud review and
 production rollout remain pending. Generic visit reversals stay blocked;
 cancellations must use the authorized domain flow.
+
+## Native mobile operations (19 October 2026)
+
+Android/iOS Dart screens now support owners, branch managers and cashiers. The
+owner shell adds an operations tab; staff get a workplace and account tab. A
+trainee identity with accepted staff assignments can switch between trainee and
+work contexts without creating another account. Branches and capabilities come
+from the server. Native flows reuse quotes, idempotent sales/entries, timed visit
+cancellation and review requests. QR scanning accepts both raw native tickets
+and the web `gymqr:` prefix. Native pending financial commands retain the original
+UUID and payload securely and expose retry on the root shell. Camera permission
+and physical scanning on Android/iOS still need device testing; no new APK is
+produced on pull requests.
+

@@ -19,6 +19,13 @@ ApiClient client(String role, Future<http.Response> Function(http.Request) handl
 Widget page(Widget child) => MaterialApp(theme: appTheme(), home: Directionality(textDirection: TextDirection.rtl, child: child));
 
 void main() {
+  test('accepts web and native QR tickets without accepting other payloads', () {
+    final token = List.filled(43, 'a').join();
+    expect(visitTicket(token), token);
+    expect(visitTicket('gymqr:$token'), token);
+    expect(visitTicket('https://example.test/$token'), isNull);
+    expect(visitTicket('gymqr:short'), isNull);
+  });
   testWidgets('trainee with a staff assignment can switch to work without losing trainee navigation', (t) async {
     final api = client('TRAINEE', (r) async {
       if (r.url.path.endsWith('me/access')) return reply({'ownedGyms': [], 'assignments': [{'role': 'CASHIER'}]});

@@ -4,6 +4,12 @@ import '../core/api.dart';
 import '../core/ui.dart';
 import 'account.dart';
 
+String? visitTicket(String input) {
+  final text = input.trim();
+  final value = text.startsWith('gymqr:') ? text.substring(6) : text;
+  return RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value) ? value : null;
+}
+
 class OperationsHome extends StatelessWidget {
   final ApiClient api;
   final String? gymId;
@@ -196,7 +202,8 @@ class _RecordVisitState extends State<RecordVisit> {
     try {
       final path = 'cashier/branches/${widget.branch['id']}';
       if (preview == null) {
-        final value = token.text.trim();
+        final value = visitTicket(token.text);
+        if (value == null) throw const ApiFailure('QR_INVALID');
         final r = await widget.api.request('$path/visit-previews', method: 'POST', body: {'token': value});
         if (mounted) setState(() { preview = Map<String, dynamic>.from(r); reviewedToken = value; });
       } else if (confirmed) {
@@ -273,8 +280,8 @@ class _ScanTicketState extends State<ScanTicket> {
     Expanded(child: MobileScanner(onDetect: (capture) {
       if (done) return;
       for (final barcode in capture.barcodes) {
-        final value = barcode.rawValue;
-        if (value != null && RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value)) {
+        final value = visitTicket(barcode.rawValue ?? '');
+        if (value != null) {
           done = true;
           Navigator.pop(context, value);
           break;

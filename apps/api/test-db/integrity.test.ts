@@ -100,7 +100,8 @@ test('cashier/manager permission requires an active assignment in the exact bran
   const f = await fixture();
   await db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'SELL_POINTS'));
   await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.b.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
-  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.a.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
+  await db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.a.id, 'SELL_POINTS'));
+  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.foreign.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
   await db.staffAssignment.updateMany({ where: { userId: f.cashier.id }, data: { active: false } });
   await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
   await db.user.update({ where: { id: f.owner.id }, data: { isActive: false } });
@@ -243,3 +244,4 @@ test('sessions store only hashes; invalid, expired, logged-out and disabled sess
     assert.equal((await request()).statusCode, 401);
   } finally { await app.close(); }
 });
+
