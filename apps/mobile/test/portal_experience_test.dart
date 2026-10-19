@@ -11,6 +11,7 @@ import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/screens/owner.dart';
 import 'package:gym_network/screens/trainee.dart';
 import 'package:gym_network/screens/directory.dart';
+import 'package:gym_network/screens/account.dart';
 import 'package:gym_network/screens/topup.dart';
 import 'api_test.dart' show MemoryStore;
 
@@ -410,6 +411,39 @@ void main() {
     expect(find.text('رمزك الشخصي'),findsOneWidget);
     expect(t.takeException(),isNull);
     await t.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('trainee gym, visit and account layouts support narrow screens and large text',(t)async{
+    t.view.physicalSize=const Size(320,740);
+    t.view.devicePixelRatio=1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final api=portalApi('TRAINEE');
+    api.user!['displayName']='إبراهيم محمد إبراهيم شوشة باسم طويل';
+    final pages=<Widget>[
+      BranchTile(branch:{
+        'name':'فرع شبين الكوم','gym':{'name':'جيم باسم طويل للاختبار'},
+        'city':'شبين الكوم','governorate':'المنوفية','images':[],
+        'visitPricePoints':25,'sessionMinutes':120,'distanceKm':0.4,
+      },onTap:(){}),
+      const VisitCard({
+        'id':'synthetic-visit','status':'ACTIVE','pointsCharged':25,
+        'startedAt':'2026-10-20T09:00:00Z','expiresAt':'2026-10-20T11:00:00Z',
+        'branch':{'name':'فرع شبين الكوم','gym':{'name':'جيم باسم طويل للاختبار'}},
+      }),
+      AccountScreen(api:api),
+    ];
+    for(final page in pages){
+      await t.pumpWidget(MaterialApp(theme:appTheme(),home:MediaQuery(
+        data:const MediaQueryData(size:Size(320,740),textScaler:TextScaler.linear(1.8)),
+        child:Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+          body:page is AccountScreen?page:ListView(padding:const EdgeInsets.all(20),children:[page]),
+        )),
+      )));
+      await t.pumpAndSettle();
+      expect(t.takeException(),isNull,reason:'${page.runtimeType} must fit large Arabic text');
+      await t.pumpWidget(const SizedBox());
+    }
   });
 
 }
