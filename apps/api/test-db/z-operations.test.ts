@@ -202,6 +202,30 @@ test('owner cancellation returns original points and records the real actor', as
   assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } })).balance, 80);
   assert.equal((await db.visit.findUniqueOrThrow({ where: { id: entry.visit.id } })).cancelledById, f.owner.id);
 });
+test('owner staff list filters the selected branch before pagination and does not expose another gym', async () => {
+  const f = await fixture(), other = await fixture();
+  const second = await db.branch.create({ data: { gymId: f.gym.id, name: 'Synthetic second staff branch', status: 'ACTIVE', visitPricePoints: 30, sessionMinutes: 120 } });
+  await db.staffAssignment.create({ data: { userId: f.manager.id, branchId: second.id, role: 'BRANCH_MANAGER' } });
+  const ownerToken = await createSession(db, f.owner.id, new Date(Date.now() + 3600000));
+  const cashierToken = await createSession(db, f.cashier.id, new Date(Date.now() + 3600000));
+  const app = buildApp(db);
+  try {
+    const path = `/gyms/${f.gym.id}/staff`;
+    const get = (query: string, token = ownerToken) => app.inject({ method: 'GET', url: `${path}?${query}`, headers: { authorization: `Bearer ${token}` } });
+    const first = await get(`branchId=${f.branch.id}&limit=1`);
+    assert.equal(first.statusCode, 200);
+    const page = first.json();
+    assert.equal(page.items.length, 1);
+    assert.equal(page.items[0].branchId, f.branch.id);
+    assert.ok(page.nextCursor);
+    const next = (await get(`branchId=${f.branch.id}&limit=1&cursor=${page.nextCursor}`)).json();
+    assert.equal(next.items[0].branchId, f.branch.id);
+    assert.notEqual(next.items[0].id, page.items[0].id);
+    assert.equal((await get(`branchId=${second.id}`)).json().items.length, 1);
+    assert.deepEqual((await get(`branchId=${other.branch.id}`)).json().items, []);
+    assert.equal((await get(`branchId=${f.branch.id}`, cashierToken)).statusCode, 403);
+  } finally { await app.close(); }
+});
 test("cashier sale conserves points, renews expiry and replays once without posting money", async () => {
   const f = await fixture(),
     key = randomUUID(),

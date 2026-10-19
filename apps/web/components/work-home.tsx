@@ -25,6 +25,27 @@ export function WorkHome({role,name,onNavigate}:{role:string;name:string;onNavig
   {title:"رصيد النقاط",description:"تابع رصيد الفرع وحركة النقاط.",destination:"inventory" as const,icon:Package},
   {title:"بيانات الفروع",description:"افتح الفروع والبيانات المتاحة لحسابك.",destination:"gyms" as const,icon:Building2},
  ];
- return <section className="work-home"><PlatformHero eyebrow={roleName(role)} title={"أهلًا يا "+name.split(" ")[0]}>يوم جديد، شغل أسهل. اختار مهمتك وابدأ من هنا.</PlatformHero><RoleSummary onNavigate={destination=>onNavigate(destination as WorkDestination)}/><div className="work-task-grid">{tasks.map((task,index)=><button key={task.title} className={`work-task ${index===0?"featured":""}`} onClick={()=>onNavigate(task.destination,task.task)}><span className="work-task-icon"><task.icon size={25}/></span><strong>{task.title}</strong><span>{task.description}</span><ArrowLeft size={18}/></button>)}</div><button className="text-button work-report" onClick={()=>onNavigate("reports")}><FileText size={17}/>افتح التقارير والمتابعة<ArrowLeft size={16}/></button></section>;
+ const primaryTasks=tasks.filter(task=>task.destination==="point-wallet"||task.task==="visit"||task.task==="sale");
+ const otherTasks=tasks.filter(task=>!primaryTasks.includes(task));
+ function taskButton(task:typeof tasks[number],featured=false){
+  return <button key={task.title} className={`work-task ${featured?"featured":""}`} onClick={()=>onNavigate(task.destination,task.task)}>
+   <span className="work-task-icon"><task.icon size={25}/></span><strong>{task.title}</strong>
+   <span>{task.description}</span><ArrowLeft size={18}/>
+  </button>;
+ }
+ return <section className="work-home">
+  <PlatformHero eyebrow={roleName(role)} title={"أهلًا يا "+name.split(" ")[0]}>كل مهمة واضحة، وكل عملية مرتبطة بفرعك وصلاحياتك.</PlatformHero>
+  <section aria-label="إجراءات التشغيل" className="portal-task-section">
+   <div className="portal-section-heading"><h2>ابدأ مهمتك</h2><p>الزيارة والشحن من مكان واحد</p></div>
+   <div className="work-task-grid portal-primary-tasks">{primaryTasks.map((task,index)=>taskButton(task,index===0))}</div>
+  </section>
+  <RoleSummary onNavigate={destination=>onNavigate(destination as WorkDestination)}/>
+  <section aria-label="الإدارة والمتابعة" className="portal-task-section">
+   <div className="portal-section-heading"><h2>{owner?"إدارة الجيم":"متابعة الفرع"}</h2><p>{owner?"الفروع والفريق والمستحقات":"السجل والبيانات المتاحة لحسابك"}</p></div>
+   <div className="work-task-grid">{otherTasks.map(task=>taskButton(task))}</div>
+  </section>
+  {owner&&<p className="portal-balance-note">نقاط الجيم لشحن المتدربين، والمستحقات بالجنيه من زياراتهم. كل رصيد له حركته المستقلة.</p>}
+  <button className="text-button work-report" onClick={()=>onNavigate("reports")}><FileText size={17}/>افتح التقارير والمتابعة<ArrowLeft size={16}/></button>
+ </section>;
 }
 

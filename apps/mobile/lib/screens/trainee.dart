@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
+import '../core/portal_ui.dart';
 import 'topup.dart';
 import 'account.dart';
 
@@ -22,45 +23,33 @@ class TraineeHome extends StatelessWidget {
     load: () => Future.wait([
       api.request('trainee/wallet'),
       api.request('trainee/active-visits'),
+      api.request('trainee/wallet/movements?limit=3'),
     ]),
     builder: (data, reload) {
-      final w = data[0], visits = rows(data[1]);
+      final w = data[0], visits = rows(data[1]), movements = rows(data[2]);
+      final unavailable = int.tryParse('${w['unavailablePoints']}') ?? 0;
       return ListView(
-        padding: const EdgeInsets.fromLTRB(22, 14, 22, 30),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'يوم جديد، تمرين جديد',
-                      style: TextStyle(color: muted, fontSize: 12),
-                    ),
-                    Text(
-                      'أهلًا ${api.user!['displayName'].toString().split(' ').first}',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'الإشعارات',
-                onPressed: () => open(context, NotificationsScreen(api: api)),
-                icon: const Icon(Icons.notifications_none_rounded),
-              ),
-            ],
+          PortalIntro(
+            'أهلًا ${api.user!['displayName'].toString().split(' ').first}',
+            eyebrow: 'حساب المتدرب',
+            detail: 'رصيد واحد. اختار مكان تمرينك وابدأ.',
+            trailing: IconButton(
+              tooltip: 'الإشعارات',
+              icon: const Icon(Icons.notifications_none_rounded),
+              onPressed: () => open(context, NotificationsScreen(api: api)),
+            ),
           ),
-          const SizedBox(height: 24),
           Panel(
             color: ink,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                const Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.account_balance_wallet_outlined,
                       color: lime,
                       size: 20,
@@ -70,39 +59,31 @@ class TraineeHome extends StatelessWidget {
                       'رصيدك المتاح',
                       style: TextStyle(color: Colors.white70),
                     ),
-                    Spacer(),
-                    Image.asset('assets/brand/gymbank-icon.png', width: 24, height: 24, excludeFromSemantics: true),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 10,
-                  children: [
-                    Text(
-                      '${w['spendablePoints']}',
-                      style: const TextStyle(
-                        fontSize: 54,
-                        height: 1.1,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
+                const SizedBox(height: 12),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    '${w['spendablePoints']} نقطة',
+                    style: const TextStyle(
+                      fontSize: 44,
+                      height: 1.2,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
                     ),
-                    const Text(
-                      'نقطة',
-                      style: TextStyle(color: lime, fontSize: 17),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Text(
                   w['expiresAt'] != null
-                      ? 'صلاحية الرصيد حتى ${shortDate(w['expiresAt']).split(' · ').first}'
+                      ? 'صالح حتى ${shortDate(w['expiresAt']).split(' · ').first}'
                       : 'اشحن رصيدك وابدأ تمرينك',
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
-                const SizedBox(height: 22),
-                FilledButton(
+                const SizedBox(height: 18),
+                FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: lime,
                     foregroundColor: ink,
@@ -111,46 +92,33 @@ class TraineeHome extends StatelessWidget {
                     await open(context, TopupScreen(api: api));
                     await reload();
                   },
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_rounded),
-                      SizedBox(width: 8),
-                      Text('اشحن رصيدك'),
-                    ],
-                  ),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('اشحن رصيدك'),
                 ),
               ],
             ),
           ),
-          if (w['unavailablePoints'] != 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Panel(
-                child: Text(
-                  '${w['unavailablePoints']} نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.',
-                ),
-              ),
+          if (unavailable > 0) ...[
+            const SizedBox(height: 12),
+            PortalNote(
+              '$unavailable نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.',
             ),
-          const SectionTitle('جاهز تتمرن؟'),
-          Row(
+          ],
+          const SectionTitle('تمرينتك الجاية'),
+          PortalGrid(
             children: [
-              Expanded(
-                child: _Quick(
-                  'رمز الدخول',
-                  'افتح الـQR',
-                  Icons.qr_code_2_rounded,
-                  showQr,
-                ),
+              PortalTask(
+                'رمز الدخول',
+                detail: 'اعرضه عند وصولك للفرع',
+                icon: Icons.qr_code_2_rounded,
+                primary: true,
+                onTap: showQr,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _Quick(
-                  'جيم قريب',
-                  'اكتشف الفروع',
-                  Icons.near_me_outlined,
-                  showGyms,
-                ),
+              PortalTask(
+                'جيم قريب',
+                detail: 'قارن المكان ونقاط الزيارة',
+                icon: Icons.near_me_outlined,
+                onTap: showGyms,
               ),
             ],
           ),
@@ -164,24 +132,60 @@ class TraineeHome extends StatelessWidget {
             ),
           ],
           SectionTitle(
-            'حركة نقاطك',
+            'آخر حركة في رصيدك',
             trailing: TextButton(
               onPressed: () => open(context, WalletHistory(api: api)),
-              child: const Text('عرض الكل'),
+              child: const Text('السجل كامل'),
             ),
           ),
-          Panel(
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.receipt_long_rounded, color: green),
-              title: const Text('شحنك وزياراتك في مكان واحد'),
-              subtitle: const Text('تابع كل نقطة اتضافت أو اتخصمت'),
-              trailing: const Icon(Icons.chevron_left_rounded),
-              onTap: () => open(context, WalletHistory(api: api)),
+          if (movements.isEmpty)
+            const EmptyState(
+              'رصيدك لسه في البداية',
+              detail:
+                  'أول شحن أو زيارة هتظهر هنا، وتقدر تتابع كل نقطة من السجل.',
+              icon: Icons.receipt_long_outlined,
             ),
-          ),
-          const SizedBox(height: 12),
-          TextButton.icon(
+          if (movements.isNotEmpty)
+            Panel(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+              child: Column(
+                children: [
+                  for (final r in movements)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        (r['delta'] as num) > 0
+                            ? Icons.south_west_rounded
+                            : Icons.north_east_rounded,
+                        color: green,
+                      ),
+                      title: Text(
+                        '${r['sourceLabel'] ?? r['branch']?['name'] ?? 'حركة نقاط'}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                      subtitle: Text(
+                        shortDate(r['eventAt']),
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      trailing: Text(
+                        '${(r['delta'] as num) > 0 ? '+' : ''}${r['delta']}',
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: green,
+                        ),
+                      ),
+                      onTap: () => open(context, WalletHistory(api: api)),
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
             onPressed: () => open(context, TopupHistory(api: api)),
             icon: const Icon(Icons.pending_actions_rounded),
             label: const Text('متابعة طلبات الشحن'),
@@ -189,44 +193,6 @@ class TraineeHome extends StatelessWidget {
         ],
       );
     },
-  );
-}
-
-class _Quick extends StatelessWidget {
-  final String title, sub;
-  final IconData icon;
-  final VoidCallback tap;
-  const _Quick(this.title, this.sub, this.icon, this.tap);
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(24),
-    child: InkWell(
-      onTap: tap,
-      borderRadius: BorderRadius.circular(24),
-      child: Padding(
-        padding: const EdgeInsets.all(19),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xffeaf1df),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Icon(icon, color: green),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-            ),
-            Text(sub, style: const TextStyle(color: muted, fontSize: 11)),
-          ],
-        ),
-      ),
-    ),
   );
 }
 
@@ -343,12 +309,25 @@ class VisitCard extends StatelessWidget {
 
 class VisitsScreen extends StatelessWidget {
   final ApiClient api;
-  const VisitsScreen({super.key, required this.api});
+  final VoidCallback? showQr;
+  const VisitsScreen({super.key, required this.api, this.showQr});
   @override
   Widget build(BuildContext context) => PagedRecords(
     api: api,
     path: 'trainee/visits',
-    empty: 'أول زيارة ليك لسه جاية',
+    header: const PortalIntro(
+      'زياراتك',
+      detail: 'تابع الجلسات الحالية والزيارات السابقة ونقاط كل زيارة.',
+    ),
+    empty: 'لسه مفيش زيارات',
+    emptyDetail: 'اختار جيمك واعرض رمز الدخول عند وصولك. الزيارة هتظهر هنا بعد تأكيد حضورك.',
+    emptyAction: showQr == null
+        ? null
+        : ActionButton(
+            'افتح رمز الدخول',
+            icon: Icons.qr_code_2_rounded,
+            onPressed: showQr,
+          ),
     item: (r) => VisitCard(r),
   );
 }
@@ -410,9 +389,8 @@ class _QrScreenState extends State<QrScreen> with WidgetsBindingObserver {
         await widget.api.request('trainee/qr', method: 'POST'),
       );
       validity =
-          DateTime.parse(
-            r['expiresAt'],
-          ).difference(DateTime.parse(r['serverTime'])) -
+          DateTime.parse(r['expiresAt'])
+              .difference(DateTime.parse(r['serverTime'])) -
           requestClock.elapsed;
       clock
         ..reset()

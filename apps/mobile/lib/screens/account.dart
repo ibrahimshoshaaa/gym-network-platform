@@ -3,11 +3,18 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
+import '../core/portal_ui.dart';
 import 'topup.dart';
 
 class AccountScreen extends StatefulWidget {
   final ApiClient api;
-  const AccountScreen({super.key, required this.api});
+  final bool workplace, ownerView;
+  const AccountScreen({
+    super.key,
+    required this.api,
+    this.workplace = false,
+    this.ownerView = false,
+  });
   @override
   State<AccountScreen> createState() => _AccountScreenState();
 }
@@ -19,7 +26,10 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(22),
     children: [
-      const SectionTitle('حسابك'),
+      const PortalIntro(
+        'حسابك',
+        detail: 'بياناتك والأمان والدعم في مكان واحد.',
+      ),
       Panel(
         child: Column(
           children: [
@@ -36,9 +46,20 @@ class _AccountScreenState extends State<AccountScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Text({'TRAINEE': 'متدرب', 'GYM_OWNER': 'صاحب جيم',
-              'BRANCH_MANAGER': 'مدير فرع', 'CASHIER': 'كاشير'}[widget.api.user!['role']] ?? 'حساب GymBank',
-              style: const TextStyle(color: green, fontWeight: FontWeight.w700)),
+            Text(
+              widget.ownerView
+                  ? 'صاحب جيم'
+                  : widget.workplace && widget.api.user!['role'] == 'TRAINEE'
+                  ? 'موظف جيم'
+                  : {
+                          'TRAINEE': 'متدرب',
+                          'GYM_OWNER': 'صاحب جيم',
+                          'BRANCH_MANAGER': 'مدير فرع',
+                          'CASHIER': 'كاشير',
+                        }[widget.api.user!['role']] ??
+                        'حساب GymBank',
+              style: const TextStyle(color: green, fontWeight: FontWeight.w700),
+            ),
             Text(
               '${widget.api.user!['displayName']}',
               style: Theme.of(context).textTheme.titleLarge,
@@ -71,11 +92,12 @@ class _AccountScreenState extends State<AccountScreen> {
               Icons.lock_outline_rounded,
               () => open(context, PasswordScreen(api: widget.api)),
             ),
-            if (['TRAINEE', 'GYM_OWNER'].contains(widget.api.user!['role'])) _item(
-              'طلبات الشحن',
-              Icons.receipt_long_rounded,
-              () => open(context, TopupHistory(api: widget.api)),
-            ),
+            if (!widget.workplace || widget.ownerView)
+              _item(
+                'طلبات الشحن',
+                Icons.receipt_long_rounded,
+                () => open(context, TopupHistory(api: widget.api)),
+              ),
             _item(
               'الإشعارات',
               Icons.notifications_none_rounded,
@@ -342,8 +364,7 @@ class SupportScreen extends StatelessWidget {
         children: [
           const EmptyState(
             'إحنا معاك',
-            detail:
-                'اسأل عن حسابك أو الشحن أو الزيارات. فريق الإدارة هيرد عليك هنا.',
+            detail: 'اسأل عن حسابك أو الشحن أو الزيارات. فريق الإدارة هيرد عليك هنا.',
             icon: Icons.support_agent_rounded,
           ),
           const SizedBox(height: 20),
@@ -571,4 +592,3 @@ class _TicketChatState extends State<TicketChat> {
     ),
   );
 }
-
