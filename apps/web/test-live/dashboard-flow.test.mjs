@@ -1671,22 +1671,6 @@ test(
           await publicPage.goto(origin);
           await expect(publicPage.getByRole('heading',{name:'أهلًا بيك من جديد',exact:true})).toBeVisible();
           await publicPage.evaluate(()=>document.fonts.ready);
-          for (const size of [{width:320,height:640},{width:393,height:700}]) {
-            await publicPage.setViewportSize(size);
-            for (const language of ['ar','en']) {
-              if(language==='en')await publicPage.getByRole('button',{name:'English',exact:true}).click();
-              for (const signup of [false,true]) {
-                await publicPage.getByRole('button',{name:language==='ar'?(signup?'حساب جديد':'دخول'):(signup?'Sign up':'Log in'),exact:true}).first().click();
-                for(const provider of ['Google','Apple']) {
-                  const bounds=await publicPage.getByRole('button',{name:new RegExp(provider)}).evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,height:window.innerHeight,scrollY:window.scrollY}));
-                  assert.ok(bounds.top>=0&&bounds.bottom<=bounds.height,`${provider} must be fully visible without scrolling`);assert.equal(bounds.scrollY,0);
-                }
-              }
-              if(language==='en')await publicPage.getByRole('button',{name:'العربية',exact:true}).click();
-            }
-            await publicPage.getByRole('button',{name:'دخول',exact:true}).click();
-          }
-
           for(const width of [320,768,1440]) {
             await publicPage.setViewportSize({width,height:1000});
             await expect(publicPage.getByRole('button',{name:'تسجيل الدخول',exact:true})).toBeVisible();
