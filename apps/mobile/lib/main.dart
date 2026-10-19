@@ -113,6 +113,7 @@ class _SessionGateState extends State<SessionGate> {
   Object? error;
   Json? application;
   List<Json> gyms = [];
+  bool assignedWork = false;
   @override
   void initState() {
     super.initState();
@@ -134,6 +135,10 @@ class _SessionGateState extends State<SessionGate> {
             ? null
             : Map<String, dynamic>.from(d[0]['application']);
         gyms = rows(d[1]);
+      } else if (widget.api.user!['role'] == 'TRAINEE') {
+        final access = await widget.api.request('me/access');
+        gyms = rows({'items': access['ownedGyms']});
+        assignedWork = (access['assignments'] as List? ?? []).isNotEmpty || gyms.isNotEmpty;
       }
     } catch (e) {
       error = e;
@@ -165,7 +170,7 @@ class _SessionGateState extends State<SessionGate> {
       );
     if (role == 'TRAINEE' || role == 'GYM_OWNER' && gyms.isNotEmpty ||
         role == 'BRANCH_MANAGER' || role == 'CASHIER')
-      return NativeShell(api: widget.api, gyms: gyms);
+      return NativeShell(api: widget.api, gyms: gyms, assignedWork: assignedWork);
     return Screen(
       title: 'GymBank',
       child: ListView(
@@ -197,7 +202,8 @@ class _SessionGateState extends State<SessionGate> {
 class NativeShell extends StatefulWidget {
   final ApiClient api;
   final List<Json> gyms;
-  const NativeShell({super.key, required this.api, required this.gyms});
+  final bool assignedWork;
+  const NativeShell({super.key, required this.api, required this.gyms, this.assignedWork = false});
   @override
   State<NativeShell> createState() => _NativeShellState();
 }
@@ -206,8 +212,14 @@ class _NativeShellState extends State<NativeShell> {
   int index = 0, gymIndex = 0, version = 0;
   bool retrying = false;
   Object? error;
-  bool get owner => widget.api.user?['role'] == 'GYM_OWNER';
-  bool get staff => ['BRANCH_MANAGER', 'CASHIER'].contains(widget.api.user?['role']);
+  bool workMode = false;
+  @override
+  void initState() {
+    super.initState();
+    workMode = widget.api.user?['role'] != 'TRAINEE';
+  }
+  bool get owner => workMode && widget.gyms.isNotEmpty;
+  bool get staff => workMode && !owner;
   @override
   Widget build(BuildContext context) {
     final gym = owner ? widget.gyms[gymIndex] : null;
@@ -263,6 +275,10 @@ class _NativeShellState extends State<NativeShell> {
       appBar: AppBar(
         title: const Brand(),
         actions: [
+          if (widget.api.user?['role'] == 'TRAINEE' && widget.assignedWork)
+            TextButton(onPressed: widget.api.pending != null ? null : () => setState(() {
+              workMode = !workMode; index = 0; version++;
+            }), child: Text(workMode ? 'حساب المتدرب' : 'عملي في الجيم')),
           if (owner && widget.gyms.length > 1)
             Padding(
               padding: const EdgeInsets.only(left: 14),

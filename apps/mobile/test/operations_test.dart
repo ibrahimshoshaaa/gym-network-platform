@@ -19,6 +19,21 @@ ApiClient client(String role, Future<http.Response> Function(http.Request) handl
 Widget page(Widget child) => MaterialApp(theme: appTheme(), home: Directionality(textDirection: TextDirection.rtl, child: child));
 
 void main() {
+  testWidgets('trainee with a staff assignment can switch to work without losing trainee navigation', (t) async {
+    final api = client('TRAINEE', (r) async {
+      if (r.url.path.endsWith('me/access')) return reply({'ownedGyms': [], 'assignments': [{'role': 'CASHIER'}]});
+      if (r.url.path.endsWith('operations/branches')) return reply({'items': [branch]});
+      if (r.url.path.endsWith('trainee/wallet')) return reply({'spendablePoints': 0, 'unavailablePoints': 0});
+      return reply({'items': []});
+    });
+    await t.pumpWidget(GymNetworkApp(api: api)); await t.pumpAndSettle();
+    expect(find.text('زياراتي'), findsOneWidget);
+    await t.tap(find.text('عملي في الجيم')); await t.pumpAndSettle();
+    expect(find.text('فرع شبين'), findsOneWidget);
+    await t.tap(find.text('حساب المتدرب')); await t.pumpAndSettle();
+    expect(find.text('زياراتي'), findsOneWidget);
+    expect(t.takeException(), isNull);
+  });
   for (final role in ['CASHIER', 'BRANCH_MANAGER']) {
     testWidgets('$role opens a native workplace and branch actions', (t) async {
       final api = client(role, (r) async => reply(r.url.path.endsWith('/summary')
