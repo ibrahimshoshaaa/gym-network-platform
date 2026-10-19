@@ -85,11 +85,13 @@ void main() {
       await t.pumpWidget(GymNetworkApp(api: api));
       await t.pumpAndSettle();
       expect(find.text('تسجيل الدخول'), findsOneWidget);
-      await t.ensureVisible(find.text('جديد معانا؟ أنشئ حساب'));
+      await t.drag(find.byType(CustomScrollView).first, const Offset(0, -500));
+      await t.pumpAndSettle();
       await t.tap(find.text('جديد معانا؟ أنشئ حساب'));
       await t.pumpAndSettle();
       expect(find.text('الإيميل'), findsOneWidget);
-      await t.ensureVisible(find.text('صاحب جيم'));
+      await t.drag(find.byType(CustomScrollView).first, const Offset(0, 900));
+      await t.pumpAndSettle();
       await t.tap(find.text('صاحب جيم'));
       await t.pumpAndSettle();
       await t.scrollUntilVisible(
@@ -101,6 +103,81 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
+  testWidgets(
+    'auth language preserves entries and persists; social buttons never authenticate',
+    (t) async {
+      t.view.physicalSize = const Size(320, 740);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.resetPhysicalSize);
+      addTearDown(t.view.resetDevicePixelRatio);
+      var calls = 0;
+      final api = fake((_) async {
+        calls++;
+        return response('{}', 200);
+      });
+      await t.pumpWidget(GymNetworkApp(api: api));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byKey(const ValueKey('auth.identifier')),
+        'member@example.test',
+      );
+      await t.ensureVisible(find.byKey(const ValueKey('auth.language')));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('auth.language')));
+      await t.pumpAndSettle();
+      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('member@example.test'), findsOneWidget);
+      expect(await api.storage.read('auth.language'), 'en');
+      expect(
+        Directionality.of(
+          t.element(find.byKey(const ValueKey('auth.identifier'))),
+        ),
+        TextDirection.ltr,
+      );
+      for (final mode in [false, true]) {
+        if (mode) {
+          await t.ensureVisible(find.byKey(const ValueKey('auth.signup.tab')));
+          await t.pumpAndSettle();
+          await t.tap(find.byKey(const ValueKey('auth.signup.tab')));
+          await t.pumpAndSettle();
+          expect(find.text('Email address'), findsOneWidget);
+        }
+        for (final provider in ['Google', 'Apple']) {
+          final button = find.byKey(ValueKey('auth.social.$provider'));
+          await t.ensureVisible(button);
+          await t.pumpAndSettle();
+          await t.tap(button);
+          await t.pumpAndSettle();
+          expect(
+            find.text(
+              '$provider sign-in and sign-up are coming soon. Please use email for now.',
+            ),
+            findsOneWidget,
+          );
+          await t.pump(const Duration(seconds: 5));
+          await t.pumpAndSettle();
+        }
+      }
+      expect(calls, 0);
+      expect(api.token, isNull);
+      await t.pumpWidget(const SizedBox());
+      await t.pumpWidget(GymNetworkApp(api: api));
+      await t.pumpAndSettle();
+      expect(find.text('Welcome back'), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('auth.language')));
+      await t.pumpAndSettle();
+      expect(find.text('أهلًا بيك من جديد'), findsOneWidget);
+      expect(await api.storage.read('auth.language'), 'ar');
+      expect(
+        Directionality.of(
+          t.element(find.byKey(const ValueKey('auth.identifier'))),
+        ),
+        TextDirection.rtl,
+      );
+      expect(t.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'pending owner sees only application status and cannot enter financial shell',
     (t) async {
