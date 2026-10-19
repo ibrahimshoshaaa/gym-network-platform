@@ -9,7 +9,7 @@ import '../core/portal_ui.dart';
 import 'topup.dart';
 import 'account.dart';
 
-class TraineeHome extends StatelessWidget {
+class TraineeHome extends StatefulWidget {
   final ApiClient api;
   final VoidCallback showGyms, showQr;
   const TraineeHome({
@@ -19,181 +19,204 @@ class TraineeHome extends StatelessWidget {
     required this.showQr,
   });
   @override
-  Widget build(BuildContext context) => DataView(
-    load: () => Future.wait([
-      api.request('trainee/wallet'),
-      api.request('trainee/active-visits'),
-      api.request('trainee/wallet/movements?limit=3'),
-    ]),
-    builder: (data, reload) {
-      final w = data[0], visits = rows(data[1]), movements = rows(data[2]);
-      final unavailable = int.tryParse('${w['unavailablePoints']}') ?? 0;
-      return ListView(
+  State<TraineeHome> createState() => _TraineeHomeState();
+}
+
+class _TraineeHomeState extends State<TraineeHome> {
+  Json? wallet;
+  List<Json>? visits, movements;
+  Object? walletError, visitsError, movementsError;
+  bool walletLoading = true, visitsLoading = true, movementsLoading = true;
+  int generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    final current = ++generation;
+    setState(() {
+      walletLoading = visitsLoading = movementsLoading = true;
+      walletError = visitsError = movementsError = null;
+    });
+    // Each section commits independently: a slow history must not hide the wallet.
+    Future<void> part(String path, void Function(dynamic) success,
+        void Function(Object) failure, void Function() finish) async {
+      try {
+        final result = await widget.api.request(path);
+        if (mounted && current == generation) setState(() => success(result));
+      } catch (e) {
+        if (mounted && current == generation) setState(() => failure(e));
+      } finally {
+        if (mounted && current == generation) setState(finish);
+      }
+    }
+    await Future.wait([
+      part('trainee/wallet', (r) => wallet = Map<String, dynamic>.from(r),
+          (e) { wallet = null; walletError = e; }, () => walletLoading = false),
+      part('trainee/active-visits', (r) => visits = rows(r),
+          (e) { visits = null; visitsError = e; }, () => visitsLoading = false),
+      part('trainee/wallet/movements?limit=3', (r) => movements = rows(r),
+          (e) { movements = null; movementsError = e; }, () => movementsLoading = false),
+    ]);
+  }
+
+  Future<void> topup() async {
+    await open(context, TopupScreen(api: widget.api));
+    if (mounted) await load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unavailable = int.tryParse('${wallet?['unavailablePoints']}') ?? 0;
+    return RefreshIndicator(
+      onRefresh: load,
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
         children: [
-          PortalIntro(
-            'أهلًا ${api.user!['displayName'].toString().split(' ').first}',
-            eyebrow: 'حساب المتدرب',
-            detail: 'رصيد واحد. اختار مكان تمرينك وابدأ.',
-            trailing: IconButton(
+          Row(children: [
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('أهلًا ${widget.api.user!['displayName'].toString().split(' ').first}',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                const Text('جاهز لتمرينتك؟', style: TextStyle(color: muted, fontSize: 12)),
+              ],
+            )),
+            IconButton(
               tooltip: 'الإشعارات',
               icon: const Icon(Icons.notifications_none_rounded),
-              onPressed: () => open(context, NotificationsScreen(api: api)),
+              onPressed: () => open(context, NotificationsScreen(api: widget.api)),
             ),
-          ),
+          ]),
+          const SizedBox(height: 18),
           Panel(
             color: ink,
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Icon(
-                      Icons.account_balance_wallet_outlined,
-                      color: lime,
-                      size: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'رصيدك المتاح',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    '${w['spendablePoints']} نقطة',
-                    style: const TextStyle(
-                      fontSize: 44,
-                      height: 1.2,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                const Text('رصيدك المتاح', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 10),
-                Text(
-                  w['expiresAt'] != null
-                      ? 'صالح حتى ${shortDate(w['expiresAt']).split(' · ').first}'
-                      : 'اشحن رصيدك وابدأ تمرينك',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: lime,
-                    foregroundColor: ink,
+                if (walletLoading && wallet == null)
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 12),
+                    child: CircularProgressIndicator(color: lime))
+                else if (wallet != null) ...[
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text('${wallet!['spendablePoints']} نقطة',
+                      style: const TextStyle(fontSize: 36, height: 1.2,
+                        fontWeight: FontWeight.w900, color: lime)),
                   ),
-                  onPressed: () async {
-                    await open(context, TopupScreen(api: api));
-                    await reload();
-                  },
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('اشحن رصيدك'),
-                ),
+                  const SizedBox(height: 8),
+                  Text(wallet!['status'] == 'EXPIRED'
+                    ? 'انتهت صلاحية الرصيد · راجع الإدارة'
+                    : wallet!['expiresAt'] != null
+                    ? 'صالح حتى ${shortDate(wallet!['expiresAt']).split(' · ').first}'
+                    : 'اشحن رصيدك وابدأ تمرينك',
+                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                ] else
+                  const Text('تعذر تحميل الرصيد', style: TextStyle(color: Colors.white)),
+                if (walletLoading && wallet != null) ...[
+                  const SizedBox(height: 8),
+                  const LinearProgressIndicator(color: lime, minHeight: 2),
+                ],
+                const SizedBox(height: 16),
+                Wrap(spacing: 10, runSpacing: 10, children: [
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink),
+                    onPressed: widget.showQr,
+                    icon: const Icon(Icons.qr_code_2_rounded, size: 20),
+                    label: const Text('رمز الدخول'),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white38)),
+                    onPressed: topup,
+                    icon: const Icon(Icons.add_rounded, size: 20),
+                    label: const Text('اشحن رصيدك'),
+                  ),
+                ]),
               ],
             ),
           ),
+          if (walletError != null) ErrorNote(walletError, retry: load),
           if (unavailable > 0) ...[
             const SizedBox(height: 12),
-            PortalNote(
-              '$unavailable نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.',
-            ),
+            PortalNote('$unavailable نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.'),
           ],
-          const SectionTitle('تمرينتك الجاية'),
-          PortalGrid(
-            children: [
-              PortalTask(
-                'رمز الدخول',
-                detail: 'اعرضه عند وصولك للفرع',
-                icon: Icons.qr_code_2_rounded,
-                primary: true,
-                onTap: showQr,
-              ),
-              PortalTask(
-                'جيم قريب',
-                detail: 'قارن المكان ونقاط الزيارة',
-                icon: Icons.near_me_outlined,
-                onTap: showGyms,
-              ),
-            ],
-          ),
-          if (visits.isNotEmpty) ...[
+          if (visitsLoading)
+            const Padding(padding: EdgeInsets.symmetric(vertical: 12),
+              child: LinearProgressIndicator(minHeight: 2))
+          else if (visitsError != null)
+            ErrorNote(visitsError, retry: load)
+          else if (visits?.isNotEmpty == true) ...[
             const SectionTitle('جلستك الحالية'),
-            ...visits.map(
-              (v) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: VisitCard(v),
-              ),
-            ),
+            ...visits!.map((v) => Padding(
+              padding: const EdgeInsets.only(bottom: 12), child: VisitCard(v))),
           ],
-          SectionTitle(
-            'آخر حركة في رصيدك',
-            trailing: TextButton(
-              onPressed: () => open(context, WalletHistory(api: api)),
-              child: const Text('السجل كامل'),
+          const SizedBox(height: 16),
+          Panel(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: const Icon(Icons.near_me_outlined, color: green),
+              title: const Text('اختار جيم قريب',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              subtitle: const Text('شوف المكان ونقاط الزيارة',
+                style: TextStyle(color: muted, fontSize: 11)),
+              trailing: const Icon(Icons.arrow_back_rounded, size: 18),
+              onTap: widget.showGyms,
             ),
           ),
-          if (movements.isEmpty)
-            const EmptyState(
-              'رصيدك لسه في البداية',
-              detail:
-                  'أول شحن أو زيارة هتظهر هنا، وتقدر تتابع كل نقطة من السجل.',
-              icon: Icons.receipt_long_outlined,
-            ),
-          if (movements.isNotEmpty)
+          SectionTitle('آخر حركة في رصيدك', trailing: TextButton(
+            onPressed: () => open(context, WalletHistory(api: widget.api)),
+            child: const Text('السجل كامل'))),
+          if (movementsLoading && movements == null)
+            const Center(child: CircularProgressIndicator())
+          else if (movementsError != null)
+            ErrorNote(movementsError, retry: load)
+          else if (movements?.isEmpty == true)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('أول شحن أو زيارة هتظهر هنا.',
+                style: TextStyle(color: muted, fontSize: 12)),
+            )
+          else if (movements != null)
             Panel(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-              child: Column(
-                children: [
-                  for (final r in movements)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        (r['delta'] as num) > 0
-                            ? Icons.south_west_rounded
-                            : Icons.north_east_rounded,
-                        color: green,
-                      ),
-                      title: Text(
-                        '${r['sourceLabel'] ?? r['branch']?['name'] ?? 'حركة نقاط'}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                      ),
-                      subtitle: Text(
-                        shortDate(r['eventAt']),
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                      trailing: Text(
-                        '${(r['delta'] as num) > 0 ? '+' : ''}${r['delta']}',
-                        textDirection: TextDirection.ltr,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: green,
-                        ),
-                      ),
-                      onTap: () => open(context, WalletHistory(api: api)),
-                    ),
-                ],
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Column(children: [
+                for (final r in movements!)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon((r['delta'] as num) > 0
+                      ? Icons.south_west_rounded : Icons.north_east_rounded, color: green),
+                    title: Text('${r['sourceLabel'] ?? r['branch']?['name'] ?? 'حركة نقاط'}',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    subtitle: Text(shortDate(r['eventAt']), style: const TextStyle(fontSize: 11)),
+                    trailing: Text('${(r['delta'] as num) > 0 ? '+' : ''}${r['delta']}',
+                      textDirection: TextDirection.ltr,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: green)),
+                    onTap: () => open(context, WalletHistory(api: widget.api)),
+                  ),
+              ]),
             ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () => open(context, TopupHistory(api: api)),
-            icon: const Icon(Icons.pending_actions_rounded),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: () => open(context, TopupHistory(api: widget.api)),
+            icon: const Icon(Icons.pending_actions_rounded, size: 18),
             label: const Text('متابعة طلبات الشحن'),
           ),
         ],
-      );
-    },
-  );
+      ),
+    );
+  }
 }
 
 class WalletHistory extends StatelessWidget {

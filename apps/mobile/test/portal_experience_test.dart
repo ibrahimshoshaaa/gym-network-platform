@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -8,6 +9,7 @@ import 'package:gym_network/core/api.dart';
 import 'package:gym_network/core/portal_ui.dart';
 import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/screens/owner.dart';
+import 'package:gym_network/screens/trainee.dart';
 import 'package:gym_network/screens/topup.dart';
 import 'api_test.dart' show MemoryStore;
 
@@ -304,4 +306,52 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
+  testWidgets('wallet and entry stay usable while movement history is still loading', (t) async {
+    t.view.physicalSize = const Size(320, 740);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final history = Completer<http.Response>();
+    var qrOpened = false;
+    final api = ApiClient(storage: MemoryStore(), transport: MockClient((r) async {
+      if (r.url.path.endsWith('wallet/movements')) return history.future;
+      if (r.url.path.endsWith('trainee/wallet')) return reply({
+        'spendablePoints': 120, 'unavailablePoints': 0,
+        'expiresAt': '2027-01-01T12:00:00Z', 'status': 'VALID',
+      });
+      return reply({'items': []});
+    }))..token = 'synthetic'..user = {'id':'u1','role':'TRAINEE','displayName':'إبراهيم'};
+    await t.pumpWidget(MaterialApp(theme: appTheme(), home: Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(body: TraineeHome(api:api,showGyms:(){},showQr:(){qrOpened=true;})),
+    )));
+    await t.pump();
+    await t.pump(const Duration(milliseconds:100));
+    expect(find.text('120 نقطة'), findsOneWidget);
+    expect(find.text('رمز الدخول').hitTestable(), findsOneWidget);
+    expect(find.text('اشحن رصيدك').hitTestable(), findsOneWidget);
+    await t.tap(find.text('رمز الدخول'));
+    expect(qrOpened,isTrue);
+    history.complete(reply({'items':[]}));
+    await t.pumpAndSettle();
+    expect(t.takeException(),isNull);
+  });
+  testWidgets('history failure does not replace a valid wallet or claim an empty history', (t) async {
+    final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
+      if(r.url.path.endsWith('wallet/movements')) return http.Response('{"code":"SERVICE_UNAVAILABLE"}',503);
+      if(r.url.path.endsWith('trainee/wallet'))return reply({
+        'spendablePoints':120,'unavailablePoints':0,'expiresAt':null,
+      });
+      return reply({'items':[]});
+    }))..token='synthetic'..user={'id':'u1','role':'TRAINEE','displayName':'إبراهيم'};
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:Directionality(
+      textDirection:TextDirection.rtl,child:Scaffold(body:TraineeHome(api:api,showGyms:(){},showQr:(){})),
+    )));
+    await t.pumpAndSettle();
+    expect(find.text('120 نقطة'),findsOneWidget);
+    expect(find.text('أول شحن أو زيارة هتظهر هنا.'),findsNothing);
+    expect(find.byType(ErrorNote),findsOneWidget);
+    expect(t.takeException(),isNull);
+  });
+
 }
