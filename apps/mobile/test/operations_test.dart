@@ -137,6 +137,17 @@ void main() {
     await t.tap(find.text('مراجعة الشحن'));
     await t.pumpAndSettle();
     expect(posted, isNull);
+    expect(find.text('90 نقطة'), findsOneWidget);
+    await t.ensureVisible(find.text('تعديل النقاط'));
+    await t.tap(find.text('تعديل النقاط'));
+    await t.pumpAndSettle();
+    expect(find.text('متدرب تجريبي'), findsOneWidget);
+    expect(find.text('بحث عن المتدرب'), findsNothing);
+    await t.ensureVisible(find.text('مراجعة الشحن'));
+    await t.tap(find.text('مراجعة الشحن'));
+    await t.pumpAndSettle();
+    expect(t.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value, false);
+    expect(posted, isNull);
     await t.ensureVisible(find.byType(CheckboxListTile));
     await t.tap(find.byType(CheckboxListTile));
     await t.pumpAndSettle();
