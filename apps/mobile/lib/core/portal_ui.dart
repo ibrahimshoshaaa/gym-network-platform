@@ -309,3 +309,22 @@ class FlowSteps extends StatelessWidget {
     ),
   );
 }
+
+/// Compact headings for the trainee's five primary destinations.
+class TraineeSectionHeader extends StatelessWidget {
+ final String title,subtitle;
+ final Widget? trailing;
+ const TraineeSectionHeader(this.title,{super.key,this.subtitle='',this.trailing});
+ @override Widget build(BuildContext context)=>Padding(
+  padding:const EdgeInsets.only(bottom:18),
+  child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Text(title,style:const TextStyle(fontSize:24,height:1.5,fontWeight:FontWeight.w800,color:ink)),
+    if(subtitle.isNotEmpty)...[
+     const SizedBox(height:5),
+     Text(subtitle,style:const TextStyle(fontSize:12,height:1.6,color:muted)),
+    ],
+   ])),
+   if(trailing!=null)...[const SizedBox(width:10),trailing!],
+  ]));
+}

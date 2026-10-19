@@ -129,7 +129,9 @@ class _TraineeHomeState extends State<TraineeHome> {
                 const SizedBox(height: 16),
                 Wrap(spacing: 10, runSpacing: 10, children: [
                   FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink),
+                    style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink,
+                      minimumSize:const Size(0,46),padding:const EdgeInsets.symmetric(horizontal:10),
+                      textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
                     onPressed: widget.showQr,
                     icon: const Icon(Icons.qr_code_2_rounded, size: 20),
                     label: const Text('رمز الدخول'),
@@ -137,6 +139,8 @@ class _TraineeHomeState extends State<TraineeHome> {
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
+                      minimumSize:const Size(0,46),padding:const EdgeInsets.symmetric(horizontal:10),
+                      textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w700),
                       side: const BorderSide(color: Colors.white38)),
                     onPressed: topup,
                     icon: const Icon(Icons.add_rounded, size: 20),
@@ -298,35 +302,35 @@ class VisitCard extends StatelessWidget {
   const VisitCard(this.visit, {super.key});
   @override
   Widget build(BuildContext context) => Panel(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.fitness_center_rounded, color: green),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '${visit['branch']?['name'] ?? visit['branchName'] ?? 'زيارة جيم'}',
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-            StatusPill(visit['status']),
-          ],
-        ),
-        Fact('النقاط', '${visit['pointsCharged']} نقطة'),
-        Text(
-          shortDate(visit['startedAt']),
-          style: const TextStyle(color: muted, fontSize: 12),
-        ),
-        if (visit['status'] == 'ACTIVE')
-          Text(
-            'نهاية الجلسة: ${shortDate(visit['expiresAt'])}',
-            style: const TextStyle(color: green, fontWeight: FontWeight.w600),
-          ),
-        Reference('${visit['id']}'),
+    padding:const EdgeInsets.all(16),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Container(padding:const EdgeInsets.all(10),
+          decoration:BoxDecoration(color:const Color(0xffe3fbf3),borderRadius:BorderRadius.circular(12)),
+          child:const Icon(Icons.fitness_center_rounded,color:green,size:21)),
+        const SizedBox(width:10),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('${visit['branch']?['gym']?['name'] ?? 'زيارة جيم'}',
+            style:const TextStyle(fontWeight:FontWeight.w800,fontSize:15)),
+          Text('${visit['branch']?['name'] ?? visit['branchName'] ?? ''}',
+            style:const TextStyle(color:muted,fontSize:12)),
+        ])),
+        const SizedBox(width:8),
+        StatusPill(visit['status']),
+      ]),
+      const SizedBox(height:14),
+      Wrap(spacing:14,runSpacing:8,children:[
+        Text('${visit['pointsCharged']} نقطة',
+          style:const TextStyle(color:green,fontWeight:FontWeight.w800,fontSize:16)),
+        Text(shortDate(visit['startedAt']),style:const TextStyle(color:muted,fontSize:11)),
+      ]),
+      if(visit['status']=='ACTIVE')...[
+        const SizedBox(height:10),
+        Text('نهاية الجلسة: ${shortDate(visit['expiresAt'])}',
+          style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w600)),
       ],
-    ),
+      Reference('${visit['id']}'),
+    ]),
   );
 }
 
@@ -338,10 +342,7 @@ class VisitsScreen extends StatelessWidget {
   Widget build(BuildContext context) => PagedRecords(
     api: api,
     path: 'trainee/visits',
-    header: const PortalIntro(
-      'زياراتك',
-      detail: 'تابع الجلسات الحالية والزيارات السابقة ونقاط كل زيارة.',
-    ),
+    header: const TraineeSectionHeader('زياراتك', subtitle: 'كل تمرينة ونقاطها، في سجل واحد.'),
     empty: 'لسه مفيش زيارات',
     emptyDetail: 'اختار جيمك واعرض رمز الدخول عند وصولك. الزيارة هتظهر هنا بعد تأكيد حضورك.',
     emptyAction: showQr == null
@@ -427,77 +428,55 @@ class _QrScreenState extends State<QrScreen> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(24),
-    children: [
-      const SizedBox(height: 14),
-      Text(
-        'دخولك يبدأ من هنا',
-        style: Theme.of(context).textTheme.headlineMedium,
-        textAlign: TextAlign.center,
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'ورّي الرمز للكاشير في الجيم. راجع نقاط الزيارة قبل ما تأكد حضورك.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: muted),
-      ),
-      const SizedBox(height: 28),
-      Panel(
-        child: Column(
-          children: [
-            const Brand(),
-            const SizedBox(height: 28),
-            if (busy)
-              const SizedBox(
-                height: 230,
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (qr != null && remaining > 0 && foreground)
-              Semantics(
-                label: 'رمز دخول مؤقت؛ اعرضه للكاشير فقط',
-                child: QrImageView(
-                  data: qr!['token'],
-                  version: QrVersions.auto,
-                  size: 230,
-                  backgroundColor: Colors.white,
-                ),
-              )
-            else
-              const SizedBox(
-                height: 230,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.qr_code_2_rounded, size: 110, color: muted),
-                    Text('الرمز غير متاح أو انتهت صلاحيته'),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 18),
-            Text(
-              qr != null && remaining > 0
-                  ? 'صالح لمدة $remaining ثانية'
-                  : 'افتح رمزًا جديدًا وقت الدخول',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: green),
-            ),
-            const SizedBox(height: 18),
-            ActionButton(
-              'تحديث رمز الدخول',
-              onPressed: load,
-              busy: busy,
-              icon: Icons.refresh_rounded,
-            ),
-          ],
+  Widget build(BuildContext context) {
+    final valid=qr!=null && remaining>0 && foreground;
+    return ListView(
+      padding:const EdgeInsets.fromLTRB(20,8,20,28),
+      children:[
+        const TraineeSectionHeader('رمز الدخول',subtitle:'اعرض الرمز للكاشير عند وصولك للجيم.'),
+        Panel(
+          padding:const EdgeInsets.all(20),
+          child:Column(children:[
+            const Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+              Icon(Icons.verified_user_outlined,size:18,color:green),
+              SizedBox(width:7),
+              Text('رمزك الشخصي',style:TextStyle(color:green,fontSize:13,fontWeight:FontWeight.w700)),
+            ]),
+            const SizedBox(height:20),
+            LayoutBuilder(builder:(context,box){
+              final size=box.maxWidth.clamp(120.0,250.0);
+              return SizedBox(width:size,height:size,child:busy
+                ? const Center(child:CircularProgressIndicator())
+                : valid
+                ? Semantics(label:'رمز دخول مؤقت؛ اعرضه للكاشير فقط',
+                    child:QrImageView(data:qr!['token'],version:QrVersions.auto,
+                      size:size,backgroundColor:Colors.white))
+                : const Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+                    Icon(Icons.qr_code_2_rounded,size:100,color:muted),
+                    SizedBox(height:10),
+                    Text('الرمز غير متاح أو انتهت صلاحيته',textAlign:TextAlign.center,
+                      style:TextStyle(fontSize:12,color:muted)),
+                  ]));
+            }),
+            const SizedBox(height:20),
+            Text(valid?'صالح لمدة $remaining ثانية':'افتح رمزًا جديدًا وقت الدخول',
+              style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:green)),
+            const SizedBox(height:12),
+            ClipRRect(borderRadius:BorderRadius.circular(8),
+              child:LinearProgressIndicator(value:valid?remaining/60:0,
+                color:green,backgroundColor:canvas,minHeight:4)),
+            const SizedBox(height:18),
+            ActionButton('تحديث رمز الدخول',onPressed:load,busy:busy,icon:Icons.refresh_rounded),
+          ]),
         ),
-      ),
-      ErrorNote(error),
-      const SizedBox(height: 18),
-      const Text(
-        'الرمز مؤقت وبيستخدم مرة واحدة. متشاركوش مع حد خارج الجيم.',
-        style: TextStyle(color: muted, fontSize: 12),
-        textAlign: TextAlign.center,
-      ),
-    ],
-  );
+        ErrorNote(error,retry:load),
+        const SizedBox(height:16),
+        const PortalNote('الرمز مؤقت وبيستخدم مرة واحدة. متشاركوش مع حد خارج الجيم.',
+          icon:Icons.shield_outlined),
+        const SizedBox(height:12),
+        const Text('نقاط الزيارة بتتراجع عند الكاشير قبل تأكيد حضورك.',
+          textAlign:TextAlign.center,style:TextStyle(color:muted,fontSize:11)),
+      ],
+    );
+  }
 }

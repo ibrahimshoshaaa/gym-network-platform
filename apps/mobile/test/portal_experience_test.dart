@@ -10,6 +10,7 @@ import 'package:gym_network/core/portal_ui.dart';
 import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/screens/owner.dart';
 import 'package:gym_network/screens/trainee.dart';
+import 'package:gym_network/screens/directory.dart';
 import 'package:gym_network/screens/topup.dart';
 import 'api_test.dart' show MemoryStore;
 
@@ -352,6 +353,63 @@ void main() {
     expect(find.text('أول شحن أو زيارة هتظهر هنا.'),findsNothing);
     expect(find.byType(ErrorNote),findsOneWidget);
     expect(t.takeException(),isNull);
+  });
+
+  test('gym thumbnail prefers the logo and ignores invalid image URLs',(){
+    expect(gymThumbnail({'images':[
+      {'url':'https://example.test/photo.jpg','purpose':'PHOTO'},
+      {'url':'https://example.test/logo.png','purpose':'LOGO'},
+    ]}),'https://example.test/logo.png');
+    expect(gymThumbnail({'images':[
+      {'url':'javascript:invalid','purpose':'LOGO'},
+      {'url':'https://example.test/photo.jpg','purpose':'PHOTO'},
+    ]}),'https://example.test/photo.jpg');
+    expect(gymThumbnail({'images':[]} ),isNull);
+  });
+  testWidgets('map marker shows the gym name above the thumbnail and opens its branch', (t)async{
+    var opened=false;
+    final b=<String,dynamic>{
+      'id':'b1','name':'فرع شبين','gym':{'name':'جيم باسم عربي طويل لاختبار الخريطة'},
+      'images':[],
+    };
+    await t.pumpWidget(MaterialApp(home:MediaQuery(
+      data:const MediaQueryData(textScaler:TextScaler.linear(1.8)),
+      child:Directionality(textDirection:TextDirection.rtl,
+        child:Scaffold(body:Center(child:SizedBox(width:124,height:148,
+          child:GymMapMarker(branch:b,onTap:(){opened=true;})))),
+      ),
+    )));
+    await t.pumpAndSettle();
+    final name=find.text('جيم باسم عربي طويل لاختبار الخريطة');
+    expect(t.getRect(name).bottom,lessThanOrEqualTo(t.getRect(find.byType(GymThumbnail)).top));
+    await t.tap(find.byType(GymThumbnail));
+    expect(opened,isTrue);
+    expect(t.takeException(),isNull);
+  });
+  testWidgets('trainee QR fits a narrow screen with larger Arabic text', (t)async{
+    t.view.physicalSize=const Size(320,740);
+    t.view.devicePixelRatio=1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final now=DateTime.now().toUtc();
+    final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async=>reply({
+      'token':'synthetic-entry-token',
+      'expiresAt':now.add(const Duration(seconds:60)).toIso8601String(),
+      'serverTime':now.toIso8601String(),
+    })))..token='synthetic'..user={'id':'u1','role':'TRAINEE'};
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:MediaQuery(
+      data:const MediaQueryData(size:Size(320,740),textScaler:TextScaler.linear(1.8)),
+      child:const Directionality(textDirection:TextDirection.rtl,child:SizedBox()),
+    )));
+    await t.pumpWidget(MaterialApp(theme:appTheme(),home:MediaQuery(
+      data:const MediaQueryData(size:Size(320,740),textScaler:TextScaler.linear(1.8)),
+      child:Directionality(textDirection:TextDirection.rtl,child:Scaffold(body:QrScreen(api:api))),
+    )));
+    await t.pump();
+    await t.pump(const Duration(milliseconds:300));
+    expect(find.text('رمزك الشخصي'),findsOneWidget);
+    expect(t.takeException(),isNull);
+    await t.pumpWidget(const SizedBox());
   });
 
 }

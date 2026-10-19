@@ -127,13 +127,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     onRefresh: () => load(),
     child: ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(22, 14, 22, 30),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
-        const PortalIntro(
-          'تمرينك أقرب مما تتخيل',
-          eyebrow: 'اكتشف الجيمات',
-          detail: 'قارن المكان ونقاط الزيارة، واختار الجيم المناسب ليك.',
-        ),
+        const TraineeSectionHeader('اكتشف جيمك', subtitle: 'اختار المكان المناسب وشوف نقاط الزيارة.'),
         TextField(
           controller: search,
           onSubmitted: (_) => load(),
@@ -178,6 +174,8 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             ),
           ),
         ExpansionTile(
+          dense: true,
+          visualDensity: VisualDensity.compact,
           tilePadding: EdgeInsets.zero,
           title: const Text(
             'تصفية بسعر الزيارة',
@@ -241,19 +239,13 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
                         .map(
                           (b) => Marker(
                             point: pointOf(b),
-                            width: 50,
-                            height: 50,
-                            child: IconButton(
-                              tooltip: '${b['name']}',
-                              icon: const Icon(
-                                Icons.location_on_rounded,
-                                color: green,
-                                size: 38,
-                              ),
-                              onPressed: () => open(
-                                context,
-                                BranchDetail(api: widget.api, id: b['id']),
-                              ),
+                            width: 124,
+                            height: 148,
+                            alignment: Alignment.topCenter,
+                            child: GymMapMarker(
+                              branch: b,
+                              onTap: () => open(context,
+                                BranchDetail(api: widget.api, id: b['id'])),
                             ),
                           ),
                         )
@@ -285,116 +277,123 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   );
 }
 
+/// Prefer the gym identity image, then a branch photo. Invalid/missing images
+/// always fall back to a local mark so the map remains usable.
+String? gymThumbnail(Json branch) {
+  final images = (branch['images'] as List? ?? []).whereType<Map>();
+  final ordered = [...images.where((p)=>p['purpose']=='LOGO'),
+    ...images.where((p)=>p['purpose']!='LOGO')];
+  for(final image in ordered) {
+    final raw=image['url'];
+    if(raw is String && Uri.tryParse(raw)?.scheme=='https') return raw;
+  }
+  return null;
+}
+
+class GymThumbnail extends StatelessWidget {
+  final Json branch;
+  final double size;
+  const GymThumbnail({super.key,required this.branch,this.size=54});
+  @override
+  Widget build(BuildContext context) {
+    final url=gymThumbnail(branch);
+    final fallback=Container(color:const Color(0xffe3fbf3),
+      alignment:Alignment.center,
+      child:const Icon(Icons.fitness_center_rounded,color:green,size:26));
+    return ClipRRect(borderRadius:BorderRadius.circular(15),
+      child:SizedBox(width:size,height:size,child:url==null?fallback:Image.network(
+        url,fit:BoxFit.cover,excludeFromSemantics:true,
+        errorBuilder:(_,error,stack)=>fallback,
+        loadingBuilder:(_,child,progress)=>progress==null?child:fallback,
+      )));
+  }
+}
+
+class GymMapMarker extends StatelessWidget {
+  final Json branch;
+  final VoidCallback? onTap;
+  const GymMapMarker({super.key,required this.branch,this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final name='${branch['gym']?['name'] ?? branch['name'] ?? 'جيم'}';
+    return Semantics(button:onTap!=null,label:'$name، ${branch['name'] ?? ''}',
+      child:GestureDetector(
+        behavior:HitTestBehavior.opaque,onTap:onTap,
+        child:Column(mainAxisAlignment:MainAxisAlignment.end,children:[
+          Container(
+            constraints:const BoxConstraints(maxWidth:120),
+            padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+            decoration:BoxDecoration(color:ink,borderRadius:BorderRadius.circular(9),
+              boxShadow:const [BoxShadow(color:Color(0x18000000),blurRadius:8,offset:Offset(0,3))]),
+            child:Text(name,maxLines:2,overflow:TextOverflow.ellipsis,textAlign:TextAlign.center,
+              style:const TextStyle(color:Colors.white,fontSize:10,height:1.35,fontWeight:FontWeight.w700)),
+          ),
+          const SizedBox(height:5),
+          Container(padding:const EdgeInsets.all(3),
+            decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(18),
+              border:Border.all(color:green,width:2),
+              boxShadow:const [BoxShadow(color:Color(0x22000000),blurRadius:12,offset:Offset(0,4))]),
+            child:GymThumbnail(branch:branch,size:46)),
+          Container(width:8,height:8,margin:const EdgeInsets.only(top:3),
+            decoration:const BoxDecoration(color:green,shape:BoxShape.circle)),
+        ]),
+      ));
+  }
+}
+
 class BranchTile extends StatelessWidget {
   final Json branch;
   final VoidCallback onTap;
-  const BranchTile({super.key, required this.branch, required this.onTap});
+  const BranchTile({super.key,required this.branch,required this.onTap});
   @override
-  Widget build(BuildContext context) {
-    final photos = branch['images'] as List? ?? [];
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(25),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (photos.isNotEmpty)
-              Image.network(
-                photos.first['url'],
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, e, s) => const SizedBox(
-                  height: 100,
-                  child: Center(
-                    child: Icon(
-                      Icons.fitness_center_rounded,
-                      color: green,
-                      size: 40,
-                    ),
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${branch['gym']?['name'] ?? ''}',
-                          style: const TextStyle(color: muted, fontSize: 11),
-                        ),
-                      ),
-                      if (branch['distanceKm'] != null)
-                        Text(
-                          '${(branch['distanceKm'] as num).toStringAsFixed(1)} كم',
-                          style: const TextStyle(
-                            color: green,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                    ],
-                  ),
-                  Text(
-                    '${branch['name']}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${branch['city']} · ${branch['governorate']}',
-                    style: const TextStyle(color: muted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: lime,
-                          borderRadius: BorderRadius.circular(9),
-                        ),
-                        child: Text(
-                          '${branch['visitPricePoints']} نقطة',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Icon(
-                        Icons.schedule_rounded,
-                        size: 16,
-                        color: muted,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          '${branch['sessionMinutes']} دقيقة',
-                          style: const TextStyle(color: muted, fontSize: 12),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.arrow_back_rounded,
-                        size: 18,
-                        color: green,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context)=>Material(
+    color:Colors.white,borderRadius:BorderRadius.circular(22),clipBehavior:Clip.antiAlias,
+    child:InkWell(onTap:onTap,child:Padding(
+      padding:const EdgeInsets.all(16),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          GymThumbnail(branch:branch,size:62),
+          const SizedBox(width:12),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('${branch['gym']?['name'] ?? branch['name']}',
+              style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
+            const SizedBox(height:3),
+            Text('${branch['name']}',style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w600)),
+            const SizedBox(height:3),
+            Text('${branch['city']} · ${branch['governorate']}',
+              style:const TextStyle(color:muted,fontSize:11)),
+          ])),
+        ]),
+        const SizedBox(height:14),
+        Wrap(spacing:8,runSpacing:8,children:[
+          _DirectoryChip('${branch['visitPricePoints']} نقطة / زيارة',Icons.toll_rounded,primary:true),
+          _DirectoryChip('${branch['sessionMinutes']} دقيقة',Icons.schedule_rounded),
+          if(branch['distanceKm']!=null)
+            _DirectoryChip('${(branch['distanceKm'] as num).toStringAsFixed(1)} كم',Icons.near_me_outlined),
+        ]),
+        const SizedBox(height:12),
+        const Row(children:[
+          Expanded(child:Text('تفاصيل الجيم والاتجاهات',
+            style:TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w700))),
+          Icon(Icons.arrow_back_rounded,size:17,color:green),
+        ]),
+      ]),
+    )),
+  );
+}
+class _DirectoryChip extends StatelessWidget {
+ final String text;
+ final IconData icon;
+ final bool primary;
+ const _DirectoryChip(this.text,this.icon,{this.primary=false});
+ @override Widget build(BuildContext context)=>Container(
+  padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
+  decoration:BoxDecoration(color:primary?const Color(0xffe3fbf3):canvas,
+    borderRadius:BorderRadius.circular(10)),
+  child:Row(mainAxisSize:MainAxisSize.min,children:[
+    Icon(icon,size:14,color:green),const SizedBox(width:5),
+    Flexible(child:Text(text,style:TextStyle(fontSize:11,color:primary?green:ink,fontWeight:FontWeight.w600))),
+  ]));
 }
 
 class BranchDetail extends StatelessWidget {
@@ -447,12 +446,9 @@ class BranchDetail extends StatelessWidget {
                     MarkerLayer(
                       markers: [
                         Marker(
-                          point: p,
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            size: 38,
-                            color: green,
-                          ),
+                          point: p, width:124, height:148,
+                          alignment:Alignment.topCenter,
+                          child:GymMapMarker(branch:b),
                         ),
                       ],
                     ),
