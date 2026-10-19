@@ -377,7 +377,7 @@ class _BranchSaleState extends State<BranchSale> {
             const SizedBox(height: 16),
             TextField(
               controller: points,
-              enabled: !busy,
+              enabled: !busy && widget.api.pending == null,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(labelText: 'عدد النقاط'),
             ),
@@ -430,7 +430,7 @@ class _BranchSaleState extends State<BranchSale> {
                       confirmed = false;
                       error = null;
                     }),
-              child: const Text(quote != null ? 'تعديل النقاط' : 'اختيار متدرب آخر'),
+              child: Text(quote != null ? 'تعديل النقاط' : 'اختيار متدرب آخر'),
             ),
         ],
       ],
