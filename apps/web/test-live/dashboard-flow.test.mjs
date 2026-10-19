@@ -1712,7 +1712,7 @@ test(
           await expect(page.getByRole('heading',{name:'محتاج تدخلك',exact:true})).toBeVisible();
           await expect(page.locator('.platform-finance')).toHaveCount(0);
           await expect(page.getByRole('navigation',{name:'وصول سريع'}).getByRole('button')).toHaveCount(5);
-          for(const width of [320,393,1280]){
+          for(const width of [320,393,800,1280]){
             await page.setViewportSize({width,height:851});
             assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'admin home must fit phone and desktop');
           }

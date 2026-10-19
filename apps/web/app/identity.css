@@ -357,6 +357,7 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
 }
 
 /* Platform owner: five destinations and a single decision queue. */
+.admin-workspace .role-quick-nav { grid-template-columns:repeat(5,minmax(0,1fr)); }
 .admin-workspace .sidebar nav > button { margin:6px 0; }
 .admin-workspace .workspace-content { max-width:1320px; }
 .admin-welcome { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:0 0 24px; }
