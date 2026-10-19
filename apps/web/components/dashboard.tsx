@@ -30,6 +30,7 @@ import { roleTabs, roleQuickTabs, roleName } from "../lib/navigation";
 import { WorkHome, type CashierTask } from "./work-home";
 import { invitationToken } from "../lib/invitation-link";
 import { AdminHome } from "./admin-home";
+import { OwnerJoinAccess } from "./owner-join-access";
 import { Login } from "./login";
 import { TraineePortal } from "./trainee-portal";
 import { SettingsPanel } from "./settings";
@@ -252,7 +253,7 @@ export function Dashboard() {
   function navigate(next: Tab, task?: CashierTask) { if(next!=="gyms")setReviewGym(null); if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
   const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
   return (
-    <div className={`app-shell ${admin ? "admin-workspace" : ""}`}>
+    <OwnerJoinAccess key={user.id} enabled={user.role === "GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><div className={`app-shell ${admin ? "admin-workspace" : ""}`}>
       {mobile && (
         <button
           className="nav-backdrop"
@@ -383,7 +384,7 @@ export function Dashboard() {
       </div>
       <nav className="role-quick-nav" aria-label="وصول سريع">{quick.map(item => <button key={item.id} aria-current={current.id === item.id ? "page" : undefined} className={current.id === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={21}/><span>{item.label}</span></button>)}<button onClick={() => setMobile(true)} aria-label="كل الأقسام"><Menu size={21}/><span>المزيد</span></button></nav>
       {password && <PasswordChange onClose={() => setPassword(false)} />}
-    </div>
+    </div></OwnerJoinAccess>
   );
 }
 function PasswordChange({ onClose }: { onClose: () => void }) {

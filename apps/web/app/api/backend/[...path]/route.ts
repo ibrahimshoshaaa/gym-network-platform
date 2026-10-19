@@ -6,8 +6,8 @@ import {
   GatewayError,
 } from "../../../../lib/security";
 import {
-  cookieName,
-  cookieOptions,
+  rememberCookieName,
+  setWebSession,
   failure,
   json,
   sessionToken,
@@ -79,10 +79,7 @@ async function handle(request: Request, context: Context) {
     }
     const result = await response.json();
     if (path === "auth/password/change" && response.ok) {
-      (await cookies()).set(cookieName(), result.accessToken, {
-        ...cookieOptions(),
-        expires: new Date(result.expiresAt),
-      });
+      await setWebSession(result.accessToken, result.expiresAt, (await cookies()).get(rememberCookieName())?.value !== "0");
       return json({ user: result.user });
     }
     const output = json(result, response.status);
@@ -97,3 +94,4 @@ export const GET = handle,
   POST = handle,
   PUT = handle,
   PATCH = handle;
+

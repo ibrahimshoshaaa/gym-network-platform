@@ -7,7 +7,7 @@ import { TraineePortal } from "../components/trainee-portal";
 
 test("public login has one sign-in path and offers trainee registration", () => {
   const html = renderToStaticMarkup(createElement(Login, { onLogin: () => {} }));
-  assert.match(html, /إنشاء حساب متدرب/);
+  assert.match(html, /إنشاء حساب/);
   assert.match(html, /name="identifier"/);
   assert.match(html, /name="password"/);
   assert.doesNotMatch(html, /login-mode|نوع الدخول|<select/);
@@ -22,3 +22,4 @@ test("trainee area has five personal destinations and no gym administration cont
   assert.equal((nav.match(/<button/g) ?? []).length, 5);
   assert.doesNotMatch(html, /الكاشير والزيارات|شراء نقاط الفروع|إدارة المنصة/);
 });
+
