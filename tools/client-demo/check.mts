@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {installDemo,setDemoRole} from './mock-api.ts';
+Object.assign(globalThis,{window:{},location:{href:'https://demo.example.test/'}});installDemo();
+const call=async(path:string,body?:unknown)=>(await window.fetch('/api/backend/'+path,body?{method:'POST',body:JSON.stringify(body)}:{})).json();
+assert.equal((await call('trainee/wallet')).balance,500);
+const quote=await call('topup-quotes',{points:200});assert.equal(quote.chargePiasters,'20000');assert.equal((await call('trainee/wallet')).balance,500);
+const order=await call('topups',{points:200,paymentMethod:'WALLET'});assert.equal(order.chargePiasters,'20000');assert.equal((await call('trainee/wallet')).balance,500);
+setDemoRole('PLATFORM_ADMIN');assert.equal((await call('admin/topups')).items.length,1);await call(`admin/topups/${order.id}/review`,{decision:'APPROVED'});await call(`admin/topups/${order.id}/review`,{decision:'APPROVED'});assert.equal((await call('trainee/wallet')).balance,700);
+setDemoRole('CASHIER');await call('operations/branches/test/sale-quotes',{points:50});assert.equal((await call('trainee/wallet')).balance,700);await call('operations/branches/test/sales',{points:50});assert.equal((await call('trainee/wallet')).balance,750);
+assert.equal((await call('directory/branches?q=غيرموجود')).items.length,0);await assert.rejects(window.fetch('https://external.test/path'));
+console.log('PASS: quote, submission, approval once, cross-role balance, sale and local isolation');

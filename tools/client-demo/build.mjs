@@ -1,0 +1,12 @@
+import {createRequire} from 'node:module';
+import fs from 'node:fs';
+import path from 'node:path';
+const require=createRequire(import.meta.url),root=path.resolve(import.meta.dirname,'../..');
+const esbuild=createRequire(require.resolve('tsx/package.json',{paths:[path.join(root,'apps/web')]}))('esbuild');
+const out=process.env.DEMO_OUTPUT||'/tmp/gymbank-client-demo';fs.mkdirSync(out,{recursive:true});
+await esbuild.build({entryPoints:[path.join(root,'tools/client-demo/entry.tsx')],bundle:true,nodePaths:[path.join(root,'apps/web/node_modules')],outfile:path.join(out,'app.js'),platform:'browser',format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'},minify:true,loader:{'.woff2':'file','.woff':'file','.png':'file'},logLevel:'warning'});
+let css='';for(const file of ['globals.css','identity.css','portal-parity.css'])css+=fs.readFileSync(path.join(root,'apps/web/app',file),'utf8')+'\n';css+=fs.readFileSync(path.join(out,'app.css'),'utf8');
+const font=require.resolve('@fontsource-variable/noto-sans-arabic/index.css',{paths:[path.join(root,'apps/web')]});const fontdir=path.dirname(font);let fontcss=fs.readFileSync(font,'utf8').replace(/url\(\.\/files\/([^)]*)\)/g,(_,f)=>{fs.mkdirSync(path.join(out,'fonts'),{recursive:true});fs.copyFileSync(path.join(fontdir,'files',f),path.join(out,'fonts',f));return `url(./fonts/${f})`});fs.writeFileSync(path.join(out,'style.css'),fontcss+'\n'+css);fs.cpSync(path.join(root,'apps/web/public/brand'),path.join(out,'brand'),{recursive:true});
+fs.copyFileSync(path.join(root,'apps/mobile/assets/brand/gymbank-icon.png'),path.join(out,'brand/gymbank-icon.png'));
+fs.writeFileSync(path.join(out,'app.js'),fs.readFileSync(path.join(out,'app.js'),'utf8').replaceAll('"/brand/','"./brand/'));
+fs.writeFileSync(path.join(out,'index.html'),'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GYMBANK | العرض التفاعلي</title><link rel="stylesheet" href="./style.css"></head><body><svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="gymbank-on-dark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 -1.05217 0 0 .94902 0 -.06087 0 0 .95686 0 -.34348 0 0 .96863 0 0 0 1 0"/></filter></defs></svg><div id="root"></div><script src="./app.js"></script></body></html>');console.log(out);
