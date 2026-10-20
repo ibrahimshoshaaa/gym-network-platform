@@ -19,6 +19,6 @@ export async function requirePermission(tx:Prisma.TransactionClient,userId:strin
  const actor=await tx.user.findUnique({where:{id:userId}});if(!actor?.isActive)throw new DomainError('ACCESS_DENIED');
  const a=await authority(tx,userId,gymId,branchId);
  if(!a.owner&&(!a.permissions.includes(permission)||a.gym.status!=='ACTIVE'))throw new DomainError('BRANCH_ACCESS_DENIED');
- if(branchId&&!await tx.branch.findFirst({where:{id:branchId,gymId,status:{not:'SUSPENDED'}}}))throw new DomainError('BRANCH_ACCESS_DENIED');
+ if(branchId&&!await tx.branch.findFirst({where:{id:branchId,gymId,...(a.owner||a.full?{}:{status:{not:'SUSPENDED'}})}}))throw new DomainError('BRANCH_ACCESS_DENIED');
  return a;
 }
