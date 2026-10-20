@@ -817,3 +817,36 @@ model WithdrawalAllocation {
  @@index([branchId])
  @@index([withdrawalId])
 }
+
+model Campaign {
+ id String @id @default(uuid()) @db.Uuid
+ title String
+ body String
+ audience String
+ channel String
+ placement String
+ status String @default("DRAFT")
+ destination String @default("NONE")
+ priority Int @default(0)
+ userIds String[] @default([]) @db.Uuid
+ gymIds String[] @default([]) @db.Uuid
+ startsAt DateTime
+ endsAt DateTime
+ imageId String? @db.Uuid
+ image CampaignAsset? @relation(fields:[imageId],references:[id],onDelete:Restrict)
+ version Int @default(1)
+ createdById String @db.Uuid
+ updatedById String @db.Uuid
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([status,startsAt,endsAt])
+}
+model CampaignAsset {
+ id String @id @default(uuid()) @db.Uuid
+ objectKey String @unique
+ assetId String @unique
+ publicUrl String
+ createdById String @db.Uuid
+ createdAt DateTime @default(now())
+ campaigns Campaign[]
+}

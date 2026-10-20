@@ -1,3 +1,4 @@
+import 'campaigns.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -385,6 +386,7 @@ class NotificationsScreen extends StatelessWidget {
                       : const Color(0xffeaf3df),
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
+                    onTap:n['destination']==null?null:()async{await openCampaign(context,api,'${n['destination']}');},
                     title: Text(
                       '${n['title']}',
                       style: const TextStyle(fontWeight: FontWeight.w700),

@@ -1,3 +1,4 @@
+import 'campaigns.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -67,6 +68,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     PortalIntro('${gym['name']}',detail:'رصيدك وتشغيل جيمك، من مكان واحد.',
      trailing:IconButton(tooltip:'الإشعارات',icon:const Icon(Icons.notifications_none_rounded),
       onPressed:()=>open(context,NotificationsScreen(api:widget.api)))),
+    CampaignBanner(api:widget.api),
     if(!active)...[
      const PortalNote('الجيم غير نشط حاليًا. تقدر تراجع بياناته، والتشغيل متاح بعد التفعيل.'),
      const SizedBox(height:12),

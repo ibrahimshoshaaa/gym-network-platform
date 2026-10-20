@@ -15,7 +15,8 @@ void main() {
       var submitted = false;
       final api = ApiClient(storage: MemoryStore(), transport: MockClient((r) async {
         Object data;
-        if (r.url.path.endsWith('topup-options')) {
+        if(r.url.path.endsWith('campaigns')){data={'items':[]};}
+        else if (r.url.path.endsWith('topup-options')) {
           data = {'policy': {'pointPricePiasters': '100', 'gymDiscountBps': 1000},
             'paymentMethods': [{'type': 'INSTAPAY', 'account': 'gym@test', 'accountName': 'GymBank', 'version': 3}],
             'packages': [{'id': 'p1', 'version': 7, 'points': 100, 'label': 'باقة ١٠٠'}]};

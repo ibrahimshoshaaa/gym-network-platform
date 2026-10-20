@@ -1,3 +1,4 @@
+import 'campaigns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -174,6 +175,7 @@ class _TopupScreenState extends State<TopupScreen> {
     final chosenMethod = methods.where((m) => m['type'] == method).firstOrNull;
     return Screen(title: kind == 'TRAINEE' ? 'اشحن رصيدك' : 'شراء نقاط', child: ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28), children: [
+        CampaignBanner(api:widget.api,placement:'WALLET'),
         if (result != null) ...[
           const EmptyState('طلب الشحن وصل', detail: 'هتوصلك النتيجة بعد مراجعة التحويل.', icon: Icons.task_alt_rounded),
           Panel(child: Column(children: [

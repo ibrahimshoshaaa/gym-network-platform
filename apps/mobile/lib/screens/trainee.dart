@@ -1,3 +1,4 @@
+import 'campaigns.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -94,6 +95,7 @@ class _TraineeHomeState extends State<TraineeHome> {
             ),
           ]),
           const SizedBox(height: 18),
+          CampaignBanner(api:widget.api),
           Panel(
             color: ink,
             padding: const EdgeInsets.all(20),
