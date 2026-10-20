@@ -19,3 +19,5 @@ BEGIN
 END $$;
 CREATE CONSTRAINT TRIGGER withdrawal_allocation_check AFTER INSERT OR UPDATE ON "WithdrawalRequest" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION verify_withdrawal_allocation();
 CREATE CONSTRAINT TRIGGER allocation_check AFTER INSERT ON "WithdrawalAllocation" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION verify_withdrawal_allocation();
+
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='gym_api_service') THEN GRANT SELECT,INSERT ON "WithdrawalAllocation" TO gym_api_service; END IF; END $$;
