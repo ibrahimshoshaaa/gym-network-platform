@@ -31,7 +31,7 @@ void main() {
       expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'متابعة لبيانات التحويل')).onPressed, isNull);
       await t.tap(find.text('100 نقطة').first);
       await t.pumpAndSettle();
-      await t.ensureVisible(find.text('متابعة لبيانات التحويل'));
+      await t.scrollUntilVisible(find.text('متابعة لبيانات التحويل'), 100, scrollable: find.byType(Scrollable).first);
       await t.tap(find.text('متابعة لبيانات التحويل'));
       await t.pumpAndSettle();
       expect(selection?['packageId'], 'p1');
@@ -40,15 +40,15 @@ void main() {
       expect(selection?['kind'], owner ? 'BRANCH_STOCK' : 'TRAINEE');
       expect(find.text('gym@test'), findsOneWidget);
       expect(find.byType(CheckboxListTile), findsNothing);
-      await t.ensureVisible(find.text('مراجعة طلب الشحن'));
+      await t.scrollUntilVisible(find.text('مراجعة طلب الشحن'), 100, scrollable: find.byType(Scrollable).first);
       expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'مراجعة طلب الشحن')).onPressed, isNull);
       expect(submitted, isFalse);
-      await t.ensureVisible(find.text('تعديل الرصيد المختار'));
+      await t.scrollUntilVisible(find.text('تعديل الرصيد المختار'), 100, scrollable: find.byType(Scrollable).first);
       await t.tap(find.text('تعديل الرصيد المختار'));
       await t.pumpAndSettle();
       await t.enterText(find.byType(TextField), '١٢٣');
       await t.pumpAndSettle();
-      await t.ensureVisible(find.text('متابعة لبيانات التحويل'));
+      await t.scrollUntilVisible(find.text('متابعة لبيانات التحويل'), 100, scrollable: find.byType(Scrollable).first);
       await t.tap(find.text('متابعة لبيانات التحويل'));
       await t.pumpAndSettle();
       expect(selection?['points'], 123);
