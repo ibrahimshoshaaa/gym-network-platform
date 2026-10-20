@@ -1,5 +1,6 @@
 "use client";
 import { QrCode,Plus,Navigation,ArrowLeft,ArrowDownLeft,ArrowUpRight,Wallet } from "lucide-react";
+import {Fact,PortalNote} from "./portal-ui";
 import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, date, message } from "../lib/client";
@@ -62,7 +63,7 @@ export function TraineeWallet({
 }: {
   revision: number;
   children?: ReactNode;
-  view?: "all" | "wallet" | "history";
+  view?: "all" | "wallet" | "history" | "visits";
   onQr?:()=>void;onTopup?:()=>void;onGyms?:()=>void;onHistory?:()=>void;
 }) {
   const [version, setVersion] = useState(0),
@@ -82,7 +83,7 @@ export function TraineeWallet({
   const refresh = `${revision}:${version}`;
   return (
     <>
-      {view!=="wallet"&&<div className="section-toolbar">
+      {view==="all"&&<div className="section-toolbar">
         <p className="muted">
           رصيدك وزياراتك بيتحدّثوا تلقائيًا.
         </p>
@@ -96,44 +97,19 @@ export function TraineeWallet({
           تحديث
         </button>
       </div>}
-      {view !== "history" && <div className="settings-grid">
+      {(view==="all"||view==="wallet") && <div className="settings-grid">
         <WalletCard refresh={refresh} onQr={onQr} onTopup={onTopup}/>
         {children}
       </div>}
-      {view === "wallet" && <>
+      {view === "wallet" && <><ActiveSessions refresh={refresh} compact/>
         <button className="card portal-gym-link" onClick={onGyms}><Navigation/><span><strong>اختار جيم قريب</strong><small>شوف المكان ونقاط الزيارة</small></span><ArrowLeft/></button>
         <RecentMovements refresh={refresh} onHistory={onHistory}/>
       </>}
-      <ActiveSessions refresh={refresh} compact={view==="wallet"}/>
+      {view==="all"&&<ActiveSessions refresh={refresh}/>}
 
-      {view !== "wallet" && <><section className="card">
-        <div className="section-toolbar">
-          <h2>حركات نقاطك</h2>
-          <label className="field">
-            نوع الحركة
-            <select
-              value={operation}
-              onChange={(e) => setOperation(e.target.value)}
-            >
-              <option value="">كل الحركات</option>
-              {Object.entries(operations).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <p className="muted">
-          الحركات المنفذة فقط، الأحدث تسجيلًا أولًا. طلبات الشحن المعلقة لا تضيف
-          نقاطًا قبل الاعتماد.
-        </p>
-        <MovementList
-          key={`${operation}:${revision}:${historyVersion}`}
-          operation={operation}
-        />
-      </section>
-      <VisitHistory key={`${revision}:${historyVersion}`} /></>}
+      {(view==="history"||view==="all")&&<MovementList operation=""/>}
+      {(view==="visits"||view==="all")&&<VisitHistory/>}
+
     </>
   );
 }
@@ -191,7 +167,7 @@ function WalletCard({ refresh,onQr,onTopup }: { refresh: string;onQr?:()=>void;o
           ) : wallet.status === "REVIEW_REQUIRED" ? (
             <Notice text="الرصيد يحتاج مراجعة صلاحية قبل استخدامه. تواصل مع إدارة المنصة." />
           ) : wallet.status === "EMPTY" ? (
-            <p className="subtle-box">لا توجد نقاط متاحة حاليًا.</p>
+            <p className="subtle-box">اشحن رصيدك وابدأ تمرينك</p>
           ) : (
             <p className="subtle-box">
               صالح حتى {wallet.expiresAt ? new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'numeric',year:'numeric',timeZone:'Africa/Cairo'}).format(new Date(wallet.expiresAt)) : '—'}
@@ -199,6 +175,7 @@ function WalletCard({ refresh,onQr,onTopup }: { refresh: string;onQr?:()=>void;o
           )}
           {!expired && wallet.status === "VALID" && left !== null && left > 0 && left <= 15*86400 && <Notice text={`صلاحية نقاطك تنتهي خلال ${Math.max(1,Math.ceil(left/86400))} يوم. راجع تاريخ الصلاحية قبل التمرين أو الشحن.`}/>}
           {(onQr||onTopup)&&<div className="trainee-quick-actions"><button className="primary" onClick={onQr}><QrCode size={20}/>رمز الدخول</button><button className="secondary" onClick={onTopup}><Plus size={20}/>اشحن رصيدك</button></div>}
+          {wallet.unavailablePoints>0&&<PortalNote>{wallet.unavailablePoints} نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.</PortalNote>}
           <details className="wallet-more wallet-diagnostics"><summary>تفاصيل الرصيد</summary><p>الرصيد المسجل: {wallet.balance} نقطة</p><small>آخر تحديث: {date(wallet.serverTime)}{loading ? " · تحديث…" : ""}</small><p className="muted">المتاح بيتراجع وقت كل عملية، وصلاحية النقاط ظاهرة فوق.</p></details>
         </>
       )}
@@ -246,7 +223,7 @@ function ActiveSessions({ refresh,compact=false }: { refresh: string;compact?:bo
   if(compact&&!loading&&!error&&!rows.length)return null;
   return (
     <section className="card">
-      <h2>زياراتك الحالية</h2>
+      <h2>جلستك الحالية</h2>
       <Notice text={error} />
       {loading && !rows.length ? (
         <Busy />
@@ -311,56 +288,25 @@ function MovementList({ operation }: { operation: string }) {
       ) : !list.rows.length ? (
         <Empty title="لا توجد حركات نقاط مطابقة" />
       ) : (
-        <div className="table-scroll">
-          <table className="mobile-records">
-            <thead>
-              <tr>
-                <th>التاريخ</th>
-                <th>الحركة</th>
-                <th>النقاط</th>
-                <th>المصدر / الفرع</th>
-                <th>المرجع</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.rows.map((m) => (
-                <tr key={m.id}>
-                  <td data-label="التاريخ">{date(m.eventAt)}</td>
-                  <td data-label="الحركة">{operations[m.operation] ?? m.operation}</td>
-                  <td dir="ltr" data-label="النقاط">{m.delta > 0 ? `+${m.delta}` : m.delta}</td>
-                  <td data-label="المصدر / الفرع">
-                    {m.sourceLabel ?? (m.branch
-                      ? `${m.branch.gymName} · ${m.branch.name}`
-                      : "المنصة")}
-                  </td>
-                  <td data-label="المراجع">
-                    <RecordReference value={m.referenceId} />
-                    <RecordReference value={m.transactionId} label="قيد النقاط" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="native-record-list">{list.rows.map(m=><article className="card native-movement-card" key={m.id}><div className="native-movement-heading">{m.delta>0?<ArrowDownLeft/>:<ArrowUpRight/>}<strong>{operations[m.operation]??"حركة نقاط"}</strong><strong dir="ltr" className={m.delta>0?"positive":""}>{m.delta>0?"+":""}{m.delta}</strong></div><p className="muted">{m.sourceLabel??m.branch?.name??"المنصة"}</p><small className="muted">{date(m.eventAt)}</small><RecordReference value={m.referenceId}/></article>)}</div>
       )}
       <More list={list} />
     </>
   );
 }
-function VisitHistory() {
+export function VisitHistory() {
   const list = usePage<Visit>("trainee/visits");
   return (
-    <section className="card">
-      <h2>سجل زياراتك</h2>
+    <section className="native-visit-history">
       <Notice text={list.error} />
       {list.loading && !list.rows.length ? (
         <Busy />
       ) : !list.rows.length ? (
-        <Empty title="لم تسجل زيارات بعد" />
+        <Empty title="لسه مفيش زيارات">اختار جيمك واعرض رمز الدخول عند وصولك. الزيارة هتظهر هنا بعد تأكيد حضورك.</Empty>
       ) : (
         <div className="timeline">
           {list.rows.map((v) => (
-            <article key={v.id}>
+            <article className="card" key={v.id}>
               <strong>
                 {v.branch.gym.name} · {v.branch.name}
               </strong>
@@ -396,5 +342,6 @@ function VisitHistory() {
 function RecentMovements({refresh,onHistory}:{refresh:string;onHistory?:()=>void}){
  const [items,setItems]=useState<Movement[]|null>(null),[error,setError]=useState('');
  useEffect(()=>{let active=true;api<{items:Movement[]}>('trainee/wallet/movements?limit=3').then(r=>{if(active){setItems(r.items);setError('');}}).catch(e=>{if(active)setError(message(e));});return()=>{active=false;};},[refresh]);
- return <section className="portal-recent"><div className="section-toolbar"><h2>آخر حركة في رصيدك</h2><button className="text-button" onClick={onHistory}>السجل كامل</button></div><Notice text={error}/><div className="card">{!items&&!error?<Busy/>:items?.length?items.map(m=><article className="portal-movement" key={m.id}>{m.delta>0?<ArrowDownLeft/>:<ArrowUpRight/>}<div><strong>{m.sourceLabel??operations[m.operation]??'حركة نقاط'}</strong><small>{date(m.eventAt)}</small></div><strong dir="ltr" className={m.delta>0?'positive':''}>{m.delta>0?'+':''}{m.delta}</strong></article>):!error?<Empty title="لسه مفيش حركة نقاط"/>:null}</div></section>;
+ return <section className="portal-recent"><div className="section-toolbar"><h2>آخر حركة في رصيدك</h2><button className="text-button" onClick={onHistory}>السجل كامل</button></div><Notice text={error}/><div className="card">{!items&&!error?<Busy/>:items?.length?items.map(m=><article className="portal-movement" key={m.id}>{m.delta>0?<ArrowDownLeft/>:<ArrowUpRight/>}<div><strong>{m.sourceLabel??operations[m.operation]??'حركة نقاط'}</strong><small>{date(m.eventAt)}</small></div><strong dir="ltr" className={m.delta>0?'positive':''}>{m.delta>0?'+':''}{m.delta}</strong></article>):!error?<p className="muted native-small">أول شحن أو زيارة هتظهر هنا.</p>:null}</div></section>;
 }
+

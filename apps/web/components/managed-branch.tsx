@@ -6,9 +6,9 @@ import {Busy,Field,Notice} from './ui';
 import {Invitation,type NewInvite} from './gyms/shared';
 type Branch={id:string;gymId:string;name:string;gymName:string;permissions?:string[];fullAccess?:boolean};
 type Staff={id:string;role:string;active:boolean;user:{displayName:string}};
-export function ManagedBranches(){
+export function ManagedBranches({selectedBranchId}:{selectedBranchId?:string}={}){
  const [branches,setBranches]=useState<Branch[]>([]),[selected,setSelected]=useState<Branch|null>(null);
- useEffect(()=>{let live=true;api<{items:Branch[]}>('operations/branches').then(r=>{if(live)setBranches(r.items.filter(b=>b.permissions?.length));}).catch(()=>{});return()=>{live=false;};},[]);
+ useEffect(()=>{let live=true;api<{items:Branch[]}>('operations/branches').then(r=>{if(live)setBranches(r.items.filter(b=>b.permissions?.length&&(!selectedBranchId||b.id===selectedBranchId)));}).catch(()=>{});return()=>{live=false;};},[selectedBranchId]);
  if(!branches.length)return null;
  return <section className="card"><h2>الصلاحيات المفوّضة لك</h2><div className="actions">{branches.map(b=><button key={b.id} className="secondary" onClick={()=>setSelected(b)}>{b.name}</button>)}</div>{selected&&<BranchManager key={selected.id} branch={selected} branches={branches}/>}</section>;
 }
@@ -31,3 +31,4 @@ function BranchManager({branch,branches}:{branch:Branch;branches:Branch[]}){
  :<><p>متاح من نصيب الفرع: {entitlement?decimal(entitlement.available)+' ج.م':'جارٍ التحميل'}</p>{entitlement?.legacyReviewRequired&&<Notice text="هناك سحوبات قديمة غير موزعة على الفروع؛ المتاح محسوب بتحفّظ لحين مراجعتها."/>}<Field label="المبلغ بالجنيه" name="amount" inputMode="decimal" required/><label className="field">وسيلة الاستلام<select name="method"><option value="INSTAPAY">إنستا باي</option><option value="WALLET">محفظة إلكترونية</option></select></label><Field label="اسم صاحب حساب الاستلام" name="name" required minLength={2}/><Field label="حساب الاستلام" name="account" required/><label className="check"><input type="checkbox" required/>راجعت المبلغ وحساب الاستلام. الطلب يحتاج اعتماد الإدارة.</label></>}
  <button className="primary" disabled={task==='withdraw'&&(!entitlement||entitlement.available==='0')}>{busy?<Busy/>:task==='staff'?'إنشاء دعوة الكاشير':task==='transfer'?'تأكيد تحويل النقاط':task==='withdraw'?'تقديم طلب السحب':'حفظ الطلب'}</button></fieldset></form>}{task==='withdraw'&&requests.length>0&&<section><h3>طلبات سحب الفرع</h3>{requests.map(r=><p key={r.id}>{decimal(r.amountPiasters)} ج.م · {({REQUESTED:'بانتظار المراجعة',APPROVED:'مقبول وبانتظار التحويل',PAID:'تم التحويل',REJECTED:'مرفوض',CANCELLED:'ملغى',DISPUTED:'قيد الاعتراض'} as Record<string,string>)[r.status]??r.status}</p>)}</section>}{invitation&&<Invitation data={invitation} onClose={()=>setInvitation(null)}/>}</>;
 }
+

@@ -1,4 +1,6 @@
 "use client";
+import {ArrowDownLeft} from "lucide-react";
+import {Fact,PortalIntro,PortalNote} from "./portal-ui";
 import { useEffect, useState, type FormEvent } from "react";
 import {
   api,
@@ -58,7 +60,7 @@ const actionName = (s: string) =>
     RECEIVED: "تأكيد استلام المبلغ",
     DISPUTE: "اعتراض على التحويل",
   })[s] ?? s;
-export function Withdrawals({ admin }: { admin: boolean }) {
+export function Withdrawals({ admin,initialGymId }: { admin: boolean;initialGymId?:string }) {
   return admin ? (
     <>
       <div className="subtle-box"><strong>طلبات السحب من المراجعة للتحويل</strong><p>راجع الطلب، اقبله لحجز موعد التنفيذ، ثم سجّل التحويل وإثباته بعد تنفيذه فعليًا.</p></div>
@@ -66,242 +68,28 @@ export function Withdrawals({ admin }: { admin: boolean }) {
       <CalendarPanel />
     </>
   ) : (
-    <OwnerWithdrawals />
+    <OwnerWithdrawals initialGymId={initialGymId}/>
   );
 }
-function OwnerWithdrawals() {
-  const gyms = usePage<{ id: string; name: string; status: string }>("gyms"),
-    [gymId, setGymId] = useState(""),
-    [revision, setRevision] = useState(0),
-    [open, setOpen] = useState(false);
-  useEffect(() => {
-    setGymId((old) =>
-      gyms.rows.some((g) => g.id === old) ? old : (gyms.rows[0]?.id ?? ""),
-    );
-  }, [gyms.rows]);
-  const gym = gyms.rows.find((g) => g.id === gymId);
-  return (
-    <>
-      <Notice text={gyms.error} />
-      {gyms.loading && !gyms.rows.length ? (
-        <Busy />
-      ) : !gyms.rows.length ? (
-        <Empty title="لا توجد جيمات مرتبطة بحسابك" />
-      ) : (
-        <>
-          <section className="card">
-            <label className="field">
-              الجيم
-              <select value={gymId} onChange={(e) => setGymId(e.target.value)}>
-                {gyms.rows.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <More list={gyms} />
-            {gymId && <Balance key={gymId} gymId={gymId} revision={revision} />}
-            <button
-              className="primary"
-              disabled={gym?.status !== "ACTIVE"}
-              onClick={() => setOpen(true)}
-            >
-              طلب سحب جديد
-            </button>
-            <p className="muted">
-              أي مبلغ موجب في حدود المتاح. يُحجز فورًا، ولا يبدأ عد أيام التنفيذ
-              قبل قبول الإدارة.
-            </p>
-          </section>
-          {gymId && (
-            <WithdrawalList
-              key={`${gymId}:${revision}`}
-              admin={false}
-              path={`gyms/${gymId}/withdrawals`}
-              onChanged={() => setRevision((n) => n + 1)}
-            />
-          )}
-          {open && (
-            <RequestForm
-              gymId={gymId}
-              onClose={() => setOpen(false)}
-              onDone={() => setRevision((n) => n + 1)}
-            />
-          )}
-        </>
-      )}
-    </>
-  );
+function OwnerWithdrawals({initialGymId}:{initialGymId?:string}) {
+  const gyms=usePage<{id:string;name:string;status:string}>("gyms"),[gymId,setGymId]=useState(initialGymId??""),[revision,setRevision]=useState(0),[open,setOpen]=useState(false),[balances,setBalances]=useState<{type:string;balancePiasters:string}[]|null>(null),[error,setError]=useState("");
+  const gym=gyms.rows.find(g=>g.id===gymId)??gyms.rows[0],id=gym?.id;
+  useEffect(()=>{if(!id)return;let live=true;setBalances(null);api<{accounts:{type:string;balancePiasters:string}[]}>(`gyms/${id}/receivables`).then(r=>{if(live){setBalances(r.accounts);setError("");}}).catch(e=>{if(live)setError(message(e));});return()=>{live=false;};},[id,revision]);
+  const value=(type:string)=>balances?.find(b=>b.type===type)?.balancePiasters??"0",available=value("GYM_AVAILABLE");
+  return <><Notice text={gyms.error||error}/>{gyms.loading&&!gym?<Busy/>:!gym?<Empty title="مفيش جيم مرتبط بحسابك"/>:<>
+  <PortalIntro title="مستحقاتك واضحة" eyebrow={gym.name} detail="تابع فلوس زيارات الجيم وحالة كل طلب سحب."/>
+  {gyms.rows.length>1&&<label className="field">الجيم<select value={id} onChange={e=>setGymId(e.target.value)}>{gyms.rows.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}<More list={gyms}/>
+  <section className="card wallet-signature native-money-balance"><p>متاح للسحب</p>{balances?<h2 className="wallet-balance">{decimal(available)} ج.م</h2>:!error?<Busy/>:null}<button className="primary full" disabled={!balances||gym.status!=="ACTIVE"||BigInt(available)<=0n} onClick={()=>setOpen(true)}><ArrowDownLeft size={20}/>طلب سحب مستحقات</button></section>
+  <PortalNote>التحويل خلال ٣ أيام عمل من قبول طلب السحب. مخزون النقاط منفصل عن المستحقات دي.</PortalNote>
+  <section className="card native-money-facts">{[["GYM_RESERVED","محجوز للسحب"],["GYM_DISPUTED","محجوز لمراجعة نزاع"],["GYM_PAID","إجمالي مدفوع للجيم"]].map(([type,label])=><Fact key={type} label={label!}>{balances?decimal(value(type!)):"—"} ج.م</Fact>)}</section>
+  <h2>طلبات السحب</h2><WithdrawalList key={`${id}:${revision}`} admin={false} path={`gyms/${id}/withdrawals`} onChanged={()=>setRevision(n=>n+1)}/>
+  {open&&<RequestForm gymId={id!} available={available} onClose={()=>setOpen(false)} onDone={()=>setRevision(n=>n+1)}/>}
+  </>}</>;
 }
-function Balance({ gymId, revision }: { gymId: string; revision: number }) {
-  const [rows, setRows] = useState<{ type: string; balancePiasters: string }[]>(
-      [],
-    ),
-    [error, setError] = useState(""),
-    [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    api<{ accounts: typeof rows }>(`gyms/${gymId}/receivables`)
-      .then((r) => {
-        if (active) {
-          setRows(r.accounts);
-          setError("");
-        }
-      })
-      .catch((e) => {
-        if (active) setError(message(e));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [gymId, revision]);
-  return (
-    <>
-      <Notice text={error} />
-      {loading ? (
-        <Busy />
-      ) : (
-        <div className="settings-grid">
-          {[
-            ["GYM_AVAILABLE", "متاح للسحب"],
-            ["GYM_RESERVED", "محجوز للطلبات"],
-            ["GYM_PAID", "تم تحويله"],
-          ].map(([type, label]) => (
-            <div className="subtle-box" key={type}>
-              <span>{label}</span>
-              <h3>
-                {decimal(
-                  rows.find((r) => r.type === type)?.balancePiasters ?? "0",
-                )}{" "}
-                ج.م
-              </h3>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-function RequestForm({
-  gymId,
-  onClose,
-  onDone,
-}: {
-  gymId: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [done, setDone] = useState<Withdrawal | null>(null);
-  const { call, uncertain } = useCommand();
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (busy) return;
-    const f = new FormData(e.currentTarget);
-    setBusy(true);
-    setError("");
-    try {
-      setDone(
-        await call<Withdrawal>(`gyms/${gymId}/withdrawals`, {
-          amountPiasters: minorUnits(String(f.get("amount"))),
-          paymentMethod: f.get("method"),
-          destinationAccount: f.get("account"),
-          destinationName: f.get("name"),
-        }),
-      );
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  const close = () => {
-    if (done) onDone();
-    onClose();
-  };
-  return (
-    <Modal title="طلب سحب مستحقات" onClose={close} locked={busy || uncertain}>
-      <Notice text={error} />
-      {done ? (
-        <>
-          <Notice
-            success
-            text={`طلب ${done.id}: ${stateName(done.status)} · ${decimal(done.amountPiasters)} ج.م`}
-          />
-          <button className="primary full" onClick={close}>
-            تم
-          </button>
-        </>
-      ) : (
-        <form onSubmit={submit}>
-          <fieldset disabled={busy}>
-            <Field
-              label="المبلغ بالجنيه"
-              name="amount"
-              inputMode="decimal"
-              required
-              readOnly={uncertain}
-            />
-            <label className="field">
-              طريقة الاستقبال
-              <select
-                name="method"
-                disabled={uncertain}
-                required
-                defaultValue=""
-              >
-                <option value="" disabled>
-                  اختر الطريقة
-                </option>
-                <option value="INSTAPAY">إنستا باي</option>
-                <option value="WALLET">محفظة إلكترونية</option>
-              </select>
-            </label>
-            <Field
-              label="حساب إنستا باي أو رقم المحفظة"
-              name="account"
-              required
-              minLength={3}
-              maxLength={150}
-              dir="ltr"
-              readOnly={uncertain}
-            />
-            <Field
-              label="اسم صاحب الحساب المستقبِل"
-              name="name"
-              required
-              minLength={2}
-              maxLength={150}
-              readOnly={uncertain}
-            />
-            <p className="subtle-box">
-              راجع بيانات الاستقبال بدقة. تُحفظ مع الطلب وتراجعها الإدارة قبل
-              التحويل اليدوي.
-            </p>
-            <label className="check">
-              <input type="checkbox" required disabled={uncertain} />
-              راجعت المبلغ وطريقة وحساب الاستقبال
-            </label>
-            <button className="primary full">
-              {busy ? (
-                <Busy />
-              ) : uncertain ? (
-                "إعادة نفس الطلب"
-              ) : (
-                "تأكيد الطلب وحجز المبلغ"
-              )}
-            </button>
-          </fieldset>
-        </form>
-      )}
-    </Modal>
-  );
+function RequestForm({gymId,available,onClose,onDone}:{gymId:string;available:string;onClose:()=>void;onDone:()=>void}){
+ const [amount,setAmount]=useState(""),[name,setName]=useState(""),[account,setAccount]=useState(""),[method,setMethod]=useState("INSTAPAY"),[review,setReview]=useState(false),[verified,setVerified]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState(false),{call,uncertain}=useCommand();
+ async function submit(e:FormEvent){e.preventDefault();if(busy)return;setError("");try{const n=minorUnits(amount);if(BigInt(n)<=0n||BigInt(n)>BigInt(available)||name.trim().length<2||account.trim().length<3)throw Error("راجع المبلغ وبيانات الاستلام.");if(!review){setReview(true);return;}if(!verified)return;setBusy(true);await call(`gyms/${gymId}/withdrawals`,{paymentMethod:method,destinationAccount:account,destinationName:name,amountPiasters:n});setDone(true);onDone();}catch(e){setError(message(e));}finally{setBusy(false);}}
+ return <Modal title="طلب سحب" onClose={onClose} locked={busy||uncertain}>{done?<><Notice success text="تم إرسال طلب السحب"/><button className="primary full" onClick={onClose}>تم</button></>:<><section className="card"><Fact label="رصيدك المتاح" strong>{decimal(available)} ج.م</Fact></section><form onSubmit={submit}><fieldset disabled={busy||uncertain}>{!review?<><Field label="المبلغ بالجنيه" value={amount} inputMode="decimal" required onChange={e=>setAmount(e.target.value)}/><Field label="اسم صاحب الحساب" value={name} required minLength={2} onChange={e=>setName(e.target.value)}/><Field label="حساب إنستا باي أو رقم المحفظة" value={account} required minLength={3} onChange={e=>setAccount(e.target.value)}/><label className="field">طريقة الاستلام<select value={method} onChange={e=>setMethod(e.target.value)}><option value="INSTAPAY">إنستا باي</option><option value="WALLET">محفظة إلكترونية</option></select></label></>:<><section className="card"><Fact label="المبلغ" strong>{decimal(minorUnits(amount))} ج.م</Fact><Fact label="المستلم">{name}</Fact><Fact label="حساب الاستلام">{account}</Fact></section><p className="muted">المبلغ يتحجز من رصيدك المتاح عند إرسال الطلب، والتحويل يتم يدويًا بعد مراجعة الإدارة. موعد التنفيذ يظهر بعد القبول.</p><label className="check"><input type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)}/>راجعت بيانات حساب الاستلام والمبلغ.</label></>}</fieldset><Notice text={error}/>{uncertain&&<Notice text="نتيجة الطلب غير مؤكدة. أعد نفس الطلب بأمان."/>}<button className="primary full" disabled={busy||(review&&!verified)}>{busy?<Busy/>:review?uncertain?"إعادة نفس الطلب":"تأكيد طلب السحب":"مراجعة الطلب"}</button>{review&&<button type="button" className="text-button" disabled={busy||uncertain} onClick={()=>{setReview(false);setVerified(false);}}>تعديل الطلب</button>}</form></>}</Modal>;
 }
 function WithdrawalList({
   admin,
@@ -318,7 +106,7 @@ function WithdrawalList({
   return (
     <>
       <div className="section-toolbar">
-        <h2>طلبات السحب</h2>
+        {admin&&<h2>طلبات السحب</h2>}
         <button
           className="secondary compact"
           disabled={list.loading}
@@ -331,15 +119,15 @@ function WithdrawalList({
         </button>
       </div>
       <Notice text={list.error} />
-      {filtered.controls}
-      <section className="card">
+      {admin&&filtered.controls}
+      <section className={admin?"card":"native-withdrawal-list"}>
         {list.loading && !list.rows.length ? (
           <Busy />
         ) : !list.rows.length ? (
           <Empty title="لا توجد طلبات سحب" />
         ) : (
           <div className="timeline">
-            {filtered.visible.map((w) => (
+            {(admin?filtered.visible:list.rows).map((w) => (
               <article key={w.id}>
                 <div className="section-toolbar">
                   <strong>{decimal(w.amountPiasters)} ج.م</strong>
@@ -352,9 +140,7 @@ function WithdrawalList({
                 <p>
                   {methodName(w.paymentMethod)} · {w.destinationName}
                 </p>
-                <small>
-                  الطلب: {w.id} · {date(w.requestedAt)}
-                </small>
+                <small className="muted">{date(w.requestedAt)}</small>
                 {w.dueAt && <p>موعد التنفيذ: {date(w.dueAt)}</p>}
                 {w.overdue && (
                   <Notice text="انتهت مهلة التنفيذ؛ يلزم توثيق سبب التأخير عند تسجيل التحويل." />
@@ -363,7 +149,7 @@ function WithdrawalList({
                   className="secondary compact"
                   onClick={() => setSelected(w.id)}
                 >
-                  {admin ? w.status === "REQUESTED" ? "مراجعة وقبول الطلب" : w.status === "APPROVED" ? "تسجيل التحويل والإثبات" : w.status === "DISPUTED" ? "مراجعة الاعتراض" : "عرض تفاصيل التحويل" : "تفاصيل الطلب والإجراءات"}
+                  {admin ? w.status === "REQUESTED" ? "مراجعة وقبول الطلب" : w.status === "APPROVED" ? "تسجيل التحويل والإثبات" : w.status === "DISPUTED" ? "مراجعة الاعتراض" : "عرض تفاصيل التحويل" : "التفاصيل والمتابعة"}
                 </button>
               </article>
             ))}
@@ -776,3 +562,4 @@ function WithdrawalDetail({
     </Modal>
   );
 }
+

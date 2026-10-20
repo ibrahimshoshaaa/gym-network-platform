@@ -3,6 +3,7 @@ import "leaflet/dist/leaflet.css";
 import "@fontsource-variable/noto-sans-arabic";
 import "./globals.css";
 import "./identity.css";
+import "./portal-parity.css";
 export const metadata: Metadata = {
   title: "GymBank | رصيد واحد، كل الجيمات",
   description: "شبكة جيمات، محفظة نقاط واحدة، وتجربة تمرين أسهل.",
@@ -19,4 +20,5 @@ export default function RootLayout({
     </html>
   );
 }
+
 

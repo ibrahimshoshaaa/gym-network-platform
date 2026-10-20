@@ -4,6 +4,7 @@ import { MapPin, Clock, Phone, Search, Navigation, QrCode, ChevronDown as Chevro
 import { api, date, message } from "../lib/client";
 import { branchDirections, branchPhone } from "../lib/branch-links";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
+import {Fact} from "./portal-ui";
 import { BranchMap } from "./branch-map";
 export type DirectoryBranch = {
   images?:{id:string;url:string;purpose:string}[];
@@ -114,68 +115,19 @@ function BranchDetails({
   const map = branch ? branchDirections(branch.latitude, branch.longitude) : null,
     phone = branchPhone(branch?.contactPhone ?? null);
   return (
-    <Modal title={initial.name} onClose={onClose}>
+    <Modal title="تفاصيل الجيم" onClose={onClose}>
       <Notice text={error} />
       {loading ? (
         <Busy />
       ) : branch ? (
         <>
-          <p className="eyebrow">{branch.gym.name}</p>
-          {branch.gym.description && <p>{branch.gym.description}</p>}
-          <h3>{branch.name}</h3>
-          {branch.images?.length ? <div className="branch-gallery">{branch.images.map(i=><img key={i.id} src={i.url} alt={i.purpose==="LOGO"?"لوجو الجيم":"صورة من الفرع"} loading="lazy"/>)}</div>:null}
-          <p>
-            {branch.governorate} · {branch.city}
-          </p>
-          <p>{branch.address}</p>
-          <div className="settings-grid">
-            <div className="subtle-box">
-              <strong>{branch.visitPricePoints} نقطة</strong>
-              <p>تكلفة الزيارة</p>
-            </div>
-            <div className="subtle-box">
-              <strong>{branch.sessionMinutes} دقيقة</strong>
-              <p>مدة السيشن</p>
-            </div>
-          </div>
-          <h3>مواعيد العمل</h3>
-          <p className="directory-hours">
-            {branch.openingHours ||
-              "لم يحدد الجيم مواعيد العمل بعد؛ تأكد منه قبل التوجّه."}
-          </p>
-          {branch.contactPhone && (
-            <p>
-              رقم تواصل الجيم:{" "}
-              {phone ? (
-                <a href={phone} dir="ltr">
-                  <Phone size={16} />
-                  {branch.contactPhone}
-                </a>
-              ) : (
-                <span dir="ltr">{branch.contactPhone}</span>
-              )}
-            </p>
-          )}
-          {map && (
-            <a
-              className="primary full"
-              href={map}
-              target="_blank"
-              rel="noopener noreferrer"
-              referrerPolicy="no-referrer"
-            >
-              <MapPin size={17} />
-              ابدأ الطريق للجيم
-            </a>
-          )}
-          {onShowQr && <button className="secondary full" onClick={onShowQr}><QrCode size={18}/>وصلت الجيم؟ افتح رمز الدخول</button>}
-          <p className="muted">
-            الخريطة تفتح في موقع خارجي. عرض الفرع لا يحجز زيارة ولا يخصم نقاطًا.
-            السعر النهائي وحالة الفرع يُراجعان عند تسجيل الزيارة مع الكاشير.
-          </p>
-          <small>
-            آخر تحقق: {date(asOf)} · نسخة السعر {branch.pricingVersion}
-          </small>
+          <DirectoryCard branch={branch} onOpen={()=>{}}/>
+          <h2>عن المكان</h2><section className="card"><p>{branch.gym.description}</p><Fact label="العنوان">{branch.address}</Fact>{branch.openingHours&&<Fact label="مواعيد العمل">{branch.openingHours}</Fact>}{branch.contactPhone&&<p>{phone?<a className="text-button" href={phone} dir="ltr"><Phone size={18}/>{branch.contactPhone}</a>:<span dir="ltr">{branch.contactPhone}</span>}</p>}</section>
+          <h2>الموقع</h2><div className="native-detail-map"><BranchMap branches={[branch]} onSelect={()=>{}}/></div>
+          {map&&<a className="primary full" href={map} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer"><MapPin size={20}/>افتح الاتجاهات</a>}
+          <p className="muted native-small">الدخول من خلال رمزك الشخصي عند الكاشير. سعر الزيارة يُراجع وقت تسجيل الحضور.</p>
+          {branch.images?.slice(1).map(i=><img key={i.id} className="native-place-photo" src={i.url} alt="صورة من الفرع" loading="lazy"/>)}
+
         </>
       ) : (
         <Empty title="تفاصيل الفرع غير متاحة حاليًا">
@@ -185,4 +137,5 @@ function BranchDetails({
     </Modal>
   );
 }
+
 

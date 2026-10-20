@@ -259,10 +259,10 @@ export function Dashboard() {
     );
   if (user.role === "TRAINEE") return <>
     <TraineePortal user={user} logout={logout} loggingOut={loggingOut} onPassword={() => setPassword(true)} error={error} />
-    {password && <PasswordChange onClose={() => setPassword(false)} />}
+    {password && <div className="mobile-mirror native-modal-host"><PasswordChange onClose={() => setPassword(false)} /></div>}
   </>;
-  if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</OwnerJoinAccess>;
-  if(user.role==="BRANCH_MANAGER"||user.role==="CASHIER")return <><StaffPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</>;
+  if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<div className="mobile-mirror native-modal-host"><PasswordChange onClose={()=>setPassword(false)}/></div>}</OwnerJoinAccess>;
+  if(user.role==="BRANCH_MANAGER"||user.role==="CASHIER")return <><StaffPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<div className="mobile-mirror native-modal-host"><PasswordChange onClose={()=>setPassword(false)}/></div>}</>;
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
@@ -485,4 +485,5 @@ function PasswordChange({ onClose }: { onClose: () => void }) {
     </Modal>
   );
 }
+
 

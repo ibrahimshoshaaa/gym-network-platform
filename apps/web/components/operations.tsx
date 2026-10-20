@@ -1,8 +1,11 @@
 "use client";
+import {BranchHome,type BranchDestination} from "./branch-home";
+import {Fact,FlowSteps,PortalIntro,PortalTask,PortalNote,ScreenBack} from "./portal-ui";
 import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Camera, RefreshCw, ScanLine, Coins, CheckCircle2 } from "lucide-react";
 import { useCommand } from "../lib/use-financial-command";
+import {OperationReviews} from "./operation-reviews";
 import { RequestAction, VisitCancelAction } from "./operation-reviews";
 import { QRCodeSVG } from "qrcode.react";
 import { TraineeWallet } from "./trainee-wallet";
@@ -11,6 +14,7 @@ import { Busy, Empty, Field, Notice } from "./ui";
 import { More, usePage } from "./gyms/shared";
 type Branch = {
   id: string;
+  gymId: string;
   name: string;
   gymName: string;
   canSell: boolean;
@@ -52,9 +56,11 @@ type SaleQuote = {
   traineeLabel: string;
   phoneLast4: string;
 };
-export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale" | "history"}) {
+export function Cashier({initialTask = "visit",gymId,initialBranchId}: {initialTask?: "visit" | "sale" | "history";gymId?:string;initialBranchId?:string}) {
+  const [recordKind,setRecordKind]=useState<"visits"|"sales"|"reviews"|null>(null);
+  const [task,setTask]=useState<"visit"|"sale"|"history"|null>(initialBranchId?initialTask:null);
   const [branches, setBranches] = useState<Branch[]>([]),
-    [branch, setBranch] = useState(""),
+    [branch, setBranch] = useState(initialBranchId??""),
     [loading, setLoading] = useState(true),
     [error, setError] = useState("");
   async function load() {
@@ -62,10 +68,9 @@ export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale"
     setError("");
     try {
       const data = await api<{ items: Branch[] }>("operations/branches");
-      setBranches(data.items);
-      setBranch((old) =>
-        data.items.some((b) => b.id === old) ? old : (data.items[0]?.id ?? ""),
-      );
+      const allowed=data.items.filter(b=>!gymId||b.gymId===gymId);
+      setBranches(allowed);
+      setBranch(old=>allowed.some(b=>b.id===old)?old:allowed[0]?.id??"");
     } catch (e) {
       setError(message(e));
     } finally {
@@ -74,65 +79,16 @@ export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale"
   }
   useEffect(() => {
     void load();
-  }, []);
-  return (
-    <>
-      <div className="section-toolbar">
-        <p className="muted">
-          سجّل زيارة أو اشحن متدربًا من رصيد الفرع حسب صلاحيات حسابك.
-        </p>
-        <button
-          className="secondary compact"
-          disabled={loading}
-          onClick={() => void load()}
-        >
-          <RefreshCw size={16} />
-          تحديث الفروع
-        </button>
-      </div>
-      <Notice text={error} />
-      {loading ? (
-        <section className="card">
-          <Busy />
-        </section>
-      ) : !branches.length ? (
-        <section className="card">
-          <Empty title="لا توجد تكليفات تشغيل نشطة">
-            تأكد من تفعيل الجيم والفرع. لو حسابك موظف، اطلب من صاحب الجيم تعيينك على الفرع.
-          </Empty>
-        </section>
-      ) : (
-        <>
-          <section className="card">
-            <div className="field">
-              <label htmlFor="cashier-branch">الفرع الحالي</label>
-              <select
-                id="cashier-branch"
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.gymName} · {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <small className="muted">تظهر أول 100 صلاحية فرع نشطة.</small>
-          </section>
-          {branch && (
-            <BranchOperations
-              key={branch}
-              branch={branches.find((b) => b.id === branch)!}
-              initialTask={initialTask}
-            />
-          )}
-        </>
-      )}
-    </>
-  );
+  }, [gymId]);
+  const selected=branches.find(b=>b.id===branch);
+  if(gymId)return <>{task&&selected?<><ScreenBack title={task==="visit"?"تسجيل زيارة":task==="sale"?"شحن متدرب":selected.name} onBack={()=>{if(recordKind)setRecordKind(null);else setTask(null);void load();}}/><div className="native-operation-context"><strong>{selected.gymName} · {selected.name}</strong></div>{task==="history"?recordKind==="reviews"?<OperationReviews admin={false}/>:recordKind?<OperationHistory key={recordKind} branchId={selected.id} canCancel={selected.canCancel} kind={recordKind}/>:<BranchHome branch={selected} navigate={next=>{if(next==="visits"||next==="sales"||next==="reviews")setRecordKind(next);else if(next==="visit"||next==="sale")setTask(next);}}/>:<BranchOperations key={`${branch}:${task}`} branch={selected} initialTask={task} taskOnly/>}</>:<>
+    <PortalIntro title="تشغيل الجيم" eyebrow="صاحب الجيم" detail="اختار مهمتك من الفرع الصحيح. كل عملية بتتسجل باسم حسابك."/>
+    <Notice text={error}/>{loading?<Busy/>:!branches.length?<Empty title="مفيش فرع متاح للتشغيل">لازم الفرع يكون نشط وحسابك متعيّن عليه. راجع صاحب الجيم أو الإدارة.</Empty>:<><p className="muted native-small">{branches.length} فرع متاح لحسابك</p>{branches.map(b=><article className="card native-operation-branch" key={b.id}><p className="muted">{b.gymName}</p><h2>{b.name}</h2>{b.canCancel&&<p className="native-green native-small">تقدر تلغي الزيارة خلال أول ١٠ دقائق.</p>}{b.canSell&&<div className="native-task-grid"><PortalTask title="تسجيل زيارة" detail="مسح رمز المتدرب" icon={ScanLine} primary onClick={()=>{setBranch(b.id);setTask("visit");}}/><PortalTask title="شحن متدرب" detail="من رصيد الفرع" icon={Coins} onClick={()=>{setBranch(b.id);setTask("sale");}}/></div>}<button className="primary full" onClick={()=>{setBranch(b.id);setTask("history");}}>فتح الفرع</button></article>)}</>}
+  </>}</>;
+  return <><Notice text={error}/>{loading?<Busy/>:<><label className="field">الفرع الحالي<select value={branch} onChange={e=>setBranch(e.target.value)}>{branches.map(b=><option key={b.id} value={b.id}>{b.gymName} · {b.name}</option>)}</select></label>{selected&&<BranchOperations key={branch} branch={selected} initialTask={initialTask}/>}</>}</>;
 }
-export function BranchOperations({ branch, initialTask }: { branch: Branch; initialTask: "visit" | "sale" | "history" }) {
+
+export function BranchOperations({ branch, initialTask,taskOnly=false }: { branch: Branch; initialTask: "visit" | "sale" | "history";taskOnly?:boolean }) {
   const [tab, setTab] = useState(branch.canSell ? initialTask : "history"),
     [stock, setStock] = useState<number | null>(null),
     [error, setError] = useState(""),
@@ -152,7 +108,7 @@ export function BranchOperations({ branch, initialTask }: { branch: Branch; init
   }, [branch.id, revision]);
   return (
     <>
-      <div className="management-tabs operation-tabs">
+      {!taskOnly&&<div className="management-tabs operation-tabs">
         {branch.canSell && <button
           aria-pressed={tab === "sale"}
           className={tab === "sale" ? "active" : ""}
@@ -176,11 +132,11 @@ export function BranchOperations({ branch, initialTask }: { branch: Branch; init
         >
           سجل الفرع
         </button>
-      </div>
+      </div>}
       <Notice text={error} />
-      <p className="muted stock-line">
+      {!taskOnly&&<p className="muted stock-line">
         مخزون الفرع: <strong>{stock ?? "—"} نقطة</strong>
-      </p>
+      </p>}
       {!branch.canSell && tab !== "history" ? (
         <section className="card">
           <Empty title="حسابك لا يملك صلاحية تنفيذ العمليات في الفرع">
@@ -207,6 +163,7 @@ function SaleForm({
   branchId: string;
   onDone: () => void;
 }) {
+  const [result,setResult]=useState<Sale|null>(null);
   const [person, setPerson] = useState<{
       id: string;
       label: string;
@@ -278,9 +235,7 @@ function SaleForm({
         body,
       );
       setSuccess(`تم تحويل ${result.points} نقطة. مرجع البيع: ${result.id}`);
-      setPerson(null);
-      setQuote(null);
-      setPoints("");
+      setResult(result);
       onDone();
     } catch (e) {
       setError(message(e));
@@ -288,118 +243,15 @@ function SaleForm({
       setBusy(false);
     }
   }
-  return (
-    <>
-      <Notice text={error} />
-      <Notice text={success} success />
-      <div className="settings-grid">
-        <section className="card">
-          <h2>تحديد المتدرب</h2>
-          <p className="muted">
-            اكتب الرقم كاملًا، ثم طابق الاسم والجزء الظاهر من الهاتف.
-          </p>
-          <form onSubmit={lookup}>
-            <fieldset disabled={busy || uncertain}>
-              <Field
-                label="رقم هاتف المتدرب"
-                name="phone"
-                type="tel"
-                required
-                maxLength={40}
-                dir="ltr"
-              />
-              <button className="secondary full">
-                {busy ? <Busy /> : "بحث برقم الهاتف"}
-              </button>
-            </fieldset>
-          </form>
-          {person && (
-            <>
-              <div className="subtle-box">
-                <strong>{person.label}</strong>
-                <p>آخر أربعة أرقام: {person.phoneLast4}</p>
-              </div>
-              <form onSubmit={calculate}>
-                <fieldset disabled={busy || uncertain}>
-                  <Field
-                    label="عدد النقاط"
-                    value={points}
-                    type="number"
-                    required
-                    min={1}
-                    max={2147483647}
-                    step={1}
-                    onChange={(e) => {
-                      setPoints(e.target.value);
-                      setQuote(null);
-                    }}
-                  />
-                  <button className="primary full">
-                    {busy ? <Busy /> : "حساب قيمة البيع"}
-                  </button>
-                </fieldset>
-              </form>
-            </>
-          )}
-        </section>
-        <section className="card">
-          <h2>التحصيل والتحويل</h2>
-          {!quote ? (
-            <Empty title="حدد المتدرب والكمية أولًا" />
-          ) : (
-            <>
-              <div className="quote-total">
-                <span>المبلغ الذي يحصّله الفرع</span>
-                <strong>
-                  {decimal(quote.chargePiasters)} <small>ج.م</small>
-                </strong>
-                <p>
-                  {quote.points} نقطة · المخزون {quote.stock}
-                </p>
-              </div>
-              <form onSubmit={confirm}>
-                <fieldset disabled={busy}>
-                  <Field
-                    label="المبلغ المستلم بالجنيه"
-                    name="amount"
-                    defaultValue={decimal(quote.chargePiasters)}
-                    readOnly={uncertain}
-                    inputMode="decimal"
-                    required
-                    dir="ltr"
-                  />
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      name="received"
-                      disabled={uncertain}
-                      required
-                    />
-                    طابقت المتدرب وتأكدت من استلام المبلغ كاملًا
-                  </label>
-                  <button
-                    className="primary full"
-                    disabled={quote.points > quote.stock}
-                  >
-                    {busy ? (
-                      <Busy>جاري تحويل النقاط</Busy>
-                    ) : (
-                      "تأكيد التحصيل وتحويل النقاط"
-                    )}
-                  </button>
-                </fieldset>
-              </form>
-              <p className="subtle-box">
-                لو حصل انقطاع بعد التأكيد، أعد نفس الطلب أو راجع السجل؛ لا تحصّل
-                المبلغ مرة ثانية. إلغاء البيع يحتاج مراجعة صاحب المنصة.
-              </p>
-            </>
-          )}
-        </section>
-      </div>
-    </>
-  );
+  if(result)return <><Empty title="تم شحن المتدرب"/><section className="card"><Fact label="المتدرب">{result.traineeLabel}</Fact><Fact label="النقاط" strong>{result.points} نقطة</Fact><Fact label="المبلغ المحصّل">{decimal(result.chargePiasters)} ج.م</Fact><RecordReference value={result.id}/></section><button className="primary full" onClick={()=>{setResult(null);setPerson(null);setQuote(null);setPoints("");setSuccess("");}}>عملية جديدة</button></>;
+  return <div className="native-sale"><FlowSteps labels={["المتدرب","النقاط","التأكيد"]} current={quote?2:person?1:0}/><PortalIntro title={!person?"هتشحن لمين؟":!quote?"اتأكد من الاسم وحدد النقاط":"راجع وأكّد الشحن"} detail="البيع من رصيد الفرع، بعد استلام المبلغ من المتدرب."/><Notice text={error}/><Notice text={success} success/>
+  {!person?<form onSubmit={lookup}><fieldset disabled={busy||uncertain}><Field label="رقم موبايل المتدرب" name="phone" type="tel" required maxLength={40} dir="ltr" placeholder="01xxxxxxxxx"/><button className="primary full">{busy?<Busy/>:"بحث عن المتدرب"}</button></fieldset></form>:<>
+   <section className="card native-recipient"><strong>{person.label}</strong><p className="muted">آخر أربعة أرقام: {person.phoneLast4}</p></section>
+   {!quote?<form onSubmit={calculate}><fieldset disabled={busy||uncertain}><Field label="عدد النقاط" value={points} inputMode="numeric" required onChange={e=>setPoints(e.target.value)}/><button className="primary full">{busy?<Busy/>:"مراجعة قيمة الشحن"}</button></fieldset></form>:<><section className="card"><Fact label="النقاط" strong>{quote.points} نقطة</Fact><Fact label="المبلغ المطلوب تحصيله" strong>{decimal(quote.chargePiasters)} ج.م</Fact><Fact label="مخزون الفرع">{quote.stock} نقطة</Fact></section><form onSubmit={confirm}><fieldset disabled={busy||uncertain}><Field label="المبلغ المستلم بالجنيه" name="amount" defaultValue={decimal(quote.chargePiasters)} inputMode="decimal" required dir="ltr"/><label className="check"><input type="checkbox" name="received" required/>طابقت المتدرب وتأكدت من استلام المبلغ كاملًا</label></fieldset><Notice text={uncertain?"نتيجة الشحن غير مؤكدة. أعد نفس الطلب بأمان.":""}/><button className="primary full" disabled={busy||quote.points>quote.stock}>{busy?<Busy/>:uncertain?"إعادة نفس الطلب":"تأكيد التحصيل وشحن المتدرب"}</button></form></>}
+   <button className="text-button" disabled={busy||uncertain} onClick={()=>{if(quote)setQuote(null);else setPerson(null);setError("");}}>تعديل البيانات</button>
+  </>}</div>;
 }
+
 function VisitForm({ branchId }: { branchId: string }) {
   const [token, setToken] = useState(""),
     [preview, setPreview] = useState<Preview | null>(null),
@@ -465,7 +317,7 @@ function VisitForm({ branchId }: { branchId: string }) {
   }
   return (
     <section className="card visit-card">
-      <h2>مسح رمز دخول المتدرب</h2>
+      <PortalIntro title={preview?"راجع الزيارة":result?"نتيجة الزيارة":"مسح رمز دخول المتدرب"} detail="الرمز صالح لدقيقة. التأكيد بعد التحقق من حضور المتدرب."/>
       <p className="muted">
         الرمز صالح لدقيقة. التأكيد يتم بعد التحقق من حضور المتدرب فعليًا.
       </p>
@@ -482,8 +334,8 @@ function VisitForm({ branchId }: { branchId: string }) {
           <RecordReference value={result.visit.id} label="مرجع الزيارة" />
         </div>
       )}
-      <button
-        className="secondary"
+      {!preview&&!result&&<><button
+        className="primary full"
         disabled={busy || uncertain}
         onClick={() => setCamera((old) => !old)}
       >
@@ -512,6 +364,8 @@ function VisitForm({ branchId }: { branchId: string }) {
           </button>
         </fieldset>
       </form>
+      </>}
+      {result&&<button className="primary full" onClick={()=>{setResult(null);setToken("");setError("");}}>تسجيل زيارة تانية</button>}
       {preview && (
         <form onSubmit={confirm}>
           <fieldset disabled={busy}>
@@ -558,6 +412,7 @@ function VisitForm({ branchId }: { branchId: string }) {
           </fieldset>
         </form>
       )}
+      {preview&&<button className="text-button" disabled={busy||uncertain} onClick={()=>{setPreview(null);setToken("");}}>تعديل الرمز</button>}
     </section>
   );
 }
@@ -631,8 +486,8 @@ export function OperationHistory({
   canCancel: boolean;
   kind?: "visits" | "sales";
 }) {
-  const sales = usePage<Sale>(`operations/branches/${branchId}/sales`),
-    visits = usePage<Visit>(`operations/branches/${branchId}/visits`);
+  const sales = usePage<Sale>(kind==="visits"?null:`operations/branches/${branchId}/sales`),
+    visits = usePage<Visit>(kind==="sales"?null:`operations/branches/${branchId}/visits`);
   return (
     <div className="two-columns">
       {kind!=='visits'&&<section className="card">
@@ -646,12 +501,7 @@ export function OperationHistory({
           <div className="timeline">
             {sales.rows.map((s) => (
               <article key={s.id}>
-                <strong>
-                  {s.traineeLabel} · {s.points} نقطة
-                </strong>
-                <p>
-                  {decimal(s.chargePiasters)} ج.م · {date(s.createdAt)}
-                </p>
+                <Fact label="المتدرب">{s.traineeLabel}</Fact><Fact label="النقاط" strong>{s.points} نقطة</Fact><Fact label="المبلغ المحصّل">{decimal(s.chargePiasters)} ج.م</Fact><Fact label="التاريخ">{date(s.createdAt)}</Fact>
                 <RecordReference value={s.id} />
                 <RequestAction kind="SALE_CORRECTION" targetId={s.id} />
               </article>
@@ -679,7 +529,7 @@ export function OperationHistory({
                       ? "انتهت المدة"
                       : "ملغاة"}
                 </strong>
-                <p>حتى {date(v.expiresAt)}</p>
+                <Fact label="التاريخ">{date(v.startedAt)}</Fact><Fact label="نهاية الجلسة">{date(v.expiresAt)}</Fact>
                 <RecordReference value={v.id} />
                 {v.cancellationReason && (
                   <p className="subtle-box">
@@ -751,66 +601,12 @@ export function TraineeQr({ standalone = false }: { standalone?: boolean }) {
     }
   }
   useEffect(() => {
-    const timer = setInterval(
-      () =>
-        setLeft(
-          Math.max(0, Math.ceil((until.current - performance.now()) / 1000)),
-        ),
-      500,
-    );
-    return () => {
-      clearInterval(timer);
-      generation.current++;
-    };
+    void renew();
+    const visible=()=>{setQr(null);setLeft(0);generation.current++;if(document.visibilityState==='visible')void renew();};
+    document.addEventListener('visibilitychange',visible);
+    const timer=setInterval(()=>setLeft(Math.max(0,Math.ceil((until.current-performance.now())/1000))),1000);
+    return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visible);generation.current++;};
   }, []);
-  const content = (
-      <section className="card trainee-code">
-        <h2>رمز دخول الجيم</h2>
-        <Notice text={error} />
-        <p className="muted">
-          اعرض الرمز للكاشير عند حضورك. الرمز لا يحتوي اسمك أو رقمك؛ إصدار الرمز
-          لا يخصم نقاطًا.
-        </p>
-        {qr && left > 0 ? (
-          <>
-            <QRCodeSVG
-              value={`gymqr:${qr.token}`}
-              size={224}
-              level="M"
-              title="رمز الدخول المؤقت"
-            />
-            <p role="status">ينتهي بعد {left} ثانية</p>
-            <details>
-              <summary>نسخ الرمز عند تعذر الكاميرا</summary>
-              <input
-                readOnly
-                value={qr.token}
-                dir="ltr"
-                aria-label="رمز الدخول النصي"
-                autoComplete="off"
-              />
-            </details>
-          </>
-        ) : (
-          <Empty title={qr ? "انتهت صلاحية الرمز" : "الرمز جاهز للإصدار"}>
-            اضغط لعرض رمز جديد قصير الصلاحية.
-          </Empty>
-        )}
-        <button
-          className="primary full"
-          disabled={busy}
-          onClick={() => void renew()}
-        >
-          {busy ? (
-            <Busy />
-          ) : qr ? (
-            "إصدار رمز جديد وتحديث المحفظة"
-          ) : (
-            "إظهار رمز الدخول"
-          )}
-        </button>
-      </section>
-  );
-  return standalone ? content : <TraineeWallet revision={revision}>{content}</TraineeWallet>;
+  const content=<><section className="card trainee-code native-qr"><p className="native-green">رمزك الشخصي</p><Notice text={error}/><div className="native-qr-image">{busy?<Busy/>:qr&&left>0?<QRCodeSVG value={qr.token} size={250} level="M" title="رمز دخول مؤقت؛ اعرضه للكاشير فقط"/>:<><ScanLine size={100}/><p>الرمز غير متاح أو انتهت صلاحيته</p></>}</div><p className="native-green">{qr&&left>0?`صالح لمدة ${left} ثانية`:"افتح رمزًا جديدًا وقت الدخول"}</p><progress max={60} value={qr?left:0}/><button className="primary full" disabled={busy} onClick={()=>void renew()}><RefreshCw size={20}/>تحديث رمز الدخول</button></section><PortalNote>الرمز مؤقت وبيستخدم مرة واحدة. متشاركوش مع حد خارج الجيم.</PortalNote><p className="muted native-qr-footnote">نقاط الزيارة بتتراجع عند الكاشير قبل تأكيد حضورك.</p></>;
+  return standalone?content:<TraineeWallet revision={revision}>{content}</TraineeWallet>;
 }
-
