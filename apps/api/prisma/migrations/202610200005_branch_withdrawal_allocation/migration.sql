@@ -11,7 +11,7 @@ CREATE TRIGGER allocation_immutable BEFORE UPDATE OR DELETE ON "WithdrawalAlloca
 CREATE FUNCTION verify_withdrawal_allocation() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE w "WithdrawalRequest";target UUID;
 BEGIN
- target:=CASE WHEN TG_TABLE_NAME='WithdrawalAllocation' THEN NEW."withdrawalId" ELSE NEW.id END;
+ target:=(CASE WHEN TG_TABLE_NAME='WithdrawalAllocation' THEN to_jsonb(NEW)->>'withdrawalId' ELSE to_jsonb(NEW)->>'id' END)::uuid;
  SELECT * INTO w FROM "WithdrawalRequest" WHERE id=target;
  IF w."allocationVersion"=1 AND ((SELECT coalesce(sum("amountPiasters"),0) FROM "WithdrawalAllocation" WHERE "withdrawalId"=target)<>w."amountPiasters" OR EXISTS(
  SELECT 1 FROM "WithdrawalAllocation" a LEFT JOIN "Branch" b ON b.id=a."branchId" WHERE a."withdrawalId"=target AND ((a."branchId" IS NOT NULL AND b."gymId"<>w."gymId") OR (w."branchId" IS NOT NULL AND a."branchId" IS DISTINCT FROM w."branchId")))) THEN RAISE EXCEPTION 'Invalid withdrawal attribution' USING ERRCODE='23514';END IF;
