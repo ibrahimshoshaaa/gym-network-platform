@@ -222,7 +222,7 @@ test(
         cookie: ownerCookie, method: "POST",
         body: {branchId: branch.id, role: "BRANCH_MANAGER", contact: {
           displayName: "Synthetic Delegated Manager",
-          email: `delegated-manager-${id}@example.test`, phone: "01500000009",
+          email: `delegated-manager-${id}@example.test`, phone: "01500000011",
         }},
       });
       assert.equal(managerInvite.status, 201);
