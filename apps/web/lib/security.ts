@@ -69,6 +69,77 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    new RegExp(`^branches/${uuid}/manageexport class GatewayError extends Error {
+  constructor(
+    public code: string,
+    public status: number,
+  ) {
+    super(code);
+  }
+}
+export function apiHeaders(initial?: HeadersInit, token?: string) {
+  const headers = new Headers(initial);
+  if (token) headers.set('authorization', `Bearer ${token}`);
+  // Transport credential is read only on the server. Never forward a caller's
+  // claimed origin credential when this deployment has not configured one.
+  headers.delete('x-gym-origin-secret');
+  if (process.env.API_ORIGIN_SECRET) headers.set('x-gym-origin-secret', process.env.API_ORIGIN_SECRET);
+  return headers;
+}
+export function apiOrigin() {
+  const value =
+    process.env.API_INTERNAL_URL ??
+    (process.env.NODE_ENV === "production" ? "" : "http://127.0.0.1:4000");
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new GatewayError("SERVICE_NOT_CONFIGURED", 503);
+  }
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash ||
+    (process.env.NODE_ENV === "production" &&
+      url.protocol !== "https:" &&
+      !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname))
+  )
+    throw new GatewayError("SERVICE_NOT_CONFIGURED", 503);
+  return url.origin;
+}
+export function checkOrigin(request: Request) {
+  const configured = process.env.WEB_ORIGIN;
+  if (!configured && process.env.NODE_ENV === "production")
+    throw new GatewayError("SERVICE_NOT_CONFIGURED", 503);
+  let expected: URL;
+  try {
+    expected = new URL(configured ?? request.url);
+  } catch {
+    throw new GatewayError("SERVICE_NOT_CONFIGURED", 503);
+  }
+  if (
+    configured &&
+    (expected.pathname !== "/" ||
+      expected.search ||
+      expected.hash ||
+      expected.username ||
+      expected.password ||
+      !["http:", "https:"].includes(expected.protocol))
+  )
+    throw new GatewayError("SERVICE_NOT_CONFIGURED", 503);
+  if (
+    request.headers.get("origin") !== expected.origin ||
+    request.headers.get("sec-fetch-site") === "cross-site"
+  )
+    throw new GatewayError("ORIGIN_REJECTED", 403);
+}
+const uuid =
+  "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+const rules: Record<string, RegExp[]> = {
+),
     /^booking-policy$/, /^admin\/booking-policy$/, /^trainee\/bookings$/, /^admin\/bookings\/review$/,
     /^campaigns$/, /^admin\/campaigns$/,
     new RegExp(`^gyms/${uuid}/delegations$`),

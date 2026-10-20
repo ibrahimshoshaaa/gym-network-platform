@@ -215,6 +215,23 @@ test(
       assert.equal(ownerLogin.status, 200);
       const ownerCookie = sessionCookie(ownerLogin);
       assert.ok(ownerCookie);
+      // Use the actual web/mobile bridges rather than a mocked endpoint reply.
+      const branchMetadata = await request(`/api/backend/branches/${branch.id}/manage`, {cookie: ownerCookie});
+      assert.equal(branchMetadata.status, 200);
+      assert.equal((await branchMetadata.json()).id, branch.id);
+      const ownerNativeLogin = await request('/api/mobile/auth/signin', {
+        method: 'POST', body: {identifier: owner.email, password},
+      });
+      assert.equal(ownerNativeLogin.status, 200);
+      const ownerNativeToken = (await ownerNativeLogin.json()).accessToken;
+      const ownerNativeHeaders = {authorization: 'Bearer ' + ownerNativeToken};
+      const nativeBranchMetadata = await request(`/api/mobile/branches/${branch.id}/manage`, {headers: ownerNativeHeaders});
+      assert.equal(nativeBranchMetadata.status, 200);
+      assert.equal((await nativeBranchMetadata.json()).name, branch.name);
+      assert.equal((await request(`/api/mobile/branches/${branch.id}/manage`)).status, 401);
+      assert.equal((await request(`/api/backend/branches/${randomUUID()}/manage`, {cookie: ownerCookie})).status, 403);
+      assert.equal((await request(`/api/mobile/branches/${randomUUID()}/manage`, {headers: ownerNativeHeaders})).status, 403);
+
       assert.equal(
         (
           await request("/api/backend/admin/topup-settings", {
