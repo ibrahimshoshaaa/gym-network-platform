@@ -7,6 +7,7 @@ import '../core/portal_ui.dart';
 import 'account.dart';
 import 'bookings.dart';
 import 'managed_branch.dart';
+import 'branch_finance.dart';
 
 String? visitTicket(String input) {
   final text = input.trim();
@@ -119,6 +120,7 @@ class _BranchDashboardState extends State<BranchDashboard> {
     final branch = widget.branch, locked = widget.api.pending != null;
     return RefreshIndicator(onRefresh: load, child: ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), physics: const AlwaysScrollableScrollPhysics(), children: [
+        BranchFinance(key: ValueKey(generation), api: widget.api, branch: branch),
         Panel(color: ink, padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('رصيد الفرع لبيع النقاط', style: TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 8),
