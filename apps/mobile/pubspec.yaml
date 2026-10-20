@@ -1,7 +1,7 @@
 name: gym_network
 publish_to: none
 description: Native GymBank experience for trainees, gym owners and branch staff.
-version: 0.2.6+8
+version: 0.2.7+9
 environment:
   sdk: '>=3.8.0 <4.0.0'
 dependencies:

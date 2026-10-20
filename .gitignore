@@ -15,3 +15,9 @@ coverage/
 
 
 *.tsbuildinfo
+
+# Android signing identities and local backups must never enter source control.
+*.jks
+*.keystore
+**/key.properties
+**/gymbank-signing-backup/

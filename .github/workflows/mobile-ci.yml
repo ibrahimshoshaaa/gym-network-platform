@@ -1,5 +1,6 @@
 name: Build Android mobile client
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main, develop]
     paths: ['apps/mobile/**', '.github/workflows/mobile-ci.yml']
@@ -39,25 +40,42 @@ jobs:
           cp -r /tmp/gym-mobile-lib/. lib/
           rm -f test/widget_test.dart
           python3 tool/prepare_platforms.py
+          python3 tool/configure_signing.py
           flutter pub get
       - name: Analyze and test mobile navigation
         working-directory: apps/mobile
         run: |
+          python3 -m unittest discover -s tool -p 'test_signing.py'
           flutter analyze lib test --no-fatal-infos
           flutter test
       - name: Build optimized Android APKs
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         working-directory: apps/mobile
-        run: flutter build apk --release --split-per-abi
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_SIGNING_CERT_SHA256: ${{ secrets.ANDROID_SIGNING_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          export GYMBANK_KEYSTORE_PATH="$RUNNER_TEMP/gymbank-signing/gymbank-release.jks"
+          trap 'rm -rf "$RUNNER_TEMP/gymbank-signing"' EXIT
+          python3 tool/install_signing.py
+          build_number=$((100000 + GITHUB_RUN_NUMBER))
+          flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number"
+          python3 tool/verify_apks.py "$build_number"
+          cd build/app/outputs/flutter-apk
+          sha256sum *.apk > SHA256SUMS.txt
       - name: Attach installable APKs to private release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view mobile-v0.2.6 >/dev/null 2>&1 || gh release create mobile-v0.2.6 --target "$GITHUB_SHA" --title "GymBank Android 0.2.6" --notes "Bilingual sign-in and registration with Google and Apple coming-soon buttons. OTP, social provider connections, wallet PIN and background push remain deferred. Testing build; store signing is separate."
-          gh release upload mobile-v0.2.6 apps/mobile/build/app/outputs/flutter-apk/*.apk --clobber
+          gh release view mobile-v0.2.7 >/dev/null 2>&1 || gh release create mobile-v0.2.7 --target "$GITHUB_SHA" --title "GymBank Android 0.2.7" --notes "Signed GymBank release with a permanent signing identity and increasing build number. First installation may require removing the older debug-signed testing app. Account data remains on the server."
+          gh release upload mobile-v0.2.7 apps/mobile/build/app/outputs/flutter-apk/*.apk apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt --clobber
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         continue-on-error: true
         with:
           name: gym-network-android-apks
