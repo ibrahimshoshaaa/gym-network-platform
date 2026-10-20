@@ -185,7 +185,7 @@ export async function inviteStaff(db: PrismaClient, actorId: string, gymId: stri
       const assignment = await tx.staffAssignment.findUnique({ where: { userId_branchId_role: { userId: user.id, branchId: branch.id, role: data.role } } });
       if (assignment?.active) throw new DomainError('STAFF_ALREADY_ASSIGNED');
       const invitation = await makeInvitation(tx, { actorId, gymId, branchId: branch.id, userId: user.id, type: 'STAFF', role: data.role });
-      return { invitation, user: publicIdentity(user) };
+      return { invitation, user: publicIdentity(user),canDelegate:grant.owner };
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new DomainError('ACCOUNT_UNAVAILABLE');

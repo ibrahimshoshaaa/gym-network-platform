@@ -1068,7 +1068,7 @@ class _InviteStaffState extends State<InviteStaff> {
             detail: 'شارك الرابط مع الموظف ليختار كلمة السر ويقبل الدعوة. الرابط مؤقت وسري.',
             icon: Icons.mark_email_read_outlined,
           ),
-          if(role=='BRANCH_MANAGER'&&result?['user']?['id']!=null)ActionButton('تحديد صلاحيات المدير',onPressed:()=>open(context,StaffDelegation(api:widget.api,gymId:widget.gymId,userId:result!['user']['id'],branchId:widget.branchId,name:name.text))),
+          if(role=='BRANCH_MANAGER'&&result?['canDelegate']==true&&result?['user']?['id']!=null)ActionButton('تحديد صلاحيات المدير',onPressed:()=>open(context,StaffDelegation(api:widget.api,gymId:widget.gymId,userId:result!['user']['id'],branchId:widget.branchId,name:name.text))),
           const SizedBox(height: 18),
           SelectableText(
             'https://gym-network-platform.vercel.app/#invite=${result!['invitation']?['token']??result!['token']}',
