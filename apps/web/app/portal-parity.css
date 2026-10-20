@@ -40,4 +40,4 @@
 .booking-card summary{cursor:pointer;font-weight:700}
 .booking-compose input[type=datetime-local]{min-width:0;max-width:100%;box-sizing:border-box}
 .booking-card .badge{white-space:normal;line-height:1.6}
-.booking-card{content-visibility:auto;contain-intrinsic-size:auto 330px}
+

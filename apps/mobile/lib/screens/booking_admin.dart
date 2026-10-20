@@ -18,7 +18,7 @@ class _SplitFields extends StatelessWidget {
  final ValueChanged<String> onKind;
  final TextEditingController percent;
  final bool disabled;
- const _SplitFields({required this.kind,required this.onKind,required this.percent,required this.disabled});
+ const _SplitFields({super.key,required this.kind,required this.onKind,required this.percent,required this.disabled});
  @override Widget build(BuildContext context)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
   DropdownButtonFormField<String>(isExpanded:true,initialValue:kind,decoration:const InputDecoration(labelText:'مصير النقاط'),items:const [
    DropdownMenuItem(value:'TRAINEE',child:Text('إرجاع بالكامل للمتدرب')),
