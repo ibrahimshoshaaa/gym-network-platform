@@ -1841,6 +1841,8 @@ test(
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'mobile support layout must fit viewport');
           assert.deepEqual(pageErrors,[]);
           await context.close();
+          // Restore the synthetic cashier after the earlier revocation assertion, only for UI checks.
+          assert.equal((await request(`/api/backend/gyms/${newGym.gym.id}/staff/${membership.id}`,{cookie:invitedOwnerCookie,method:'PATCH',body:{active:true}})).status,200);
           // Both staff roles use the same branch workspace and four tabs as Flutter.
           for(const staffCookie of [cashierCookie,managerCookie]){
             const staffContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
@@ -1860,6 +1862,7 @@ test(
             await expect(staffPage.getByRole('heading',{name:'مبيعات النقاط',exact:true})).toBeVisible();
             await staffContext.close();
           }
+          assert.equal((await request(`/api/backend/gyms/${newGym.gym.id}/staff/${membership.id}`,{cookie:invitedOwnerCookie,method:'PATCH',body:{active:false}})).status,200);
           // Real trainee ledger rows reproduce the narrow-column UUID regression.
           const traineeContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const traineeSeparator=traineeCookie.indexOf('=');
