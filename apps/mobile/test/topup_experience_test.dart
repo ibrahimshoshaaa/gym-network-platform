@@ -43,6 +43,7 @@ void main() {
       await t.ensureVisible(find.text('مراجعة طلب الشحن'));
       expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'مراجعة طلب الشحن')).onPressed, isNull);
       expect(submitted, isFalse);
+      await t.ensureVisible(find.text('تعديل الرصيد المختار'));
       await t.tap(find.text('تعديل الرصيد المختار'));
       await t.pumpAndSettle();
       await t.enterText(find.byType(TextField), '١٢٣');
