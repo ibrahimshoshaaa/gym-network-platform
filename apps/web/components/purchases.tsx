@@ -1,534 +1,149 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  UploadCloud,
-  Copy,
-  Check,
-  ArrowLeft,
-  Building2,
-  RefreshCw,
-} from "lucide-react";
-import {
-  api,
-  send,
-  message,
-  decimal,
-  minorUnits,
-  methodName,
-  date,
-  type Settings,
-  type Page,
-  type Topup,
-} from "../lib/client";
+import { Check, Copy, ImagePlus, History } from "lucide-react";
+import { api, send, message, decimal, minorUnits, methodName, date, type Settings, type Page, type Topup } from "../lib/client";
+import { useCommand } from "../lib/use-financial-command";
+import { normalizeDigits, topupEstimate } from "../lib/topup-estimate";
 import { Busy, Empty, Field, Notice } from "./ui";
-type Gym = { id: string; name: string; status: string };
-type Branch = { id: string; name: string; status: string };
+import { More, usePage } from "./gyms/shared";
+import {CampaignBanner} from "./campaign-banner";
+import { Fact, FlowSteps, PortalIntro, ScreenBack } from "./portal-ui";
+import { RecordReference } from "./record-reference";
 type Quote = {
-  points: number;
-  chargePiasters: string;
-  pricingVersion: number;
-  discountBps: number;
-  unallocatedPiasters: string;
+    points: number;
+    chargePiasters: string;
+    pricingVersion: number;
+    unallocatedPiasters: string;
 };
-export function Purchases({ trainee = false, onWallet }: { trainee?: boolean; onWallet?: () => void }) {
-  const [gyms, setGyms] = useState<Gym[]>([]),
-    [branches, setBranches] = useState<Branch[]>([]),
-    [gym, setGym] = useState(""),
-    [branch, setBranch] = useState(""),
-    [options, setOptions] = useState<Settings | null>(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [success, setSuccess] = useState(""),
-    [completed, setCompleted] = useState<number | null>(null);
-  const [selection, setSelection] = useState("points"),
-    [quantity, setQuantity] = useState(""),
-    [packId, setPackId] = useState(""),
-    [method, setMethod] = useState(""),
-    [quote, setQuote] = useState<Quote | null>(null),
-    [quoting, setQuoting] = useState(false),
-    [uploading, setUploading] = useState(false),
-    [submitting, setSubmitting] = useState(false),
-    [receiptId, setReceiptId] = useState(""),
-    [receiptName, setReceiptName] = useState(""),
-    [copied, setCopied] = useState(false),
-    [rows, setRows] = useState<Topup[]>([]),
-    [cursor, setCursor] = useState<string | null>(null),
-    [listing, setListing] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null),
-    command = useRef<{ body: string; key: string } | null>(null);
-  const busy = submitting || quoting || uploading;
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const [access, config, history] = await Promise.all([
-        trainee ? Promise.resolve({ ownedGyms: [] as Gym[] }) : api<{ ownedGyms: Gym[] }>("me/access"),
-        api<Settings>(`topup-options?kind=${trainee ? "TRAINEE" : "BRANCH_STOCK"}`),
-        api<Page<Topup>>("topups?limit=25"),
-      ]);
-      const active = access.ownedGyms.filter((g) => g.status === "ACTIVE");
-      setGyms(active);
-      setOptions(config);
-      setRows(history.items);
-      setCursor(history.nextCursor);
-      setGym((old) =>
-        active.some((g) => g.id === old) ? old : (active[0]?.id ?? ""),
-      );
-      setQuote(null);
-      setMethod(config.paymentMethods.length === 1 ? config.paymentMethods[0]!.type : "");
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setLoading(false);
+type Selection = {
+    kind: string;
+    receivingGymId?: string;
+    receivingBranchId?: string;
+    packageId?: string;
+    packageVersion?: number;
+    points?: number;
+    amountPiasters?: string;
+};
+type Gym = {
+    id: string;
+    name: string;
+    status: string;
+};
+export function Purchases({ trainee = false, onWallet, gymId, branchId }: {
+    trainee?: boolean;
+    onWallet?: () => void;
+    gymId?: string;
+    branchId?: string;
+}) {
+    const [version,setVersion]=useState(0);
+    const [options, setOptions] = useState<Settings | null>(null), [gyms, setGyms] = useState<Gym[]>([]), [chosenGym, setChosenGym] = useState(gymId ?? ""), [quantity, setQuantity] = useState(""), [byAmount, setByAmount] = useState(false), [packId, setPackId] = useState(""), [method, setMethod] = useState(""), [quote, setQuote] = useState<Quote | null>(null), [receipt, setReceipt] = useState<{
+        id: string;
+        name: string;
+    } | null>(null), [reviewing, setReviewing] = useState(false), [confirmed, setConfirmed] = useState(false), [result, setResult] = useState<Topup | null>(null), [history, setHistory] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [copied, setCopied] = useState(false);
+    const snapshot = useRef<Selection | null>(null), fileRef = useRef<HTMLInputElement>(null), running = useRef(false), { call, uncertain } = useCommand();
+    const locked = busy || uncertain, kind = trainee ? "TRAINEE" : "BRANCH_STOCK", destination = trainee ? "محفظتك" : branchId ? "مخزون الفرع" : "رصيد صاحب الجيم";
+    useEffect(() => { let live = true; setBusy(true); Promise.all([api<Settings>(`topup-options?kind=${kind}`), !trainee && !gymId && !branchId ? api<Page<Gym>>("gyms?limit=100") : Promise.resolve({ items: [] as Gym[] })]).then(([o, g]) => { if (!live)
+        return; setOptions(o); setMethod(o.paymentMethods[0]?.type ?? ""); setGyms(g.items.filter(x => x.status === "ACTIVE")); setChosenGym(gymId ?? g.items.find(x => x.status === "ACTIVE")?.id ?? ""); }).catch(e => { if (live)
+        setError(message(e)); }).finally(() => { if (live)
+        setBusy(false); }); return () => { live = false; }; }, [kind, trainee, gymId, branchId,version]);
+    const estimate = topupEstimate(options?.policy, trainee, quantity, byAmount), channel = options?.paymentMethods.find(m => m.type === method), step = quote ? reviewing ? 2 : 1 : 0;
+    async function calculate(e: FormEvent) {
+        e.preventDefault();
+        if (running.current || locked || !estimate || (!trainee && !branchId && !chosenGym))
+            return;
+        running.current = true;
+        setBusy(true);
+        setError("");
+        try {
+            const pack = options?.packages.find(p => p.id === packId);
+            const selected: Selection = { kind, ...(!trainee ? (branchId ? { receivingBranchId: branchId } : { receivingGymId: chosenGym }) : {}), ...(pack ? { packageId: pack.id, packageVersion: pack.version } : byAmount ? { amountPiasters: minorUnits(normalizeDigits(quantity).trim()) } : { points: estimate.points }) };
+            const q = await api<Quote>("topup-quotes", send(selected));
+            snapshot.current = selected;
+            setQuote(q);
+            setReviewing(false);
+            setReceipt(null);
+            setConfirmed(false);
+        }
+        catch (e) {
+            setError(message(e));
+        }
+        finally {
+            running.current = false;
+            setBusy(false);
+        }
     }
-  }
-  useEffect(() => {
-    void load();
-  }, [trainee]);
-  useEffect(() => {
-    let active = true;
-    setBranches([]);
-    setBranch("");
-    setQuote(null);
-    if (gym)
-      api<BranchPage>(`gyms/${gym}/branches?limit=100`)
-        .then((result) => {
-          if (active) {
-            const rows = result.items.filter((b) => b.status === "ACTIVE");
-            setBranches(rows);
-            setBranch(rows[0]?.id ?? "");
-          }
-        })
-        .catch((e) => {
-          if (active) setError(message(e));
-        });
-    return () => {
-      active = false;
-    };
-  }, [gym]);
-  type BranchPage = Page<Branch>;
-  function getSelection() {
-    if (!trainee && !branch) throw new Error("اختر فرعًا نشطًا أولًا.");
-    const base = trainee ? { kind: "TRAINEE" } : { kind: "BRANCH_STOCK", receivingBranchId: branch };
-    if (selection === "package") {
-      const pack = options?.packages.find((p) => p.id === packId);
-      if (!pack) throw new Error("اختر الباقة.");
-      return { ...base, packageId: pack.id, packageVersion: pack.version };
+    async function upload(file?: File) { if (!file || running.current || locked)
+        return; setError(""); if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 4194304) {
+        setError("اختار صورة JPG أو PNG أو WebP بحد أقصى 4 ميجابايت.");
+        return;
+    } running.current = true; setBusy(true); try {
+        const r = await api<{
+            id: string;
+        }>("receipts", { method: "POST", headers: { "content-type": file.type }, body: file });
+        setReceipt({ id: r.id, name: file.name });
+        setConfirmed(false);
     }
-    if (selection === "amount")
-      return { ...base, amountPiasters: minorUnits(quantity) };
-    if (
-      !/^\d+$/.test(quantity) ||
-      !Number.isSafeInteger(Number(quantity)) ||
-      Number(quantity) < 1 ||
-      Number(quantity) > 2147483647
-    )
-      throw new Error("اكتب عدد نقاط صحيحًا أكبر من صفر.");
-    return { ...base, points: Number(quantity) };
-  }
-  async function calculate(e: FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setQuoting(true);
-    setError("");
-    setSuccess("");
-    try {
-      setQuote(await api<Quote>("topup-quotes", send(getSelection())));
-      setReceiptId(""); setReceiptName(""); setCopied(false);
-    } catch (e) {
-      setError(message(e));
-      setQuote(null);
-    } finally {
-      setQuoting(false);
+    catch (e) {
+        setError(message(e));
     }
-  }
-  async function upload(file?: File) {
-    if (!file || busy) return;
-    setError("");
-    setReceiptId("");
-    setReceiptName("");
-    if (
-      !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-      file.size > 4194304
-    ) {
-      setError("اختار صورة JPG أو PNG أو WebP بحد أقصى 4 ميجابايت.");
-      if (fileRef.current) fileRef.current.value = "";
-      return;
+    finally {
+        running.current = false;
+        setBusy(false);
+        if (fileRef.current)
+            fileRef.current.value = "";
+    } }
+    async function submit(e: FormEvent) { e.preventDefault(); if (running.current || busy || !confirmed || !quote || !receipt || !channel || !snapshot.current)
+        return; running.current = true; setBusy(true); setError(""); try {
+        const r = await call<Topup>("topups", { ...snapshot.current, pricingVersion: quote.pricingVersion, receiptId: receipt.id, paymentMethod: channel.type, paymentMethodVersion: channel.version });
+        setResult(r);
     }
-    setUploading(true);
-    try {
-      const response = await api<{ id: string }>("receipts", {
-        method: "POST",
-        headers: { "content-type": file.type },
-        body: file,
-      });
-      setReceiptId(response.id);
-      setReceiptName(file.name);
-    } catch (e) {
-      setError(message(e));
-      if (fileRef.current) fileRef.current.value = "";
-    } finally {
-      setUploading(false);
+    catch (e) {
+        setError(message(e));
     }
-  }
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (busy || !quote) return;
-    setSubmitting(true);
-    setError("");
-    setSuccess("");
-    try {
-      const channel = options?.paymentMethods.find((m) => m.type === method);
-      if (!channel || !receiptId)
-        throw new Error("اختر طريقة التحويل وارفع الإيصال أولًا.");
-      const body = {
-        ...getSelection(),
-        pricingVersion: quote.pricingVersion,
-        paymentMethod: method,
-        paymentMethodVersion: channel.version,
-        receiptId,
-      };
-      const canonical = JSON.stringify(body);
-      if (!command.current || command.current.body !== canonical)
-        command.current = { body: canonical, key: crypto.randomUUID() };
-      const result = await api<Topup>("topups", {
-        ...send(body),
-        headers: {
-          "content-type": "application/json",
-          "idempotency-key": command.current.key,
-        },
-      });
-      setRows((old) => [result, ...old.filter((r) => r.id !== result.id)]);
-      setCompleted(result.points);
-      setReceiptId("");
-      setReceiptName("");
-      setQuote(null);
-      command.current = null;
-      if (fileRef.current) fileRef.current.value = "";
-      setSuccess(
-        trainee ? "تم إرسال إيصالك للمراجعة. نقاطك هتظهر في المحفظة بعد الموافقة، وتقدر تتابع الطلب من هنا." : "تم إرسال الطلب للمراجعة. النقاط ستُضاف لمخزون الفرع بعد موافقة صاحب المنصة.",
-      );
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setSubmitting(false);
+    finally {
+        running.current = false;
+        setBusy(false);
+    } }
+    function edit() { setQuote(null); snapshot.current = null; setReceipt(null); setConfirmed(false); setError(""); }
+    if (history)
+        return <><ScreenBack title="طلبات الشحن" onBack={() => setHistory(false)}/><TopupHistory /></>;
+    return <div className="native-topup">
+ <ScreenBack title={trainee ? "اشحن رصيدك" : "شراء نقاط"} onBack={() => { if (reviewing && !locked) {
+        setReviewing(false);
+        setConfirmed(false);
     }
-  }
-  async function more() {
-    if (!cursor || listing) return;
-    setListing(true);
-    try {
-      const result = await api<Page<Topup>>(`topups?limit=25&cursor=${cursor}`);
-      setRows((old) => [
-        ...old,
-        ...result.items.filter(
-          (item) => !old.some((row) => row.id === item.id),
-        ),
-      ]);
-      setCursor(result.nextCursor);
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setListing(false);
-    }
-  }
-  const channel = options?.paymentMethods.find((m) => m.type === method);
-  return (
-    <>
-      <div className="section-toolbar">
-        <p className="muted">
-          {trainee ? "اختار عدد النقاط أو المبلغ، حوّل القيمة وارفع إيصالك. تابع موافقة الإدارة من طلباتك السابقة." : "اشترِ نقاطًا لمخزون أحد فروع الجيم، وتابع حالة المراجعة."}
-        </p>
-        <button
-          className="secondary compact"
-          disabled={busy || loading}
-          onClick={() => void load()}
-        >
-          <RefreshCw size={16} />
-          تحديث البيانات
-        </button>
-      </div>
-      <Notice text={error} />
-      {!completed && <Notice text={success} success />}
-      <ol className="purchase-steps" aria-label="خطوات الشحن">{["اختار النقاط", "حوّل وارفع الإيصال", "تابع الطلب"].map((label,index) => <li key={label} aria-current={(completed !== null ? 2 : quote ? 1 : 0) === index ? "step" : undefined}><span>{index + 1}</span>{label}</li>)}</ol>
-      {completed !== null ? <section className="card purchase-complete"><Check size={32}/><h2>طلبك وصل للمراجعة</h2><p>طلب شحن {completed} نقطة اتبعت. النقاط هتظهر بعد موافقة الإدارة؛ تابع الحالة من «طلباتي» تحت.</p><div className="actions">{onWallet && <button className="primary" onClick={onWallet}>افتح محفظتي</button>}<button className="secondary" onClick={() => { setCompleted(null); setSuccess(""); }}>طلب شحن جديد</button></div></section> : loading ? (
-        <section className="card">
-          <Busy />
-        </section>
-      ) : !trainee && !gyms.length ? (
-        <section className="card">
-          <Empty title="لا توجد جيمات نشطة مرتبطة بحسابك">
-            طلبات شراء النقاط متاحة لصاحب الجيم بعد تفعيل الجيم والفروع.
-          </Empty>
-        </section>
-      ) : !options?.policy || !options.paymentMethods.length ? (
-        <section className="card">
-          <Empty title="شراء النقاط غير متاح حاليًا">
-            {trainee ? "الإدارة لسه بتجهّز أسعار النقاط وطرق الدفع. ارجع هنا لاحقًا؛ محفظتك وحسابك جاهزين." : "تواصل مع صاحب المنصة لاستكمال إعداد الأسعار وحسابات التحويل."}
-          </Empty>
-        </section>
-      ) : (
-        <div className={quote ? "settings-grid" : "purchase-first-step"}>
-          <section className="card">
-            <div className="card-heading">
-              <div className="card-icon">
-                <Building2 size={22} />
-              </div>
-              <div>
-                <h2>{trainee ? "اشحن محفظتك" : "طلب شراء نقاط"}</h2>
-                <p>{trainee ? "١. اختار النقاط أو المبلغ" : "الخطوة الأولى: حدد الفرع والكمية"}</p>
-              </div>
-            </div>
-            <form onSubmit={calculate}>
-              <fieldset disabled={busy}>
-                {!trainee && <>
-                <div className="form-grid">
-                  <div className="field">
-                    <label htmlFor="purchase-gym">الجيم</label>
-                    <select
-                      id="purchase-gym"
-                      value={gym}
-                      onChange={(e) => {
-                        setGym(e.target.value);
-                        setQuote(null);
-                      }}
-                    >
-                      {gyms.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="purchase-branch">الفرع</label>
-                    <select
-                      id="purchase-branch"
-                      required
-                      value={branch}
-                      onChange={(e) => {
-                        setBranch(e.target.value);
-                        setQuote(null);
-                      }}
-                    >
-                      <option value="">اختر الفرع</option>
-                      {branches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <small className="muted">
-                  تظهر الفروع النشطة من أول 100 فرع.
-                </small>
-                </>}
-                <div className="field">
-                  <label htmlFor="selection">طريقة تحديد الكمية</label>
-                  <select
-                    id="selection"
-                    value={selection}
-                    onChange={(e) => {
-                      setSelection(e.target.value);
-                      setQuantity("");
-                      setQuote(null);
-                    }}
-                  >
-                    <option value="points">عدد نقاط</option>
-                    <option value="amount">مبلغ بالجنيه</option>
-                    <option value="package">باقة جاهزة</option>
-                  </select>
-                </div>
-                {selection === "package" ? (
-                  <div className="field">
-                    <label htmlFor="purchase-package">الباقة</label>
-                    <select
-                      id="purchase-package"
-                      required
-                      value={packId}
-                      onChange={(e) => {
-                        setPackId(e.target.value);
-                        setQuote(null);
-                      }}
-                    >
-                      <option value="">اختر باقة</option>
-                      {options.packages.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.label} · {p.points} نقطة
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <Field
-                    label={
-                      selection === "points" ? "عدد النقاط" : "المبلغ بالجنيه"
-                    }
-                    required
-                    value={quantity}
-                    inputMode={selection === "points" ? "numeric" : "decimal"}
-                    dir="ltr"
-                    onChange={(e) => {
-                      setQuantity(e.target.value);
-                      setQuote(null);
-                    }}
-                  />
-                )}
-                <button className="primary full" disabled={!trainee && !branch}>
-                  {quoting ? (
-                    <Busy>جاري حساب القيمة</Busy>
-                  ) : (
-                    <>
-                      حساب قيمة التحويل
-                      <ArrowLeft size={17} />
-                    </>
-                  )}
-                </button>
-              </fieldset>
-            </form>
-          </section>
-          {quote && <section className="card">
-            <div className="card-heading">
-              <div className="card-icon">
-                <UploadCloud size={22} />
-              </div>
-              <div>
-                <h2>التحويل وإرسال الإيصال</h2>
-                <p>الخطوة الثانية: حوّل القيمة الموضحة ثم أرسل الطلب</p>
-              </div>
-            </div>
-            {!quote ? (
-              <Empty title="ابدأ بحساب قيمة الطلب">
-                {trainee ? "هنوضح لك عدد النقاط والمبلغ المطلوب قبل ما تحوّل أي فلوس." : "هنوضح لك الخصم والمبلغ الفعلي المطلوب تحويله."}
-              </Empty>
-            ) : (
-              <>
-                <div className="quote-total">
-                  <span>المبلغ المطلوب تحويله</span>
-                  <strong>
-                    {decimal(quote.chargePiasters)} <small>ج.م</small>
-                  </strong>
-                  <p>
-                    {quote.points} نقطة{!trainee && <> · خصم {decimal(quote.discountBps)}%</>}
-                  </p>
-                </div>
-                {quote.unallocatedPiasters !== "0" && (
-                  <p className="subtle-box">
-                    يتبقى {decimal(quote.unallocatedPiasters)} ج.م من المبلغ
-                    المدخل لا يشتري نقطة كاملة. حوّل القيمة المطلوبة أعلاه فقط.
-                  </p>
-                )}
-                <form onSubmit={submit}>
-                  <fieldset disabled={busy}>
-                    {options.paymentMethods.length > 1 && <>
-                    <div className="field">
-                      <label htmlFor="payment-channel">طريقة التحويل</label>
-                      <select
-                        id="payment-channel"
-                        required
-                        value={method}
-                        onChange={(e) => {
-                          setMethod(e.target.value);
-                          setCopied(false);
-                        }}
-                      >
-                        <option value="">اختر طريقة الدفع</option>
-                        {options.paymentMethods.map((m) => (
-                          <option value={m.type} key={m.type}>
-                            {methodName(m.type)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    </>}
-                    {channel && (
-                      <div className="receiver">
-                        <span>حوّل إلى الحساب التالي</span>
-                        <div>
-                          <strong dir="ltr">{channel.account}</strong>
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label="نسخ حساب التحويل"
-                            onClick={async () => {
-                              try {
-                                await navigator.clipboard.writeText(
-                                  channel.account,
-                                );
-                                setCopied(true);
-                              } catch {
-                                setError(
-                                  "تعذر النسخ تلقائيًا. انسخ الرقم من النص الظاهر.",
-                                );
-                              }
-                            }}
-                          >
-                            {copied ? <Check size={18} /> : <Copy size={18} />}
-                          </button>
-                        </div>
-                        <p>{channel.accountName}</p>
-                        {copied && <small role="status">تم النسخ</small>}
-                      </div>
-                    )}
-                    <div className="upload-box">
-                      <UploadCloud size={26} aria-hidden="true" />
-                      <label htmlFor="receipt-upload">
-                        {receiptName || "ارفع صورة إيصال التحويل"}
-                      </label>
-                      <input
-                        ref={fileRef}
-                        id="receipt-upload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(e) => void upload(e.target.files?.[0])}
-                      />
-                      <small>JPG / PNG / WebP · حتى 4 ميجابايت</small>
-                      {uploading && <Busy>جاري رفع الإيصال</Busy>}
-                    </div>
-                    <button
-                      className="primary full"
-                      disabled={!receiptId || !method}
-                    >
-                      {submitting ? (
-                        <Busy>جاري إرسال الطلب</Busy>
-                      ) : (
-                        "إرسال الطلب للمراجعة"
-                      )}
-                    </button>
-                  </fieldset>
-                </form>
-              </>
-            )}
-          </section>}
-        </div>
-      )}
-      <section className="card table-card history">
-        <div className="table-heading">
-          <h2>طلباتي</h2>
-          <span className="muted">النقاط تُضاف بعد الاعتماد</span>
-        </div>
-        {rows.length ? (
-          <div className="purchase-history">{rows.map(row => <article className="purchase-history-item" key={row.id}><div><strong>{row.points} نقطة · {decimal(row.chargePiasters)} ج.م</strong><small className="muted">{date(row.createdAt)}</small></div><span className={`badge ${row.status === "APPROVED" ? "approved" : row.status === "REJECTED" ? "rejected" : "pending"}`}>{row.status === "APPROVED" ? "تم الشحن" : row.status === "REJECTED" ? "مرفوض" : "بانتظار المراجعة"}</span>{row.reviewReason && <p className="muted">{row.reviewReason}</p>}</article>)}</div>
-        ) : (
-          !loading && (
-            <Empty title="لسه مفيش طلبات">
-              طلبات شراء النقاط الخاصة بك ستظهر هنا.
-            </Empty>
-          )
-        )}
-        {cursor && (
-          <div className="load-more">
-            <button
-              className="secondary"
-              disabled={listing}
-              onClick={() => void more()}
-            >
-              {listing ? <Busy /> : "تحميل المزيد"}
-            </button>
-          </div>
-        )}
-      </section>
-    </>
-  );
+    else if (quote && !locked)
+        edit();
+    else
+        onWallet?.(); }} disabled={locked || (!quote && !onWallet)}/>
+ <Notice text={error}/>{uncertain && <Notice text="نتيجة الطلب غير مؤكدة. أعد إرسال نفس الطلب بأمان قبل تعديل البيانات."/>}
+ {result ? <><Empty title="طلب الشحن وصل">هتوصلك النتيجة بعد مراجعة التحويل.</Empty><section className="card"><Fact label="وجهة النقاط">{destination}</Fact><Fact label="النقاط" strong>{result.points} نقطة</Fact><Fact label="المبلغ">{decimal(result.chargePiasters)} ج.م</Fact><RecordReference value={result.id}/></section><button className="primary full" onClick={onWallet ?? (() => setHistory(true))}>رجوع للمحفظة</button><button className="text-button" onClick={() => setHistory(true)}>متابعة طلبات الشحن</button></> : !options ? busy ? <Busy /> : <><Empty title="تعذر تحميل بيانات الشحن"/><button className="secondary full" onClick={()=>setVersion(v=>v+1)}>إعادة المحاولة</button></> : !options.paymentMethods.length ? <Empty title="الشحن غير متاح مؤقتًا">لا توجد وسيلة تحويل مفعّلة حاليًا. تواصل مع الإدارة.</Empty> : !options.policy ? <Empty title="تسعير النقاط غير متاح">الإدارة هتفعّل الأسعار قبل استقبال طلبات جديدة.</Empty> : <>
+ <FlowSteps pills labels={["اختيار الرصيد", "التحويل", "المراجعة"]} current={step}/>
+ <PortalIntro title={!quote ? "اختار رصيدك" : reviewing ? "راجع طلب الشحن" : "حوّل وارفع الإيصال"} detail={`النقاط هتضاف إلى ${destination} بعد اعتماد الطلب.`}/>
+ {!quote ? <form onSubmit={calculate}><fieldset disabled={locked}>
+ {!trainee && !gymId && !branchId && <label className="field">الجيم<select required value={chosenGym} onChange={e => setChosenGym(e.target.value)}>{gyms.map(g => <option value={g.id} key={g.id}>{g.name}</option>)}</select></label>}
+ {!byAmount && options.packages.length > 0 && <><h3 className="native-label">باقات جاهزة</h3><div className="native-packages">{options.packages.map(p => <button type="button" key={p.id} aria-pressed={packId === p.id} onClick={() => { setPackId(p.id); setQuantity(String(p.points)); setError(""); }}><strong>{p.points} نقطة</strong><span>{decimal(topupEstimate(options.policy, trainee, String(p.points), false)?.chargePiasters ?? "0")} ج.م</span>{!normalizeDigits(p.label).includes(String(p.points)) && <small>{p.label}</small>}</button>)}</div><h3 className="native-label">أو اختار قيمة تانية</h3></>}
+ <div className="native-segments" role="group" aria-label="طريقة تحديد الرصيد">{[false, true].map(v => <button type="button" key={String(v)} aria-pressed={byAmount === v} onClick={() => { setByAmount(v); setQuantity(""); setPackId(""); setError(""); }}>{byAmount === v && <Check size={18}/>} {v ? "جنيه" : "نقاط"}</button>)}</div>
+ <Field label={byAmount ? "المبلغ بالجنيه" : "عدد النقاط"} value={quantity} inputMode={byAmount ? "decimal" : "numeric"} dir="ltr" onChange={e => { setQuantity(normalizeDigits(e.target.value)); setPackId(""); setError(""); }}/>
+ {estimate && <section className="card native-estimate"><Fact label="النقاط المختارة">{estimate.points} نقطة</Fact><Fact label="السعر المتوقع" strong>{decimal(estimate.chargePiasters)} ج.م</Fact></section>}
+ <button className="primary full" disabled={!estimate || (!trainee && !branchId && !chosenGym)}>{busy ? <Busy /> : "متابعة لبيانات التحويل"}</button>
+ </fieldset></form> : <>
+ <section className="card wallet-signature native-transfer-total"><p>{reviewing ? `طلب شحن إلى ${destination}` : "المبلغ المطلوب تحويله"}</p><h2 className="wallet-balance">{decimal(quote.chargePiasters)} ج.م</h2><p>{quote.points} نقطة</p></section>
+ {quote.unallocatedPiasters && quote.unallocatedPiasters !== "0" && <p className="muted">حوّل القيمة الموضحة فقط؛ المتبقي {decimal(quote.unallocatedPiasters)} ج.م لا يقابل نقاطًا كاملة.</p>}
+ {!reviewing ? <><h2>بيانات التحويل</h2><label className="field">وسيلة التحويل<select value={method} disabled={locked} onChange={e => { setMethod(e.target.value); setReceipt(null); setConfirmed(false); setCopied(false); }}>{options.paymentMethods.map(m => <option key={m.type} value={m.type}>{methodName(m.type)}</option>)}</select></label>
+ {channel && <section className="card native-receiver"><strong>{channel.accountName}</strong><strong dir="ltr">{channel.account}</strong><button className="text-button" onClick={async () => { try {
+                    await navigator.clipboard.writeText(channel.account);
+                    setCopied(true);
+                }
+                catch {
+                    setError("تعذر النسخ؛ انسخ الحساب من النص الظاهر.");
+                } }}><Copy size={17}/>{copied ? "تم النسخ" : "نسخ الحساب"}</button></section>}
+ <h2>إيصال التحويل</h2><input className="native-file" ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="صورة إيصال التحويل" onChange={e => void upload(e.target.files?.[0])}/><button className="secondary full native-upload" disabled={locked} onClick={() => fileRef.current?.click()}>{busy ? <Busy /> : receipt ? <Check size={20}/> : <ImagePlus size={20}/>} {receipt ? "الإيصال جاهز · تغيير الصورة" : "ارفع صورة الإيصال"}</button>{receipt && <small className="muted">{receipt.name}</small>}
+ <button className="primary full" disabled={locked || !receipt || !channel} onClick={() => { setReviewing(true); setConfirmed(false); setError(""); }}>مراجعة طلب الشحن</button><button className="text-button" disabled={locked} onClick={edit}>تعديل الرصيد المختار</button>
+ </> : <form onSubmit={submit}><fieldset disabled={locked}><section className="card"><Fact label="وسيلة التحويل">{methodName(method)}</Fact><Fact label="صاحب الحساب">{channel?.accountName}</Fact><Fact label="الحساب"><span dir="ltr">{channel?.account}</span></Fact><Fact label="الإيصال">مرفوع وجاهز للمراجعة</Fact></section><label className="check"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}/>حوّلت المبلغ وراجعت الحساب والإيصال.</label></fieldset><button className="primary full" disabled={busy || !confirmed}>{busy ? <Busy /> : uncertain ? "إعادة إرسال نفس الطلب" : "إرسال طلب الشحن"}</button><button type="button" className="text-button" disabled={locked} onClick={() => { setReviewing(false); setConfirmed(false); }}>تعديل بيانات التحويل</button></form>}
+ </>}
+ {!quote && <button className="text-button" disabled={locked} onClick={() => setHistory(true)}><History size={18}/>متابعة طلبات الشحن</button>}
+ </>}
+ </div>;
 }
+export function TopupHistory() { const list = usePage<Topup>("topups"); return <div className="native-record-list"><Notice text={list.error}/>{list.loading && !list.rows.length ? <Busy /> : !list.rows.length && !list.error ? <Empty title="لسه مفيش طلبات شحن"/> : list.rows.map(r => <article className="card" key={r.id}><div className="section-toolbar"><h2>{r.points} نقطة</h2><span className={`badge ${r.status === "APPROVED" ? "approved" : r.status === "REJECTED" ? "rejected" : "pending"}`}>{r.status === "APPROVED" ? "تم الشحن" : r.status === "REJECTED" ? "مرفوض" : "بانتظار المراجعة"}</span></div><Fact label="المبلغ">{decimal(r.chargePiasters)} ج.م</Fact><small className="muted">{date(r.createdAt)}</small>{r.reviewReason && <p>{r.reviewReason}</p>}<RecordReference value={r.id}/></article>)}<More list={list}/></div>; }
