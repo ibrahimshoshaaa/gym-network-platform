@@ -208,7 +208,7 @@ model PointAccount {
   branchId    String?          @db.Uuid
   branch      Branch?          @relation(fields: [branchId], references: [id])
   gymId       String?          @db.Uuid
-  gym         Gym?             @relation(fields: [gymId], references: [id])
+  gym         Gym?             @relation(fields: [gymId], references: [id], onDelete: Restrict)
   balance     Int              @default(0)
   expiresAt   DateTime?
   postings    PointPosting[]
@@ -273,7 +273,7 @@ model TopupRequest {
   redemptionBps      Int?
   reviewReason       String?
   receivingGymId     String?            @db.Uuid
-  receivingGym       Gym?               @relation(fields: [receivingGymId], references: [id])
+  receivingGym       Gym?               @relation(fields: [receivingGymId], references: [id], onDelete: Restrict)
   receivingBranchId  String?            @db.Uuid
   receivingBranch    Branch?            @relation(fields: [receivingBranchId], references: [id])
   points             Int
