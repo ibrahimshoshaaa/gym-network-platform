@@ -17,3 +17,13 @@ test('campaign scheduling and targeting reject malformed or arbitrary HTML desti
  assert.ok(campaignSchema.safeParse(base).success);assert.equal(campaignSchema.safeParse({...base,endsAt:base.startsAt}).success,false);
  assert.equal(campaignSchema.safeParse({...base,destination:'https://external.test'}).success,false);assert.equal(campaignSchema.safeParse({...base,userIds:['all']}).success,false);
 });
+
+test('poster-only campaigns accept omitted copy but empty campaigns are rejected',()=>{
+ const base={audience:'TRAINEES',channel:'AD',placement:'HOME',status:'PUBLISHED',destination:'NONE',priority:0,userIds:[],gymIds:[],startsAt:'2026-10-20T00:00:00Z',endsAt:'2026-10-21T00:00:00Z',imageId:'12345678-1234-4234-8234-123456789012',expectedVersion:0};
+ const poster=campaignSchema.parse(base);assert.equal(poster.title,'');assert.equal(poster.body,'');
+ assert.ok(campaignSchema.safeParse({...base,title:' ',body:'  '}).success);
+ assert.equal(campaignSchema.safeParse({...base,imageId:null}).success,false);
+ assert.ok(campaignSchema.safeParse({...base,imageId:null,title:'عنوان فقط'}).success);
+ assert.ok(campaignSchema.safeParse({...base,imageId:null,body:'تفاصيل فقط'}).success);
+ assert.equal(campaignSchema.safeParse({...base,title:'x'.repeat(121)}).success,false);
+});

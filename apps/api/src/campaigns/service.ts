@@ -6,7 +6,7 @@ import {parse} from '../gyms/validation.js';
 import {audit} from '../gyms/service.js';
 import {serializable} from '../ledger/service.js';
 import {DomainError} from '../domain/errors.js';
-export const campaignSchema=z.object({title:z.string().trim().min(2).max(120),body:z.string().trim().min(2).max(1000),audience:z.enum(['TRAINEES','OWNERS','STAFF','ALL']),channel:z.enum(['AD','NOTIFICATION','BOTH']),placement:z.enum(['HOME','GYMS','WALLET']),status:z.enum(['DRAFT','PUBLISHED','PAUSED']),destination:z.enum(['NONE','GYMS','TOPUP','QR','SUPPORT','POINT_WALLET','WITHDRAWALS']),priority:z.number().int().min(0).max(100),userIds:z.array(z.string().uuid()).max(100),gymIds:z.array(z.string().uuid()).max(50),startsAt:z.string().datetime(),endsAt:z.string().datetime(),imageId:z.string().uuid().nullable(),expectedVersion:z.number().int().min(0)}).strict().refine(d=>Date.parse(d.endsAt)>Date.parse(d.startsAt));
+export const campaignSchema=z.object({title:z.string().trim().max(120).default(''),body:z.string().trim().max(1000).default(''),audience:z.enum(['TRAINEES','OWNERS','STAFF','ALL']),channel:z.enum(['AD','NOTIFICATION','BOTH']),placement:z.enum(['HOME','GYMS','WALLET']),status:z.enum(['DRAFT','PUBLISHED','PAUSED']),destination:z.enum(['NONE','GYMS','TOPUP','QR','SUPPORT','POINT_WALLET','WITHDRAWALS']),priority:z.number().int().min(0).max(100),userIds:z.array(z.string().uuid()).max(100),gymIds:z.array(z.string().uuid()).max(50),startsAt:z.string().datetime(),endsAt:z.string().datetime(),imageId:z.string().uuid().nullable(),expectedVersion:z.number().int().min(0)}).strict().refine(d=>Date.parse(d.endsAt)>Date.parse(d.startsAt)).refine(d=>Boolean(d.title||d.body||d.imageId),{message:'Add a poster or text'});
 export type Audience={id:string;role:string;owner:boolean;staff:boolean;gymIds:string[]};
 export function campaignMatches(c:{audience:string;userIds:string[];gymIds:string[]},v:Audience){
  if(v.role==='PLATFORM_ADMIN')return false;
@@ -31,7 +31,7 @@ async function viewer(tx:Prisma.TransactionClient,id:string):Promise<Audience>{
 export async function activeCampaigns(tx:Prisma.TransactionClient,id:string,channel:'AD'|'NOTIFICATION',placement?:string){
  const v=await viewer(tx,id),now=new Date();
  const rows=await tx.campaign.findMany({where:{status:'PUBLISHED',channel:{in:[channel,'BOTH']},startsAt:{lte:now},endsAt:{gt:now},...(placement?{placement}:{})},orderBy:[{priority:'desc'},{startsAt:'desc'},{id:'asc'}],include:{image:{select:{publicUrl:true}}},take:200});
- return rows.filter(c=>campaignMatches(c,v)).slice(0,channel==='AD'?3:25).map(c=>({id:c.id,version:c.version,title:c.title,description:c.body,imageUrl:c.image?.publicUrl??null,at:c.startsAt,endsAt:c.endsAt,destination:campaignDestination(c.destination,v.owner,v.role==='TRAINEE'),hasAction:c.destination!=='NONE'}));
+ return rows.filter(c=>campaignMatches(c,v)).slice(0,25).map(c=>({id:c.id,version:c.version,title:c.title,description:c.body,imageUrl:c.image?.publicUrl??null,at:c.startsAt,endsAt:c.endsAt,destination:campaignDestination(c.destination,v.owner,v.role==='TRAINEE'),hasAction:c.destination!=='NONE'}));
 }
 export async function saveCampaign(db:PrismaClient,actorId:string,id:string|undefined,input:unknown){
  const d=parse(campaignSchema,input);return serializable(db,async tx=>{
