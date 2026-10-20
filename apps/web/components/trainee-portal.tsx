@@ -1,8 +1,8 @@
 "use client";
 import {CampaignBanner} from "./campaign-banner";
-import { NetworkMark } from "./platform-identity";
+import {PortalHeader} from "./portal-header";
 import { useState } from "react";
-import { Home, UserRound, MapPin, QrCode, History, MoreHorizontal } from "lucide-react";
+import { Home, UserRound, Navigation, QrCode, History, MoreHorizontal } from "lucide-react";
 import type { Identity } from "../lib/client";
 import { BranchDirectory } from "./branch-directory";
 import { Purchases } from "./purchases";
@@ -11,11 +11,11 @@ import { TraineeWallet } from "./trainee-wallet";
 import { Notice } from "./ui";
 
 import { Support } from "./support";
-import { AccountTools } from "./updates";
+
 import { PortalAccount } from "./portal-account";
 const sections = [
   { id: "wallet", label: "الرئيسية", icon: Home },
-  { id: "gyms", label: "الجيمات", icon: MapPin },
+  { id: "gyms", label: "الجيمات", icon: Navigation },
   { id: "qr", label: "رمز الدخول", icon: QrCode },
   { id: "visits", label: "زياراتي", icon: History },
   { id: "account", label: "حسابي", icon: UserRound },
@@ -30,9 +30,9 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
     window.scrollTo({ top: 0, behavior: "auto" });
   }
   return <div className="trainee-portal mobile-mirror">
-    <header className="trainee-header"><div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">BANK</span></span></div><AccountTools user={user} onNavigate={next=>{if(next==="support"||next==="topup"||sections.some(s=>s.id===next))navigate(next as Section);}}/></header>
-    <main className="trainee-content"><Notice text={error}/>{["wallet","gyms","topup"].includes(section)&&<CampaignBanner placement={section==="gyms"?"GYMS":section==="topup"?"WALLET":"HOME"} onNavigate={next=>{if(["wallet","gyms","topup","qr","support"].includes(next))navigate(next as Section);}}/>}<div key={section}>
-      {section === "wallet" ? <><div className="portal-welcome"><h1>أهلًا {user.displayName.split(" ")[0]}</h1><p className="muted">جاهز لتمرينتك؟</p></div><TraineeWallet revision={0} view="wallet" onQr={()=>navigate("qr")} onTopup={()=>navigate("topup")} onGyms={()=>navigate("gyms")} onHistory={()=>navigate("visits")}/></>
+    <PortalHeader intro={section==="wallet"} user={user} onNavigate={next=>{if(next==="support"||next==="topup"||sections.some(s=>s.id===next))navigate(next as Section);}}/>
+    <main className="trainee-content"><Notice text={error}/>{section!=="wallet"&&["wallet","gyms","topup"].includes(section)&&<CampaignBanner placement={section==="gyms"?"GYMS":section==="topup"?"WALLET":"HOME"} onNavigate={next=>{if(["wallet","gyms","topup","qr","support"].includes(next))navigate(next as Section);}}/>}<div key={section}>
+      {section === "wallet" ? <><div className="portal-welcome"><h1>أهلًا {user.displayName.split(" ")[0]}</h1><p className="muted">جاهز لتمرينتك؟</p></div><CampaignBanner placement="HOME" onNavigate={next=>{if(["wallet","gyms","topup","qr","support"].includes(next))navigate(next as Section);}}/><TraineeWallet revision={0} view="wallet" onQr={()=>navigate("qr")} onTopup={()=>navigate("topup")} onGyms={()=>navigate("gyms")} onHistory={()=>navigate("visits")}/></>
       : section === "account" ? <PortalAccount user={user} onPassword={onPassword} onPurchases={()=>navigate("topup")} onSupport={()=>navigate("support")} logout={logout} loggingOut={loggingOut}/>
       : section === "support" ? <Support/>
       : section === "topup" ? <Purchases trainee onWallet={()=>navigate("wallet")}/>

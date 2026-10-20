@@ -1,5 +1,5 @@
 "use client";
-import { QrCode,Plus,MapPin,ArrowLeft,Wallet } from "lucide-react";
+import { QrCode,Plus,Navigation,ArrowLeft,ArrowDownLeft,ArrowUpRight,Wallet } from "lucide-react";
 import { RecordReference } from "./record-reference";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, date, message } from "../lib/client";
@@ -82,7 +82,7 @@ export function TraineeWallet({
   const refresh = `${revision}:${version}`;
   return (
     <>
-      <div className={`section-toolbar ${view==="wallet"?"portal-refresh":""}`}>
+      {view!=="wallet"&&<div className="section-toolbar">
         <p className="muted">
           رصيدك وزياراتك بيتحدّثوا تلقائيًا.
         </p>
@@ -95,13 +95,13 @@ export function TraineeWallet({
         >
           تحديث
         </button>
-      </div>
+      </div>}
       {view !== "history" && <div className="settings-grid">
         <WalletCard refresh={refresh} onQr={onQr} onTopup={onTopup}/>
         {children}
       </div>}
       {view === "wallet" && <>
-        <button className="card portal-gym-link" onClick={onGyms}><MapPin/><span><strong>اختار جيم قريب</strong><small>شوف المكان ونقاط الزيارة</small></span><ArrowLeft/></button>
+        <button className="card portal-gym-link" onClick={onGyms}><Navigation/><span><strong>اختار جيم قريب</strong><small>شوف المكان ونقاط الزيارة</small></span><ArrowLeft/></button>
         <RecentMovements refresh={refresh} onHistory={onHistory}/>
       </>}
       <ActiveSessions refresh={refresh} compact={view==="wallet"}/>
@@ -194,12 +194,12 @@ function WalletCard({ refresh,onQr,onTopup }: { refresh: string;onQr?:()=>void;o
             <p className="subtle-box">لا توجد نقاط متاحة حاليًا.</p>
           ) : (
             <p className="subtle-box">
-              الصلاحية حتى {wallet.expiresAt ? date(wallet.expiresAt) : "—"}
+              صالح حتى {wallet.expiresAt ? new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'numeric',year:'numeric',timeZone:'Africa/Cairo'}).format(new Date(wallet.expiresAt)) : '—'}
             </p>
           )}
           {!expired && wallet.status === "VALID" && left !== null && left > 0 && left <= 15*86400 && <Notice text={`صلاحية نقاطك تنتهي خلال ${Math.max(1,Math.ceil(left/86400))} يوم. راجع تاريخ الصلاحية قبل التمرين أو الشحن.`}/>}
           {(onQr||onTopup)&&<div className="trainee-quick-actions"><button className="primary" onClick={onQr}><QrCode size={20}/>رمز الدخول</button><button className="secondary" onClick={onTopup}><Plus size={20}/>اشحن رصيدك</button></div>}
-          <details className="wallet-more"><summary>تفاصيل الرصيد</summary><p>الرصيد المسجل: {wallet.balance} نقطة</p><small>آخر تحديث: {date(wallet.serverTime)}{loading ? " · تحديث…" : ""}</small><p className="muted">المتاح بيتراجع وقت كل عملية، وصلاحية النقاط ظاهرة فوق.</p></details>
+          <details className="wallet-more wallet-diagnostics"><summary>تفاصيل الرصيد</summary><p>الرصيد المسجل: {wallet.balance} نقطة</p><small>آخر تحديث: {date(wallet.serverTime)}{loading ? " · تحديث…" : ""}</small><p className="muted">المتاح بيتراجع وقت كل عملية، وصلاحية النقاط ظاهرة فوق.</p></details>
         </>
       )}
     </section>
@@ -396,5 +396,5 @@ function VisitHistory() {
 function RecentMovements({refresh,onHistory}:{refresh:string;onHistory?:()=>void}){
  const [items,setItems]=useState<Movement[]|null>(null),[error,setError]=useState('');
  useEffect(()=>{let active=true;api<{items:Movement[]}>('trainee/wallet/movements?limit=3').then(r=>{if(active){setItems(r.items);setError('');}}).catch(e=>{if(active)setError(message(e));});return()=>{active=false;};},[refresh]);
- return <section className="portal-recent"><div className="section-toolbar"><h2>آخر حركة في رصيدك</h2><button className="text-button" onClick={onHistory}>السجل كامل</button></div><Notice text={error}/><div className="card">{!items&&!error?<Busy/>:items?.length?items.map(m=><article className="portal-movement" key={m.id}><div><strong>{m.sourceLabel??operations[m.operation]??'حركة نقاط'}</strong><small>{date(m.eventAt)}</small></div><strong dir="ltr" className={m.delta>0?'positive':''}>{m.delta>0?'+':''}{m.delta}</strong></article>):!error?<Empty title="لسه مفيش حركة نقاط"/>:null}</div></section>;
+ return <section className="portal-recent"><div className="section-toolbar"><h2>آخر حركة في رصيدك</h2><button className="text-button" onClick={onHistory}>السجل كامل</button></div><Notice text={error}/><div className="card">{!items&&!error?<Busy/>:items?.length?items.map(m=><article className="portal-movement" key={m.id}>{m.delta>0?<ArrowDownLeft/>:<ArrowUpRight/>}<div><strong>{m.sourceLabel??operations[m.operation]??'حركة نقاط'}</strong><small>{date(m.eventAt)}</small></div><strong dir="ltr" className={m.delta>0?'positive':''}>{m.delta>0?'+':''}{m.delta}</strong></article>):!error?<Empty title="لسه مفيش حركة نقاط"/>:null}</div></section>;
 }

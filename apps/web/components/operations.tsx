@@ -132,7 +132,7 @@ export function Cashier({initialTask = "visit"}: {initialTask?: "visit" | "sale"
     </>
   );
 }
-function BranchOperations({ branch, initialTask }: { branch: Branch; initialTask: "visit" | "sale" | "history" }) {
+export function BranchOperations({ branch, initialTask }: { branch: Branch; initialTask: "visit" | "sale" | "history" }) {
   const [tab, setTab] = useState(branch.canSell ? initialTask : "history"),
     [stock, setStock] = useState<number | null>(null),
     [error, setError] = useState(""),
@@ -622,18 +622,20 @@ function Scanner({
     />
   );
 }
-function OperationHistory({
+export function OperationHistory({
   branchId,
   canCancel,
+  kind,
 }: {
   branchId: string;
   canCancel: boolean;
+  kind?: "visits" | "sales";
 }) {
   const sales = usePage<Sale>(`operations/branches/${branchId}/sales`),
     visits = usePage<Visit>(`operations/branches/${branchId}/visits`);
   return (
     <div className="two-columns">
-      <section className="card">
+      {kind!=='visits'&&<section className="card">
         <h2>مبيعات النقاط</h2>
         <Notice text={sales.error} />
         {sales.loading && !sales.rows.length ? (
@@ -657,8 +659,8 @@ function OperationHistory({
           </div>
         )}
         <More list={sales} />
-      </section>
-      <section className="card">
+      </section>}
+      {kind!=='sales'&&<section className="card">
         <h2>الزيارات المسجلة</h2>
         <Notice text={visits.error} />
         {visits.loading && !visits.rows.length ? (
@@ -702,7 +704,7 @@ function OperationHistory({
           </div>
         )}
         <More list={visits} />
-      </section>
+      </section>}
     </div>
   );
 }

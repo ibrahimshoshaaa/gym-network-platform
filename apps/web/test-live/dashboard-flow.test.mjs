@@ -1811,6 +1811,10 @@ test(
           const ownerSeparator=invitedOwnerCookie.indexOf('=');
           await ownerContext.addCookies([{name:invitedOwnerCookie.slice(0,ownerSeparator),value:invitedOwnerCookie.slice(ownerSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
           const ownerPage=await ownerContext.newPage();await ownerPage.goto(origin);
+          await expect(ownerPage.locator('.wallet-signature .wallet-balance')).toBeVisible();
+          const ownerWalletBounds=await ownerPage.locator('.wallet-signature').boundingBox();
+          assert.ok(ownerWalletBounds.height<320,'owner stock card must keep the Flutter spacing');
+          await expect(ownerPage.locator('.portal-app-header>img')).toHaveAttribute('src','/brand/gymbank-wordmark.png');
           await ownerPage.getByRole('button',{name:/محفظتي وإرسال النقاط/}).click();
           await expect(ownerPage.getByText('رصيد صاحب الجيم المتاح للبيع',{exact:true})).toBeVisible();
           await ownerPage.getByLabel('رقم موبايل المتدرب',{exact:true}).fill(traineeBody.phone);
@@ -1844,6 +1848,28 @@ test(
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'mobile support layout must fit viewport');
           assert.deepEqual(pageErrors,[]);
           await context.close();
+          // Restore the synthetic cashier after the earlier revocation assertion, only for UI checks.
+          assert.equal((await request(`/api/backend/gyms/${newGym.gym.id}/staff/${membership.id}`,{cookie:invitedOwnerCookie,method:'PATCH',body:{active:true}})).status,200);
+          // Both staff roles use the same branch workspace and four tabs as Flutter.
+          for(const staffCookie of [cashierCookie,managerCookie]){
+            const staffContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
+            const separator=staffCookie.indexOf('=');
+            await staffContext.addCookies([{name:staffCookie.slice(0,separator),value:staffCookie.slice(separator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
+            const staffPage=await staffContext.newPage();await staffPage.goto(origin);
+            await expect(staffPage.locator('.staff-stock .wallet-balance')).toBeVisible();
+            await expect(staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button')).toHaveCount(4);
+            for(const width of [320,393,700,1280]){
+              await staffPage.setViewportSize({width,height:851});
+              assert.equal(await staffPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),true,'staff workspace must fit each viewport');
+            }
+            await staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button',{name:'الزيارات',exact:true}).click();
+            await expect(staffPage.getByRole('heading',{name:'الزيارات المسجلة',exact:true})).toBeVisible();
+            await expect(staffPage.getByRole('heading',{name:'مبيعات النقاط',exact:true})).toHaveCount(0);
+            await staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button',{name:'المبيعات',exact:true}).click();
+            await expect(staffPage.getByRole('heading',{name:'مبيعات النقاط',exact:true})).toBeVisible();
+            await staffContext.close();
+          }
+          assert.equal((await request(`/api/backend/gyms/${newGym.gym.id}/staff/${membership.id}`,{cookie:invitedOwnerCookie,method:'PATCH',body:{active:false}})).status,200);
           // Real trainee ledger rows reproduce the narrow-column UUID regression.
           const traineeContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const traineeSeparator=traineeCookie.indexOf('=');
@@ -1873,6 +1899,16 @@ test(
           const pausePoster=await request(`/api/backend/admin/campaigns/${posterCampaign.id}`,{cookie,method:'PUT',body:{...posterBody,status:'PAUSED',expectedVersion:1}});assert.equal(pausePoster.status,200);
           const paused=await request(`/api/backend/admin/campaigns/${campaign.id}`,{cookie,method:'PUT',body:{...campaignBody,status:'PAUSED',expectedVersion:1}});assert.equal(paused.status,200);
           await traineePage.getByRole('button',{name:'الرئيسية',exact:true}).click();await expect(traineePage.locator('.campaign-banner').filter({has:traineePage.getByRole('button',{name:'فتح الإعلان',exact:true})})).toHaveCount(0);
+          await expect(traineePage.locator('.wallet-signature .wallet-balance')).toBeVisible();
+          for(const width of [320,393,700]){
+            await traineePage.setViewportSize({width,height:851});
+            const walletBounds=await traineePage.locator('.wallet-signature').boundingBox();
+            assert.ok(walletBounds.height<280,'trainee balance card must match compact mobile hierarchy');
+            const actions=traineePage.locator('.trainee-quick-actions button');
+            const first=await actions.nth(0).boundingBox(),second=await actions.nth(1).boundingBox();
+            assert.ok(Math.abs(first.y-second.y)<2,'QR and topup actions must share one row');
+          }
+          await traineePage.setViewportSize({width:393,height:851});
           await traineePage.getByRole('button',{name:'زياراتي',exact:true}).click();
           await expect(traineePage.getByRole('heading',{name:'حركات نقاطك'})).toBeVisible();
           const records=traineePage.locator('.mobile-records tbody tr');
