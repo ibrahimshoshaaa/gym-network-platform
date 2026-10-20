@@ -115,7 +115,7 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
       const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: { include: { owner: { select: { isActive: true } } } } } });
       if (!branch || branch.gym.status !== 'ACTIVE' || !branch.gym.ownerAcceptedAt || !branch.gym.owner.isActive || branch.status === 'SUSPENDED') throw new DomainError('BRANCH_ACCESS_DENIED');
       const owns = branch.gym.ownerId === userId && branch.gym.ownerAcceptedAt;
-      if (user.role !== 'PLATFORM_ADMIN' && !owns && !await tx.staffAssignment.findFirst({ where: { userId, branchId, active: true } })) throw new DomainError('BRANCH_ACCESS_DENIED');
+      if (user.role !== 'PLATFORM_ADMIN' && !owns && !await tx.staffAssignment.findFirst({ where: { userId, branchId, active: true } })&&!(await authority(tx,userId,branch.gymId,branchId)).full) throw new DomainError('BRANCH_ACCESS_DENIED');
       const { gym: _gym, ...metadata } = branch;
       return metadata;
     });

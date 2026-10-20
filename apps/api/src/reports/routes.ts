@@ -1,3 +1,4 @@
+import {authority} from "../auth/delegation.js";
 import { Prisma,type PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -59,11 +60,11 @@ export function registerReportRoutes(app: FastifyInstance, db: PrismaClient) {
         select: { id: true, name: true, ownerId: true, ownerAcceptedAt: true },
       });
       return {
-        items: gyms.slice(0, q.limit).map((g) => ({
+        items: await Promise.all(gyms.slice(0, q.limit).map(async (g) => ({
           id: g.id,
           name: g.name,
-          canFinance: admin || Boolean(g.ownerId === id && g.ownerAcceptedAt),
-        })),
+          canFinance: admin || Boolean(g.ownerId === id && g.ownerAcceptedAt)||(await authority(tx,id,g.id)).full,
+        }))),
         nextCursor: gyms.length > q.limit ? gyms[q.limit - 1]!.id : null,
       };
     });
@@ -77,7 +78,7 @@ export function registerReportRoutes(app: FastifyInstance, db: PrismaClient) {
         g = await tx.gym.findUnique({ where: { id: gymId } }),
         all =
           user.role === "PLATFORM_ADMIN" ||
-          Boolean(g?.ownerId === id && g.ownerAcceptedAt);
+          Boolean(g?.ownerId === id && g.ownerAcceptedAt)||(await authority(tx,id,gymId)).full;
       if (
         !all &&
         !(await tx.staffAssignment.findFirst({

@@ -1,3 +1,4 @@
+import {authority} from "../auth/delegation.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
@@ -288,7 +289,7 @@ export async function requestReview(
       actor.role !== "PLATFORM_ADMIN" &&
       target.traineeId !== actorId &&
       !(branch.gym.ownerId === actorId && branch.gym.ownerAcceptedAt) &&
-      !assignment
+      !assignment && !(await authority(tx,actorId,branch.gymId,branch.id)).full
     )
       throw new DomainError("BRANCH_ACCESS_DENIED");
     const old = await tx.operationReview.findUnique({

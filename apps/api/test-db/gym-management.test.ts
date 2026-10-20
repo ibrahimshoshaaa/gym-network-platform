@@ -363,6 +363,12 @@ test('owner delegation is scoped, revocable, versioned and cannot be granted by 
   assert.equal((await f.request('POST','/auth/invitations/accept',undefined,{token:invited.json().invitation.token,password})).statusCode,400);
   await saveDelegation(db,f.owner.user.id,f.gymId,{...body,branchId:null,expectedVersion:0,fullAccess:true,permissions:[]});
   await db.$transaction(tx=>requireGymOwner(tx,manager.user.id,f.gymId));
+  const reportGyms=await f.request('GET','/reports/gyms',manager.accessToken);assert.equal(reportGyms.statusCode,200);assert.equal(reportGyms.json().items.find((g:{id:string})=>g.id===f.gymId)?.canFinance,true);
+  const extra=await f.request('POST',`/gyms/${f.gymId}/branches`,f.owner.accessToken,branchData());assert.equal(extra.statusCode,201);
+  const managed=await f.request('GET',`/branches/${extra.json().branch.id}/manage`,manager.accessToken);assert.equal(managed.statusCode,200,managed.body);
+  const reportBranches=await f.request('GET',`/reports/gyms/${f.gymId}/branches`,manager.accessToken);assert.equal(reportBranches.statusCode,200);assert.ok(reportBranches.json().items.some((b:{id:string})=>b.id===extra.json().branch.id));
+  assert.equal((await f.request('GET','/disputes',manager.accessToken)).statusCode,200);
+
   await db.staffAssignment.updateMany({where:{userId:manager.user.id},data:{active:false}});
   await assert.rejects(db.$transaction(tx=>requireGymOwner(tx,manager.user.id,f.gymId)));
  }finally{await f.app.close();}
