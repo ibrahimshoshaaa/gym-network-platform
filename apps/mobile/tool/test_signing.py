@@ -91,3 +91,21 @@ class ApkVerificationTests(unittest.TestCase):
         import subprocess
         with patch('verify_apks.subprocess.run',side_effect=subprocess.CalledProcessError(1,'apksigner')):
             with self.assertRaises(subprocess.CalledProcessError): verify(Path('app.apk'),'apksigner','aapt','a'*64,100001)
+
+
+class SdkScopedSignerTests(unittest.TestCase):
+    def test_same_key_across_android_sdk_ranges_is_accepted(self):
+        from verify_apks import verify
+        from types import SimpleNamespace
+        digest='a'*64
+        output='\n'.join('Signer (minSdkVersion='+str(lo)+', maxSdkVersion='+str(hi)+') certificate SHA-256 digest: '+digest for lo,hi in [(24,32),(33,2147483647)])
+        results=[SimpleNamespace(stdout=output),SimpleNamespace(stdout="package: name='net.shotech.gym_network' versionCode='100001' versionName='0.2.7'")]
+        with patch('verify_apks.subprocess.run',side_effect=results):
+            verify(Path('synthetic.apk'),'apksigner','aapt',digest,100001)
+
+    def test_unexpected_key_in_any_sdk_range_is_rejected(self):
+        from verify_apks import verify
+        from types import SimpleNamespace
+        output='Signer (minSdkVersion=24, maxSdkVersion=32) certificate SHA-256 digest: '+('a'*64)+'\nSigner (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: '+('b'*64)
+        with patch('verify_apks.subprocess.run',return_value=SimpleNamespace(stdout=output)):
+            with self.assertRaises(SystemExit): verify(Path('synthetic.apk'),'apksigner','aapt','a'*64,100001)
