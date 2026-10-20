@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { MapPin, Clock, Phone, Search, Navigation, QrCode, SlidersHorizontal, X } from "lucide-react";
+import { MapPin, Clock, Phone, Search, Navigation, QrCode, ChevronDown as ChevronDownIcon, X, Map, List, ArrowLeft, Circle, Dumbbell } from "lucide-react";
 import { api, date, message } from "../lib/client";
 import { branchDirections, branchPhone } from "../lib/branch-links";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
@@ -49,38 +49,36 @@ export function BranchDirectory({onShowQr}:{onShowQr?:()=>void}) {
    const at={latitude:p.coords.latitude,longitude:p.coords.longitude};setPosition(at);setLocating(false);setResult(null);void load(query(at));
   },e=>{if(current!==locationGeneration.current)return;setLocating(false);setLocationError(e.code===1?"السماح بالموقع مقفول. تقدر تبحث باسم منطقتك، أو تسمح بالموقع من إعدادات المتصفح.":"تعذر تحديد موقعك. جرّب مرة تانية أو ابحث باسم منطقتك.");},{enableHighAccuracy:false,timeout:10000,maximumAge:60000});
  }
- return <>
-  <section className="card directory-search">
-   <h2>اختار جيم تمرينتك</h2><p className="muted">شوف سعر الزيارة والمكان، وافتح الطريق للجيم المناسب.</p>
-   <button className="primary full nearby-button" disabled={busy||locating} onClick={nearest}>{locating?<Busy>بنحدد مكانك</Busy>:<><Navigation size={20}/>{position?"تحديث الأقرب لمكاني":"الجيمات الأقرب لمكاني"}</>}</button>
-   <small className="muted">الموقع يُستخدم لترتيب النتائج لما تضغط الزر، ومش بيتحفظ في حسابك.</small>
-   <Notice text={locationError}/>
+ return <div className="directory-browser">
+  <section className="directory-search" aria-label="البحث عن الجيمات">
    <form onSubmit={search}><fieldset disabled={busy||locating}>
-    <div className="directory-search-row"><Field label="ابحث عن جيم أو منطقة" value={q} maxLength={80} onChange={e=>setQ(e.target.value)} placeholder="اسم الجيم، المدينة أو المنطقة"/><button className="secondary" aria-label="بحث عن الجيمات"><Search size={20}/></button></div>
-    <details className="directory-filters"><summary><SlidersHorizontal size={16}/>تحديد المنطقة وسعر الزيارة</summary><div className="form-grid"><Field label="المحافظة" value={governorate} maxLength={80} onChange={e=>setGovernorate(e.target.value)}/><Field label="المدينة" value={city} maxLength={80} onChange={e=>setCity(e.target.value)}/><Field label="أقل سعر بالنقاط" type="number" value={minPrice} min={1} onChange={e=>setMinPrice(e.target.value)}/><Field label="أعلى سعر بالنقاط" type="number" value={maxPrice} min={Number(minPrice)||1} onChange={e=>setMaxPrice(e.target.value)}/></div><button className="secondary compact">تطبيق التحديد</button></details>
+    <div className="directory-search-row"><Search size={21}/><input aria-label="ابحث عن جيم أو منطقة" value={q} maxLength={80} onChange={e=>setQ(e.target.value)} placeholder="اسم الجيم، المدينة أو المنطقة"/><button type="submit" aria-label="بحث عن الجيمات"><ArrowLeft size={23}/></button></div>
    </fieldset></form>
+   <div className="directory-location-row"><button className="nearby-button" aria-label="الجيمات الأقرب لمكاني" disabled={busy||locating} onClick={nearest}>{locating?<Busy>بنحدد مكانك</Busy>:<><Navigation size={17}/>{position?"تحديث موقعي":"الأقرب لموقعي"}</>}</button><button className="directory-view-toggle" type="button" aria-label={showMap?"عرض قائمة الجيمات":"اعرض الفروع على الخريطة"} aria-pressed={showMap} disabled={!result?.items.length} onClick={()=>setShowMap(v=>!v)}>{showMap?<List size={23}/>:<Map size={23}/>}</button></div>
+   <Notice text={locationError}/>
+   <form onSubmit={search}><fieldset disabled={busy||locating}><details className="directory-filters"><summary>تصفية بسعر الزيارة<ChevronDownIcon/></summary><div className="form-grid"><Field label="المحافظة" value={governorate} maxLength={80} onChange={e=>setGovernorate(e.target.value)}/><Field label="المدينة" value={city} maxLength={80} onChange={e=>setCity(e.target.value)}/><Field label="أقل سعر بالنقاط" type="number" value={minPrice} min={1} onChange={e=>setMinPrice(e.target.value)}/><Field label="أعلى سعر بالنقاط" type="number" value={maxPrice} min={Number(minPrice)||1} onChange={e=>setMaxPrice(e.target.value)}/></div><button className="secondary compact">تطبيق التحديد</button><small className="muted">الموقع لترتيب النتائج عند طلبك فقط، ولا يُحفظ في حسابك.</small></details></fieldset></form>
   </section>
   <Notice text={error}/>
   {result&&<div className="section-toolbar"><p className="muted">{new URLSearchParams(applied).has("latitude")?"مرتّبة من الأقرب ليك · المسافة بخط مستقيم تقريبًا":"الفروع المتاحة"} · {result.items.length} فرع</p>{position&&<button className="text-button" disabled={busy||locating} onClick={()=>{setPosition(null);setResult(null);void load(query(null));}}><X size={15}/>إلغاء الموقع</button>}</div>}
   {busy&&!result?<section className="card"><Busy>بنجيب الجيمات</Busy></section>:result&&!result.items.length?<section className="card"><Empty title="مفيش فروع مطابقة حاليًا">جرّب منطقة تانية أو امسح التحديد. الجيم يظهر بعد تفعيل الفرع واعتماد سعره.</Empty><button className="secondary full" onClick={()=>{setQ("");setGovernorate("");setCity("");setPosition(null);setMinPrice("");setMaxPrice("");setResult(null);void load("limit=12");}}>عرض كل الجيمات</button></section>:null}
   {error&&<button className="secondary full" disabled={busy} onClick={()=>void load(applied||query())}>إعادة المحاولة</button>}
-  {result&&result.items.length>0&&<button className="secondary full" aria-pressed={showMap} onClick={()=>setShowMap(v=>!v)}>{showMap?"إخفاء الخريطة":"اعرض الفروع على الخريطة"}</button>}
   {showMap&&result&&<BranchMap branches={result.items} onSelect={setSelected}/>}
-  <div className="directory-grid">{result?.items.map(branch=><DirectoryCard key={branch.id} branch={branch} onOpen={()=>setSelected(branch)}/>)}</div>
+  <div className="directory-grid" hidden={showMap}>{result?.items.map(branch=><DirectoryCard key={branch.id} branch={branch} onOpen={()=>setSelected(branch)}/>)}</div>
   {result?.nextCursor&&<button className="secondary full" disabled={busy||locating} onClick={()=>void load(applied,result.nextCursor!)}>{busy?<Busy/>:"جيمات أكتر"}</button>}
   {selected&&<BranchDetails key={selected.id} initial={selected} onClose={()=>setSelected(null)} onShowQr={onShowQr}/>}
- </>;
+ </div>;
 }
 export function DirectoryCard({branch:b,onOpen}:{branch:DirectoryBranch;onOpen:()=>void}) {
- const directions=branchDirections(b.latitude,b.longitude);
+ const image=b.images?.find(i=>i.purpose==='LOGO')??b.images?.[0];
  return <article className="card directory-card">
-  {b.images?.length ? <img className="directory-cover" src={(b.images.find(i=>i.purpose==="PHOTO")??b.images[0])!.url} alt={`صورة ${b.gym.name} · ${b.name}`} loading="lazy"/>:null}
-  <div className="section-toolbar"><span className="eyebrow">{b.gym.name}</span>{b.distanceKm!==undefined&&<span className="distance-badge"><Navigation size={14}/>{b.distanceKm<1?`${Math.round(b.distanceKm*1000)} متر`:`${b.distanceKm.toFixed(1)} كم`}</span>}</div>
-  <h3>{b.name}</h3><p className="muted"><MapPin size={16}/>{b.city} · {b.governorate}</p><p className="directory-address">{b.address}</p>
-  <div className="directory-price"><strong>{b.visitPricePoints}<small> نقطة / زيارة</small></strong><span><Clock size={15}/>{b.sessionMinutes} دقيقة</span></div>
-  <div className="directory-actions"><button className="secondary" onClick={onOpen}>التفاصيل والمواعيد</button>{directions&&<a className="primary" href={directions} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer"><Navigation size={17}/>الاتجاهات</a>}</div>
+  <button className="directory-card-open" onClick={onOpen} aria-label={`تفاصيل ${b.gym.name} · ${b.name}`}>
+   <div className="directory-identity"><span className="directory-thumbnail">{image?<img src={image.url} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>:null}<Dumbbell size={26}/></span><div><h3>{b.gym.name}</h3><p className="directory-branch-name">{b.name}</p><p className="directory-region">{b.city} · {b.governorate}</p></div></div>
+   <div className="directory-price"><span className="directory-price-chip"><Circle size={14}/>{b.visitPricePoints} نقطة / زيارة</span><span><Clock size={14}/>{b.sessionMinutes} دقيقة</span>{b.distanceKm!==undefined&&<span><Navigation size={14}/>{b.distanceKm<1?`${Math.round(b.distanceKm*1000)} متر`:`${b.distanceKm.toFixed(1)} كم`}</span>}</div>
+   <div className="directory-card-footer"><strong>تفاصيل الجيم والاتجاهات</strong><ArrowLeft size={18}/></div>
+  </button>
  </article>;
 }
+
 function BranchDetails({
   initial,
   onClose,
