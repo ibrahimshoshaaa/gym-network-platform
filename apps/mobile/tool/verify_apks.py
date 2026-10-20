@@ -8,7 +8,7 @@ from pathlib import Path
 def verify(apk, apksigner, aapt, fingerprint, version_code):
     result = subprocess.run([str(apksigner), 'verify', '--verbose', '--print-certs', str(apk)],
                             capture_output=True, text=True, check=True)
-    digests = re.findall(r'^Signer[^\r\n]*? certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$', result.stdout, re.MULTILINE)
+    digests = re.findall(r'^(?:Signer[^\r\n]*?|V\d+(?:\.\d+)* Signer:) certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$', result.stdout, re.MULTILINE)
     expected = re.sub(r'[\s:]', '', fingerprint).lower()
     if not re.fullmatch('[0-9a-f]{64}', expected) or not digests or {d.lower() for d in digests} != {expected}:
         print('APK public signer certificate digests: ' + ', '.join(digests or ['no recognized certificate lines']))

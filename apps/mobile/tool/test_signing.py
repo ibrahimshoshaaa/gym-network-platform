@@ -134,3 +134,20 @@ class CertificatePreflightTests(unittest.TestCase):
         output='Signer #1 (minSdkVersion=24, maxSdkVersion=2147483647) certificate SHA-256 digest: '+digest
         results=[SimpleNamespace(stdout=output),SimpleNamespace(stdout="package: name='net.shotech.gym_network' versionCode='100001' versionName='0.2.7'")]
         with patch('verify_apks.subprocess.run',side_effect=results): verify(Path('fixture.apk'),'apksigner','aapt',digest,100001)
+
+
+class Android37SignerTests(unittest.TestCase):
+    def test_android37_versioned_signer_matches_the_permanent_identity(self):
+        from verify_apks import verify
+        from types import SimpleNamespace
+        digest='a'*64
+        output='Verifies\nV3.0 Signer: certificate SHA-256 digest: '+digest+'\n'
+        results=[SimpleNamespace(stdout=output),SimpleNamespace(stdout="package: name='net.shotech.gym_network' versionCode='100001' versionName='0.2.7'")]
+        with patch('verify_apks.subprocess.run',side_effect=results): verify(Path('fixture.apk'),'apksigner','aapt',digest,100001)
+
+    def test_android37_unexpected_identity_is_rejected(self):
+        from verify_apks import verify
+        from types import SimpleNamespace
+        output='V3.0 Signer: certificate SHA-256 digest: '+('b'*64)
+        with patch('verify_apks.subprocess.run',return_value=SimpleNamespace(stdout=output)):
+            with self.assertRaises(SystemExit): verify(Path('fixture.apk'),'apksigner','aapt','a'*64,100001)
