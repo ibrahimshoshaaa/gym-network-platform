@@ -5,7 +5,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-def verify(apk, apksigner, aapt, fingerprint, version_code):
+ABI_CODES = {'armeabi-v7a': 1, 'arm64-v8a': 2, 'x86_64': 4}
+
+def split_metadata(apk, base_code):
+    match = re.fullmatch(r'app-(armeabi-v7a|arm64-v8a|x86_64)-release\.apk', apk.name)
+    if not match:
+        raise SystemExit('Unexpected Android ABI APK filename')
+    abi = match.group(1)
+    return abi, int(base_code) + ABI_CODES[abi] * 1000
+
+def verify(apk, apksigner, aapt, fingerprint, version_code, expected_abi=None):
     result = subprocess.run([str(apksigner), 'verify', '--verbose', '--print-certs', str(apk)],
                             capture_output=True, text=True, check=True)
     digests = re.findall(r'^(?:Signer[^\r\n]*?|V\d+(?:\.\d+)* Signer:) certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$', result.stdout, re.MULTILINE)
@@ -18,7 +27,11 @@ def verify(apk, apksigner, aapt, fingerprint, version_code):
                              capture_output=True, text=True, check=True).stdout
     match = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging)
     if not match or match.groups() != ('net.shotech.gym_network', str(version_code), '0.2.7'):
+        print('APK package/version observed: ' + repr(match.groups() if match else None))
+        print('Expected package/version: net.shotech.gym_network / ' + str(version_code) + ' / 0.2.7')
         raise SystemExit('APK package or release version does not match this build')
+    if expected_abi and re.findall(r"native-code: '([^']+)'", badging) != [expected_abi]:
+        raise SystemExit('APK native architecture does not match its release filename')
     print(f'Verified {apk.name}: permanent signing identity, version code {version_code}')
 
 if __name__ == '__main__':
@@ -29,4 +42,5 @@ if __name__ == '__main__':
     if tools is None or len(apks) != 3:
         raise SystemExit('Expected Android verification tools and three ABI APKs')
     for apk in apks:
-        verify(apk, tools/'apksigner', tools/'aapt', os.environ['ANDROID_SIGNING_CERT_SHA256'], sys.argv[1])
+        abi, version_code = split_metadata(apk, sys.argv[1])
+        verify(apk, tools/'apksigner', tools/'aapt', os.environ['ANDROID_SIGNING_CERT_SHA256'], version_code, abi)
