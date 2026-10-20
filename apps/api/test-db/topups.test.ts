@@ -199,7 +199,7 @@ test('owner can purchase central stock before adding branches; approval issues o
   const quote=await getQuote(db,owner.id,selection);
   const data=await input(owner.id,selection), key=randomUUID();
   await expectCode(getQuote(db,outsider.id,selection),'GYM_ACCESS_DENIED');
-  await expectCode(getQuote(db,owner.id,{...selection,receivingBranchId:randomUUID()}),'INVALID_INPUT');
+  assert.throws(()=>getQuote(db,owner.id,{...selection,receivingBranchId:randomUUID()}),/INVALID_INPUT/);
   const request=await submitTopup(db,owner.id,key,data);
   assert.equal(request.receivingGymId,gym.id);assert.equal(request.receivingBranchId,null);
   assert.equal((await submitTopup(db,owner.id,key,data)).id,request.id);
