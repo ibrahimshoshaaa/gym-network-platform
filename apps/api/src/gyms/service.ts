@@ -1,3 +1,4 @@
+import {authority,requirePermission} from '../auth/delegation.js';
 import { randomBytes } from 'node:crypto';
 import { Prisma, type PrismaClient, type UserRole } from '@prisma/client';
 import { DomainError } from '../domain/errors.js';
@@ -11,7 +12,7 @@ type Tx = Prisma.TransactionClient;
 export const audit = (tx: Tx, actorId: string, action: string, entityId: string, reason: string) =>
   tx.auditLog.create({ data: { actorId, action, entityId, reason } });
 
-async function contactUser(tx: Tx, contact: { displayName: string; email: string; phone: string }, role: UserRole) {
+export async function contactUser(tx: Tx, contact: { displayName: string; email: string; phone: string }, role: UserRole) {
   const existing = await tx.user.findFirst({ where: { OR: [{ email: contact.email }, { phoneE164: contact.phone }] }, include: { password: true } });
   if (existing) {
     if (existing.email !== contact.email || existing.phoneE164 !== contact.phone || existing.role === 'PLATFORM_ADMIN' || (!existing.isActive && existing.password)) throw new DomainError('ACCOUNT_UNAVAILABLE');
@@ -100,8 +101,8 @@ export function createBranch(db: PrismaClient, actorId: string, gymId: string, i
   });
 }
 
-async function ownedBranch(tx: Tx, actorId: string, gymId: string, branchId: string) {
-  await requireGymOwner(tx, actorId, gymId);
+async function ownedBranch(tx: Tx, actorId: string, gymId: string, branchId: string, permission?:'EDIT_BRANCH'|'REQUEST_PRICING'|'MANAGE_CASHIERS') {
+  if(permission)await requirePermission(tx,actorId,gymId,permission,branchId);else await requireGymOwner(tx, actorId, gymId);
   const branch = await tx.branch.findUnique({ where: { id: branchId } });
   if (!branch || branch.gymId !== gymId) throw new DomainError('BRANCH_ACCESS_DENIED');
   return branch;
@@ -110,7 +111,7 @@ async function ownedBranch(tx: Tx, actorId: string, gymId: string, branchId: str
 export function updateBranch(db: PrismaClient, actorId: string, gymId: string, branchId: string, input: unknown) {
   const data = parse(branchUpdateSchema, input);
   return serializable(db, async tx => {
-    await ownedBranch(tx, actorId, gymId, branchId);
+    await ownedBranch(tx, actorId, gymId, branchId, 'EDIT_BRANCH');
     const branch = await tx.branch.update({ where: { id: branchId }, data });
     await audit(tx, actorId, 'BRANCH_UPDATED', branchId, 'Owner updated branch metadata');
     return branch;
@@ -121,7 +122,7 @@ export async function requestPricing(db: PrismaClient, actorId: string, gymId: s
   const data = parse(priceSchema, input);
   try {
     return await serializable(db, async tx => {
-      await ownedBranch(tx, actorId, gymId, branchId);
+      await ownedBranch(tx, actorId, gymId, branchId, 'REQUEST_PRICING');
       await tx.$queryRaw`SELECT id FROM "Branch" WHERE id = ${branchId}::uuid FOR UPDATE`;
       const branch = await tx.branch.findUniqueOrThrow({ where: { id: branchId } });
       const request = await tx.branchPricingRequest.create({ data: { ...data, branchId, requestedById: actorId, baseVersion: branch.pricingVersion, previousPricePoints: branch.visitPricePoints, previousSessionMinutes: branch.sessionMinutes } });
@@ -176,14 +177,15 @@ export async function inviteStaff(db: PrismaClient, actorId: string, gymId: stri
   const data = parse(staffInviteSchema, input);
   try {
     return await serializable(db, async tx => {
-      const branch = await ownedBranch(tx, actorId, gymId, data.branchId);
+      const branch = await ownedBranch(tx, actorId, gymId, data.branchId, 'MANAGE_CASHIERS');
       const gym = await tx.gym.findUniqueOrThrow({ where: { id: gymId } });
       if (gym.status !== 'ACTIVE' || branch.status === 'SUSPENDED') throw new DomainError('GYM_INACTIVE');
+      const grant=await authority(tx,actorId,gymId,data.branchId);if(!grant.owner&&!grant.full&&data.role!=='CASHIER')throw new DomainError('BRANCH_ACCESS_DENIED');
       const user = await contactUser(tx, data.contact, data.role);
       const assignment = await tx.staffAssignment.findUnique({ where: { userId_branchId_role: { userId: user.id, branchId: branch.id, role: data.role } } });
       if (assignment?.active) throw new DomainError('STAFF_ALREADY_ASSIGNED');
       const invitation = await makeInvitation(tx, { actorId, gymId, branchId: branch.id, userId: user.id, type: 'STAFF', role: data.role });
-      return { invitation, user: publicIdentity(user) };
+      return { invitation, user: publicIdentity(user),canDelegate:grant.owner };
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') throw new DomainError('ACCOUNT_UNAVAILABLE');
@@ -194,9 +196,10 @@ export async function inviteStaff(db: PrismaClient, actorId: string, gymId: stri
 export function setStaffActive(db: PrismaClient, actorId: string, gymId: string, assignmentId: string, input: unknown) {
   const data = parse(staffActiveSchema, input);
   return serializable(db, async tx => {
-    await requireGymOwner(tx, actorId, gymId);
     const assignment = await tx.staffAssignment.findUnique({ where: { id: assignmentId }, include: { branch: true } });
     if (!assignment || assignment.branch.gymId !== gymId) throw new DomainError('BRANCH_ACCESS_DENIED');
+    const grant=await requirePermission(tx,actorId,gymId,'MANAGE_CASHIERS',assignment.branchId);
+    if(!grant.owner&&!grant.full&&(assignment.role!=='CASHIER'||assignment.userId===actorId))throw new DomainError('BRANCH_ACCESS_DENIED');
     const result = await tx.staffAssignment.update({ where: { id: assignmentId }, data });
     if (!data.active) await tx.staffInvitation.updateMany({ where: { userId: assignment.userId, branchId: assignment.branchId, role: assignment.role, acceptedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
     await audit(tx, actorId, data.active ? 'STAFF_ENABLED' : 'STAFF_DISABLED', assignmentId, 'Owner changed branch assignment access');

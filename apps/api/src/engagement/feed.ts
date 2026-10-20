@@ -1,3 +1,4 @@
+import {activeCampaigns} from '../campaigns/service.js';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { requireActor } from '../auth/authorization.js';
@@ -5,7 +6,7 @@ import { parse } from '../gyms/validation.js';
 import { period } from '../reports/validation.js';
 import { walletView } from '../wallet/validation.js';
 export async function scopeIds(tx:Prisma.TransactionClient,id:string){
- const gyms=await tx.gym.findMany({where:{ownerId:id,ownerAcceptedAt:{not:null}},select:{id:true}});
+ const gyms=await tx.gym.findMany({where:{ownerAcceptedAt:{not:null},OR:[{ownerId:id},{delegations:{some:{userId:id,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId:id,active:true,role:'BRANCH_MANAGER'}}}}}]},select:{id:true}});
  const branches=await tx.branch.findMany({where:{OR:[{gym:{ownerId:id,ownerAcceptedAt:{not:null}}},{staff:{some:{userId:id,active:true}},gym:{status:'ACTIVE',ownerAcceptedAt:{not:null},owner:{isActive:true}}}]},select:{id:true}});
  return {gymIds:gyms.map(g=>g.id),branchIds:branches.map(b=>b.id)};
 }
@@ -13,7 +14,8 @@ export type FeedItem={id:string;title:string;description:string;at:Date;destinat
 const names:Record<string,string>={PENDING:'بانتظار المراجعة',APPROVED:'مقبول',REJECTED:'مرفوض',REQUESTED:'طلب جديد',PAID:'تم التحويل',DISPUTED:'يوجد اعتراض',CANCELLED:'ملغى',OPEN:'مفتوح',WAITING_USER:'بانتظار رد العميل',WAITING_ADMIN:'بانتظار رد الإدارة',CLOSED:'مغلق'};
 export async function notificationFeed(db:PrismaClient,id:string){return db.$transaction(async tx=>{
  const actor=await requireActor(tx,id),admin=actor.role==='PLATFORM_ADMIN',trainee=actor.role==='TRAINEE',{gymIds,branchIds}=await scopeIds(tx,id);
- const events:FeedItem[]=[];const add=(kind:string,key:string,state:string,title:string,at:Date,destination:string,description='')=>events.push({id:`${kind}:${key}:${state}`,title,description,at,destination,referenceId:key});
+ const events:FeedItem[]=[];
+ for(const c of await activeCampaigns(tx,id,'NOTIFICATION'))events.push({id:`campaign:${c.id}:${c.version}`,title:c.title,description:c.description,at:c.at,destination:c.destination});const add=(kind:string,key:string,state:string,title:string,at:Date,destination:string,description='')=>events.push({id:`${kind}:${key}:${state}`,title,description,at,destination,referenceId:key});
  const topups=await tx.topupRequest.findMany({where:admin?{status:'PENDING'}:{requestorUserId:id},orderBy:{createdAt:'desc'},take:50,select:{id:true,status:true,points:true,createdAt:true,reviewedAt:true,reviewReason:true}});
  for(const t of topups)add('topup',t.id,t.status,`شحن ${t.points} نقطة · ${names[t.status]??t.status}`,t.reviewedAt??t.createdAt,admin?'reviews':trainee?'topup':'purchases',admin?'يوجد طلب شحن يحتاج قرارك':t.reviewReason??'تابع حالة الطلب');
  const withdrawals=await tx.withdrawalRequest.findMany({where:admin?{status:{in:['REQUESTED','APPROVED','DISPUTED']}}:{gymId:{in:gymIds}},orderBy:{requestedAt:'desc'},take:50,select:{id:true,status:true,requestedAt:true,acceptedAt:true,paidAt:true,closedAt:true,dueAt:true}});

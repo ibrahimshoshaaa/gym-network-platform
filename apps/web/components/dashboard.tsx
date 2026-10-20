@@ -1,4 +1,5 @@
 "use client";
+import {Campaigns} from "./campaigns";
 import { NetworkMark } from "./platform-identity";
 import { useEffect, useState, type FormEvent } from "react";
 import {
@@ -34,6 +35,7 @@ import { AdminFinance } from "./platform-finance";
 import { AdminHome } from "./admin-home";
 import { OwnerJoinAccess } from "./owner-join-access";
 import { Login } from "./login";
+import { OwnerPortal } from "./owner-portal";
 import { TraineePortal } from "./trainee-portal";
 import { SettingsPanel } from "./settings";
 import { Cashier, TraineeQr } from "./operations";
@@ -55,6 +57,7 @@ import { AccountRecovery, recoveryToken } from "./account-recovery";
 import { PointWallet } from "./point-wallet";
 import { GymApplications } from "./gym-applications";
 type Tab =
+  | "campaigns"
   | "requests" | "finance" | "more"
   | "gym-applications"
   | "direct-topup" | "point-wallet"
@@ -75,6 +78,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"campaigns" as const,label:"الإعلانات والإشعارات",icon:Send,description:"الجمهور ومواعيد الظهور والحملات"},
   {id:"requests" as const,label:"الطلبات",icon:FileCheck2,description:"طلبات الشحن والانضمام والأسعار والإلغاء والسحب"},
   {id:"finance" as const,label:"المالية",icon:Wallet,description:"التحصيلات والمستحقات وحركة النقاط"},
   {id:"more" as const,label:"المزيد",icon:MoreHorizontal,description:"الدعم والمستخدمون وإعدادات المنصة"},
@@ -182,6 +186,8 @@ export function Dashboard() {
     [reviewGym,setReviewGym]=useState<string|null>(null),
     [cashierTask, setCashierTask] = useState<CashierTask>("visit"),
     [recovery, setRecovery] = useState<string|null>(null);
+  const [delegatedFull,setDelegatedFull]=useState(false);
+  useEffect(()=>{let live=true;setDelegatedFull(false);if(user&&user.role!=='GYM_OWNER'&&user.role!=='PLATFORM_ADMIN')api<{items:unknown[]}>('gyms?limit=1').then(r=>{if(live)setDelegatedFull(r.items.length>0);}).catch(()=>{});return()=>{live=false;};},[user?.id,user?.role]);
   function loggedIn(person: Identity) {
     setReviewGym(null);
     setUser(person);
@@ -253,6 +259,7 @@ export function Dashboard() {
     <TraineePortal user={user} logout={logout} loggingOut={loggingOut} onPassword={() => setPassword(true)} error={error} />
     {password && <PasswordChange onClose={() => setPassword(false)} />}
   </>;
+  if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</OwnerJoinAccess>;
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
@@ -359,7 +366,7 @@ export function Dashboard() {
             {adminSection.items.map(id=>{const item=available.find(t=>t.id===id)!;return <button key={id} aria-current={contentTab===id?"page":undefined} className={contentTab===id?"active":""} onClick={()=>navigate(id)}>{item.label}</button>;})}
           </nav>:null}
           <Notice text={error} />
-          {contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" || contentTab === "point-wallet" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
+          {contentTab === "campaigns" ? <Campaigns/> : contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" || contentTab === "point-wallet" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : contentTab === "directory" ? (
             <BranchDirectory />

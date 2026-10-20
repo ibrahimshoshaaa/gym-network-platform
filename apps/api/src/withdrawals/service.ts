@@ -1,3 +1,5 @@
+import {authority,requirePermission} from "../auth/delegation.js";
+import {allocateWithdrawal} from "./allocation.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
@@ -16,7 +18,7 @@ import { uuid } from "../operations/service.js";
 import { calendarSchema, withdrawalDeadline } from "./calendar.js";
 type Tx = Prisma.TransactionClient;
 const reason = z.string().trim().min(5).max(1000);
-const destination = { destinationName: z.string().trim().min(2).max(150) };
+const destination = { branchId: z.string().uuid().optional(), destinationName: z.string().trim().min(2).max(150) };
 export const requestSchema = z.discriminatedUnion("paymentMethod", [
   z
     .object({
@@ -72,6 +74,7 @@ export function withdrawalView(w: WithdrawalRequest) {
   return {
     id: w.id,
     gymId: w.gymId,
+    branchId:w.branchId,
     amountPiasters: w.amountPiasters.toString(),
     status: w.status,
     paymentMethod: w.paymentMethod,
@@ -204,7 +207,7 @@ export async function requestWithdrawal(
   const idempotencyKey = `withdraw:${actorId}:${key}`,
     requestHash = digest({ gymId, ...data });
   return serializable(db, async (tx) => {
-    const gym = await requireGymOwner(tx, actorId, gymId, false);
+    const gym = data.branchId?(await requirePermission(tx,actorId,gymId,'REQUEST_WITHDRAWAL',data.branchId)).gym:await requireGymOwner(tx, actorId, gymId, false);
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey},0))`;
     const old = await tx.withdrawalRequest.findUnique({
       where: { idempotencyKey },
@@ -215,8 +218,9 @@ export async function requestWithdrawal(
       return withdrawalView(old);
     }
     if (gym.status !== "ACTIVE") throw new DomainError("GYM_INACTIVE");
-    const id = randomUUID(),
-      amountPiasters = BigInt(data.amountPiasters);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`withdrawal-allocation:${gymId}`},0))`;
+    const id = randomUUID(), amountPiasters = BigInt(data.amountPiasters);
+    const allocations=await allocateWithdrawal(tx,gymId,amountPiasters,data.branchId);
     const reserveTransactionId = await move(
       tx,
       actorId,
@@ -231,6 +235,7 @@ export async function requestWithdrawal(
         id,
         gymId,
         requestorId: actorId,
+        branchId:data.branchId,allocationVersion:1,allocations:{create:allocations},
         amountPiasters,
         paymentMethod: data.paymentMethod,
         destinationAccount: data.destinationAccount,
@@ -284,7 +289,7 @@ async function command(
     await tx.$queryRaw`SELECT id FROM "WithdrawalRequest" WHERE id=${id}::uuid FOR UPDATE`;
     const row = await tx.withdrawalRequest.findUnique({ where: { id } });
     if (!row) throw new DomainError("NOT_FOUND");
-    if (owner) await requireGymOwner(tx, actorId, row.gymId, false);
+    if (owner){if(row.branchId)await requirePermission(tx,actorId,row.gymId,'REQUEST_WITHDRAWAL',row.branchId);else await requireGymOwner(tx, actorId, row.gymId, false);}
     else await requireAdmin(tx, actorId);
     const old = await tx.withdrawalAction.findUnique({
       where: { idempotencyKey },
@@ -397,12 +402,7 @@ export async function decideWithdrawal(
           row.amountPiasters
         )
           throw new DomainError("INSUFFICIENT_FUNDS");
-        const gym = await requireGymOwner(
-          tx,
-          row.requestorId,
-          row.gymId,
-          false,
-        );
+        const gym = row.branchId?(await requirePermission(tx,row.requestorId,row.gymId,'REQUEST_WITHDRAWAL',row.branchId)).gym:await requireGymOwner(tx,row.requestorId,row.gymId,false);
         if (gym.status !== "ACTIVE") throw new DomainError("GYM_INACTIVE");
         const calendar = await tx.withdrawalCalendar.findFirst({
           orderBy: { version: "desc" },

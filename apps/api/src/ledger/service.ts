@@ -1,3 +1,4 @@
+import {authority,requirePermission} from '../auth/delegation.js';
 import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient, type PointTxKind, type MoneyTxKind } from '@prisma/client';
 import { requireAdmin, requireBranchAccess, requireGymOwner } from '../auth/authorization.js';
@@ -123,7 +124,9 @@ export function transferStock(db: PrismaClient, input: {
     const branches = await Promise.all(branchIds.map(id => requireBranchAccess(tx, input.actorId, id, 'TRANSFER_STOCK')));
     const gymId = input.gymId ?? branches[0]?.gymId;
     if (!gymId || branches.some(b => b.gymId !== gymId)) throw new DomainError('BRANCH_ACCESS_DENIED');
-    const gym = await requireGymOwner(tx, input.actorId, gymId, false);
+    const grant=await authority(tx,input.actorId,gymId);
+    if(!grant.owner&&!grant.full&&[input.fromBranchId,input.toBranchId].includes(null))await requirePermission(tx,input.actorId,gymId,'TRANSFER_STOCK');
+    const gym=grant.gym;
     if (gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
     const account = async (branchId: string | null) => branchId === null ? centralStock(tx, gymId) : tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId } } });
     const from = await account(input.fromBranchId), to = await account(input.toBranchId);

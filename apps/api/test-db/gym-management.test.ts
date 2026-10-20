@@ -347,3 +347,29 @@ test('incomplete branch data rolls back the entire combined approval and rejecti
   assert.equal((await db.gym.findUniqueOrThrow({where:{id:g.id}})).status,'PENDING');
  }finally{await f.app.close();}
 });
+
+test('owner delegation is scoped, revocable, versioned and cannot be granted by a manager',async()=>{
+ const {saveDelegation}=await import('../src/gyms/delegations.js');const {requirePermission}=await import('../src/auth/delegation.js');const {requireGymOwner}=await import('../src/auth/authorization.js');
+ const f=await network(),manager=await staff(f,'BRANCH_MANAGER');
+ const body={userId:manager.user.id,branchId:f.branch.id,permissions:['MANAGE_CASHIERS'],fullAccess:false,active:true,expectedVersion:0};
+ try{
+  await assert.rejects(db.$transaction(tx=>requirePermission(tx,manager.user.id,f.gymId,'MANAGE_CASHIERS',f.branch.id)));
+  const grant=await saveDelegation(db,f.owner.user.id,f.gymId,body);assert.equal(grant.version,1);
+  await assert.rejects(saveDelegation(db,manager.user.id,f.gymId,{...body,expectedVersion:1,fullAccess:true}));
+  await assert.rejects(saveDelegation(db,f.owner.user.id,f.gymId,body));
+  const invited=await f.request('POST',`/gyms/${f.gymId}/staff-invitations`,manager.accessToken,{branchId:f.branch.id,role:'CASHIER',contact:contact()});assert.equal(invited.statusCode,201,invited.body);
+  const escalation=await f.request('POST',`/gyms/${f.gymId}/staff-invitations`,manager.accessToken,{branchId:f.branch.id,role:'BRANCH_MANAGER',contact:contact()});assert.equal(escalation.statusCode,403);
+  await saveDelegation(db,f.owner.user.id,f.gymId,{...body,expectedVersion:1,active:false});
+  assert.equal((await f.request('POST','/auth/invitations/accept',undefined,{token:invited.json().invitation.token,password})).statusCode,400);
+  await saveDelegation(db,f.owner.user.id,f.gymId,{...body,branchId:null,expectedVersion:0,fullAccess:true,permissions:[]});
+  await db.$transaction(tx=>requireGymOwner(tx,manager.user.id,f.gymId));
+  const reportGyms=await f.request('GET','/reports/gyms',manager.accessToken);assert.equal(reportGyms.statusCode,200);assert.equal(reportGyms.json().items.find((g:{id:string})=>g.id===f.gymId)?.canFinance,true);
+  const extra=await f.request('POST',`/gyms/${f.gymId}/branches`,f.owner.accessToken,branchData());assert.equal(extra.statusCode,201);
+  const managed=await f.request('GET',`/branches/${extra.json().branch.id}/manage`,manager.accessToken);assert.equal(managed.statusCode,200,managed.body);
+  const reportBranches=await f.request('GET',`/reports/gyms/${f.gymId}/branches`,manager.accessToken);assert.equal(reportBranches.statusCode,200);assert.ok(reportBranches.json().items.some((b:{id:string})=>b.id===extra.json().branch.id));
+  assert.equal((await f.request('GET','/disputes',manager.accessToken)).statusCode,200);
+
+  await db.staffAssignment.updateMany({where:{userId:manager.user.id},data:{active:false}});
+  await assert.rejects(db.$transaction(tx=>requireGymOwner(tx,manager.user.id,f.gymId)));
+ }finally{await f.app.close();}
+});

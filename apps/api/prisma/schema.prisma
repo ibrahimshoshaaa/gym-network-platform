@@ -117,6 +117,7 @@ model User {
   updatedAt       DateTime          @updatedAt
   ownedGyms       Gym[]             @relation("GymOwner")
   assignments     StaffAssignment[]
+  delegations StaffDelegation[]
   pointAccounts   PointAccount[]
   visits          Visit[]           @relation("TraineeVisits")
   sessions        AuthSession[]
@@ -147,6 +148,7 @@ model Gym {
   stockTopups      TopupRequest[]
   moneyAccounts   MoneyAccount[]
   withdrawals     WithdrawalRequest[]
+  delegations StaffDelegation[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -177,6 +179,8 @@ model Branch {
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   staff             StaffAssignment[]
+  delegations StaffDelegation[]
+  withdrawalAllocations WithdrawalAllocation[]
   pointAccounts     PointAccount[]
   visits            Visit[]
   topups            TopupRequest[]
@@ -407,6 +411,8 @@ model WithdrawalRequest {
   branchId         String?          @db.Uuid
   branch           Branch?          @relation(fields: [branchId, gymId], references: [id, gymId])
   amountPiasters   BigInt
+  allocations WithdrawalAllocation[]
+  allocationVersion Int @default(0)
   status           WithdrawalStatus @default(REQUESTED)
   requestedAt      DateTime         @default(now())
   acceptedAt       DateTime?
@@ -782,3 +788,65 @@ model GymApplication {
   @@index([status,createdAt,id])
 }
 
+
+model StaffDelegation {
+ id String @id @default(uuid()) @db.Uuid
+ userId String @db.Uuid
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+ gymId String @db.Uuid
+ gym Gym @relation(fields:[gymId],references:[id],onDelete:Restrict)
+ branchId String? @db.Uuid
+ branch Branch? @relation(fields:[branchId,gymId],references:[id,gymId],onDelete:Restrict)
+ permissions String[] @default([])
+ fullAccess Boolean @default(false)
+ active Boolean @default(true)
+ version Int @default(1)
+ grantedById String @db.Uuid
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([userId,gymId,active])
+}
+
+model WithdrawalAllocation {
+ id String @id @default(uuid()) @db.Uuid
+ withdrawalId String @db.Uuid
+ withdrawal WithdrawalRequest @relation(fields:[withdrawalId],references:[id],onDelete:Restrict)
+ branchId String? @db.Uuid
+ branch Branch? @relation(fields:[branchId],references:[id],onDelete:Restrict)
+ amountPiasters BigInt
+ @@index([branchId])
+ @@index([withdrawalId])
+}
+
+model Campaign {
+ id String @id @default(uuid()) @db.Uuid
+ title String
+ body String
+ audience String
+ channel String
+ placement String
+ status String @default("DRAFT")
+ destination String @default("NONE")
+ priority Int @default(0)
+ userIds String[] @default([]) @db.Uuid
+ gymIds String[] @default([]) @db.Uuid
+ startsAt DateTime
+ endsAt DateTime
+ imageId String? @db.Uuid
+ image CampaignAsset? @relation(fields:[imageId],references:[id],onDelete:Restrict)
+ version Int @default(1)
+ createdById String @db.Uuid
+ updatedById String @db.Uuid
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([status,startsAt,endsAt])
+}
+model CampaignAsset {
+ id String @id @default(uuid()) @db.Uuid
+ objectKey String @unique
+ assetId String @unique
+ publicUrl String
+ createdById String @db.Uuid
+ createdAt DateTime @default(now())
+ campaigns Campaign[]
+}

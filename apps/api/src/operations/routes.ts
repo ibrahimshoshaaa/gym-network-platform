@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import {authority} from "../auth/delegation.js";
 import { z } from "zod";
 import { actorId } from "../gyms/routes.js";
 import { parse } from "../gyms/validation.js";
@@ -78,7 +79,7 @@ export function registerOperationRoutes(
         take: 100,
       });
       const owned = await tx.branch.findMany({
-        where: { status: 'ACTIVE', gym: { ownerId: id, status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } },
+        where: { status: 'ACTIVE', gym: { OR:[{ownerId:id},{delegations:{some:{userId:id,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId:id,role:'BRANCH_MANAGER',active:true}}}}}], status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } },
         select: { id: true, name: true, gymId: true, gym: { select: { name: true } } },
         take: 100,
       });
@@ -107,7 +108,7 @@ export function registerOperationRoutes(
           canCancel: row.role === "BRANCH_MANAGER" || Boolean(old?.canCancel),
         });
       }
-      return { items: [...map.values()] };
+      return { items: await Promise.all([...map.values()].map(async b=>{const a=await authority(tx,id,b.gymId,b.id);return {...b,permissions:a.permissions,fullAccess:a.full,canDelegate:a.owner};})) };
     });
   });
   app.get("/operations/branches/:branchId/summary", async (r) => {

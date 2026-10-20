@@ -1,4 +1,5 @@
 "use client";
+import {StaffDelegation} from "../staff-delegation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -187,6 +188,7 @@ function GymDetails({
     [invitation, setInvitation] = useState<NewInvite | null>(null),
     [history, setHistory] = useState<Branch | null>(null),
     [success, setSuccess] = useState("");
+  const [delegating,setDelegating]=useState<{user:{id:string;displayName:string};branchId:string}|null>(null);
   const [receivables, setReceivables] = useState<
     { type: string; balancePiasters: string }[]
   >([]);
@@ -232,6 +234,7 @@ function GymDetails({
     active = gym?.status === "ACTIVE";
   return (
     <>
+      {delegating&&<StaffDelegation gymId={id} userId={delegating.user.id} branchId={delegating.branchId} name={delegating.user.displayName} onClose={()=>setDelegating(null)}/>}
       <div className="section-toolbar">
         <button className="text-button" onClick={onBack}>
           <ArrowRight size={17} />
@@ -612,6 +615,7 @@ function GymDetails({
                             </span>
                           </td>
                           <td data-label="الإجراء">
+                            {person.role==="BRANCH_MANAGER"&&person.canDelegate&&<button className="text-button" onClick={()=>setDelegating(person)}>تفويض الصلاحيات</button>}
                             <button
                               className="text-button"
                               disabled={!editable}
@@ -699,6 +703,7 @@ function GymDetails({
                             </td>
                             <td data-label="الإجراءات">
                               <div className="row-actions">
+                                {gym?.canDelegate&&invite.role==='BRANCH_MANAGER'&&invite.branchId&&!invite.revokedAt&&!expired&&<button className="text-button" onClick={()=>setDelegating({user:{id:invite.userId,displayName:invite.user.displayName},branchId:invite.branchId!})}>تحديد صلاحيات المدير</button>}
                                 {!invite.acceptedAt &&
                                   !invite.revokedAt &&
                                   (admin || invite.type === "STAFF") && (

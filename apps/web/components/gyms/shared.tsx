@@ -14,6 +14,7 @@ import { Copy, Check } from "lucide-react";
 import { api, send, message, date, type Page } from "../../lib/client";
 import { Busy, Field, Modal, Notice } from "../ui";
 export type Gym = {
+  canDelegate?:boolean;
   updatedAt: string;
   id: string;
   name: string;
@@ -48,6 +49,7 @@ export type Branch = {
   pointAccounts: { balance: number }[];
 };
 export type Invite = {
+  userId:string;
   id: string;
   type: string;
   role: string;
@@ -60,11 +62,12 @@ export type Invite = {
 };
 export type NewInvite = { id: string; token: string; expiresAt: string };
 export type Staff = {
+  canDelegate?:boolean;branchId:string;
   id: string;
   role: string;
   active: boolean;
   branch: { name: string };
-  user: { displayName: string; email: string; phoneE164: string };
+  user: { id:string;displayName: string; email: string; phoneE164: string };
 };
 export type Pricing = {
   id: string;

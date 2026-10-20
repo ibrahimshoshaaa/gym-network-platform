@@ -1,3 +1,4 @@
+import 'campaigns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -195,6 +196,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             ),
           ],
         ),
+        CampaignBanner(api:widget.api,placement:'GYMS'),
         ErrorNote(error, retry: () => load()),
         if (search.text.isNotEmpty ||
             maxPrice.text.isNotEmpty ||

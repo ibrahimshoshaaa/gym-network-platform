@@ -5,6 +5,7 @@ import '../core/api.dart';
 import '../core/ui.dart';
 import '../core/portal_ui.dart';
 import 'account.dart';
+import 'managed_branch.dart';
 
 String? visitTicket(String input) {
   final text = input.trim();
@@ -29,6 +30,163 @@ class OperationContext extends StatelessWidget {
     if(detail.isNotEmpty)Text(detail,style:const TextStyle(color:muted,fontSize:11)),
    ])),
   ])));
+}
+
+class StaffWorkplace extends StatelessWidget {
+  final ApiClient api;
+  final int section;
+  final String? branchId;
+  final ValueChanged<String> onBranchChanged;
+  final VoidCallback showVisits, showSales;
+  const StaffWorkplace({super.key, required this.api, required this.section,
+    required this.branchId, required this.onBranchChanged, required this.showVisits, required this.showSales});
+  @override
+  Widget build(BuildContext context) => DataView(
+    load: () => api.request('operations/branches'),
+    builder: (data, reload) {
+      final branches = rows(data);
+      if (branches.isEmpty) return ListView(padding: const EdgeInsets.all(20), children: const [
+        EmptyState('مفيش فرع متاح للتشغيل', detail: 'راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.'),
+      ]);
+      final branch = branches.where((b) => b['id'] == branchId).firstOrNull ?? branches.first;
+      return Column(children: [
+        Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 12), child: Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(branch['canCancel'] == true ? 'مدير الفرع' : 'كاشير الفرع', style: const TextStyle(color: green, fontSize: 12, fontWeight: FontWeight.w700)),
+            if (branches.length > 1) DropdownButton<String>(value: branch['id'], isExpanded: true,
+              underline: const SizedBox.shrink(), items: branches.map((b) => DropdownMenuItem<String>(value: b['id'],
+                child: Text('${b['name']}', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+              onChanged: api.pending != null ? null : (id) => onBranchChanged(id!))
+            else Text('${branch['name']}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+            Text('${branch['gymName']}', style: const TextStyle(color: muted, fontSize: 11)),
+          ])),
+          IconButton(tooltip: 'الإشعارات', icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () => open(context, NotificationsScreen(api: api))),
+        ])),
+        Expanded(child: KeyedSubtree(key: ValueKey('${branch['id']}:$section'), child: switch(section) {
+          1 => BranchRecords(api: api, branch: branch, kind: 'visits', embedded: true),
+          2 => BranchRecords(api: api, branch: branch, kind: 'sales', embedded: true),
+          _ => BranchDashboard(api: api, branch: branch, showVisits: showVisits, showSales: showSales),
+        })),
+      ]);
+    },
+  );
+}
+
+class BranchDashboard extends StatefulWidget {
+  final ApiClient api;
+  final Json branch;
+  final VoidCallback? showVisits, showSales;
+  const BranchDashboard({super.key, required this.api, required this.branch, this.showVisits, this.showSales});
+  @override
+  State<BranchDashboard> createState() => _BranchDashboardState();
+}
+class _BranchDashboardState extends State<BranchDashboard> {
+  Json? summary, report;
+  Object? summaryError, reportError;
+  bool summaryLoading = true, reportLoading = true;
+  int generation = 0;
+  @override
+  void initState() { super.initState(); load(); }
+  Future<void> load() async {
+    final current = ++generation;
+    setState(() { summaryLoading = reportLoading = true; summaryError = reportError = null; });
+    final now = DateTime.now();
+    final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    Future<void> part(String path, bool stock) async {
+      try {
+        final data = Map<String, dynamic>.from(await widget.api.request(path));
+        if (mounted && current == generation) setState(() { if (stock) { summary = data; } else { report = data; } });
+      } catch(e) {
+        if (mounted && current == generation) setState(() { if (stock) { summary = null; summaryError = e; } else { report = null; reportError = e; } });
+      } finally {
+        if (mounted && current == generation) setState(() { if (stock) { summaryLoading = false; } else { reportLoading = false; } });
+      }
+    }
+    await Future.wait([
+      part('operations/branches/${widget.branch['id']}/summary', true),
+      part('reports/summary?gymId=${widget.branch['gymId']}&branchId=${widget.branch['id']}&from=$day&to=$day', false),
+    ]);
+  }
+  Future<void> action(Widget page) async { await open(context, page); if (mounted) await load(); }
+  void records(String kind) {
+    final callback = kind == 'visits' ? widget.showVisits : widget.showSales;
+    if (callback != null) { callback(); } else { open(context, BranchRecords(api: widget.api, branch: widget.branch, kind: kind)); }
+  }
+  @override
+  Widget build(BuildContext context) {
+    final branch = widget.branch, locked = widget.api.pending != null;
+    return RefreshIndicator(onRefresh: load, child: ListView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), physics: const AlwaysScrollableScrollPhysics(), children: [
+        Panel(color: ink, padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('رصيد الفرع لبيع النقاط', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 8),
+          if (summaryLoading && summary == null) const LinearProgressIndicator(color: lime)
+          else FittedBox(fit: BoxFit.scaleDown, child: Text(summary == null ? 'تعذر تحميل الرصيد' : '${summary!['stock'] ?? '—'} نقطة',
+            style: const TextStyle(color: lime, fontSize: 30, fontWeight: FontWeight.w900))),
+          const SizedBox(height: 10),
+          if (summary != null) Text('الزيارة ${summary!['visitPricePoints'] ?? '—'} نقطة · ${summary!['sessionMinutes'] ?? '—'} دقيقة', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        ])),
+        if (summaryError != null) ErrorNote(summaryError, retry: load),
+        if (summary != null && '${summary!['stock']}' == '0') const Padding(padding: EdgeInsets.only(top: 12),
+          child: PortalNote('رصيد بيع النقاط خلص. اطلب من صاحب الجيم يوزّع نقاط للفرع. تسجيل الزيارات متاح من رصيد المتدرب.')),
+        const SectionTitle('إجراء سريع'),
+        if (branch['canSell'] == true) ...[
+          ActionButton('تسجيل زيارة', icon: Icons.qr_code_scanner_rounded,
+            onPressed: locked ? null : () => action(RecordVisit(api: widget.api, branch: branch))),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(icon: const Icon(Icons.add_card_rounded), label: const Text('بيع نقاط لمتدرب'),
+            onPressed: locked || summary == null || summaryLoading || '${summary!['stock']}' == '0' ? null : () => action(BranchSale(api: widget.api, branch: branch))),
+        ],
+        const SectionTitle('حركة الفرع النهارده'),
+        Panel(padding: const EdgeInsets.all(16), child: Column(children: [
+          if (reportLoading && report == null) const LinearProgressIndicator(minHeight: 2),
+          if (report != null) ...[
+            Fact('زيارات مسجلة', '${report!['visits']?['count'] ?? '—'}'),
+            Fact('نقاط مباعة', '${report!['sales']?['points'] ?? '—'}'),
+            if (report!['sales']?['amountPiasters'] != null) Fact('تحصيل بيع النقاط', '${money(report!['sales']['amountPiasters'])} ج.م', strong: true),
+          ],
+          if (reportError != null) ErrorNote(reportError, retry: load),
+        ])),
+        if((branch['permissions'] as List? ?? []).isNotEmpty)...[
+          const SectionTitle('الصلاحيات المفوّضة لك'),
+          Panel(child:Column(children:[
+            for(final item in const [
+              ('MANAGE_CASHIERS','staff','فريق الكاشير'),('EDIT_BRANCH','edit','بيانات الفرع'),
+              ('REQUEST_PRICING','price','طلب تعديل السعر'),('REQUEST_WITHDRAWAL','withdraw','مستحقات الفرع والسحب'),
+              ('TRANSFER_STOCK','transfer','تحويل نقاط الفرع'),
+            ])if((branch['permissions'] as List).contains(item.$1))ListTile(contentPadding:EdgeInsets.zero,title:Text(item.$3),trailing:const Icon(Icons.chevron_left_rounded),onTap:locked?null:()=>action(ManagedBranch(api:widget.api,branch:branch,task:item.$2))),
+          ])),
+        ],
+        const SectionTitle('متابعة الفرع'),
+        Panel(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), child: Column(children: [
+          ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.directions_run_rounded, color: green),
+            title: const Text('سجل الزيارات'), trailing: const Icon(Icons.chevron_left_rounded), onTap: () => records('visits')),
+          const Divider(height: 1),
+          ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.receipt_long_outlined, color: green),
+            title: const Text('سجل المبيعات'), trailing: const Icon(Icons.chevron_left_rounded), onTap: () => records('sales')),
+          if (branch['canCancel'] == true) ...[
+            const Divider(height: 1),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('إلغاء الزيارة متاح خلال أول ١٠ دقائق من سجل الزيارات. بعد كده يُرسل طلب مراجعة.', style: TextStyle(color: muted, fontSize: 12))),
+          ],
+        ])),
+        TextButton.icon(onPressed: () => open(context, OperationReviewsScreen(api: widget.api)),
+          icon: const Icon(Icons.fact_check_outlined), label: const Text('طلبات المراجعة')),
+      ],
+    ));
+  }
+}
+
+class OperationReviewsScreen extends StatelessWidget {
+  final ApiClient api;
+  const OperationReviewsScreen({super.key, required this.api});
+  @override
+  Widget build(BuildContext context) => Screen(title: 'طلبات المراجعة', child: PagedRecords(
+    api: api, path: 'operation-reviews', item: (r) => Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      StatusPill('${r['status']}'), Fact('السبب', '${r['reason']}'),
+      if (r['reviewReason'] != null) Fact('رد الإدارة', '${r['reviewReason']}'), Reference('${r['id']}'),
+    ])),
+  ));
 }
 
 class OperationsHome extends StatelessWidget {
@@ -176,85 +334,8 @@ class BranchWorkspace extends StatelessWidget {
   final Json branch;
   const BranchWorkspace({super.key, required this.api, required this.branch});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: '${branch['name']}',
-    child: DataView(
-      load: () => api.request('operations/branches/${branch['id']}/summary'),
-      builder: (summary, reload) => ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text('${branch['gymName']}', style: const TextStyle(color: muted)),
-          const SizedBox(height: 12),
-          Panel(
-            color: ink,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'رصيد الفرع المتاح للشحن',
-                  style: TextStyle(color: Colors.white70),
-                ),
-                Text(
-                  '${summary['stock']} نقطة',
-                  style: const TextStyle(
-                    color: lime,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'الزيارة ${summary['visitPricePoints']} نقطة · ${summary['sessionMinutes']} دقيقة',
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          const SectionTitle('إجراء جديد'),
-          if (branch['canSell'] == true) ...[
-            ActionButton(
-              'تسجيل زيارة',
-              icon: Icons.qr_code_scanner_rounded,
-              onPressed: () async {
-                await open(context, RecordVisit(api: api, branch: branch));
-                await reload();
-              },
-            ),
-            const SizedBox(height: 12),
-            ActionButton(
-              'شحن نقاط لمتدرب',
-              icon: Icons.add_card_rounded,
-              onPressed: () async {
-                await open(context, BranchSale(api: api, branch: branch));
-                await reload();
-              },
-            ),
-          ],
-          const SectionTitle('سجل الفرع'),
-          for (final kind in ['visits', 'sales'])
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                kind == 'visits'
-                    ? Icons.directions_run_rounded
-                    : Icons.receipt_long_outlined,
-              ),
-              title: Text(
-                kind == 'visits'
-                    ? 'الزيارات والإلغاءات'
-                    : 'عمليات شحن المتدربين',
-              ),
-              trailing: const Icon(Icons.chevron_left_rounded),
-              onTap: () => open(
-                context,
-                BranchRecords(api: api, branch: branch, kind: kind),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => Screen(title: '${branch['name']}',
+    child: BranchDashboard(api: api, branch: branch));
 }
 
 class BranchSale extends StatefulWidget {
@@ -657,11 +738,13 @@ class BranchRecords extends StatefulWidget {
   final ApiClient api;
   final Json branch;
   final String kind;
+  final bool embedded;
   const BranchRecords({
     super.key,
     required this.api,
     required this.branch,
     required this.kind,
+    this.embedded = false,
   });
   @override
   State<BranchRecords> createState() => _BranchRecordsState();
@@ -673,13 +756,18 @@ class _BranchRecordsState extends State<BranchRecords> {
   Json get branch => widget.branch;
   String get kind => widget.kind;
   @override
-  Widget build(BuildContext context) => Screen(
+  Widget build(BuildContext context) {
+    final content = PagedRecords(
+      key: ValueKey(version), api: api, path: 'operations/branches/${branch['id']}/$kind',
+      item: (r) => _record(context, r),
+    );
+    return widget.embedded ? content : Screen(
     title: kind == 'visits' ? 'زيارات الفرع' : 'شحن المتدربين',
-    child: PagedRecords(
-      key: ValueKey(version),
-      api: api,
-      path: 'operations/branches/${branch['id']}/$kind',
-      item: (r) => Panel(
+    child: content,
+  );
+  }
+  Widget _record(BuildContext context, Json r) => Panel(
+
         child: Column(
           children: [
             if (kind == 'sales') Fact('المتدرب', '${r['traineeLabel']}'),
@@ -696,7 +784,7 @@ class _BranchRecordsState extends State<BranchRecords> {
               shortDate(r[kind == 'visits' ? 'startedAt' : 'createdAt']),
             ),
             if (kind == 'visits')
-              Fact('الخروج التلقائي', shortDate(r['expiresAt'])),
+              Fact('نهاية الجلسة', shortDate(r['expiresAt'])),
             Reference('${r['id']}'),
             if (kind == 'visits' && r['status'] != 'CANCELLED')
               TextButton(
@@ -707,13 +795,11 @@ class _BranchRecordsState extends State<BranchRecords> {
                   );
                   if (mounted) setState(() => version++);
                 },
-                child: const Text('إلغاء أو طلب مراجعة'),
+                child: Text(branch['canCancel'] == true ? 'مراجعة أو إلغاء الزيارة' : 'طلب مراجعة الزيارة'),
               ),
           ],
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class VisitCancellation extends StatefulWidget {
@@ -756,6 +842,7 @@ class _VisitCancellationState extends State<VisitCancellation> {
     child: ListView(
       padding: const EdgeInsets.all(22),
       children: [
+        OperationContext(title:'${widget.branch['name']}',detail:'زيارة بقيمة ${widget.visit['pointsCharged']} نقطة'),
         if (result != null) ...[
           EmptyState(
             result!['visit'] != null
@@ -774,15 +861,15 @@ class _VisitCancellationState extends State<VisitCancellation> {
           const SizedBox(height: 16),
           TextField(
             controller: reason,
-            enabled: !busy,
+            enabled: !busy && widget.api.pending == null,
             decoration: const InputDecoration(
               labelText: 'سبب الإلغاء (٥ حروف على الأقل)',
             ),
           ),
           const SizedBox(height: 12),
-          TextField(
+          if (!direct) TextField(
             controller: details,
-            enabled: !busy,
+            enabled: !busy && widget.api.pending == null,
             maxLines: 3,
             decoration: const InputDecoration(
               labelText: 'تفاصيل المراجعة (١٠ حروف على الأقل لو الطلب للإدارة)',
@@ -791,7 +878,7 @@ class _VisitCancellationState extends State<VisitCancellation> {
           CheckboxListTile(
             value: confirmed,
             title: const Text('راجعت الزيارة وسبب الإلغاء'),
-            onChanged: busy
+            onChanged: busy || widget.api.pending != null
                 ? null
                 : (v) => setState(() => confirmed = v == true),
           ),

@@ -1340,3 +1340,27 @@ test('a dispute cannot exceed visit entitlement or silently use later earnings a
  await code(createHold(db,f.admin.id,{visitId:v.visit.id,amountPiasters:'1',reason:'Synthetic intervening payout requires review',key:randomUUID(),confirmed:true}),'SETTLEMENT_REVIEW_REQUIRED');
 });
 
+
+test('owner and delegated manager cannot reserve the same branch entitlement twice', async()=>{
+ const {saveDelegation}=await import('../src/gyms/delegations.js');
+ const {branchEntitlements}=await import('../src/withdrawals/allocation.js');
+ const {requestWithdrawal,cancelWithdrawal}=await import('../src/withdrawals/service.js');
+ const f=await fixture();const q=await f.qr();await confirmVisit(db,f.cashier.id,f.branch.id,randomUUID(),f.entry(q.token));
+ const [earned]=await db.$transaction(tx=>branchEntitlements(tx,f.gym.id));assert.ok(earned!.available>0n);
+ const body={amountPiasters:earned!.available.toString(),paymentMethod:'INSTAPAY',destinationAccount:'synthetic@bank',destinationName:'Synthetic recipient'};
+ await assert.rejects(requestWithdrawal(db,f.manager.id,f.gym.id,randomUUID(),{...body,branchId:f.branch.id}));
+ await saveDelegation(db,f.owner.id,f.gym.id,{userId:f.manager.id,branchId:f.branch.id,permissions:['REQUEST_WITHDRAWAL'],fullAccess:false,active:true,expectedVersion:0});
+ const results=await Promise.allSettled([requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),body),requestWithdrawal(db,f.manager.id,f.gym.id,randomUUID(),{...body,branchId:f.branch.id})]);
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);const won=results.find(r=>r.status==='fulfilled');assert.ok(won&&won.status==='fulfilled');
+ const used=await db.withdrawalAllocation.aggregate({where:{withdrawalId:won.value.id},_sum:{amountPiasters:true}});assert.equal(used._sum.amountPiasters,earned!.available);
+ const [after]=await db.$transaction(tx=>branchEntitlements(tx,f.gym.id));assert.equal(after!.available,0n);
+ await cancelWithdrawal(db,f.owner.id,won.value.id,randomUUID(),{reason:'Synthetic release for retry'});
+ const retryKey=randomUUID(),retry=await requestWithdrawal(db,f.manager.id,f.gym.id,retryKey,{...body,branchId:f.branch.id});
+ assert.equal((await requestWithdrawal(db,f.manager.id,f.gym.id,retryKey,{...body,branchId:f.branch.id})).id,retry.id);
+ const row=await db.withdrawalRequest.findUniqueOrThrow({where:{id:retry.id}});assert.equal(row.branchId,f.branch.id);
+ const {decideWithdrawal}=await import('../src/withdrawals/service.js');const calendar=await db.withdrawalCalendar.findFirst({orderBy:{version:'desc'}});
+ const approval=decideWithdrawal(db,f.admin.id,retry.id,randomUUID(),{decision:'APPROVE',reason:'Synthetic delegated request review',calendarVersion:calendar?.version??1,destinationVerified:true});
+ if(calendar)assert.equal((await approval).status,'APPROVED');else await assert.rejects(approval,(e:unknown)=>typeof e==='object'&&e!==null&&'code' in e&&e.code==='CALENDAR_NOT_CONFIGURED');
+
+ await assert.rejects(db.$executeRaw`UPDATE "WithdrawalAllocation" SET "amountPiasters"=1 WHERE "withdrawalId"=${retry.id}::uuid`);
+});

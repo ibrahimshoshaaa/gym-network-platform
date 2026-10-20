@@ -1841,8 +1841,18 @@ test(
           const traineeContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const traineeSeparator=traineeCookie.indexOf('=');
           await traineeContext.addCookies([{name:traineeCookie.slice(0,traineeSeparator),value:traineeCookie.slice(traineeSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
+          const campaignBody={title:'Synthetic targeted browser campaign',body:'Synthetic platform notice for one trainee',audience:'TRAINEES',channel:'BOTH',placement:'HOME',status:'PUBLISHED',destination:'QR',priority:100,userIds:[traineeIdentity.user.id],gymIds:[],startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+3600000).toISOString(),imageId:null,expectedVersion:0};
+          const campaignResponse=await request('/api/backend/admin/campaigns',{cookie,method:'POST',body:campaignBody});
+          assert.equal(campaignResponse.status,200,await campaignResponse.clone().text());const campaign=await campaignResponse.json();
+          const excludedCampaigns=await request('/api/backend/campaigns?placement=HOME',{cookie:invitedOwnerCookie});assert.equal(excludedCampaigns.status,200);assert.ok(!(await excludedCampaigns.json()).items.some(c=>c.id===campaign.id));
           const traineePage=await traineeContext.newPage();
           await traineePage.goto(origin);
+          const campaignCard=traineePage.locator('.campaign-banner').filter({hasText:campaignBody.title});await expect(campaignCard).toBeVisible();
+          assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'campaign must fit the personal mobile portal');
+          await campaignCard.getByRole('button',{name:'اعرف التفاصيل',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'رمز الدخول',exact:true})).toBeVisible();
+          const campaignFeed=await request('/api/backend/notifications',{cookie:traineeCookie});assert.equal(campaignFeed.status,200);assert.ok((await campaignFeed.json()).items.some(c=>c.id===`campaign:${campaign.id}:1`));
+          const paused=await request(`/api/backend/admin/campaigns/${campaign.id}`,{cookie,method:'PUT',body:{...campaignBody,status:'PAUSED',expectedVersion:1}});assert.equal(paused.status,200);
+          await traineePage.getByRole('button',{name:'الرئيسية',exact:true}).click();await expect(traineePage.locator('.campaign-banner').filter({hasText:campaignBody.title})).toHaveCount(0);
           await traineePage.getByRole('button',{name:'زياراتي',exact:true}).click();
           await expect(traineePage.getByRole('heading',{name:'حركات نقاطك'})).toBeVisible();
           const records=traineePage.locator('.mobile-records tbody tr');
@@ -1905,4 +1915,5 @@ test(
     }
   },
 );
+
 

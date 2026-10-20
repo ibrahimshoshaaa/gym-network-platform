@@ -23,7 +23,7 @@ async function handle(request: Request, context: Context) {
     if (request.method !== "GET") checkOrigin(request);
     const token = await sessionToken();
     if (!token) return json({ code: "UNAUTHENTICATED" }, 401);
-    const upload = path === "receipts" || /^gyms\/[^/]+\/images$/.test(path),
+    const upload = path === "receipts" || path === "admin/campaign-assets" || /^gyms\/[^/]+\/images$/.test(path),
       headers: Record<string, string> = {};
     let body: Uint8Array | undefined;
     if (request.method !== "GET") {

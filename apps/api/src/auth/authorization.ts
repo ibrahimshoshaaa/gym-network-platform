@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import {authority,requirePermission} from './delegation.js';
 import { DomainError } from '../domain/errors.js';
 
 export async function requireActor(tx: Prisma.TransactionClient, userId: string) {
@@ -23,7 +24,9 @@ export async function requireBranchAccess(
   const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: { include: { owner: { select: { isActive: true } } } } } });
   if (!branch || branch.status !== 'ACTIVE' || branch.gym.status !== 'ACTIVE' || !branch.gym.ownerAcceptedAt || !branch.gym.owner.isActive) throw new DomainError('BRANCH_ACCESS_DENIED');
   if (branch.gym.ownerId === userId) return branch;
-  if (permission === 'TRANSFER_STOCK') throw new DomainError('BRANCH_ACCESS_DENIED');
+  const delegated=await authority(tx,userId,branch.gymId,branchId);
+  if(delegated.full)return branch;
+  if (permission === 'TRANSFER_STOCK'){await requirePermission(tx,userId,branch.gymId,'TRANSFER_STOCK',branchId);return branch;}
   const membership = await tx.staffAssignment.findFirst({
     where: { userId, branchId, active: true,
       role: { in: permission === 'SELL_POINTS' ? ['CASHIER', 'BRANCH_MANAGER'] : ['BRANCH_MANAGER'] } },
@@ -35,7 +38,8 @@ export async function requireBranchAccess(
 export async function requireGymOwner(tx: Prisma.TransactionClient, userId: string, gymId: string, editable = true) {
   await requireActor(tx, userId);
   const gym = await tx.gym.findUnique({ where: { id: gymId } });
-  if (!gym || gym.ownerId !== userId || !gym.ownerAcceptedAt) throw new DomainError('GYM_ACCESS_DENIED');
+  if (!gym || !gym.ownerAcceptedAt) throw new DomainError('GYM_ACCESS_DENIED');
+  if(gym.ownerId!==userId&&!(await authority(tx,userId,gymId)).full)throw new DomainError('GYM_ACCESS_DENIED');
   if (editable && !['PENDING', 'ACTIVE'].includes(gym.status)) throw new DomainError('GYM_INACTIVE');
   return gym;
 }

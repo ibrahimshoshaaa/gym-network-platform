@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import test,{after} from 'node:test';
+import {PrismaClient} from '@prisma/client';
+import {saveCampaign,activeCampaigns} from '../src/campaigns/service.js';
+import {notificationFeed,readNotifications} from '../src/engagement/feed.js';
+const url=new URL(process.env.DATABASE_URL??'');if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw new Error('Disposable local test database required');
+const db=new PrismaClient();after(()=>db.$disconnect());
+test('scheduled campaigns enforce audience, placement, publication and versioned read state',async()=>{
+ const user=(role:'PLATFORM_ADMIN'|'TRAINEE'|'GYM_OWNER')=>db.user.create({data:{role,displayName:'Synthetic campaign viewer',phoneE164:'+20campaign'+randomUUID()}});
+ const admin=await user('PLATFORM_ADMIN'),trainee=await user('TRAINEE'),other=await user('TRAINEE'),owner=await user('GYM_OWNER');
+ const input={title:'Synthetic targeted campaign',body:'Synthetic campaign content',audience:'TRAINEES',channel:'BOTH',placement:'HOME',status:'PUBLISHED',destination:'QR',priority:20,userIds:[trainee.id],gymIds:[],startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+3600000).toISOString(),imageId:null,expectedVersion:0};
+ await assert.rejects(saveCampaign(db,trainee.id,undefined,input));
+ const c=await saveCampaign(db,admin.id,undefined,input);
+ const delivered=(id:string,placement='HOME')=>db.$transaction(tx=>activeCampaigns(tx,id,'AD',placement));
+ assert.ok((await delivered(trainee.id)).some(x=>x.id===c.id));assert.ok(!(await delivered(other.id)).some(x=>x.id===c.id));assert.ok(!(await delivered(owner.id)).some(x=>x.id===c.id));assert.ok(!(await delivered(trainee.id,'WALLET')).some(x=>x.id===c.id));
+ const event=`campaign:${c.id}:1`;assert.equal((await notificationFeed(db,trainee.id)).items.find(x=>x.id===event)?.read,false);
+ await readNotifications(db,trainee.id,{ids:[event]});assert.equal((await notificationFeed(db,trainee.id)).items.find(x=>x.id===event)?.read,true);
+ await assert.rejects(saveCampaign(db,admin.id,c.id,input));
+ await saveCampaign(db,admin.id,c.id,{...input,status:'PAUSED',expectedVersion:1});assert.ok(!(await delivered(trainee.id)).some(x=>x.id===c.id));assert.ok(!(await notificationFeed(db,trainee.id)).items.some(x=>x.id.startsWith(`campaign:${c.id}:`)));
+ await saveCampaign(db,admin.id,c.id,{...input,startsAt:new Date(Date.now()+60000).toISOString(),expectedVersion:2});assert.ok(!(await delivered(trainee.id)).some(x=>x.id===c.id));
+});

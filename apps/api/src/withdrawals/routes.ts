@@ -1,3 +1,5 @@
+import {authority,requirePermission} from "../auth/delegation.js";
+import {branchEntitlements} from "./allocation.js";
 import { withdrawalBalances } from "./balances.js";
 import type { PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
@@ -21,12 +23,14 @@ const pageSchema = z
   .object({
     limit: z.coerce.number().int().min(1).max(100).default(25),
     cursor: uuid.optional(),
+    branchId:uuid.optional(),
   })
   .strict();
 export function registerWithdrawalRoutes(
   app: FastifyInstance,
   db: PrismaClient,
 ) {
+  app.get('/operations/branches/:branchId/entitlements',async r=>{const actor=await actorId(db,r),branchId=parse(uuid,(r.params as {branchId:string}).branchId);return db.$transaction(async tx=>{const branch=await tx.branch.findUnique({where:{id:branchId}});if(!branch)throw new DomainError('NOT_FOUND');await requirePermission(tx,actor,branch.gymId,'REQUEST_WITHDRAWAL',branchId);const row=(await branchEntitlements(tx,branch.gymId)).find(b=>b.id===branchId)!;const cash=await tx.moneyAccount.findFirst({where:{gymId:branch.gymId,branchId:null,type:'GYM_AVAILABLE'}});const available=row.available<(cash?.balancePiasters??0n)?row.available:(cash?.balancePiasters??0n);return {...row,earned:row.earned.toString(),committed:row.committed.toString(),disputed:row.disputed.toString(),available:available.toString()};},{isolationLevel:'RepeatableRead'});});
   app.get("/admin/withdrawal-calendar", async (r) => {
     await requireAdmin(db, await actorId(db, r));
     return {
@@ -60,9 +64,9 @@ export function registerWithdrawalRoutes(
             : parse(uuid, (r.params as { gymId: string }).gymId);
         return db.$transaction(async (tx) => {
           if (admin) await requireAdmin(tx, id);
-          else await requireGymOwner(tx, id, gymId!, false);
+          else if(q.branchId)await requirePermission(tx,id,gymId!,'REQUEST_WITHDRAWAL',q.branchId);else await requireGymOwner(tx, id, gymId!, false);
           const rows = await tx.withdrawalRequest.findMany({
-            where: gymId ? { gymId } : {},
+            where: {...(gymId?{gymId}:{}),...(q.branchId?{branchId:q.branchId}:{})},
             take: q.limit + 1,
             orderBy: { id: "asc" },
             ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
@@ -82,7 +86,7 @@ export function registerWithdrawalRoutes(
       if (!row) throw new DomainError("NOT_FOUND");
       const user = await tx.user.findUniqueOrThrow({ where: { id: actor } });
       if (user.role === "PLATFORM_ADMIN") await requireAdmin(tx, actor);
-      else await requireGymOwner(tx, actor, row.gymId, false);
+      else if(row.branchId)await requirePermission(tx,actor,row.gymId,'REQUEST_WITHDRAWAL',row.branchId);else await requireGymOwner(tx, actor, row.gymId, false);
       const gym = await tx.gym.findUniqueOrThrow({
         where: { id: row.gymId },
         select: { name: true },
@@ -90,7 +94,7 @@ export function registerWithdrawalRoutes(
       return {
         withdrawal: withdrawalView(row),
         gymName: gym.name,
-        balances: await withdrawalBalances(tx, row),
+        balances: user.role==='PLATFORM_ADMIN'||(await authority(tx,actor,row.gymId)).full?await withdrawalBalances(tx,row):null,
         feedback: await tx.withdrawalFeedback.findUnique({
           where: { withdrawalId: id },
         }),

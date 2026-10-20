@@ -69,6 +69,9 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^campaigns$/, /^admin\/campaigns$/,
+    new RegExp(`^gyms/${uuid}/delegations$`),
+    new RegExp(`^operations/branches/${uuid}/entitlements$`),
     /^admin\/gym-applications$/,
     /^me\/gym-application$/,
     /^admin\/point-transfers$/,
@@ -114,6 +117,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^admin\/(campaigns|campaign-assets)$/,
     new RegExp(`^admin/gym-applications/${uuid}/review$`),
     /^me\/gym-application\/resubmit$/,
     /^admin\/point-transfers(?:\/(?:lookup|quotes))?$/,
@@ -163,6 +167,8 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^gyms/${uuid}/staff/${uuid}$`),
   ],
   PUT: [
+    new RegExp(`^admin/campaigns/${uuid}$`),
+    new RegExp(`^gyms/${uuid}/delegations$`),
     /^admin\/support-contact$/,
     /^admin\/payment-methods\/(INSTAPAY|WALLET)$/,
     new RegExp(`^admin/topup-packages/${uuid}$`),

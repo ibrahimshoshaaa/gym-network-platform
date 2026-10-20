@@ -228,6 +228,7 @@ class NativeShell extends StatefulWidget {
 class _NativeShellState extends State<NativeShell> {
   int index = 0, gymIndex = 0, version = 0;
   bool retrying = false;
+  String? staffBranchId;
   Object? error;
   bool workMode = false;
   @override
@@ -251,7 +252,9 @@ class _NativeShellState extends State<NativeShell> {
           ]
         : staff
         ? const [
-            (Icons.dashboard_outlined, 'شغلي'),
+            (Icons.dashboard_outlined, 'الرئيسية'),
+            (Icons.directions_run_rounded, 'الزيارات'),
+            (Icons.receipt_long_outlined, 'المبيعات'),
             (Icons.person_outline_rounded, 'حسابي'),
           ]
         : const [
@@ -277,8 +280,11 @@ class _NativeShellState extends State<NativeShell> {
         _ => AccountScreen(api: widget.api, workplace: true, ownerView: true),
       };
     } else if (staff) {
-      content = index == 0
-          ? OperationsHome(api: widget.api)
+      content = index < 3
+          ? StaffWorkplace(api: widget.api, section: index, branchId: staffBranchId,
+              onBranchChanged: (id) => setState(() { staffBranchId = id; version++; }),
+              showVisits: () => setState(() => index = 1),
+              showSales: () => setState(() => index = 2))
           : AccountScreen(api: widget.api, workplace: true);
     } else {
       content = switch (index) {

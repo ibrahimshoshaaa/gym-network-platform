@@ -1,3 +1,4 @@
+import {authority} from "../auth/delegation.js";
 import { platformFinance } from "./platform.js";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { requireActor, requireGymOwner } from "../auth/authorization.js";
@@ -53,7 +54,7 @@ async function scope(tx: Tx, actorId: string, f: Filter): Promise<Scope> {
     };
   if (!gymId) throw new DomainError("GYM_ACCESS_DENIED");
   const gym = await tx.gym.findUnique({ where: { id: gymId } });
-  const owner = Boolean(gym?.ownerId === actorId && gym.ownerAcceptedAt);
+  const owner = Boolean(gym?.ownerId === actorId && gym.ownerAcceptedAt)||(await authority(tx,actorId,gymId)).full;
   if (owner) {
     await requireGymOwner(tx, actorId, gymId, false);
     return {
