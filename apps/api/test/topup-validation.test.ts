@@ -33,3 +33,11 @@ test('Cloudinary storage fails closed until credentials are configured', () => {
   try { names.forEach(n => delete process.env[n]); assert.throws(() => new CloudinaryReceiptStorage().readUrl('synthetic'), { code: 'STORAGE_NOT_CONFIGURED' }); }
   finally { names.forEach((n, i) => { if (before[i] === undefined) delete process.env[n]; else process.env[n] = before[i]; }); }
 });
+
+
+test('central purchases require one gym target and cannot mix trainee or branch destinations',()=>{
+ const gym='abcdef02-2345-4123-8123-123456789abc',branch='abcdef03-2345-4123-8123-123456789abc';
+ assert.equal(quoteSchema.safeParse({kind:'BRANCH_STOCK',receivingGymId:gym,points:10}).success,true);
+ assert.equal(quoteSchema.safeParse({kind:'BRANCH_STOCK',receivingGymId:gym,receivingBranchId:branch,points:10}).success,false);
+ assert.equal(quoteSchema.safeParse({kind:'TRAINEE',receivingGymId:gym,points:10}).success,false);
+});

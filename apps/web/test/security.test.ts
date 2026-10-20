@@ -260,3 +260,13 @@ test("trainee wallet proxy allows only own read endpoints without arbitrary acco
   }
   assert.equal(allowedPath("GET", "trainee/wallet/some-user/movements"), false);
 });
+
+
+test('inventory overview and immutable transfer history use explicit gym UUID routes',()=>{
+ const id='86d076a7-7827-4013-a6f9-a32f94e0131b';
+ assert.equal(allowedPath('GET',`gyms/${id}/inventory`),true);
+ assert.equal(allowedPath('GET',`gyms/${id}/stock-transfers`),true);
+ assert.equal(allowedPath('POST',`gyms/${id}/stock-transfers`),true);
+ assert.equal(allowedPath('POST',`gyms/${id}/inventory`),false);
+ assert.equal(allowedPath('GET','gyms/not-a-uuid/inventory'),false);
+});

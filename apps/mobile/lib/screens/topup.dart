@@ -8,8 +8,8 @@ import '../core/portal_ui.dart';
 
 class TopupScreen extends StatefulWidget {
   final ApiClient api;
-  final String? branchId;
-  const TopupScreen({super.key, required this.api, this.branchId});
+  final String? branchId, gymId;
+  const TopupScreen({super.key, required this.api, this.branchId, this.gymId}) : assert(branchId == null || gymId == null);
   @override
   State<TopupScreen> createState() => _TopupScreenState();
 }
@@ -32,10 +32,11 @@ class _TopupScreenState extends State<TopupScreen> {
     super.dispose();
   }
 
-  String get kind => widget.branchId == null ? 'TRAINEE' : 'BRANCH_STOCK';
+  String get kind => widget.branchId == null && widget.gymId == null ? 'TRAINEE' : 'BRANCH_STOCK';
   Json get selection => {
     'kind': kind,
     if (widget.branchId != null) 'receivingBranchId': widget.branchId,
+    if (widget.gymId != null) 'receivingGymId': widget.gymId,
     if (byAmount)
       'amountPiasters': piasters(amount.text)
     else
@@ -150,7 +151,7 @@ class _TopupScreenState extends State<TopupScreen> {
         .map((e) => Map<String, dynamic>.from(e))
         .toList();
     return Screen(
-      title: widget.branchId == null ? 'اشحن رصيدك' : 'شراء نقاط للفرع',
+      title: widget.gymId != null ? 'شراء نقاط لرصيد صاحب الجيم' : widget.branchId == null ? 'اشحن رصيدك' : 'شراء نقاط للفرع',
       child: ListView(
         padding: const EdgeInsets.all(22),
         children: [
@@ -421,3 +422,4 @@ class TopupHistory extends StatelessWidget {
     ),
   );
 }
+

@@ -1785,12 +1785,27 @@ test(
           const ownerPointData=await ownerPointQuote.json();
           const ownerTopup=await request('/api/backend/admin/point-transfers',{cookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{recipientId:ownerPointData.recipientId,recipientLabel:ownerPointData.recipientLabel,gymId:newGym.gym.id,branchId:ownerPointData.branchId,points:30,pricingVersion:ownerPointData.pricingVersion,receivedAmountPiasters:ownerPointData.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH'}});
           assert.equal(ownerTopup.status,201,await ownerTopup.text());
+          // Fund the reserve, allocate to a branch, and recall through the real gateway.
+          const reservePath = `/api/backend/gyms/${newGym.gym.id}/inventory`, transfersPath = `/api/backend/gyms/${newGym.gym.id}/stock-transfers`;
+          const reserveBefore = await (await request(reservePath,{cookie:invitedOwnerCookie})).json();
+          assert.equal(reserveBefore.central,'30');
+          const allocateKey=randomUUID(), allocationBody={fromBranchId:null,toBranchId:setupBranch.branch.id,points:3};
+          const allocation=await request(transfersPath,{cookie:invitedOwnerCookie,method:'POST',headers:{'idempotency-key':allocateKey},body:allocationBody});
+          assert.equal(allocation.status,201);const allocationId=(await allocation.json()).id;
+          assert.equal((await (await request(transfersPath,{cookie:invitedOwnerCookie,method:'POST',headers:{'idempotency-key':allocateKey},body:allocationBody})).json()).id,allocationId);
+          const allocated=await (await request(reservePath,{cookie:invitedOwnerCookie})).json();
+          assert.equal(allocated.central,'27');assert.equal(allocated.total,reserveBefore.total);
+          assert.equal(allocated.branches.find(b=>b.id===setupBranch.branch.id).stock,3);
+          assert.equal((await request(transfersPath,{cookie:invitedOwnerCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{fromBranchId:setupBranch.branch.id,toBranchId:null,points:3}})).status,201);
+          assert.equal((await (await request(reservePath,{cookie:invitedOwnerCookie})).json()).central,'30');
+          const transferHistory=await request(transfersPath,{cookie:invitedOwnerCookie});
+          assert.equal(transferHistory.status,200);assert.ok((await transferHistory.json()).items.some(r=>r.id===allocationId));
           const ownerContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const ownerSeparator=invitedOwnerCookie.indexOf('=');
           await ownerContext.addCookies([{name:invitedOwnerCookie.slice(0,ownerSeparator),value:invitedOwnerCookie.slice(ownerSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
           const ownerPage=await ownerContext.newPage();await ownerPage.goto(origin);
           await ownerPage.getByRole('button',{name:/محفظتي وإرسال النقاط/}).click();
-          await expect(ownerPage.getByText('متاح للإرسال',{exact:true})).toBeVisible();
+          await expect(ownerPage.getByText('رصيد صاحب الجيم المتاح للبيع',{exact:true})).toBeVisible();
           await ownerPage.getByLabel('رقم موبايل المتدرب',{exact:true}).fill(traineeBody.phone);
           await ownerPage.getByRole('button',{name:'متابعة',exact:true}).click();
           await expect(ownerPage.locator('.transfer-recipient')).toContainText(traineeBody.displayName);
@@ -1801,6 +1816,7 @@ test(
           await ownerPage.getByRole('button',{name:'تأكيد الإرسال',exact:true}).click();
           await expect(ownerPage.getByRole('heading',{name:'تم إرسال النقاط',exact:true})).toBeVisible();
           assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance,walletBeforeDispatch+15);
+          assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_gymId:{type:'GYM_INVENTORY',gymId:newGym.gym.id}}})).balance,25);
           assert.equal(await ownerPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'gym wallet must fit mobile');
           await ownerContext.close();
           const incomingSupport=await request('/api/backend/support/tickets',{cookie:traineeCookie,method:'POST',body:{subject:'Synthetic browser support',category:'HELP',body:'Synthetic support message from mobile viewport',clientKey:randomUUID()}});

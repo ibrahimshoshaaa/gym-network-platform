@@ -8,6 +8,7 @@ import 'directory.dart';
 import 'topup.dart';
 import 'account.dart';
 import 'operations.dart';
+import 'inventory.dart';
 
 String reportRange() {
   final now = DateTime.now(), from = now.subtract(const Duration(days: 29));
@@ -71,7 +72,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     ],
     Panel(color:ink,padding:const EdgeInsets.all(20),child:Column(
      crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('نقاط متاحة لبيعها للمتدربين',style:TextStyle(color:Colors.white70,fontSize:12)),
+      const Text('رصيد صاحب الجيم',style:TextStyle(color:Colors.white70,fontSize:12)),
       const SizedBox(height:10),
       if(walletLoading&&wallet==null)
        const Padding(padding:EdgeInsets.all(12),child:CircularProgressIndicator(color:lime))
@@ -79,7 +80,7 @@ class _OwnerHomeState extends State<OwnerHome> {
        FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
         child:Text('$available نقطة',style:const TextStyle(color:lime,fontSize:36,height:1.2,fontWeight:FontWeight.w900))),
        const SizedBox(height:8),
-       Text('إجمالي مخزون الفروع ${wallet!['total']} نقطة',
+       Text('موزّع على الفروع ${wallet!['branchesTotal'] ?? wallet!['total']} نقطة',
         style:const TextStyle(color:Colors.white70,fontSize:11)),
       ]else const Text('تعذر تحميل رصيد النقاط',style:TextStyle(color:Colors.white)),
       const SizedBox(height:16),
@@ -92,21 +93,27 @@ class _OwnerHomeState extends State<OwnerHome> {
         },
        icon:const Icon(Icons.north_west_rounded,size:20),
        label:const Text('بيع نقاط لمتدرب')),
-      TextButton(onPressed:widget.showBranches,
+      TextButton(onPressed:!active?null:()async{
+        await open(context,TopupScreen(api:widget.api,gymId:gym['id']));
+        if(mounted)await load();
+       },
        style:TextButton.styleFrom(foregroundColor:Colors.white70),
        child:const Text('شراء نقاط لرصيد الجيم',style:TextStyle(fontSize:12))),
      ])),
     if(walletError!=null)ErrorNote(walletError,retry:load),
-    if(wallet!=null&&'${wallet!['total']}'!='${wallet!['available']}')...[
+    if(wallet!=null&&'${wallet!['central']}'=='0'&&BigInt.tryParse('${wallet!['branchesTotal']}')!=null&&BigInt.parse('${wallet!['branchesTotal']}')>BigInt.zero)...[
       const SizedBox(height:12),
-      const PortalNote('نقاط الفروع غير المفعّلة محفوظة في الإجمالي، وغير متاحة للبيع.'),
+      const PortalNote('نقاطك موجودة في الفروع. من «إدارة النقاط» تقدر ترجع جزء منها لرصيدك أو تنقلها لفرع تاني.'),
     ],
     const SectionTitle('شغل الجيم'),
     Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
+      _ownerTask('إدارة النقاط','رصيدك، توزيع الفروع والتحويل بينها',Icons.swap_horiz_rounded,
+        ()async{await open(context,InventoryScreen(api:widget.api,gym:gym));if(mounted)await load();}),
+      const Divider(height:1),
       _ownerTask('تسجيل زيارة','امسح رمز المتدرب وأكّد حضوره',Icons.qr_code_scanner_rounded,
         active?widget.showOperations:null),
       const Divider(height:1),
-      _ownerTask('الفروع والموظفين','بيانات الفروع، شراء النقاط والتعيينات',
+      _ownerTask('الفروع والموظفين','بيانات الفروع والتعيينات',
         Icons.storefront_outlined,widget.showBranches),
       const Divider(height:1),
       _ownerTask('تقارير الجيم','راجع الزيارات وحركة النقاط',
@@ -462,6 +469,8 @@ class BranchesScreen extends StatelessWidget {
             ),
           ],
         ),
+        TextButton.icon(icon:const Icon(Icons.swap_horiz_rounded),label:const Text('إدارة النقاط وتوزيعها'),
+          onPressed:()async{await open(context,InventoryScreen(api:api,gym:gym));await reload();}),
         const SizedBox(height: 10),
         const Text(
           'حدد مكان الفرع على الخريطة واقترح نقاط الزيارة ومدتها. الإدارة هتراجعهم قبل التفعيل.',
@@ -543,12 +552,12 @@ class BranchesScreen extends StatelessWidget {
                             : () async {
                                 await open(
                                   context,
-                                  TopupScreen(api: api, branchId: b['id']),
+                                  StockTransfer(api: api, gym: gym, fromBranchId: b['id']),
                                 );
                                 await reload();
                               },
                         icon: const Icon(Icons.add_card_rounded, size: 18),
-                        label: const Text('شراء نقاط'),
+                        label: const Text('تحويل نقاط'),
                       ),
                       SizedBox(width:double.infinity,child:ExpansionTile(
                         tilePadding:EdgeInsets.zero,
@@ -1118,3 +1127,4 @@ class OwnerReport extends StatelessWidget {
     ),
   );
 }
+

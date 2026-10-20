@@ -270,3 +270,36 @@ test("suspension blocks stock movement while private history remains readable an
   assert.equal(balance.statusCode, 200);
   assert.equal(balance.json().stock, 10);
 });
+
+
+test('owner reserve, allocation and recall conserve stock without issuing points or moving money', async t => {
+  const f = await fixture(t), issuance = await db.pointAccount.findFirstOrThrow({where:{type:'ISSUANCE'}});
+  const moneyBefore = await db.moneyTransaction.count();
+  const move = (fromBranchId:string|null,toBranchId:string|null,points:number,key=randomUUID()) => f.transfer({key,body:{fromBranchId,toBranchId,points}});
+  const key = randomUUID();
+  const recall = await Promise.all([move(f.a.id,null,30,key),move(f.a.id,null,30,key)]);
+  assert.ok(recall.every(r=>r.statusCode===201),recall.map(r=>r.body).join());
+  assert.equal(recall[0]!.json().id,recall[1]!.json().id);
+  const central = await db.pointAccount.findUniqueOrThrow({where:{type_gymId:{type:'GYM_INVENTORY',gymId:f.gym.id}}});
+  assert.equal(central.balance,30);
+  const summary = await f.get(`/gyms/${f.gym.id}/inventory`);
+  assert.equal(summary.json().central,'30');assert.equal(summary.json().branchesTotal,'20');assert.equal(summary.json().total,'50');
+  const competing = await Promise.all([move(null,f.b.id,20),move(null,f.a.id,20)]);
+  assert.deepEqual(competing.map(r=>r.statusCode).sort(),[201,409]);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:central.id}})).balance,10);
+  assert.equal((await move(null,f.b.id,1,key)).json().code,'IDEMPOTENCY_CONFLICT');
+  assert.equal((await move(null,f.foreign.id,1)).statusCode,403);
+  for(const actor of [f.cashier.id,f.outsider.id,f.admin.id]) {
+    assert.equal((await f.get(`/gyms/${f.gym.id}/inventory`,actor)).statusCode,403);
+    assert.equal((await f.get(`/gyms/${f.gym.id}/stock-transfers`,actor)).statusCode,403);
+    assert.equal((await f.transfer({actor,body:{fromBranchId:null,toBranchId:f.a.id,points:1}})).statusCode,403);
+  }
+  const history = await f.get(`/gyms/${f.gym.id}/stock-transfers`);
+  assert.equal(history.statusCode,200);assert.equal(history.json().items.length,2);
+  assert.equal(history.json().items.find((r:{id:string})=>r.id===recall[0]!.json().id).toBranchId,null);
+  assert.equal((await f.get(`/gyms/${f.gym.id}/stock-transfers?cursor=${randomUUID()}`)).statusCode,400);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:issuance.id}})).balance,issuance.balance);
+  assert.equal(await db.moneyTransaction.count(),moneyBefore);
+  await assert.rejects(db.pointAccount.update({where:{id:central.id},data:{gymId:f.foreignGym.id}}));
+  await assert.rejects(db.pointAccount.update({where:{id:central.id},data:{balance:999}}));
+});

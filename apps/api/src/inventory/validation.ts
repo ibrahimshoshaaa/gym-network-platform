@@ -5,8 +5,8 @@ export const id = z
   .transform((v) => v.toLowerCase());
 export const transferSchema = z
   .object({
-    fromBranchId: id,
-    toBranchId: id,
+    fromBranchId: id.nullable(),
+    toBranchId: id.nullable(),
     points: z.number().int().positive().max(2147483647),
   })
   .strict()
@@ -17,3 +17,4 @@ export const pageSchema = z
     cursor: id.optional(),
   })
   .strict();
+

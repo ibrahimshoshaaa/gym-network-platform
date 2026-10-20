@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Prisma, type PrismaClient, type PointTxKind, type MoneyTxKind } from '@prisma/client';
-import { requireAdmin, requireBranchAccess } from '../auth/authorization.js';
+import { requireAdmin, requireBranchAccess, requireGymOwner } from '../auth/authorization.js';
+import { centralStock } from '../inventory/central.js';
 import { DomainError } from '../domain/errors.js';
 
 type Entry = { accountId: string; delta: bigint };
@@ -114,15 +115,18 @@ export function postLedger(db: PrismaClient, command: LedgerCommand) {
 }
 
 export function transferStock(db: PrismaClient, input: {
-  actorId: string; gymId?: string; fromBranchId: string; toBranchId: string; points: number; idempotencyKey: string;
+  actorId: string; gymId?: string; fromBranchId: string | null; toBranchId: string | null; points: number; idempotencyKey: string;
 }) {
   if (!Number.isSafeInteger(input.points) || input.points <= 0 || input.points > Number(maxInt) || input.fromBranchId === input.toBranchId) throw new DomainError('INVALID_TRANSFER');
   return serializable(db, async tx => {
-    const source = await requireBranchAccess(tx, input.actorId, input.fromBranchId, 'TRANSFER_STOCK');
-    const target = await requireBranchAccess(tx, input.actorId, input.toBranchId, 'TRANSFER_STOCK');
-    if (source.gymId !== target.gymId || (input.gymId && input.gymId !== source.gymId)) throw new DomainError('BRANCH_ACCESS_DENIED');
-    const [from, to] = await Promise.all([input.fromBranchId, input.toBranchId].map(branchId =>
-      tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId } } })));
+    const branchIds = [input.fromBranchId, input.toBranchId].filter((id): id is string => id !== null);
+    const branches = await Promise.all(branchIds.map(id => requireBranchAccess(tx, input.actorId, id, 'TRANSFER_STOCK')));
+    const gymId = input.gymId ?? branches[0]?.gymId;
+    if (!gymId || branches.some(b => b.gymId !== gymId)) throw new DomainError('BRANCH_ACCESS_DENIED');
+    const gym = await requireGymOwner(tx, input.actorId, gymId, false);
+    if (gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
+    const account = async (branchId: string | null) => branchId === null ? centralStock(tx, gymId) : tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId } } });
+    const from = await account(input.fromBranchId), to = await account(input.toBranchId);
     if (!from || !to) throw new DomainError('ACCOUNT_NOT_FOUND');
     return postInTransaction(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: 'Owner branch stock transfer',
       points: { kind: 'TRANSFER', entries: [{ accountId: from.id, delta: -BigInt(input.points) }, { accountId: to.id, delta: BigInt(input.points) }] } });
@@ -158,3 +162,4 @@ export function reverseLedger(db: PrismaClient, input: {
     });
   });
 }
+

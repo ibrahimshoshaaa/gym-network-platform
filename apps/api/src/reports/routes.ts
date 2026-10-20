@@ -27,7 +27,7 @@ export function registerReportRoutes(app: FastifyInstance, db: PrismaClient) {
     const gyms=await tx.gym.findMany({where:q.cursor?{id:{gt:q.cursor}}:{},orderBy:{id:'asc'},take:q.limit+1,select:{id:true,name:true}}),ids=gyms.slice(0,q.limit).map(g=>g.id);
     if(!ids.length)return {items:[],nextCursor:null};
     const [stocks,money]=await Promise.all([
-      tx.$queryRaw<{gymId:string;points:string}[]>(Prisma.sql`SELECT b."gymId",sum(a.balance)::text AS points FROM "PointAccount" a JOIN "Branch" b ON b.id=a."branchId" WHERE a.type='BRANCH_INVENTORY' AND b."gymId" IN (${Prisma.join(ids.map(id=>Prisma.sql`${id}::uuid`))}) GROUP BY b."gymId"`),
+      tx.$queryRaw<{gymId:string;points:string}[]>(Prisma.sql`SELECT coalesce(a."gymId",b."gymId") AS "gymId",sum(a.balance)::text AS points FROM "PointAccount" a LEFT JOIN "Branch" b ON b.id=a."branchId" WHERE a.type IN ('BRANCH_INVENTORY','GYM_INVENTORY') AND coalesce(a."gymId",b."gymId") IN (${Prisma.join(ids.map(id=>Prisma.sql`${id}::uuid`))}) GROUP BY coalesce(a."gymId",b."gymId")`),
       tx.moneyAccount.groupBy({by:['gymId','type'],where:{gymId:{in:ids},type:{in:['GYM_AVAILABLE','GYM_RESERVED','GYM_DISPUTED']}},_sum:{balancePiasters:true}})
     ]);
     return {items:gyms.slice(0,q.limit).map(g=>{const amount=(t:string)=>money.find(m=>m.gymId===g.id&&m.type===t)?._sum.balancePiasters??0n;const available=amount('GYM_AVAILABLE'),reserved=amount('GYM_RESERVED'),disputed=amount('GYM_DISPUTED');return {...g,points:stocks.find(s=>s.gymId===g.id)?.points??'0',available:available.toString(),reserved:reserved.toString(),disputed:disputed.toString(),total:(available+reserved+disputed).toString()};}),nextCursor:gyms.length>q.limit?gyms[q.limit-1]!.id:null};
@@ -128,3 +128,4 @@ export function registerReportRoutes(app: FastifyInstance, db: PrismaClient) {
       .send(reportCsv(data.items));
   });
 }
+

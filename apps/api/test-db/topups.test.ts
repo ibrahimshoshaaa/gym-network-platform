@@ -190,3 +190,24 @@ test('receipt HTTP flow authenticates, normalizes, deduplicates and restricts sh
     assert.equal(listed.json().items.length, 0);
   } finally { await app.close(); }
 });
+
+
+test('owner can purchase central stock before adding branches; approval issues once into reserve', async () => {
+  const owner=await user('GYM_OWNER'), outsider=await user('GYM_OWNER');
+  const gym=await db.gym.create({data:{ownerId:owner.id,ownerAcceptedAt:new Date(),name:'Central Purchase Gym',status:'ACTIVE'}});
+  const selection={kind:'BRANCH_STOCK',receivingGymId:gym.id,points:20};
+  const quote=await getQuote(db,owner.id,selection);
+  const data=await input(owner.id,selection), key=randomUUID();
+  await expectCode(getQuote(db,outsider.id,selection),'GYM_ACCESS_DENIED');
+  assert.throws(()=>getQuote(db,owner.id,{...selection,receivingBranchId:randomUUID()}),/INVALID_INPUT/);
+  const request=await submitTopup(db,owner.id,key,data);
+  assert.equal(request.receivingGymId,gym.id);assert.equal(request.receivingBranchId,null);
+  assert.equal((await submitTopup(db,owner.id,key,data)).id,request.id);
+  const review=approval(quote.chargePiasters);
+  const responses=await Promise.all([reviewTopup(db,admin.id,request.id,review),reviewTopup(db,admin.id,request.id,review)]);
+  assert.equal(responses[0]!.pointTransactionId,responses[1]!.pointTransactionId);
+  const reserve=await db.pointAccount.findUniqueOrThrow({where:{type_gymId:{type:'GYM_INVENTORY',gymId:gym.id}}});
+  assert.equal(reserve.balance,20);assert.equal(reserve.expiresAt,null);
+  assert.equal(await db.pointAccount.count({where:{branch:{gymId:gym.id}}}),0);
+  await assert.rejects(db.topupRequest.update({where:{id:request.id},data:{receivingGymId:null}}));
+});

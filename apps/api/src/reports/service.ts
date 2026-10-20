@@ -79,7 +79,7 @@ async function scope(tx: Tx, actorId: string, f: Filter): Promise<Scope> {
 function source(kind: Kind, now: Date): Prisma.Sql {
   switch (kind) {
     case "TOPUPS":
-      return Prisma.sql`SELECT t.id,t."createdAt" AS "eventAt",t."reviewedAt" AS "completedAt",g.id AS "gymId",g.name AS "gymName",b.id AS "branchId",b.name AS "branchName",t.status::text AS status,t.points::bigint AS points,t."chargePiasters" AS amount,t."requestorUserId" AS "actorId",(t.status='APPROVED' AND EXISTS(SELECT 1 FROM "PointTransaction" p WHERE p.id=t."pointTransactionId" AND p.posted)) AS sealed FROM "TopupRequest" t LEFT JOIN "Branch" b ON b.id=t."receivingBranchId" LEFT JOIN "Gym" g ON g.id=b."gymId" UNION ALL SELECT d.id,d."createdAt",d."createdAt",g.id,g.name,b.id,b.name,'APPROVED'::text,d.points::bigint,d."chargePiasters",d."actorId",p.posted FROM "PointDispatch" d JOIN "PointTransaction" p ON p.id=d."pointTransactionId" LEFT JOIN "Gym" g ON g.id=d."gymId" LEFT JOIN "Branch" b ON b.id=d."branchId" WHERE d.kind='ADMIN_TOPUP'`;
+      return Prisma.sql`SELECT t.id,t."createdAt" AS "eventAt",t."reviewedAt" AS "completedAt",g.id AS "gymId",g.name AS "gymName",b.id AS "branchId",b.name AS "branchName",t.status::text AS status,t.points::bigint AS points,t."chargePiasters" AS amount,t."requestorUserId" AS "actorId",(t.status='APPROVED' AND EXISTS(SELECT 1 FROM "PointTransaction" p WHERE p.id=t."pointTransactionId" AND p.posted)) AS sealed FROM "TopupRequest" t LEFT JOIN "Branch" b ON b.id=t."receivingBranchId" LEFT JOIN "Gym" g ON g.id=coalesce(t."receivingGymId",b."gymId") UNION ALL SELECT d.id,d."createdAt",d."createdAt",g.id,g.name,b.id,b.name,'APPROVED'::text,d.points::bigint,d."chargePiasters",d."actorId",p.posted FROM "PointDispatch" d JOIN "PointTransaction" p ON p.id=d."pointTransactionId" LEFT JOIN "Gym" g ON g.id=d."gymId" LEFT JOIN "Branch" b ON b.id=d."branchId" WHERE d.kind='ADMIN_TOPUP'`;
     case "SALES":
       return Prisma.sql`SELECT s.id,s."createdAt" AS "eventAt",s."createdAt" AS "completedAt",g.id AS "gymId",g.name AS "gymName",b.id AS "branchId",b.name AS "branchName",'RECORDED'::text AS status,s.points::bigint AS points,s."chargePiasters" AS amount,s."cashierId" AS "actorId",true AS sealed FROM "PointSale" s JOIN "Branch" b ON b.id=s."branchId" JOIN "Gym" g ON g.id=b."gymId" UNION ALL SELECT d.id,d."createdAt",d."createdAt",g.id,g.name,NULL::uuid,NULL::text,'RECORDED'::text,d.points::bigint,d."chargePiasters",d."actorId",p.posted FROM "PointDispatch" d JOIN "Gym" g ON g.id=d."gymId" JOIN "PointTransaction" p ON p.id=d."pointTransactionId" WHERE d.kind='GYM_SALE'`;
     case "VISITS":
@@ -192,7 +192,7 @@ export async function reportSummary(
         )
       : null;
     const [stock] = await tx.$queryRaw<{ points: string }[]>(
-      Prisma.sql`SELECT coalesce(sum(a.balance),0)::text AS points FROM "PointAccount" a JOIN "Branch" b ON b.id=a."branchId" WHERE a.type='BRANCH_INVENTORY' ${s.gymId ? Prisma.sql`AND b."gymId"=${s.gymId}::uuid` : Prisma.empty} ${s.branchId ? Prisma.sql`AND b.id=${s.branchId}::uuid` : Prisma.empty}`,
+      Prisma.sql`SELECT coalesce(sum(a.balance),0)::text AS points FROM "PointAccount" a LEFT JOIN "Branch" b ON b.id=a."branchId" WHERE a.type IN ('BRANCH_INVENTORY','GYM_INVENTORY') ${s.gymId ? Prisma.sql`AND coalesce(a."gymId",b."gymId")=${s.gymId}::uuid` : Prisma.empty} ${s.branchId ? Prisma.sql`AND b.id=${s.branchId}::uuid` : Prisma.empty}`,
     );
     let reconciliation = null;
     if (s.admin && !s.gymId && !s.branchId) {
@@ -319,3 +319,4 @@ export function reportCsv(rows: ReportRow[]) {
     "\r\n"
   );
 }
+
