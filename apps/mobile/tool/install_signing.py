@@ -1,5 +1,8 @@
 """Restore the release keystore only inside a trusted CI release step."""
 import base64
+import hashlib
+import re
+import subprocess
 import os
 from pathlib import Path
 
@@ -15,5 +18,22 @@ def install():
     target.write_bytes(base64.b64decode(os.environ['ANDROID_KEYSTORE_BASE64'], validate=True))
     target.chmod(0o600)
 
-if __name__ == '__main__':
+def preflight():
     install()
+    target = Path(os.environ['GYMBANK_KEYSTORE_PATH'])
+    try:
+        result = subprocess.run(['keytool', '-exportcert', '-keystore', str(target),
+                                 '-alias', os.environ['ANDROID_KEY_ALIAS'],
+                                 '-storepass:env', 'ANDROID_KEYSTORE_PASSWORD'],
+                                capture_output=True, check=True)
+    except subprocess.CalledProcessError:
+        raise SystemExit('Cannot unlock the supplied GymBank keystore/alias. Check the existing Secrets; do not generate a new key.') from None
+    actual = hashlib.sha256(result.stdout).hexdigest()
+    expected = re.sub(r'[\s:]', '', os.environ['ANDROID_SIGNING_CERT_SHA256']).lower()
+    if actual != expected:
+        print('Public certificate SHA-256 from supplied keystore: ' + actual)
+        raise SystemExit('ANDROID_SIGNING_CERT_SHA256 does not match the supplied keystore certificate.')
+    print('Keystore certificate matches expected permanent GymBank identity.')
+
+if __name__ == '__main__':
+    preflight()

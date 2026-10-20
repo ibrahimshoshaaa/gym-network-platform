@@ -109,3 +109,28 @@ class SdkScopedSignerTests(unittest.TestCase):
         output='Signer (minSdkVersion=24, maxSdkVersion=32) certificate SHA-256 digest: '+('a'*64)+'\nSigner (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: '+('b'*64)
         with patch('verify_apks.subprocess.run',return_value=SimpleNamespace(stdout=output)):
             with self.assertRaises(SystemExit): verify(Path('synthetic.apk'),'apksigner','aapt','a'*64,100001)
+
+
+class CertificatePreflightTests(unittest.TestCase):
+    def test_keystore_fingerprint_mismatch_stops_before_compilation(self):
+        import hashlib
+        from types import SimpleNamespace
+        from install_signing import preflight
+        with patch('install_signing.install'),patch.dict(os.environ,{'GYMBANK_KEYSTORE_PATH':'fixture.jks','ANDROID_KEY_ALIAS':'gymbank','ANDROID_SIGNING_CERT_SHA256':'b'*64}),patch('install_signing.subprocess.run',return_value=SimpleNamespace(stdout=b'synthetic certificate')):
+            with self.assertRaises(SystemExit): preflight()
+
+    def test_correct_keystore_fingerprint_accepts_display_spacing(self):
+        import hashlib
+        from types import SimpleNamespace
+        from install_signing import preflight
+        digest=hashlib.sha256(b'synthetic certificate').hexdigest()
+        with patch('install_signing.install'),patch.dict(os.environ,{'GYMBANK_KEYSTORE_PATH':'fixture.jks','ANDROID_KEY_ALIAS':'gymbank','ANDROID_SIGNING_CERT_SHA256':' '+':'.join(digest[i:i+2] for i in range(0,64,2))+'\n'}),patch('install_signing.subprocess.run',return_value=SimpleNamespace(stdout=b'synthetic certificate')):
+            preflight()
+
+    def test_numbered_sdk_scoped_certificate_label_is_accepted(self):
+        from verify_apks import verify
+        from types import SimpleNamespace
+        digest='a'*64
+        output='Signer #1 (minSdkVersion=24, maxSdkVersion=2147483647) certificate SHA-256 digest: '+digest
+        results=[SimpleNamespace(stdout=output),SimpleNamespace(stdout="package: name='net.shotech.gym_network' versionCode='100001' versionName='0.2.7'")]
+        with patch('verify_apks.subprocess.run',side_effect=results): verify(Path('fixture.apk'),'apksigner','aapt',digest,100001)

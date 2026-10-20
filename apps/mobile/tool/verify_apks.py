@@ -8,9 +8,11 @@ from pathlib import Path
 def verify(apk, apksigner, aapt, fingerprint, version_code):
     result = subprocess.run([str(apksigner), 'verify', '--verbose', '--print-certs', str(apk)],
                             capture_output=True, text=True, check=True)
-    digests = re.findall(r'^Signer (?:#\d+|\(minSdkVersion=\d+, maxSdkVersion=\d+\)) certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$', result.stdout, re.MULTILINE)
-    expected = fingerprint.replace(':', '').strip().lower()
+    digests = re.findall(r'^Signer[^\r\n]*? certificate SHA-256 digest: ([0-9a-fA-F]{64})\s*$', result.stdout, re.MULTILINE)
+    expected = re.sub(r'[\s:]', '', fingerprint).lower()
     if not re.fullmatch('[0-9a-f]{64}', expected) or not digests or {d.lower() for d in digests} != {expected}:
+        print('APK public signer certificate digests: ' + ', '.join(digests or ['no recognized certificate lines']))
+        print('Signer labels: ' + '; '.join(line.split(' certificate ')[0] for line in result.stdout.splitlines() if line.startswith('Signer') and 'certificate SHA-256 digest:' in line))
         raise SystemExit('APK signing identity does not match the permanent GymBank certificate')
     badging = subprocess.run([str(aapt), 'dump', 'badging', str(apk)],
                              capture_output=True, text=True, check=True).stdout
