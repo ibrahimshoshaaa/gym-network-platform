@@ -1,3 +1,4 @@
+import {authority} from "../auth/delegation.js";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
@@ -62,7 +63,7 @@ export async function readBranch(tx: Tx, actorId: string, branchId: string) {
     !(branch.gym.ownerId === actorId && branch.gym.ownerAcceptedAt) &&
     !(await tx.staffAssignment.findFirst({
       where: { userId: actorId, branchId, active: true },
-    }))
+    })) && !(await authority(tx,actorId,branch.gymId,branchId)).full
   )
     throw new DomainError("BRANCH_ACCESS_DENIED");
   return branch;

@@ -60,11 +60,12 @@ export type Invite = {
 };
 export type NewInvite = { id: string; token: string; expiresAt: string };
 export type Staff = {
+  canDelegate?:boolean;branchId:string;
   id: string;
   role: string;
   active: boolean;
   branch: { name: string };
-  user: { displayName: string; email: string; phoneE164: string };
+  user: { id:string;displayName: string; email: string; phoneE164: string };
 };
 export type Pricing = {
   id: string;

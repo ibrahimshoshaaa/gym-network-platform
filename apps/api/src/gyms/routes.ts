@@ -1,3 +1,5 @@
+import {saveDelegation} from "./delegations.js";
+import {authority,requirePermission} from "../auth/delegation.js";
 import { approveBranchSetup } from "./setup.js";
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
@@ -25,7 +27,7 @@ export async function actorId(db: PrismaClient, request: FastifyRequest) {
 export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
   app.get('/me/access', async request => {
     const userId = await actorId(db, request);
-    return { ownedGyms: await db.gym.findMany({ where: { ownerId: userId, ownerAcceptedAt: { not: null } }, select: { id: true, name: true, status: true }, take: 100 }),
+    return { ownedGyms: await db.gym.findMany({ where: {ownerAcceptedAt:{not:null},OR:[{ownerId:userId},{delegations:{some:{userId,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId,role:'BRANCH_MANAGER',active:true}}}}}]}, select: { id: true, name: true, status: true }, take: 100 }),
       assignments: await db.staffAssignment.findMany({ where: { userId, active: true }, select: { id: true, role: true, branch: { select: { id: true, name: true, status: true, gymId: true, gym: { select: { status: true } } } } }, take: 100 }) };
   });
   app.post('/admin/gyms', { bodyLimit: 8192 }, async (r, reply) => reply.code(201).send(await createGym(db, await actorId(db, r), r.body)));
@@ -66,13 +68,15 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
     return db.$transaction(async tx => { await requireAdmin(tx, userId); return page(await tx.branchPricingRequest.findMany({ ...args, where: { status: 'PENDING' }, include: { branch: { select: { id: true, name: true, gymId: true, gym: { select: { name: true, status: true } } } } } }), args.take); });
   });
   app.post('/admin/price-change-requests/:requestId/review', async r => reviewPricing(db, await actorId(db, r), id(r, 'requestId'), r.body));
+  app.put('/gyms/:gymId/delegations',async r=>saveDelegation(db,await actorId(db,r),id(r,'gymId'),r.body));
+  app.get('/gyms/:gymId/delegations',async r=>{const actor=await actorId(db,r),gymId=id(r,'gymId');await requireActor(db,actor);const gym=await db.gym.findUnique({where:{id:gymId}});if(gym?.ownerId!==actor)throw new DomainError('GYM_ACCESS_DENIED');return {items:await db.staffDelegation.findMany({where:{gymId},orderBy:{id:'asc'},take:500})};});
   app.get('/gyms', async r => {
     const userId = await actorId(db, r); const args = pagination(r);
-    return page(await db.gym.findMany({ ...args, where: { ownerId: userId, ownerAcceptedAt: { not: null } } }), args.take);
+    return page(await db.gym.findMany({ ...args, where: {ownerAcceptedAt:{not:null},OR:[{ownerId:userId},{delegations:{some:{userId,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId,role:'BRANCH_MANAGER',active:true}}}}}]} }), args.take);
   });
   app.get('/gyms/:gymId', async r => {
     const userId = await actorId(db, r), gymId = id(r, 'gymId');
-    return db.$transaction(async tx => requireGymOwner(tx, userId, gymId, false));
+    return db.$transaction(async tx => ({...await requireGymOwner(tx,userId,gymId,false),canDelegate:(await tx.gym.findUnique({where:{id:gymId}}))?.ownerId===userId}));
   });
   app.patch('/gyms/:gymId', async r => updateGym(db, await actorId(db, r), id(r, 'gymId'), r.body));
   app.get('/gyms/:gymId/branches', async r => {
@@ -96,7 +100,7 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
     const query = parse(pageSchema.extend({ branchId: idSchema.optional() }), r.query);
     const args = { take: query.limit + 1, orderBy: { id: 'asc' as const },
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}) };
-    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.staffAssignment.findMany({ ...args, where: { branch: { gymId }, ...(query.branchId ? { branchId: query.branchId } : {}) }, select: { id: true, branchId: true, role: true, active: true, branch: { select: { name: true } }, user: { select: { id: true, displayName: true, email: true, phoneE164: true } } } }), args.take); });
+    return db.$transaction(async tx => { if(query.branchId)await requirePermission(tx,userId,gymId,'MANAGE_CASHIERS',query.branchId);else await requireGymOwner(tx, userId, gymId, false); const canDelegate=(await tx.gym.findUnique({where:{id:gymId}}))?.ownerId===userId;const result=page(await tx.staffAssignment.findMany({ ...args, where: { branch: { gymId }, ...(query.branchId ? { branchId: query.branchId } : {}) }, select: { id: true, branchId: true, role: true, active: true, branch: { select: { name: true } }, user: { select: { id: true, displayName: true, email: true, phoneE164: true } } } }), args.take);return {...result,items:result.items.map(s=>({...s,canDelegate}))}; });
   });
   app.patch('/gyms/:gymId/staff/:assignmentId', async r => setStaffActive(db, await actorId(db, r), id(r, 'gymId'), id(r, 'assignmentId'), r.body));
   app.get('/gyms/:gymId/invitations', async r => {

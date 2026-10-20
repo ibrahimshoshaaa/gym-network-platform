@@ -5,7 +5,7 @@ import { parse } from '../gyms/validation.js';
 import { period } from '../reports/validation.js';
 import { walletView } from '../wallet/validation.js';
 export async function scopeIds(tx:Prisma.TransactionClient,id:string){
- const gyms=await tx.gym.findMany({where:{ownerId:id,ownerAcceptedAt:{not:null}},select:{id:true}});
+ const gyms=await tx.gym.findMany({where:{ownerAcceptedAt:{not:null},OR:[{ownerId:id},{delegations:{some:{userId:id,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId:id,active:true,role:'BRANCH_MANAGER'}}}}}]},select:{id:true}});
  const branches=await tx.branch.findMany({where:{OR:[{gym:{ownerId:id,ownerAcceptedAt:{not:null}}},{staff:{some:{userId:id,active:true}},gym:{status:'ACTIVE',ownerAcceptedAt:{not:null},owner:{isActive:true}}}]},select:{id:true}});
  return {gymIds:gyms.map(g=>g.id),branchIds:branches.map(b=>b.id)};
 }

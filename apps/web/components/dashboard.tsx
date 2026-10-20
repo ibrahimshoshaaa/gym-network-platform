@@ -183,6 +183,8 @@ export function Dashboard() {
     [reviewGym,setReviewGym]=useState<string|null>(null),
     [cashierTask, setCashierTask] = useState<CashierTask>("visit"),
     [recovery, setRecovery] = useState<string|null>(null);
+  const [delegatedFull,setDelegatedFull]=useState(false);
+  useEffect(()=>{let live=true;setDelegatedFull(false);if(user&&user.role!=='GYM_OWNER'&&user.role!=='PLATFORM_ADMIN')api<{items:unknown[]}>('gyms?limit=1').then(r=>{if(live)setDelegatedFull(r.items.length>0);}).catch(()=>{});return()=>{live=false;};},[user?.id,user?.role]);
   function loggedIn(person: Identity) {
     setReviewGym(null);
     setUser(person);
@@ -254,7 +256,7 @@ export function Dashboard() {
     <TraineePortal user={user} logout={logout} loggingOut={loggingOut} onPassword={() => setPassword(true)} error={error} />
     {password && <PasswordChange onClose={() => setPassword(false)} />}
   </>;
-  if(user.role === "GYM_OWNER")return <OwnerJoinAccess key={user.id} enabled onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</OwnerJoinAccess>;
+  if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</OwnerJoinAccess>;
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;

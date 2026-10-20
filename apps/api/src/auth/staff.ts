@@ -1,3 +1,4 @@
+import {authority} from './delegation.js';
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import { DomainError } from '../domain/errors.js';
@@ -33,7 +34,8 @@ export async function acceptInvitation(db: PrismaClient, input: unknown) {
       if (creator.role !== 'PLATFORM_ADMIN' || current.gym.ownerId !== current.userId || current.gym.ownerAcceptedAt) throw new DomainError('INVITATION_INVALID');
       await tx.gym.update({ where: { id: current.gymId }, data: { ownerAcceptedAt: new Date() } });
     } else {
-      if (creator.id !== current.gym.ownerId || !current.gym.owner.isActive || !current.gym.ownerAcceptedAt || current.gym.status !== 'ACTIVE' || !current.branch || current.branch.gymId !== current.gymId || current.branch.status === 'SUSPENDED') throw new DomainError('INVITATION_INVALID');
+      const grant=await authority(tx,creator.id,current.gymId,current.branchId??undefined);
+      if (!(creator.id===current.gym.ownerId||grant.full||(current.role==='CASHIER'&&grant.permissions.includes('MANAGE_CASHIERS'))) || !current.gym.owner.isActive || !current.gym.ownerAcceptedAt || current.gym.status !== 'ACTIVE' || !current.branch || current.branch.gymId !== current.gymId || current.branch.status === 'SUSPENDED') throw new DomainError('INVITATION_INVALID');
       await tx.staffAssignment.upsert({ where: { userId_branchId_role: { userId: current.userId, branchId: current.branch.id, role: current.role } },
         create: { userId: current.userId, branchId: current.branch.id, role: current.role }, update: { active: true } });
     }

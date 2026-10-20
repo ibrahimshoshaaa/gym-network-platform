@@ -1,4 +1,5 @@
 "use client";
+import {ManagedBranches} from "./managed-branch";
 import { PlatformHero } from "./platform-identity";
 import { Building2, QrCode, Coins, Package, FileText, ArrowLeft } from "lucide-react";
 import { RoleSummary } from "./updates";
@@ -39,6 +40,7 @@ export function WorkHome({role,name,onNavigate}:{role:string;name:string;onNavig
    <div className="portal-section-heading"><h2>ابدأ مهمتك</h2><p>الزيارة والشحن من مكان واحد</p></div>
    <div className="work-task-grid portal-primary-tasks">{primaryTasks.map((task,index)=>taskButton(task,index===0))}</div>
   </section>
+  {!owner&&<ManagedBranches/>}
   <RoleSummary onNavigate={destination=>onNavigate(destination as WorkDestination)}/>
   <section aria-label="الإدارة والمتابعة" className="portal-task-section">
    <div className="portal-section-heading"><h2>{owner?"إدارة الجيم":"متابعة الفرع"}</h2><p>{owner?"الفروع والفريق والمستحقات":"السجل والبيانات المتاحة لحسابك"}</p></div>

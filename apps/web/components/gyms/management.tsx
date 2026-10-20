@@ -1,4 +1,5 @@
 "use client";
+import {StaffDelegation} from "../staff-delegation";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -187,6 +188,7 @@ function GymDetails({
     [invitation, setInvitation] = useState<NewInvite | null>(null),
     [history, setHistory] = useState<Branch | null>(null),
     [success, setSuccess] = useState("");
+  const [delegating,setDelegating]=useState<Staff|null>(null);
   const [receivables, setReceivables] = useState<
     { type: string; balancePiasters: string }[]
   >([]);
@@ -232,6 +234,7 @@ function GymDetails({
     active = gym?.status === "ACTIVE";
   return (
     <>
+      {delegating&&<StaffDelegation gymId={id} userId={delegating.user.id} branchId={delegating.branchId} name={delegating.user.displayName} onClose={()=>setDelegating(null)}/>}
       <div className="section-toolbar">
         <button className="text-button" onClick={onBack}>
           <ArrowRight size={17} />
@@ -612,6 +615,7 @@ function GymDetails({
                             </span>
                           </td>
                           <td data-label="الإجراء">
+                            {person.role==="BRANCH_MANAGER"&&person.canDelegate&&<button className="text-button" onClick={()=>setDelegating(person)}>تفويض الصلاحيات</button>}
                             <button
                               className="text-button"
                               disabled={!editable}
