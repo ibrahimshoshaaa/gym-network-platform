@@ -1,5 +1,6 @@
 "use client";
 import {StaffPortal} from "./staff-portal";
+import {AdminSideNav} from "./admin-side-nav";
 import {Campaigns} from "./campaigns";
 import { NetworkMark } from "./platform-identity";
 import { useEffect, useState, type FormEvent } from "react";
@@ -299,7 +300,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {admin ? adminSections.map(section=>{const item=available.find(t=>t.id===section.id)!;return <button key={section.id} aria-current={adminSection.id===section.id?"page":undefined} className={adminSection.id===section.id?"active":""} onClick={()=>navigate(section.id)}><item.icon size={20}/><span>{section.label}</span>{adminSection.id===section.id?<ChevronLeft size={16}/>:null}</button>;}) : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {admin ? <AdminSideNav items={available} current={contentTab} onNavigate={id=>navigate(id as Tab)}/> : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}

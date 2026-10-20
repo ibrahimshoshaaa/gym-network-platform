@@ -1718,9 +1718,14 @@ test(
           }
           await page.setViewportSize({width:393,height:851});
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await expect(page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button')).toHaveCount(5);
+          await expect(page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true})).toHaveAttribute('aria-expanded','false');
           await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true}).click();
-          await page.getByRole('navigation',{name:'أقسام الطلبات'}).getByRole('button',{name:'طلبات الانضمام',exact:true}).click();
+          await expect(page.getByRole('button',{name:'الطلبات',exact:true}).first()).toHaveAttribute('aria-expanded','true');
+          await expect(page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'طلبات الشحن',exact:true})).toBeVisible();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true}).click();
+          await expect(page.getByRole('group',{name:'قائمة الطلبات',exact:true})).toBeHidden();
+          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true}).click();
+          await page.getByRole('group',{name:'قائمة الطلبات',exact:true}).getByRole('button',{name:'طلبات الانضمام',exact:true}).click();
           const applicationCard=page.locator('article.card').filter({has:page.getByRole('heading',{name:'Synthetic Native Application',exact:true})});
           await expect(applicationCard).toContainText('Synthetic Native Owner');
           await applicationCard.getByRole('button',{name:'قبول الانضمام',exact:true}).click();
@@ -1730,7 +1735,8 @@ test(
           assert.equal(approvedNative.status,'APPROVED');assert.ok(approvedNative.gymId);
           assert.equal((await db.gym.findUniqueOrThrow({where:{id:approvedNative.gymId}})).ownerId,nativeOwner.user.id);
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
+          if(await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).getAttribute('aria-expanded')!=='true')await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
+          await page.getByRole('group',{name:'قائمة المالية',exact:true}).getByRole('button',{name:'نظرة عامة',exact:true}).click();
 
           await expect(page.getByRole('heading',{name:'الصورة المالية للمنصة',exact:true})).toBeVisible();
           await expect(page.getByText('إجمالي المستحق للجيمات',{exact:true})).toBeVisible();
@@ -1766,7 +1772,8 @@ test(
           // The admin and owner use the same phone → name → points → confirmation flow.
           const walletBeforeDispatch=(await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance;
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
-          await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
+          if(await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).getAttribute('aria-expanded')!=='true')await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
+          await page.getByRole('group',{name:'قائمة المالية',exact:true}).getByRole('button',{name:'نظرة عامة',exact:true}).click();
           await page.getByRole('navigation',{name:'أقسام المالية'}).getByRole('button',{name:'شحن مباشر بالرقم',exact:true}).click();
           await page.getByLabel('رقم موبايل المتدرب أو صاحب الجيم').fill(traineeBody.phone);
           await page.getByRole('button',{name:'متابعة',exact:true}).click();

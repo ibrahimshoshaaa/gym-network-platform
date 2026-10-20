@@ -542,3 +542,8 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
 .mobile-mirror .trainee-code>svg{display:block;width:min(100%,250px);height:auto;margin:24px auto}.mobile-mirror .trainee-code>h2{font-size:16px;margin:0 0 16px}.mobile-mirror .trainee-code>p{font-size:12px}
 
 .mobile-mirror .campaign-slider .campaign-banner{padding:0;margin:0;border:0!important;background:transparent!important;border-radius:22px}
+/* Admin sections expand in place; only a destination closes the mobile drawer. */
+.admin-workspace .sidebar{overflow-y:auto;overscroll-behavior:contain}
+.admin-nav-group{margin-block:4px 8px}.sidebar nav .admin-nav-toggle{width:100%}.sidebar nav .admin-nav-toggle.section-active{color:white;background:#ffffff0b;font-weight:750}.admin-nav-toggle>svg:last-child{margin-inline-start:auto;transition:transform .18s}.admin-nav-toggle>svg.expanded{transform:rotate(180deg)}
+.admin-nav-children{margin-inline-start:19px;padding-inline-start:9px;border-inline-start:1px solid #ffffff26}.admin-nav-children[hidden]{display:none}.sidebar nav .admin-nav-children button{width:100%;min-height:44px;padding:9px 10px;font-size:11px;gap:9px;white-space:normal;text-align:start}.admin-nav-children button span{flex:1}
+@media(prefers-reduced-motion:reduce){.admin-nav-toggle>svg:last-child{transition:none}}
