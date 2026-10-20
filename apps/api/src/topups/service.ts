@@ -8,8 +8,10 @@ import { parse } from '../gyms/validation.js';
 import { DomainError } from '../domain/errors.js';
 import { maxMoney, methodTypeSchema, moneySchema } from './settings.js';
 
-const selection = { kind: z.enum(['TRAINEE', 'BRANCH_STOCK']), receivingBranchId: z.string().uuid().optional(), points: z.number().int().positive().max(2147483647).optional(), amountPiasters: moneySchema.optional(), packageId: z.string().uuid().optional(), packageVersion: z.number().int().positive().optional() };
-const validSelection = (v: z.infer<z.ZodObject<typeof selection>>) => [v.points, v.amountPiasters, v.packageId].filter(x => x !== undefined).length === 1 && (v.kind === 'BRANCH_STOCK') === Boolean(v.receivingBranchId) && Boolean(v.packageId) === Boolean(v.packageVersion);
+import { centralStock } from '../inventory/central.js';
+
+const selection = { kind: z.enum(['TRAINEE', 'BRANCH_STOCK']), receivingBranchId: z.string().uuid().optional(), receivingGymId: z.string().uuid().optional(), points: z.number().int().positive().max(2147483647).optional(), amountPiasters: moneySchema.optional(), packageId: z.string().uuid().optional(), packageVersion: z.number().int().positive().optional() };
+const validSelection = (v: z.infer<z.ZodObject<typeof selection>>) => [v.points, v.amountPiasters, v.packageId].filter(x => x !== undefined).length === 1 && (v.kind === 'BRANCH_STOCK' ? Number(Boolean(v.receivingBranchId)) + Number(Boolean(v.receivingGymId)) === 1 : !v.receivingBranchId && !v.receivingGymId) && Boolean(v.packageId) === Boolean(v.packageVersion);
 export const quoteSchema = z.object(selection).strict().refine(validSelection);
 export const submitSchema = z.object({ ...selection, pricingVersion: z.number().int().positive(), receiptId: z.string().uuid(), paymentMethod: methodTypeSchema, paymentMethodVersion: z.number().int().positive() }).strict().refine(validSelection);
 export const reviewSchema = z.discriminatedUnion('decision', [
@@ -32,6 +34,9 @@ async function eligibility(tx: Tx, actorId: string, data: Selection) {
   const user = await requireActor(tx, actorId);
   if (data.kind === 'TRAINEE') {
     if (user.role !== 'TRAINEE' || data.receivingBranchId) throw new DomainError('ACCESS_DENIED');
+  } else if (data.receivingGymId) {
+    const gym = await requireGymOwner(tx, actorId, data.receivingGymId, false);
+    if (gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
   } else {
     const branch = await tx.branch.findUnique({ where: { id: data.receivingBranchId! } });
     if (!branch || branch.status !== 'ACTIVE') throw new DomainError('BRANCH_ACCESS_DENIED');
@@ -54,7 +59,7 @@ async function quote(tx: Tx, actorId: string, data: Selection) {
   return { ...calculation, policy, discountBps };
 }
 
-export const topupView = (r: TopupRequest) => ({ id: r.id, kind: r.kind, requestorUserId: r.requestorUserId, receivingBranchId: r.receivingBranchId, points: r.points, chargePiasters: r.chargePiasters.toString(), unitPricePiasters: r.unitPricePiasters?.toString() ?? null, discountBps: r.discountBps, redemptionBps: r.redemptionBps, policyId: r.policyId, status: r.status, receiptId: r.receiptId, paymentMethod: r.paymentMethodType, paymentAccount: r.paymentAccount, paymentAccountName: r.paymentAccountName, reviewedAt: r.reviewedAt, reviewReason: r.reviewReason, pointTransactionId: r.pointTransactionId, createdAt: r.createdAt });
+export const topupView = (r: TopupRequest) => ({ id: r.id, kind: r.kind, requestorUserId: r.requestorUserId, receivingBranchId: r.receivingBranchId, receivingGymId: r.receivingGymId, points: r.points, chargePiasters: r.chargePiasters.toString(), unitPricePiasters: r.unitPricePiasters?.toString() ?? null, discountBps: r.discountBps, redemptionBps: r.redemptionBps, policyId: r.policyId, status: r.status, receiptId: r.receiptId, paymentMethod: r.paymentMethodType, paymentAccount: r.paymentAccount, paymentAccountName: r.paymentAccountName, reviewedAt: r.reviewedAt, reviewReason: r.reviewReason, pointTransactionId: r.pointTransactionId, createdAt: r.createdAt });
 export function getQuote(db: PrismaClient, actorId: string, input: unknown) {
   const data = parse(quoteSchema, input);
   return db.$transaction(async tx => {
@@ -66,7 +71,7 @@ export function getQuote(db: PrismaClient, actorId: string, input: unknown) {
 export async function submitTopup(db: PrismaClient, actorId: string, key: string, input: unknown) {
   const data = parse(submitSchema, input); parse(z.string().uuid(), key);
   const idempotencyKey = `topup:${actorId}:${key}`;
-  const requestHash = createHash('sha256').update(JSON.stringify({ kind: data.kind, receivingBranchId: data.receivingBranchId, points: data.points, amountPiasters: data.amountPiasters, packageId: data.packageId, packageVersion: data.packageVersion, pricingVersion: data.pricingVersion, receiptId: data.receiptId, paymentMethod: data.paymentMethod, paymentMethodVersion: data.paymentMethodVersion })).digest('hex');
+  const requestHash = createHash('sha256').update(JSON.stringify({ kind: data.kind, receivingBranchId: data.receivingBranchId, ...(data.receivingGymId ? { receivingGymId: data.receivingGymId } : {}), points: data.points, amountPiasters: data.amountPiasters, packageId: data.packageId, packageVersion: data.packageVersion, pricingVersion: data.pricingVersion, receiptId: data.receiptId, paymentMethod: data.paymentMethod, paymentMethodVersion: data.paymentMethodVersion })).digest('hex');
   try {
     return await serializable(db, async tx => {
       await requireActor(tx, actorId);
@@ -83,7 +88,7 @@ export async function submitTopup(db: PrismaClient, actorId: string, key: string
       if (!receipt || receipt.ownerUserId !== actorId) throw new DomainError('RECEIPT_ACCESS_DENIED');
       if (await tx.topupRequest.findUnique({ where: { receiptId: receipt.id } }) || await tx.withdrawalRequest.findUnique({ where: { proofReceiptId: receipt.id } })) throw new DomainError('RECEIPT_ALREADY_USED');
       const request = await tx.topupRequest.create({ data: {
-        requestorUserId: actorId, kind: data.kind, receivingBranchId: data.receivingBranchId, points: q.points, chargePiasters: q.chargePiasters,
+        requestorUserId: actorId, kind: data.kind, receivingBranchId: data.receivingBranchId, ...(data.receivingGymId ? { receivingGymId: data.receivingGymId } : {}), points: q.points, chargePiasters: q.chargePiasters,
         receiptObjectKey: receipt.objectKey, receiptId: receipt.id, policyId: q.policy.id, unitPricePiasters: q.policy.pointPricePiasters, discountBps: q.discountBps, redemptionBps: q.policy.redemptionBps,
         paymentMethodType: method.type, paymentAccount: method.account, paymentAccountName: method.accountName, idempotencyKey, requestHash,
       } });
@@ -117,12 +122,12 @@ export async function reviewTopup(db: PrismaClient, actorId: string, requestId: 
       }
       if (!request.kind || !request.policyId || !request.receiptId) throw new DomainError('LEGACY_REQUEST_REVIEW_REQUIRED');
       if (BigInt(data.receivedAmountPiasters) !== request.chargePiasters) throw new DomainError('PAYMENT_AMOUNT_MISMATCH');
-      await eligibility(tx, request.requestorUserId, { kind: request.kind, receivingBranchId: request.receivingBranchId ?? undefined });
+      await eligibility(tx, request.requestorUserId, { kind: request.kind, receivingBranchId: request.receivingBranchId ?? undefined, receivingGymId: request.receivingGymId ?? undefined });
       const paymentReference = data.paymentReference.toUpperCase();
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'payment-reference:'+paymentReference},0))`;
       if (await tx.topupRequest.findUnique({ where: { paymentReference } }) || await tx.pointDispatch.findUnique({where:{paymentReference}})) throw new DomainError('PAYMENT_REFERENCE_USED');
       const issuance = await tx.pointAccount.findFirst({ where: { type: 'ISSUANCE' } });
-      const destination = request.kind === 'TRAINEE' ? await tx.pointAccount.findUnique({ where: { type_ownerUserId: { type: 'TRAINEE_WALLET', ownerUserId: request.requestorUserId } } }) : await tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: request.receivingBranchId! } } });
+      const destination = request.kind === 'TRAINEE' ? await tx.pointAccount.findUnique({ where: { type_ownerUserId: { type: 'TRAINEE_WALLET', ownerUserId: request.requestorUserId } } }) : request.receivingGymId ? await centralStock(tx, request.receivingGymId) : await tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: request.receivingBranchId! } } });
       if (!issuance || !destination) throw new DomainError('ACCOUNT_NOT_FOUND');
       if (request.kind === 'TRAINEE' && destination.balance > 0 && destination.expiresAt && destination.expiresAt <= new Date()) throw new DomainError('WALLET_EXPIRY_REVIEW_REQUIRED');
       const posting = await postInTransaction(tx, { actorId, idempotencyKey: `approved-topup:${requestId}`, reason: data.reason, referenceId: requestId,
@@ -137,3 +142,4 @@ export async function reviewTopup(db: PrismaClient, actorId: string, requestId: 
     throw e;
   }
 }
+

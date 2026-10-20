@@ -72,7 +72,7 @@ const rules: Record<string, RegExp[]> = {
     /^admin\/gym-applications$/,
     /^me\/gym-application$/,
     /^admin\/point-transfers$/,
-    new RegExp(`^gyms/${uuid}/(?:point-wallet|point-transfers)$`),
+    new RegExp(`^gyms/${uuid}/(?:point-wallet|point-transfers|inventory|stock-transfers)$`),
     /^disputes$/,
     new RegExp(`^gyms/${uuid}/images$`),
     /^notifications$/,
@@ -204,4 +204,5 @@ export async function boundedBody(
   }
   return result;
 }
+
 

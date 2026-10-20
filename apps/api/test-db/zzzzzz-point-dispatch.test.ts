@@ -19,21 +19,22 @@ async function fixture(){
  const branch=(status:'ACTIVE'|'SUSPENDED')=>db.branch.create({data:{gymId:gym.id,name:'Synthetic Dispatch Branch',status,visitPricePoints:20,sessionMinutes:60,priceApprovedAt:new Date(),pricingVersion:1}});
  const a=await branch('ACTIVE'),b=await branch('ACTIVE'),frozen=await branch('SUSPENDED');
  const stock=(branchId:string)=>db.pointAccount.create({data:{branchId,type:'BRANCH_INVENTORY'}});
+ const central=await db.pointAccount.create({data:{type:'GYM_INVENTORY',gymId:gym.id}});
  const x=await stock(a.id),y=await stock(b.id),z=await stock(frozen.id),w=await db.pointAccount.create({data:{type:'TRAINEE_WALLET',ownerUserId:trainee.id}});
  const issuance=await db.pointAccount.findFirstOrThrow({where:{type:'ISSUANCE'}});
- await postLedger(db,{actorId:admin.id,idempotencyKey:randomUUID(),reason:'Synthetic dispatch fixture funding',points:{kind:'ISSUE',entries:[{accountId:issuance.id,delta:-150n},{accountId:x.id,delta:30n},{accountId:y.id,delta:20n},{accountId:z.id,delta:100n}]}});
+ await postLedger(db,{actorId:admin.id,idempotencyKey:randomUUID(),reason:'Synthetic dispatch fixture funding',points:{kind:'ISSUE',entries:[{accountId:issuance.id,delta:-200n},{accountId:central.id,delta:50n},{accountId:x.id,delta:30n},{accountId:y.id,delta:20n},{accountId:z.id,delta:100n}]}});
  const quote=(actor=owner.id,points=40,source:string|undefined=gym.id,target:string|undefined=undefined,recipientId=trainee.id)=>db.$transaction(tx=>pointQuote(tx,actor,{recipientId,points,...(target?{gymId:target}:{})},source));
  const body=(q:Awaited<ReturnType<typeof quote>>,target:string|undefined=gym.id)=>({recipientId:q.recipientId,recipientLabel:q.recipientLabel,points:q.points,pricingVersion:q.pricingVersion,receivedAmountPiasters:q.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH',...(q.branchId?{branchId:q.branchId}:{}),...(target?{gymId:target}:{})});
- return {admin,owner,other,trainee,cashier,gym,a,b,frozen,x,y,z,w,quote,body};
+ return {admin,owner,other,trainee,cashier,gym,a,b,frozen,central,x,y,z,w,quote,body};
 }
-test('owner sends from aggregate eligible stock without cashier assignment; replay once and immutable report attribution',async()=>{
+test('owner sells only from independent central stock without cashier assignment; replay once and immutable report attribution',async()=>{
  const f=await fixture(),q=await f.quote(),payload=f.body(q),key=randomUUID(),before=await db.moneyTransaction.count();
- const balance=await db.$transaction(tx=>gymWallet(tx,f.owner.id,f.gym.id));assert.equal(balance.total,'150');assert.equal(balance.available,'50');
+ const balance=await db.$transaction(tx=>gymWallet(tx,f.owner.id,f.gym.id));assert.equal(balance.total,'200');assert.equal(balance.available,'50');
  const collectionBefore=await db.$transaction(tx=>platformFinance(tx,new Date()));
  const results=await Promise.all(Array.from({length:4},()=>dispatchPoints(db,f.owner.id,key,payload,f.gym.id)));assert.equal(new Set(results.map(r=>r.id)).size,1);
  const row=await db.pointDispatch.findUniqueOrThrow({where:{id:results[0]!.id}});assert.equal(row.branchId,null);assert.equal(row.gymId,f.gym.id);
  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.w.id}})).balance,40);assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.z.id}})).balance,100);
- const remaining=await db.pointAccount.findMany({where:{id:{in:[f.x.id,f.y.id]}}});assert.equal(remaining.reduce((s,a)=>s+a.balance,0),10);assert.equal(await db.moneyTransaction.count(),before);
+ const remaining=await db.pointAccount.findMany({where:{id:{in:[f.x.id,f.y.id]}}});assert.equal(remaining.reduce((s,a)=>s+a.balance,0),50);assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.central.id}})).balance,10);assert.equal(await db.moneyTransaction.count(),before);
  assert.equal((await db.$transaction(tx=>platformFinance(tx,new Date()))).collections.total,collectionBefore.collections.total);
  const movement=(await walletMovements(db,f.trainee.id,{})).items.find(r=>r.referenceId===row.id);assert.equal(movement?.operation,'SALE');assert.equal(movement?.branch,null);assert.match(movement?.sourceLabel??'',/Synthetic Dispatch Gym/);
  const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()),report=await reportRows(db,f.owner.id,{gymId:f.gym.id,kind:'SALES',from:date,to:date});assert.equal(report.items.find(r=>r.id===row.id)?.branchId,null);
@@ -47,7 +48,7 @@ test('admin phone topups quote and record trainee and gym collections at actual 
  const traineeQuote=await db.$transaction(tx=>pointQuote(tx,f.admin.id,{recipientId:f.trainee.id,points:10}));
  const first=await dispatchPoints(db,f.admin.id,randomUUID(),{...f.body(traineeQuote),gymId:undefined});assert.equal(first.kind,'ADMIN_TOPUP');
  const ownerQuote=await db.$transaction(tx=>pointQuote(tx,f.admin.id,{recipientId:f.owner.id,gymId:f.gym.id,points:10}));
- const second=await dispatchPoints(db,f.admin.id,randomUUID(),f.body(ownerQuote));assert.equal(second.gymId,f.gym.id);assert.ok(second.branchId);
+ const second=await dispatchPoints(db,f.admin.id,randomUUID(),f.body(ownerQuote));assert.equal(second.gymId,f.gym.id);assert.equal(second.branchId,null);assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.central.id}})).balance,60);
  const after=await db.$transaction(tx=>platformFinance(tx,new Date()));assert.equal(BigInt(after.collections.trainees)-BigInt(before.collections.trainees),BigInt(traineeQuote.chargePiasters));assert.equal(BigInt(after.collections.gyms)-BigInt(before.collections.gyms),BigInt(ownerQuote.chargePiasters));
  const movements=await walletMovements(db,f.trainee.id,{});assert.equal(movements.items.find(r=>r.referenceId===first.id)?.operation,'TOPUP');
 });
@@ -71,4 +72,5 @@ test('same payment reference cannot be approved in old topups and direct topups 
  await code(reviewTopup(db,f.admin.id,p.id,approve(ref)),'PAYMENT_REFERENCE_USED');
  const ref2='SYNTH-'+randomUUID(),p2=await pending();await reviewTopup(db,f.admin.id,p2.id,approve(ref2));await code(dispatchPoints(db,f.admin.id,randomUUID(),{...body,paymentReference:ref2}),'PAYMENT_REFERENCE_USED');
 });
+
 

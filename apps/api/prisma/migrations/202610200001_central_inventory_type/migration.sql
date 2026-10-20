@@ -1,0 +1,2 @@
+ALTER TYPE "PointAccountType" ADD VALUE 'GYM_INVENTORY';
+
