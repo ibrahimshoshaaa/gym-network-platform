@@ -496,9 +496,12 @@ class BranchesScreen extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          '${b['name']}',
-                          style: Theme.of(context).textTheme.titleLarge,
+                        child: TextButton(
+                          onPressed: b['status'] != 'ACTIVE' || gym['status'] != 'ACTIVE' ? null : () async {
+                            await open(context, BranchWorkspace(api: api, branch: {...b, 'gymName': gym['name'], 'canSell': true, 'canCancel': true, 'fullAccess': true}));
+                            await reload();
+                          },
+                          child: Text('${b['name']}', style: Theme.of(context).textTheme.titleLarge),
                         ),
                       ),
                       StatusPill(b['status']),
@@ -538,6 +541,7 @@ class BranchesScreen extends StatelessWidget {
                                       'gymName': gym['name'],
                                       'canSell': true,
                                       'canCancel': true,
+                                      'fullAccess': true,
                                     },
                                   ),
                                 );

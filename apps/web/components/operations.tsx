@@ -20,6 +20,8 @@ type Branch = {
   gymName: string;
   canSell: boolean;
   canCancel: boolean;
+  fullAccess?: boolean;
+  permissions?: string[];
 };
 type Sale = {
   id: string;
