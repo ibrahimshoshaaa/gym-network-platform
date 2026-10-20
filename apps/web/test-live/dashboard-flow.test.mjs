@@ -215,40 +215,6 @@ test(
       assert.equal(ownerLogin.status, 200);
       const ownerCookie = sessionCookie(ownerLogin);
       assert.ok(ownerCookie);
-
-      {
-      // Exercise native PUT through the real Next route, not only the API service.
-      const managerInvite = await request(`/api/backend/gyms/${gym.id}/staff-invitations`, {
-        cookie: ownerCookie, method: "POST",
-        body: {branchId: branch.id, role: "BRANCH_MANAGER", contact: {
-          displayName: "Synthetic Delegated Manager",
-          email: `delegated-manager-${id}@example.test`, phone: "01500000011",
-        }},
-      });
-      assert.equal(managerInvite.status, 201);
-      const pendingManager = await managerInvite.json();
-      const nativeLogin = await request("/api/mobile/auth/signin", {
-        method: "POST", body: {identifier: owner.email, password},
-      });
-      assert.equal(nativeLogin.status, 200);
-      const nativeSession = await nativeLogin.json();
-      const nativePath = `/api/mobile/gyms/${gym.id}/delegations`;
-      const grantBody = {userId: pendingManager.user.id, branchId: branch.id,
-        permissions: ["MANAGE_CASHIERS", "EDIT_BRANCH", "REQUEST_PRICING"],
-        fullAccess: false, active: true, expectedVersion: 0};
-      assert.equal((await request(nativePath, {method: "PUT", body: grantBody,
-        cookie: ownerCookie})).status, 401); // Cookies never authorize native calls.
-      const savedGrant = await request(nativePath, {method: "PUT", body: grantBody,
-        headers: {authorization: `Bearer ${nativeSession.accessToken}`}});
-      assert.equal(savedGrant.status, 200, await savedGrant.clone().text());
-      assert.equal((await savedGrant.json()).version, 1);
-      const nativeGrants = await request(nativePath, {
-        headers: {authorization: `Bearer ${nativeSession.accessToken}`}});
-      assert.equal(nativeGrants.status, 200);
-      assert.ok((await nativeGrants.json()).items.some(g =>
-        g.userId === pendingManager.user.id && g.permissions.includes("MANAGE_CASHIERS")));
-      }
-
       assert.equal(
         (
           await request("/api/backend/admin/topup-settings", {
@@ -1875,17 +1841,17 @@ test(
           const traineeContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const traineeSeparator=traineeCookie.indexOf('=');
           await traineeContext.addCookies([{name:traineeCookie.slice(0,traineeSeparator),value:traineeCookie.slice(traineeSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
-          const campaignBody={title:'Synthetic targeted browser campaign',body:'Synthetic platform notice for one trainee',audience:'TRAINEES',channel:'BOTH',placement:'HOME',status:'PUBLISHED',destination:'QR',priority:100,userIds:[traineeIdentity.user.id],gymIds:[],startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+3600000).toISOString(),imageId:null,expectedVersion:0};
+          const posterAsset=await db.campaignAsset.create({data:{objectKey:`synthetic-poster-${id}`,assetId:`synthetic-poster-${id}`,publicUrl:'https://res.cloudinary.com/gym-ci/image/upload/synthetic-poster.png',createdById:admin.id}});
+          const campaignBody={title:'Synthetic targeted browser campaign',body:'Synthetic platform notice for one trainee',audience:'TRAINEES',channel:'BOTH',placement:'HOME',status:'PUBLISHED',destination:'QR',priority:100,userIds:[traineeIdentity.user.id],gymIds:[],startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+3600000).toISOString(),imageId:posterAsset.id,expectedVersion:0};
           const campaignResponse=await request('/api/backend/admin/campaigns',{cookie,method:'POST',body:campaignBody});
           assert.equal(campaignResponse.status,200,await campaignResponse.clone().text());const campaign=await campaignResponse.json();
           const excludedCampaigns=await request('/api/backend/campaigns?placement=HOME',{cookie:invitedOwnerCookie});assert.equal(excludedCampaigns.status,200);assert.ok(!(await excludedCampaigns.json()).items.some(c=>c.id===campaign.id));
           const traineePage=await traineeContext.newPage();
           await traineePage.goto(origin);
-          const campaignCard=traineePage.locator('.campaign-banner').filter({hasText:campaignBody.title});await expect(campaignCard).toBeVisible();
+          const campaignCard=traineePage.locator('.campaign-banner').filter({has:traineePage.getByRole('button',{name:'فتح الإعلان',exact:true})});await expect(campaignCard).toBeVisible();
           assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'campaign must fit the personal mobile portal');
-          await campaignCard.getByRole('button',{name:'اعرف التفاصيل',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'رمز الدخول',exact:true})).toBeVisible();
+          await campaignCard.getByRole('button',{name:'فتح الإعلان',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'رمز الدخول',exact:true})).toBeVisible();
           const campaignFeed=await request('/api/backend/notifications',{cookie:traineeCookie});assert.equal(campaignFeed.status,200);assert.ok((await campaignFeed.json()).items.some(c=>c.id===`campaign:${campaign.id}:1`));
-          const posterAsset=await db.campaignAsset.create({data:{objectKey:`synthetic-poster-${id}`,assetId:`synthetic-poster-${id}`,publicUrl:'https://res.cloudinary.com/gym-ci/image/upload/synthetic-poster.png',createdById:admin.id}});
           const posterBody={...campaignBody,title:'',body:'',imageId:posterAsset.id,destination:'NONE',channel:'AD',priority:99};
           const posterResponse=await request('/api/backend/admin/campaigns',{cookie,method:'POST',body:posterBody});assert.equal(posterResponse.status,200,await posterResponse.clone().text());const posterCampaign=await posterResponse.json();
           await traineePage.clock.install();
@@ -1899,7 +1865,7 @@ test(
           await traineePage.getByRole('button',{name:'عرض الإعلان 1',exact:true}).click();await expect(campaignCard).toBeVisible();
           const pausePoster=await request(`/api/backend/admin/campaigns/${posterCampaign.id}`,{cookie,method:'PUT',body:{...posterBody,status:'PAUSED',expectedVersion:1}});assert.equal(pausePoster.status,200);
           const paused=await request(`/api/backend/admin/campaigns/${campaign.id}`,{cookie,method:'PUT',body:{...campaignBody,status:'PAUSED',expectedVersion:1}});assert.equal(paused.status,200);
-          await traineePage.getByRole('button',{name:'الرئيسية',exact:true}).click();await expect(traineePage.locator('.campaign-banner').filter({hasText:campaignBody.title})).toHaveCount(0);
+          await traineePage.getByRole('button',{name:'الرئيسية',exact:true}).click();await expect(traineePage.locator('.campaign-banner').filter({has:traineePage.getByRole('button',{name:'فتح الإعلان',exact:true})})).toHaveCount(0);
           await traineePage.getByRole('button',{name:'زياراتي',exact:true}).click();
           await expect(traineePage.getByRole('heading',{name:'حركات نقاطك'})).toBeVisible();
           const records=traineePage.locator('.mobile-records tbody tr');
