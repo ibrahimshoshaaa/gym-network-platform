@@ -155,6 +155,9 @@ export function listBookings(db:PrismaClient,actorId:string,admin:boolean){
   const due=await tx.booking.findMany({where:{...(!admin?{traineeId:actorId}:{}),status:'RESERVED',deadlineAt:{lt:new Date()}},orderBy:{deadlineAt:'asc'},take:25});
   for(const row of due)await expire(tx,await lockBooking(tx,row.id),actorId);
   const items=await tx.booking.findMany({where:admin?{status:'PENDING_REVIEW'}:{traineeId:actorId},orderBy:{createdAt:'desc'},take:100});
-  return {items:items.map(bookingView),processed:due.length,serverTime:new Date()};
+  const branches=await tx.branch.findMany({where:{id:{in:items.map(b=>b.branchId)}},select:{id:true,name:true,gym:{select:{name:true}}}});
+  const people=admin?await tx.user.findMany({where:{id:{in:items.map(b=>b.traineeId)}},select:{id:true,displayName:true}}):[];
+  const branchMap=new Map(branches.map(b=>[b.id,b])),peopleMap=new Map(people.map(u=>[u.id,u.displayName]));
+  return {items:items.map(b=>({...bookingView(b),branch:branchMap.get(b.branchId),...(admin?{traineeName:peopleMap.get(b.traineeId)}:{})})),processed:due.length,serverTime:new Date()};
  });
 }

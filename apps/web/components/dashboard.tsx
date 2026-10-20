@@ -1,4 +1,5 @@
 "use client";
+import {BookingAdmin} from "./booking-admin";
 import {StaffPortal} from "./staff-portal";
 import {AdminSideNav} from "./admin-side-nav";
 import {Campaigns} from "./campaigns";
@@ -59,6 +60,7 @@ import { AccountRecovery, recoveryToken } from "./account-recovery";
 import { PointWallet } from "./point-wallet";
 import { GymApplications } from "./gym-applications";
 type Tab =
+  | "booking-policy"
   | "campaigns"
   | "requests" | "finance" | "more"
   | "gym-applications"
@@ -80,6 +82,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"booking-policy" as const,label:"الحجوزات وسياسة الحضور",icon:ClipboardCheck,description:"مهلة السماح ومراجعة أسباب عدم الحضور وتوزيع النقاط"},
   {id:"campaigns" as const,label:"الإعلانات والإشعارات",icon:Send,description:"الجمهور ومواعيد الظهور والحملات"},
   {id:"requests" as const,label:"الطلبات",icon:FileCheck2,description:"طلبات الشحن والانضمام والأسعار والإلغاء والسحب"},
   {id:"finance" as const,label:"المالية",icon:Wallet,description:"التحصيلات والمستحقات وحركة النقاط"},
@@ -394,7 +397,7 @@ export function Dashboard() {
           ) : contentTab === "purchases" ? (
             <Purchases />
           ) : (
-            <SettingsPanel key={contentTab} section={contentTab} />
+            contentTab === "booking-policy" ? <BookingAdmin/> : <SettingsPanel key={contentTab} section={contentTab} />
           )}
           <footer className="page-footer">
             GymBank <span>•</span> ShoTech Solutions

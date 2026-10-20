@@ -18,7 +18,7 @@ test("trainee area has five personal destinations and no gym administration cont
     logout: async () => {}, loggingOut: false, onPassword: () => {}, error: "",
   }));
   const nav = html.match(/<nav[\s\S]*?<\/nav>/)?.[0] ?? "";
-  for (const label of ["الرئيسية", "الجيمات", "رمز الدخول", "زياراتي", "حسابي"]) assert.ok(nav.includes(label));
+  for (const label of ["الرئيسية", "الجيمات", "حجوزاتي", "زياراتي", "حسابي"]) assert.ok(nav.includes(label));
   assert.equal((nav.match(/<button/g) ?? []).length, 5);
   assert.doesNotMatch(html, /الكاشير والزيارات|شراء نقاط الفروع|إدارة المنصة/);
 });

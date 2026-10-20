@@ -1,4 +1,5 @@
 "use client";
+import {BookingComposer} from "./bookings";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MapPin, Clock, Phone, Search, Navigation, QrCode, ChevronDown as ChevronDownIcon, X, Map, List, ArrowLeft, Circle, Dumbbell } from "lucide-react";
 import { api, date, message } from "../lib/client";
@@ -89,6 +90,7 @@ function BranchDetails({
   onClose: () => void;
   onShowQr?: () => void;
 }) {
+  const [bookingLocked,setBookingLocked]=useState(false);
   const [branch, setBranch] = useState<DirectoryBranch | null>(null),
     [asOf, setAsOf] = useState(""),
     [loading, setLoading] = useState(true),
@@ -115,7 +117,7 @@ function BranchDetails({
   const map = branch ? branchDirections(branch.latitude, branch.longitude) : null,
     phone = branchPhone(branch?.contactPhone ?? null);
   return (
-    <Modal title="تفاصيل الجيم" onClose={onClose}>
+    <Modal title="تفاصيل الجيم" onClose={onClose} locked={bookingLocked}>
       <Notice text={error} />
       {loading ? (
         <Busy />
@@ -125,7 +127,7 @@ function BranchDetails({
           <h2>عن المكان</h2><section className="card"><p>{branch.gym.description}</p><Fact label="العنوان">{branch.address}</Fact>{branch.openingHours&&<Fact label="مواعيد العمل">{branch.openingHours}</Fact>}{branch.contactPhone&&<p>{phone?<a className="text-button" href={phone} dir="ltr"><Phone size={18}/>{branch.contactPhone}</a>:<span dir="ltr">{branch.contactPhone}</span>}</p>}</section>
           <h2>الموقع</h2><div className="native-detail-map"><BranchMap branches={[branch]} onSelect={()=>{}}/></div>
           {map&&<a className="primary full" href={map} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer"><MapPin size={20}/>افتح الاتجاهات</a>}
-          <p className="muted native-small">الدخول من خلال رمزك الشخصي عند الكاشير. سعر الزيارة يُراجع وقت تسجيل الحضور.</p>
+          <BookingComposer branch={branch} onLocked={setBookingLocked} onDone={()=>{onClose();onShowQr?.();}}/>
           {branch.images?.slice(1).map(i=><img key={i.id} className="native-place-photo" src={i.url} alt="صورة من الفرع" loading="lazy"/>)}
 
         </>

@@ -1,5 +1,5 @@
 export const roleTabs: Record<string, readonly string[]> = {
- PLATFORM_ADMIN: ["campaigns","requests","finance","more","home","gym-applications","direct-topup","reviews","branch-prices","gyms","reports","inventory","withdrawals","disputes","operation-reviews","pricing","payments","packages","support","users","audit"],
+ PLATFORM_ADMIN: ["booking-policy","campaigns","requests","finance","more","home","gym-applications","direct-topup","reviews","branch-prices","gyms","reports","inventory","withdrawals","disputes","operation-reviews","pricing","payments","packages","support","users","audit"],
  GYM_OWNER: ["home","point-wallet","gyms","purchases","cashier","inventory","reports","withdrawals","disputes","operation-reviews","support"],
  BRANCH_MANAGER: ["home","cashier","gyms","inventory","reports","operation-reviews","support"],
  CASHIER: ["home","cashier","reports","operation-reviews","support"],
@@ -18,7 +18,7 @@ export const roleName = (role: string) => roleNames[role] ?? "حساب المن�
 /** Admin destinations stay reachable through five task-oriented sections. */
 export const adminSections = [
  {id:"home",label:"الرئيسية",description:"ابدأ بالطلبات التي تحتاج تدخلك",items:[]},
- {id:"requests",label:"الطلبات",description:"راجع الطلب واختر القرار من مكان واحد",items:["reviews","gym-applications","branch-prices","operation-reviews","withdrawals"]},
+ {id:"requests",label:"الطلبات",description:"راجع الطلب واختر القرار من مكان واحد",items:["booking-policy","reviews","gym-applications","branch-prices","operation-reviews","withdrawals"]},
  {id:"gyms",label:"الجيمات",description:"الجيمات والفروع وبيانات التشغيل",items:[]},
  {id:"finance",label:"المالية",description:"التحصيلات والمستحقات وحركة النقاط",items:["direct-topup","inventory","disputes","reports"]},
  {id:"more",label:"المزيد",description:"الدعم والمستخدمون وإعدادات المنصة",items:["campaigns","support","users","pricing","payments","packages","audit"]},

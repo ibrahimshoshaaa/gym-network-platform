@@ -24,3 +24,20 @@
 .staff-mirror:has(.native-screen-bar) .staff-intro{display:none}.mobile-mirror .portal-menu .account-tools .icon-button{width:100%;height:auto;justify-content:flex-start}.mobile-mirror .portal-menu .account-tools .notification-toggle>svg{width:23px;height:23px;margin:0;padding:0}.mobile-mirror .portal-recent:has(.empty)>.card{padding:0;border:0;background:transparent}
 
 .mobile-mirror .card .native-fact:last-child{padding-bottom:0}.mobile-mirror .card .native-fact:first-child{padding-top:0}.mobile-mirror .native-branch-card .native-fact{padding-block:12px}.mobile-mirror .native-money-facts .native-fact{padding-block:10px}.mobile-mirror .native-sale .native-recipient{background:#e6f2e9}.mobile-mirror .native-steps+.native-intro h1{font-size:25px}.mobile-mirror .native-topup .native-intro h1{font-size:22px}.mobile-mirror .staff-stock .wallet-balance{font-size:30px}.mobile-mirror .staff-stock{padding:18px}
+
+/* Scheduled bookings use the same compact cards on web and native-sized screens. */
+.booking-list,.booking-admin{display:grid;gap:16px}
+.booking-list .section-toolbar,.booking-admin .section-toolbar{margin:0}
+.booking-compose h2,.booking-scanner h2,.booking-card>p{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.booking-compose fieldset,.booking-admin fieldset{border:0;padding:0;margin:0;min-width:0}
+.booking-compose form,.booking-admin form{display:grid;gap:14px}
+.booking-policy{padding:14px;border-radius:14px;background:#e3fbf3;color:#164c3f;font-size:13px;line-height:1.8}
+.booking-policy p:last-child{margin-bottom:0}
+.booking-actions,.booking-allocation{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.booking-actions>button{flex:1;min-height:46px}
+.booking-allocation>span{padding:7px 10px;border-radius:10px;background:#f2f4f7;font-size:12px}
+.booking-card details{margin-block:12px;font-size:13px}
+.booking-card summary{cursor:pointer;font-weight:700}
+.booking-compose input[type=datetime-local]{min-width:0;max-width:100%;box-sizing:border-box}
+.booking-card .badge{white-space:normal;line-height:1.6}
+.booking-card{content-visibility:auto;contain-intrinsic-size:auto 330px}

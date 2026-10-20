@@ -5,6 +5,7 @@ import '../core/api.dart';
 import '../core/ui.dart';
 import '../core/portal_ui.dart';
 import 'account.dart';
+import 'bookings.dart';
 import 'managed_branch.dart';
 
 String? visitTicket(String input) {
@@ -132,6 +133,8 @@ class _BranchDashboardState extends State<BranchDashboard> {
           child: PortalNote('رصيد بيع النقاط خلص. اطلب من صاحب الجيم يوزّع نقاط للفرع. تسجيل الزيارات متاح من رصيد المتدرب.')),
         const SectionTitle('إجراء سريع'),
         if (branch['canSell'] == true) ...[
+          ActionButton('تأكيد حضور حجز',icon:Icons.qr_code_scanner_rounded,onPressed:locked?null:()=>action(ScanBookingScreen(api:widget.api,branch:branch))),
+          const SizedBox(height:10),
           ActionButton('تسجيل زيارة', icon: Icons.qr_code_scanner_rounded,
             onPressed: locked ? null : () => action(RecordVisit(api: widget.api, branch: branch))),
           const SizedBox(height: 10),
@@ -250,6 +253,7 @@ class OperationsHome extends StatelessWidget {
                       const SizedBox(height: 14),
                       PortalGrid(
                         children: [
+                          PortalTask('تأكيد حضور حجز',icon:Icons.calendar_month_outlined,detail:'مسح QR الحجز',onTap:()async{await open(context,ScanBookingScreen(api:api,branch:branch));await reload();}),
                           PortalTask(
                             'تسجيل زيارة',
                             icon: Icons.qr_code_scanner_rounded,
