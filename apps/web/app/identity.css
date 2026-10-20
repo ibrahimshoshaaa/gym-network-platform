@@ -423,3 +423,65 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
  .admin-workspace .role-quick-nav button { font-size:10px; min-width:0; }
  .admin-workspace .role-quick-nav button.active { background:#e3fbf3; color:#006b52; }
 }
+
+/* Shared with the approved mobile navigation and card hierarchy. */
+.mobile-mirror{background:#f2f4f7;min-height:100dvh;color:#101819;padding-bottom:110px}
+.mobile-mirror .trainee-header{min-height:78px;padding:14px 24px;background:#f2f4f7;border:0;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mobile-mirror .trainee-header .brand{font-size:22px;gap:8px;white-space:nowrap}
+.mobile-mirror .trainee-header .brand-icon{width:34px;height:34px;min-width:34px}
+.mobile-mirror .trainee-content{max-width:1040px;margin:auto;padding:16px 24px 24px}
+.mobile-mirror h1{font-size:clamp(25px,4vw,34px);margin:0 0 8px;font-weight:850}
+.mobile-mirror h2{font-size:21px;margin:28px 0 16px}
+.mobile-mirror .card{border:1px solid #e2e7e4;border-radius:24px;box-shadow:none;padding:24px;margin-bottom:20px}
+.mobile-mirror .portal-welcome{padding:16px 0 24px}
+.mobile-mirror .portal-welcome p{margin:0}
+.mobile-mirror .wallet-signature{background:#101819;color:white;min-height:0;padding:26px;border-radius:26px;overflow:visible}
+.mobile-mirror .wallet-signature h2{margin:0}
+.mobile-mirror .wallet-signature .wallet-balance{font-size:clamp(42px,7vw,60px);font-weight:900;color:#00d7a0;margin:18px 0;line-height:1.25;overflow-wrap:anywhere}
+.mobile-mirror .wallet-balance small{font-size:.55em;color:inherit}
+.mobile-mirror .wallet-signature .muted,.mobile-mirror .wallet-signature p{color:#adb9b6;font-size:13px}
+.mobile-mirror .wallet-signature .subtle-box{background:transparent;border:0;padding:0;margin:8px 0 20px}
+.mobile-mirror .wallet-signature .primary{background:#00d7a0;color:#071713;border-color:transparent}
+.mobile-mirror .wallet-signature .secondary{background:transparent;color:white;border:1px solid #71807c}
+.mobile-mirror .wallet-signature .text-button{color:#c8d6d0;margin-top:12px}
+.mobile-mirror .wallet-signature .wallet-more{margin-top:20px;border-top:1px solid #32413d;padding-top:12px}
+.mobile-mirror .wallet-more summary{font-size:12px;color:#adb9b6}
+.mobile-mirror .wallet-signature-top h2{font-size:14px;font-weight:500;color:#adb9b6}
+.mobile-mirror .wallet-signature-top{display:flex;align-items:center;justify-content:space-between}
+.mobile-mirror .wallet-signature-top svg{color:#00d7a0}
+.mobile-mirror .settings-grid{display:block}
+.mobile-mirror .trainee-quick-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.mobile-mirror .trainee-quick-actions button{flex:1;min-width:145px;border-radius:18px;min-height:52px;justify-content:center}
+.mobile-mirror .portal-refresh{font-size:11px;margin-bottom:8px;justify-content:flex-end}
+.mobile-mirror .portal-refresh p{display:none}
+.mobile-mirror .portal-refresh button{min-height:32px;font-size:11px}
+.mobile-mirror .portal-gym-link{display:flex;align-items:center;gap:18px;width:100%;text-align:start;background:white;color:#101819}
+.mobile-mirror .portal-gym-link>svg:first-child{color:#076b58;width:28px;height:28px}
+.mobile-mirror .portal-gym-link>svg:last-child{margin-inline-start:auto}
+.mobile-mirror .portal-gym-link strong,.mobile-mirror .portal-gym-link small{display:block}
+.mobile-mirror .portal-gym-link small{font-size:12px;color:#7b8985;margin-top:4px}
+.mobile-mirror .portal-recent{margin-top:30px}
+.mobile-mirror .portal-recent h2{margin:0;font-size:20px}
+.mobile-mirror .portal-movement{display:flex;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid #e4e9e6}
+.mobile-mirror .portal-movement:last-child{border:0}
+.mobile-mirror .portal-movement small{display:block;color:#7b8985;font-size:12px;margin-top:4px}
+.mobile-mirror .portal-movement>.positive{color:#076b58;font-size:24px}
+.mobile-mirror .trainee-navigation{position:fixed;inset:auto 0 0;z-index:35;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;background:white;border:0;border-radius:24px 24px 0 0;padding:12px max(12px,env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom));margin:0;box-shadow:0 -4px 24px #122c2010}
+.mobile-mirror .trainee-navigation button{display:flex;flex-direction:column;align-items:center;gap:8px;background:transparent;border:0;color:#65716c;padding:6px 2px;font-size:11px;min-width:0;border-radius:16px}
+.mobile-mirror .trainee-navigation button svg{box-sizing:content-box;padding:8px 20px;max-width:100%;border-radius:24px}
+.mobile-mirror .trainee-navigation button.active{color:#076b58;background:transparent;font-weight:800}
+.mobile-mirror .trainee-navigation button.active svg{background:#00d7a0;color:#073e33}
+.mobile-mirror .portal-menu{padding:4px 20px}
+.mobile-mirror .portal-menu button{display:flex;align-items:center;gap:14px;width:100%;background:transparent;border:0;border-bottom:1px solid #e2e7e4;min-height:74px;padding:16px 0;text-align:start;color:#101819}
+.mobile-mirror .portal-menu button:last-child{border:0}
+.mobile-mirror .portal-menu button>svg:first-child{color:#076b58;flex-shrink:0}
+.mobile-mirror .portal-menu button>svg:last-child{margin-inline-start:auto;flex-shrink:0;color:#7b8985}
+.mobile-mirror .portal-menu small{display:block;color:#7b8985;font-size:11px;margin-top:4px}
+.mobile-mirror .portal-profile-card{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:26px}
+.mobile-mirror .portal-avatar{display:grid;place-items:center;background:#00d7a0;color:#073e33;font-size:32px;font-weight:800;width:76px;height:76px;border-radius:50%}
+.mobile-mirror .portal-account-hint{display:flex;gap:8px;align-items:center;padding:12px 0;font-size:12px}
+.mobile-mirror .portal-back{margin-bottom:16px}
+.mobile-mirror .account-tools{gap:6px}
+.mobile-mirror .account-tools .icon-button{width:38px;height:38px;border-radius:12px}
+@media(min-width:900px){.mobile-mirror .trainee-content{padding-top:24px}.mobile-mirror .trainee-navigation{inset:92px 24px auto auto;width:150px;display:flex;flex-direction:column;gap:10px;border-radius:24px;padding:16px;box-shadow:none}.mobile-mirror .trainee-content{max-width:1100px;padding-inline-start:196px}.mobile-mirror .trainee-header{max-width:1400px;margin:auto}.mobile-mirror .trainee-navigation button{flex-direction:row;font-size:13px;gap:12px}.mobile-mirror .trainee-navigation button svg{padding:8px}.mobile-mirror .trainee-navigation button.active{background:#e1faf2}.mobile-mirror .portal-account-page{max-width:680px}.mobile-mirror .trainee-quick-actions{max-width:500px}}
+@media(max-width:360px){.mobile-mirror .trainee-header{padding:12px}.mobile-mirror .trainee-content{padding:12px 16px}.mobile-mirror .trainee-header .brand{font-size:18px}.mobile-mirror .brand-icon{display:none}.mobile-mirror .trainee-navigation button svg{padding:8px 14px}.mobile-mirror .card{padding:20px}.mobile-mirror .trainee-quick-actions button{min-width:120px;font-size:12px}}

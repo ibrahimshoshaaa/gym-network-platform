@@ -1,71 +1,44 @@
 "use client";
-import { NetworkMark, PlatformHero } from "./platform-identity";
+import { NetworkMark } from "./platform-identity";
 import { useState } from "react";
-import { Wallet, PlusCircle, MapPin, QrCode, History, LogOut, KeyRound, MoreHorizontal } from "lucide-react";
+import { Home, UserRound, MapPin, QrCode, History, MoreHorizontal } from "lucide-react";
 import type { Identity } from "../lib/client";
 import { BranchDirectory } from "./branch-directory";
 import { Purchases } from "./purchases";
 import { TraineeQr } from "./operations";
 import { TraineeWallet } from "./trainee-wallet";
-import { Busy, Notice } from "./ui";
+import { Notice } from "./ui";
 
 import { Support } from "./support";
 import { AccountTools } from "./updates";
+import { PortalAccount } from "./portal-account";
 const sections = [
-  { id: "wallet", label: "محفظتي", title: "كل اللي تحتاجه لتمرينتك الجاية", icon: Wallet },
-  { id: "topup", label: "اشحن رصيدك", title: "اشحن نقاطك في خطوات بسيطة", icon: PlusCircle },
-  { id: "gyms", label: "الجيمات", title: "اختار تمرينتك الجاية", icon: MapPin },
-  { id: "qr", label: "رمز الدخول", title: "اعرض الرمز عند وصولك للجيم", icon: QrCode },
-  { id: "visits", label: "زياراتي", title: "زياراتك وحركة نقاطك", icon: History },
+  { id: "wallet", label: "الرئيسية", icon: Home },
+  { id: "gyms", label: "الجيمات", icon: MapPin },
+  { id: "qr", label: "رمز الدخول", icon: QrCode },
+  { id: "visits", label: "زياراتي", icon: History },
+  { id: "account", label: "حسابي", icon: UserRound },
 ] as const;
-type Section = typeof sections[number]["id"] | "support";
+type Section = typeof sections[number]["id"] | "support" | "topup";
 export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
   user: Identity; logout: () => Promise<void>; loggingOut: boolean; onPassword: () => void; error: string;
 }) {
   const [section, setSection] = useState<Section>("wallet");
-  const current = sections.find(item => item.id === section) ?? {label:"الدعم والمساعدة",title:"طلباتك ورسائلك مع إدارة المنصة"};
   function navigate(next: Section) {
     setSection(next);
     window.scrollTo({ top: 0, behavior: "auto" });
   }
-  return (
-    <div className="trainee-portal">
-      <header className="trainee-header">
-        <div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">BANK</span></span></div>
-        <AccountTools user={user} onNavigate={next=>{if(next==="support"||sections.some(s=>s.id===next))navigate(next as Section);}}/>
-        <details className="trainee-account-menu"><summary aria-label="خيارات الحساب"><MoreHorizontal size={22} /></summary><div className="trainee-account">
-          <span><strong>{user.displayName}</strong><small>حساب متدرب</small></span>
-          <button className="icon-button" aria-label="تغيير كلمة المرور" onClick={onPassword}><KeyRound size={20} /><span>تغيير كلمة المرور</span></button>
-          <button className="icon-button" aria-label="تسجيل الخروج" disabled={loggingOut} onClick={() => void logout()}>{loggingOut ? <Busy /> : <LogOut size={20} />}<span>تسجيل الخروج</span></button>
-        </div></details>
-      </header>
-      <main className="trainee-content">
-        <PlatformHero eyebrow={section === "wallet" ? "جاهز لتمرينتك؟" : current.label} title={section === "wallet" ? `أهلًا يا ${user.displayName.split(" ")[0]}` : current.label}>{current.title}</PlatformHero>
-        <Notice text={error} />
-        <nav className="trainee-navigation" aria-label="قائمة المتدرب">
-          {sections.map(item => <button key={item.id} aria-current={section === item.id ? "page" : undefined} className={section === item.id ? "active" : ""} onClick={() => navigate(item.id)}><item.icon size={22} /><span>{item.label}</span></button>)}
-        </nav>
-        <div key={section}>
-          {section === "support" ? <Support/> : section === "wallet" ? <>
-            <TraineeWallet revision={0} view="wallet">
-             <div className="trainee-wallet-next">
-              <div className="trainee-quick-actions">
-                <button className="primary" onClick={() => navigate("qr")}><QrCode size={21} />افتح رمز الدخول</button>
-                <button className="secondary" onClick={() => navigate("topup")}><PlusCircle size={21} />اشحن محفظتك</button>
-              </div>
-              <section className="card trainee-start">
-                <span className="eyebrow">تمرينتك الجاية</span><h2>هتتمرّن فين النهارده؟</h2><p className="muted">شوف الجيمات القريبة وسعر الزيارة قبل ما تتحرك.</p><button className="primary full" onClick={() => navigate("gyms")}>اختار جيم قريب<MapPin size={18}/></button><details className="getting-started"><summary>أول مرة تستخدم المنصة؟</summary>
-                <ol><li><strong>اشحن نقاطك</strong><p>اختار الكمية، حوّل المبلغ وارفع الإيصال. الرصيد يظهر بعد موافقة الإدارة.</p></li><li><strong>اختار جيمك</strong><p>شوف الفروع المشاركة وسعر الزيارة ومكان كل فرع.</p></li><li><strong>اعرض رمز الدخول</strong><p>عند وصولك، مسؤول الفرع يؤكد حضورك وتتخصم نقاط الزيارة من محفظتك.</p></li></ol>
-                </details>
-              </section>
-             </div>
-            </TraineeWallet>
-          </> : section === "topup" ? <Purchases trainee onWallet={() => navigate("wallet")} /> : section === "gyms" ? <BranchDirectory onShowQr={() => navigate("qr")} /> : section === "qr" ? <TraineeQr standalone /> : <TraineeWallet revision={0} view="history" />}
-        </div>
-        <footer className="page-footer">GymBank · ShoTech Solutions</footer>
-      </main>
-    </div>
-  );
+  return <div className="trainee-portal mobile-mirror">
+    <header className="trainee-header"><div className="brand"><span className="brand-icon"><NetworkMark /></span><span>GYM<span className="brand-light">BANK</span></span></div><AccountTools user={user} onNavigate={next=>{if(next==="support"||next==="topup"||sections.some(s=>s.id===next))navigate(next as Section);}}/></header>
+    <main className="trainee-content"><Notice text={error}/><div key={section}>
+      {section === "wallet" ? <><div className="portal-welcome"><h1>أهلًا {user.displayName.split(" ")[0]}</h1><p className="muted">جاهز لتمرينتك؟</p></div><TraineeWallet revision={0} view="wallet" onQr={()=>navigate("qr")} onTopup={()=>navigate("topup")} onGyms={()=>navigate("gyms")} onHistory={()=>navigate("visits")}/></>
+      : section === "account" ? <PortalAccount user={user} onPassword={onPassword} onPurchases={()=>navigate("topup")} onSupport={()=>navigate("support")} logout={logout} loggingOut={loggingOut}/>
+      : section === "support" ? <Support/>
+      : section === "topup" ? <Purchases trainee onWallet={()=>navigate("wallet")}/>
+      : section === "gyms" ? <><h1>اكتشف جيمك</h1><p className="muted">اختار المكان المناسب وشوف نقاط الزيارة.</p><BranchDirectory onShowQr={()=>navigate("qr")}/></>
+      : section === "qr" ? <><h1>رمز الدخول</h1><TraineeQr standalone/></>
+      : <><h1>زياراتك</h1><p className="muted">كل تمرينة ونقاطها، في سجل واحد.</p><TraineeWallet revision={0} view="history"/></>}
+    </div><footer className="page-footer">GymBank · ShoTech Solutions</footer></main>
+    <nav className="trainee-navigation" aria-label="قائمة المتدرب">{sections.map(item=><button key={item.id} aria-current={section===item.id?"page":undefined} className={section===item.id?"active":""} onClick={()=>navigate(item.id)}><item.icon size={22}/><span>{item.label}</span></button>)}</nav>
+  </div>;
 }
-
-

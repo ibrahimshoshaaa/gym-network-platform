@@ -34,6 +34,7 @@ import { AdminFinance } from "./platform-finance";
 import { AdminHome } from "./admin-home";
 import { OwnerJoinAccess } from "./owner-join-access";
 import { Login } from "./login";
+import { OwnerPortal } from "./owner-portal";
 import { TraineePortal } from "./trainee-portal";
 import { SettingsPanel } from "./settings";
 import { Cashier, TraineeQr } from "./operations";
@@ -253,6 +254,7 @@ export function Dashboard() {
     <TraineePortal user={user} logout={logout} loggingOut={loggingOut} onPassword={() => setPassword(true)} error={error} />
     {password && <PasswordChange onClose={() => setPassword(false)} />}
   </>;
+  if(user.role === "GYM_OWNER")return <OwnerJoinAccess key={user.id} enabled onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</OwnerJoinAccess>;
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;
