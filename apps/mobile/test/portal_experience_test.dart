@@ -331,9 +331,9 @@ void main() {
     await t.pump();
     await t.pump(const Duration(milliseconds:100));
     expect(find.text('120 نقطة'), findsOneWidget);
-    expect(find.text('حجوزاتي').hitTestable(), findsOneWidget);
+    expect(find.text('رمز الدخول').hitTestable(), findsOneWidget);
     expect(find.text('اشحن رصيدك').hitTestable(), findsOneWidget);
-    await t.tap(find.text('حجوزاتي'));
+    await t.tap(find.text('رمز الدخول'));
     expect(qrOpened,isTrue);
     history.complete(reply({'items':[]}));
     await t.pumpAndSettle();

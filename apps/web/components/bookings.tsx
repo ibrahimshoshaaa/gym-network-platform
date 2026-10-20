@@ -41,7 +41,7 @@ function BookingCard({b,refresh,now}:{b:Booking;refresh:()=>Promise<void>;now:nu
  const late=now>Date.parse(b.deadlineAt);
  async function cancel(){if(busy||!reason.trim())return;setBusy(true);setError("");try{await api("trainee/bookings/"+b.id+"/cancel",send({reason:reason.trim()}));setEditing(false);await refresh();}catch(e){setError(message(e));}finally{setBusy(false);}}
  return <article className="card booking-card"><span className="badge">{bookingStatus(b.status)}</span><h3>{b.branch?b.branch.gym.name+" · "+b.branch.name:"زيارة محجوزة"}</h3><p><CalendarClock size={17}/> {date(b.scheduledAt)}</p><strong>{b.points} نقطة</strong><p className="muted">نهاية مهلة السماح: {date(b.deadlineAt)}</p>
- {b.status==="RESERVED"&&!late&&<p className="muted">{now<Date.parse(b.scheduledAt)?"رمز الحضور يتاح عند موعد الزيارة.":"رمز الحضور متاح الآن."}</p>}
+ {b.status==="RESERVED"&&!late&&<p className="muted">رمز الحجز متاح الآن، وتقدر تدخل قبل موعدك.</p>}
  <details><summary>سياسة هذا الحجز</summary><p>{policySummary(b.policySnapshot)}</p></details>
  {b.decisionReason&&<p>قرار الإدارة: {b.decisionReason}</p>}
  {b.traineePoints!==null&&<div className="booking-allocation"><span>لك: {b.traineePoints}</span><span>للجيم: {b.gymPoints}</span><span>للمنصة: {b.platformPoints}</span></div>}

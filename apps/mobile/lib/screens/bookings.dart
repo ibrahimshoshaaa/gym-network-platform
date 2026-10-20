@@ -30,7 +30,7 @@ String? bookingToken(String input) {
  return RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value)?value:null;
 }
 bool bookingWindow(Json b,DateTime now) => b['status']=='RESERVED' &&
- !now.isBefore(DateTime.parse(b['scheduledAt'])) && !now.isAfter(DateTime.parse(b['deadlineAt']));
+ !now.isAfter(DateTime.parse(b['deadlineAt']));
 
 class CreateBookingScreen extends StatefulWidget {
  final ApiClient api;
@@ -174,7 +174,7 @@ class _BookingCardState extends State<_BookingCard>{
    if(b['traineePoints']!=null)Text('لك: ${b['traineePoints']} · للجيم: ${b['gymPoints']} · للمنصة: ${b['platformPoints']} نقطة'),
    ErrorNote(error),
    if(bookingWindow(b,now))ActionButton('اعرض QR الحجز',icon:Icons.qr_code_2_rounded,onPressed:()async{await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>BookingQrScreen(api:widget.api,booking:b)));if(mounted)await widget.reload();}),
-   if(b['status']=='RESERVED'&&now.isBefore(DateTime.parse(b['scheduledAt'])))const Text('رمز الحضور يتاح عند موعد الزيارة.',style:TextStyle(color:muted,fontSize:12)),
+   if(b['status']=='RESERVED'&&!late)const Text('رمز الحجز متاح الآن، وتقدر تدخل قبل موعدك.',style:TextStyle(color:muted,fontSize:12)),
    if(['RESERVED','PENDING_REVIEW'].contains(b['status']))TextButton(onPressed:busy?null:cancel,child:Text(busy?'جاري الإرسال…':late||b['status']=='PENDING_REVIEW'?'إضافة سبب عدم الحضور':'إلغاء الحجز')),
   ]));
  }

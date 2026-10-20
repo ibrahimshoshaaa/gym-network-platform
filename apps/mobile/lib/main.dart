@@ -263,7 +263,7 @@ class _NativeShellState extends State<NativeShell> {
         : const [
             (Icons.home_outlined, 'الرئيسية'),
             (Icons.near_me_outlined, 'الجيمات'),
-            (Icons.qr_code_2_rounded, 'حجوزاتي'),
+            (Icons.qr_code_2_rounded, 'رمز الدخول'),
             (Icons.history_rounded, 'زياراتي'),
             (Icons.person_outline_rounded, 'حسابي'),
           ];
@@ -297,7 +297,7 @@ class _NativeShellState extends State<NativeShell> {
           showQr: () => setState(() => index = 2),
         ),
         1 => DirectoryScreen(api: widget.api),
-        2 => BookingsScreen(api: widget.api,embedded:true),
+        2 => GymEntryScreen(api: widget.api),
         3 => VisitsScreen(
           api: widget.api,
           showQr: () => setState(() => index = 2),
@@ -451,4 +451,22 @@ class _NativeShellState extends State<NativeShell> {
       ),
     );
   }
+}
+
+class GymEntryScreen extends StatefulWidget {
+ final ApiClient api;
+ const GymEntryScreen({super.key,required this.api});
+ @override State<GymEntryScreen> createState()=>_GymEntryScreenState();
+}
+class _GymEntryScreenState extends State<GymEntryScreen>{
+ bool bookings=false;
+ @override Widget build(BuildContext context)=>Column(children:[
+  Padding(padding:const EdgeInsets.fromLTRB(20,8,20,8),child:Row(children:[
+   Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=false),child:const Text('دخول بدون حجز'))),
+   const SizedBox(width:10),
+   Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=true),child:const Text('حجوزاتي'))),
+  ])),
+  if(!bookings)const Padding(padding:EdgeInsets.symmetric(horizontal:20),child:Text('مش محتاج تحجز مسبقًا. اعرض رمز الدخول لموظف الجيم عند وصولك.',style:TextStyle(color:muted,fontSize:12))),
+  Expanded(child:bookings?BookingsScreen(api:widget.api,embedded:true):QrScreen(api:widget.api)),
+ ]);
 }

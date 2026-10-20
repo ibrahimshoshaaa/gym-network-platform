@@ -8,6 +8,7 @@ import { BranchDirectory } from "./branch-directory";
 import {ScreenBack,PortalIntro} from "./portal-ui";
 import { Purchases,TopupHistory } from "./purchases";
 import { Bookings } from "./bookings";
+import {TraineeQr} from "./operations";
 import { TraineeWallet } from "./trainee-wallet";
 import { Notice } from "./ui";
 
@@ -17,11 +18,11 @@ import { PortalAccount } from "./portal-account";
 const sections = [
   { id: "wallet", label: "الرئيسية", icon: Home },
   { id: "gyms", label: "الجيمات", icon: Navigation },
-  { id: "qr", label: "حجوزاتي", icon: QrCode },
+  { id: "qr", label: "رمز الدخول", icon: QrCode },
   { id: "visits", label: "زياراتي", icon: History },
   { id: "account", label: "حسابي", icon: UserRound },
 ] as const;
-type Section = typeof sections[number]["id"] | "support" | "topup" | "movements" | "topup-history";
+type Section = typeof sections[number]["id"] | "support" | "topup" | "movements" | "topup-history" | "bookings";
 export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
   user: Identity; logout: () => Promise<void>; loggingOut: boolean; onPassword: () => void; error: string;
 }) {
@@ -39,11 +40,12 @@ export function TraineePortal({ user, logout, loggingOut, onPassword, error }: {
       : section === "topup-history" ? <><ScreenBack title="طلبات الشحن" onBack={()=>navigate("account")}/><TopupHistory/></>
       : section === "support" ? <Support/>
       : section === "topup" ? <Purchases trainee onWallet={()=>navigate("wallet")}/>
-      : section === "gyms" ? <><h1>اكتشف جيمك</h1><p className="muted">اختار المكان المناسب وشوف نقاط الزيارة.</p><BranchDirectory onShowQr={()=>navigate("qr")}/></>
-      : section === "qr" ? <Bookings onGyms={()=>navigate("gyms")}/>
+      : section === "gyms" ? <><h1>اكتشف جيمك</h1><p className="muted">اختار المكان المناسب وشوف نقاط الزيارة.</p><BranchDirectory onShowQr={()=>navigate("bookings")}/></>
+      : section === "bookings" ? <><ScreenBack title="حجوزاتي" onBack={()=>navigate("qr")}/><Bookings onGyms={()=>navigate("gyms")}/></>
+      : section === "qr" ? <><PortalIntro title="رمز الدخول" detail="داخل من غير حجز؟ اعرض الرمز ده لموظف الجيم."/><button className="secondary full" onClick={()=>navigate("bookings")}>حجوزاتي · اعرض QR الحجز</button><TraineeQr standalone/></>
       : <><h1>زياراتك</h1><p className="muted">كل تمرينة ونقاطها، في سجل واحد.</p><TraineeWallet revision={0} view="visits"/></>}
     </div><footer className="page-footer">GymBank · ShoTech Solutions</footer></main>
-    <nav className="trainee-navigation" aria-label="قائمة المتدرب">{sections.map(item=><button key={item.id} aria-current={section===item.id?"page":undefined} className={section===item.id?"active":""} onClick={()=>navigate(item.id)}><item.icon size={22}/><span>{item.label}</span></button>)}</nav>
+    <nav className="trainee-navigation" aria-label="قائمة المتدرب">{sections.map(item=><button key={item.id} aria-current={(section===item.id||(section==="bookings"&&item.id==="qr"))?"page":undefined} className={(section===item.id||(section==="bookings"&&item.id==="qr"))?"active":""} onClick={()=>navigate(item.id)}><item.icon size={22}/><span>{item.label}</span></button>)}</nav>
   </div>;
 }
 
