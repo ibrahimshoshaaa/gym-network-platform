@@ -151,3 +151,22 @@ class Android37SignerTests(unittest.TestCase):
         output='V3.0 Signer: certificate SHA-256 digest: '+('b'*64)
         with patch('verify_apks.subprocess.run',return_value=SimpleNamespace(stdout=output)):
             with self.assertRaises(SystemExit): verify(Path('fixture.apk'),'apksigner','aapt','a'*64,100001)
+
+
+class SplitAbiVersionTests(unittest.TestCase):
+    def test_each_split_uses_flutter347_version_code_offsets(self):
+        from verify_apks import split_metadata
+        for abi,offset in [('armeabi-v7a',1000),('arm64-v8a',2000),('x86_64',4000)]:
+            self.assertEqual(split_metadata(Path('app-'+abi+'-release.apk'),100042),(abi,100042+offset))
+        from verify_apks import split_metadata
+        with self.assertRaises(SystemExit): split_metadata(Path('unexpected.apk'),100042)
+
+    def test_arm64_split_checks_exact_version_architecture_and_signer(self):
+        from verify_apks import verify
+        from types import SimpleNamespace
+        output='V3.0 Signer: certificate SHA-256 digest: '+('a'*64)
+        metadata="package: name='net.shotech.gym_network' versionCode='102042' versionName='0.2.7'\nnative-code: 'arm64-v8a'"
+        with patch('verify_apks.subprocess.run',side_effect=[SimpleNamespace(stdout=output),SimpleNamespace(stdout=metadata)]):
+            verify(Path('app-arm64-v8a-release.apk'),'apksigner','aapt','a'*64,102042,'arm64-v8a')
+        with patch('verify_apks.subprocess.run',side_effect=[SimpleNamespace(stdout=output),SimpleNamespace(stdout=metadata)]):
+            with self.assertRaises(SystemExit): verify(Path('app-arm64-v8a-release.apk'),'apksigner','aapt','a'*64,102042,'armeabi-v7a')
