@@ -1,4 +1,5 @@
 "use client";
+import {StaffPortal} from "./staff-portal";
 import {Campaigns} from "./campaigns";
 import { NetworkMark } from "./platform-identity";
 import { useEffect, useState, type FormEvent } from "react";
@@ -260,6 +261,7 @@ export function Dashboard() {
     {password && <PasswordChange onClose={() => setPassword(false)} />}
   </>;
   if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</OwnerJoinAccess>;
+  if(user.role==="BRANCH_MANAGER"||user.role==="CASHIER")return <><StaffPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<PasswordChange onClose={()=>setPassword(false)}/>}</>;
   const admin = user.role === "PLATFORM_ADMIN",
     available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
     current = available.find((t) => t.id === tab) ?? available[0]!;

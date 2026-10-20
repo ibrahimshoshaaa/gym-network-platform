@@ -1,0 +1,31 @@
+"use client";
+import {useEffect,useState} from 'react';
+import {Home,History,ReceiptText,UserRound,QrCode,Plus,ChevronLeft,ClipboardCheck} from 'lucide-react';
+import {api,message,decimal,type Identity} from '../lib/client';
+import {PortalHeader} from './portal-header';
+import {PortalAccount} from './portal-account';
+import {BranchOperations,OperationHistory} from './operations';
+import {ManagedBranches} from './managed-branch';
+import {OperationReviews} from './operation-reviews';
+import {Support} from './support';
+import {Busy,Empty,Notice} from './ui';
+type Branch={id:string;gymId:string;name:string;gymName:string;canSell:boolean;canCancel:boolean};
+type Section='home'|'visits'|'sales'|'account'|'visit'|'sale'|'reviews'|'support';
+const destinations=[{id:'home',label:'الرئيسية',icon:Home},{id:'visits',label:'الزيارات',icon:History},{id:'sales',label:'المبيعات',icon:ReceiptText},{id:'account',label:'حسابي',icon:UserRound}] as const;
+export function StaffPortal({user,logout,loggingOut,onPassword,error}:{user:Identity;logout:()=>Promise<void>;loggingOut:boolean;onPassword:()=>void;error:string}){
+ const [section,setSection]=useState<Section>('home'),[branches,setBranches]=useState<Branch[]|null>(null),[branchId,setBranchId]=useState(''),[loadError,setLoadError]=useState('');
+ useEffect(()=>{let live=true;api<{items:Branch[]}>('operations/branches').then(r=>{if(live)setBranches(r.items);}).catch(e=>{if(live)setLoadError(message(e));});return()=>{live=false;};},[]);
+ function navigate(next:Section){setSection(next);window.scrollTo({top:0,behavior:'auto'});}
+ const branch=branches?.find(b=>b.id===branchId)??branches?.[0],active=['visit','sale','reviews'].includes(section)?'home':section==='support'?'account':section;
+ return <div className="trainee-portal mobile-mirror staff-mirror"><PortalHeader user={user} onNavigate={next=>navigate(next==='support'?'support':'reviews')}/><main className="trainee-content"><Notice text={error||loadError}/>
+ {section==='account'?<PortalAccount user={user} onPassword={onPassword} onPurchases={()=>navigate('sales')} onSupport={()=>navigate('support')} logout={logout} loggingOut={loggingOut}/>:section==='support'?<Support/>:section==='reviews'?<OperationReviews admin={false}/>:!branches&&!loadError?<Busy/>:!branch?<Empty title="مفيش فرع متاح للتشغيل">راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.</Empty>:<>
+ <div className="portal-welcome staff-intro"><small>{user.role==='BRANCH_MANAGER'?'مدير الفرع':'كاشير الفرع'}</small>{branches!.length>1?<label className="field">الفرع الحالي<select value={branch.id} onChange={e=>{setBranchId(e.target.value);navigate('home');}}>{branches!.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>:<h1>{branch.name}</h1>}<p className="muted">{branch.gymName}</p></div>
+ {section==='home'?<StaffHome key={branch.id} branch={branch} navigate={navigate}/>:section==='visits'||section==='sales'?<OperationHistory key={`${branch.id}:${section}`} branchId={branch.id} canCancel={branch.canCancel} kind={section}/>:<><button className="text-button portal-back" onClick={()=>navigate('home')}>الرجوع للرئيسية</button><BranchOperations key={`${branch.id}:${section}`} branch={branch} initialTask={section==='sale'?'sale':'visit'}/></>}
+ </>}
+ </main><nav className="trainee-navigation" aria-label="قائمة موظف الفرع">{destinations.map(item=><button key={item.id} className={active===item.id?'active':''} aria-current={active===item.id?'page':undefined} onClick={()=>navigate(item.id)}><item.icon size={22}/><span>{item.label}</span></button>)}</nav></div>;
+}
+function StaffHome({branch,navigate}:{branch:Branch;navigate:(next:Section)=>void}){
+ const [stock,setStock]=useState<{stock:number;visitPricePoints:number;sessionMinutes:number}|null>(null),[report,setReport]=useState<{visits?:{count:number};sales?:{points:number;amountPiasters:string}}|null>(null),[stockError,setStockError]=useState(''),[reportError,setReportError]=useState('');
+ useEffect(()=>{let live=true;const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());api<typeof stock>(`operations/branches/${branch.id}/summary`).then(r=>{if(live)setStock(r);}).catch(e=>{if(live)setStockError(message(e));});api<typeof report>(`reports/summary?gymId=${branch.gymId}&branchId=${branch.id}&from=${day}&to=${day}`).then(r=>{if(live)setReport(r);}).catch(e=>{if(live)setReportError(message(e));});return()=>{live=false;};},[branch.id,branch.gymId]);
+ return <><section className="card wallet-signature staff-stock"><p>رصيد الفرع لبيع النقاط</p><Notice text={stockError}/>{stock?<><h2 className="wallet-balance">{stock.stock} نقطة</h2><p>الزيارة {stock.visitPricePoints} نقطة · {stock.sessionMinutes} دقيقة</p></>:!stockError?<Busy/>:null}</section>{stock?.stock===0&&<p className="subtle-box">رصيد بيع النقاط خلص. اطلب من صاحب الجيم يوزّع نقاط للفرع. تسجيل الزيارات متاح من رصيد المتدرب.</p>}<h2>إجراء سريع</h2>{branch.canSell&&<div className="staff-quick-actions"><button className="primary full" onClick={()=>navigate('visit')}><QrCode size={20}/>تسجيل زيارة</button><button className="secondary full" disabled={!stock||stock.stock===0} onClick={()=>navigate('sale')}><Plus size={20}/>بيع نقاط لمتدرب</button></div>}<h2>حركة الفرع النهارده</h2><section className="card portal-facts"><Notice text={reportError}/>{report?<><p><span>زيارات مسجلة</span><strong>{report.visits?.count??'—'}</strong></p><p><span>نقاط مباعة</span><strong>{report.sales?.points??'—'}</strong></p><p><span>تحصيل بيع النقاط</span><strong>{report.sales?.amountPiasters!==undefined?decimal(report.sales.amountPiasters):'—'} ج.م</strong></p></>:!reportError?<Busy/>:null}</section><ManagedBranches/><h2>متابعة الفرع</h2><section className="card portal-menu"><button onClick={()=>navigate('visits')}><History/>سجل الزيارات<ChevronLeft/></button><button onClick={()=>navigate('sales')}><ReceiptText/>سجل المبيعات<ChevronLeft/></button>{branch.canCancel&&<p className="muted">إلغاء الزيارة متاح خلال أول ١٠ دقائق من سجل الزيارات. بعد كده يُرسل طلب مراجعة.</p>}</section><button className="text-button" onClick={()=>navigate('reviews')}><ClipboardCheck size={18}/>طلبات المراجعة</button></>;
+}
