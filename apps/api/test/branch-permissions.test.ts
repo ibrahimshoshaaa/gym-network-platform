@@ -4,12 +4,13 @@ import type { Prisma } from '@prisma/client';
 import { requireBranchAccess } from '../src/auth/authorization.js';
 
 function scope(actor: string, role?: 'CASHIER' | 'BRANCH_MANAGER', active = true) {
-  const branch = { id: 'branch', status: 'ACTIVE', gym: { ownerId: 'owner', ownerAcceptedAt: new Date(), status: 'ACTIVE', owner: { isActive: true } } };
+  const branch = { gymId:'gym',id: 'branch', status: 'ACTIVE', gym: { id:'gym',ownerId: 'owner', ownerAcceptedAt: new Date(), status: 'ACTIVE', owner: { isActive: true } } };
   const tx = {
     user: { findUnique: async () => ({ id: actor, isActive: active }) },
-    branch: { findUnique: async () => branch },
-    staffAssignment: { findFirst: async ({where}: {where: {userId: string; branchId: string; active: boolean; role: {in: string[]}}}) =>
-      role && where.userId === actor && where.branchId === 'branch' && where.active && where.role.in.includes(role) ? { active: true, role } : null },
+    branch: { findUnique: async () => branch,findFirst:async()=>branch },
+    gym:{findUnique:async()=>branch.gym},staffDelegation:{findMany:async()=>[]},
+    staffAssignment: { findFirst: async ({where}: {where: {userId: string; branchId?: string; active: boolean; role: string|{in: string[]}}}) =>
+      role && where.userId === actor && (!where.branchId||where.branchId === 'branch') && where.active && (typeof where.role==='string'?where.role===role:where.role.in.includes(role)) ? { active: true, role } : null },
   } as unknown as Prisma.TransactionClient;
   return { tx, branch };
 }

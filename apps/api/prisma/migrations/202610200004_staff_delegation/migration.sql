@@ -7,3 +7,5 @@ CREATE TABLE "StaffDelegation" (
 );
 CREATE INDEX "StaffDelegation_userId_gymId_active_idx" ON "StaffDelegation"("userId","gymId",active);
 CREATE UNIQUE INDEX delegation_scope ON "StaffDelegation"("userId","gymId",coalesce("branchId",'00000000-0000-0000-0000-000000000000'::uuid));
+
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='gym_api_service') THEN GRANT SELECT,INSERT,UPDATE ON "StaffDelegation" TO gym_api_service; END IF; END $$;
