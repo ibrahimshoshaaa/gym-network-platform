@@ -39,6 +39,8 @@ export type Topup = {
   requestor?: { displayName: string; email: string; phoneE164: string };
   branch?: { name: string; gym: { name: string } } | null;
   receivingBranchId: string | null;
+  receivingGymId?: string | null;
+  gym?: { id: string; name: string } | null;
   points: number;
   chargePiasters: string;
   unitPricePiasters: string | null;
