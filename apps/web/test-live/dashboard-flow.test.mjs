@@ -1883,7 +1883,7 @@ test(
           await traineePage.goto(origin);
           const campaignCard=traineePage.locator('.campaign-banner').filter({has:traineePage.getByRole('button',{name:'فتح الإعلان',exact:true})});await expect(campaignCard).toBeVisible();
           assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'campaign must fit the personal mobile portal');
-          await campaignCard.getByRole('button',{name:'فتح الإعلان',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'رمز الدخول',exact:true})).toBeVisible();
+          await campaignCard.getByRole('button',{name:'فتح الإعلان',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'حجوزاتي',exact:true})).toBeVisible();
           const campaignFeed=await request('/api/backend/notifications',{cookie:traineeCookie});assert.equal(campaignFeed.status,200);assert.ok((await campaignFeed.json()).items.some(c=>c.id===`campaign:${campaign.id}:1`));
           const posterBody={...campaignBody,title:'',body:'',imageId:posterAsset.id,destination:'NONE',channel:'AD',priority:99};
           const posterResponse=await request('/api/backend/admin/campaigns',{cookie,method:'POST',body:posterBody});assert.equal(posterResponse.status,200,await posterResponse.clone().text());const posterCampaign=await posterResponse.json();
