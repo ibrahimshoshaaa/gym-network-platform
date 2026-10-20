@@ -92,10 +92,30 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('مساحة الإدارة على الويب'), findsNothing);
       expect(find.text('فرع شبين'), findsOneWidget);
-      await t.tap(find.text('فتح الفرع'));
-      await t.pumpAndSettle();
       expect(find.text('تسجيل زيارة'), findsOneWidget);
-      expect(find.text('شحن نقاط لمتدرب'), findsOneWidget);
+      expect(find.text('بيع نقاط لمتدرب'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
+  }
+  testWidgets('zero stock keeps attendance available and disables point sales', (t) async {
+    final api = client('CASHIER', (r) async => reply(
+      r.url.path.contains('reports/') ? {'visits': {'count': 0}, 'sales': {'points': 0, 'amountPiasters': '0'}}
+      : {'stock': 0, 'visitPricePoints': 20, 'sessionMinutes': 120}));
+    await t.pumpWidget(page(Scaffold(body: BranchDashboard(api: api, branch: branch))));
+    await t.pumpAndSettle();
+    expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'تسجيل زيارة')).onPressed, isNotNull);
+    expect(t.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'بيع نقاط لمتدرب')).onPressed, isNull);
+    expect(t.takeException(), isNull);
+  });
+  for (final manager in [false, true]) {
+    testWidgets('visit cancellation follows branch capability $manager', (t) async {
+      final api = client('BRANCH_MANAGER', (_) async => reply({}));
+      await t.pumpWidget(page(VisitCancellation(api: api, branch: {...branch, 'canCancel': manager},
+        visit: {'id': 'v1', 'pointsCharged': 20, 'startedAt': DateTime.now().toUtc().toIso8601String()})));
+      await t.pumpAndSettle();
+      expect(find.text('تأكيد إلغاء الزيارة'), manager ? findsOneWidget : findsNothing);
+      expect(find.text('إرسال طلب مراجعة'), manager ? findsNothing : findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(manager ? 1 : 2));
       expect(t.takeException(), isNull);
     });
   }

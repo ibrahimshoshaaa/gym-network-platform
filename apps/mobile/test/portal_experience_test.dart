@@ -142,6 +142,7 @@ void main() {
                       'version': 1,
                     },
                   ],
+                  'policy': {'pointPricePiasters': '100', 'gymDiscountBps': 1000},
                   'packages': [],
                 }),
               ),
@@ -165,7 +166,7 @@ void main() {
       );
       await t.pumpAndSettle();
       expect(
-        find.widgetWithText(SegmentedButton<bool>, 'عدد النقاط'),
+        find.widgetWithText(SegmentedButton<bool>, 'نقاط'),
         findsOneWidget,
       );
       expect(t.takeException(), isNull);
