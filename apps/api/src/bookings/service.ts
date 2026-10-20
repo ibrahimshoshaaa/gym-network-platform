@@ -127,7 +127,7 @@ export function issueBookingQr(db:PrismaClient,actorId:string,id:string,bearer:s
   await trainee(tx,actorId);const b=await lockBooking(tx,id);
   if(b.traineeId!==actorId)throw new DomainError('ACCESS_DENIED');
   const now=new Date();
-  if(b.status!=='RESERVED'||now<b.scheduledAt||now>b.deadlineAt)throw new DomainError('INVALID_STATE');
+  if(b.status!=='RESERVED'||now>b.deadlineAt)throw new DomainError('INVALID_STATE');
   const session=await tx.authSession.findUnique({where:{tokenHash:hashToken(bearer)}});
   if(!session||session.userId!==actorId||session.revokedAt||session.expiresAt<=now)throw new DomainError('UNAUTHENTICATED');
   const token=randomBytes(32).toString('base64url'),expiresAt=new Date(Math.min(now.getTime()+60000,b.deadlineAt.getTime(),session.expiresAt.getTime()));
@@ -142,7 +142,7 @@ export function scanBooking(db:PrismaClient,actorId:string,branchId:string,input
   const found=await tx.booking.findUnique({where:{qrHash:hashToken(data.token)}});
   if(!found)throw new DomainError('QR_INVALID');
   const b=await lockBooking(tx,found.id),now=new Date();
-  if(b.qrHash!==hashToken(data.token)||b.branchId!==branchId||b.status!=='RESERVED'||!b.qrExpiresAt||b.qrExpiresAt<now||now<b.scheduledAt||now>b.deadlineAt)throw new DomainError('QR_INVALID');
+  if(b.qrHash!==hashToken(data.token)||b.branchId!==branchId||b.status!=='RESERVED'||!b.qrExpiresAt||b.qrExpiresAt<now||now>b.deadlineAt)throw new DomainError('QR_INVALID');
   const session=b.qrSessionId?await tx.authSession.findUnique({where:{id:b.qrSessionId}}):null;
   if(!session||session.userId!==b.traineeId||session.revokedAt||session.expiresAt<=now)throw new DomainError('QR_INVALID');
   await trainee(tx,b.traineeId);

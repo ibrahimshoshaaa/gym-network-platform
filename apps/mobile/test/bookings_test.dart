@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:gym_network/core/api.dart';
+import 'package:gym_network/main.dart' show GymEntryScreen;
 import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/screens/bookings.dart';
 import 'api_test.dart' show MemoryStore;
@@ -13,6 +14,25 @@ ApiClient client(Future<http.Response> Function(http.Request) handle)=>ApiClient
  ..restored=true..token='synthetic'..user={'id':'t','role':'TRAINEE','displayName':'متدرب'};
 Widget page(Widget child)=>MaterialApp(theme:appTheme(),home:Directionality(textDirection:TextDirection.rtl,child:child));
 void main(){
+ testWidgets('walk-in QR is available without a booking and history remains reachable',(t)async{
+  final calls=<String>[];
+  final api=client((r)async{
+   calls.add(r.url.path);
+   if(r.url.path.endsWith('/trainee/qr'))return reply({'token':List.filled(43,'a').join(),'expiresAt':DateTime.now().add(const Duration(minutes:1)).toUtc().toIso8601String(),'serverTime':DateTime.now().toUtc().toIso8601String()});
+   return reply({'items':[],'serverTime':DateTime.now().toUtc().toIso8601String()});
+  });addTearDown(api.dispose);
+  await t.pumpWidget(page(Scaffold(body:GymEntryScreen(api:api))));await t.pumpAndSettle();
+  expect(find.text('رمزك الشخصي'),findsOneWidget);
+  expect(calls.where((p)=>p.endsWith('/trainee/qr')).length,1);
+  expect(calls.any((p)=>p.endsWith('/trainee/bookings')),isFalse);
+  await t.tap(find.widgetWithText(OutlinedButton,'حجوزاتي'));await t.pumpAndSettle();
+  expect(calls.any((p)=>p.endsWith('/trainee/bookings')),isTrue);
+  expect(find.text('لسه مفيش حجوزات'),findsOneWidget);
+  await t.tap(find.widgetWithText(OutlinedButton,'دخول بدون حجز'));await t.pumpAndSettle();
+  expect(find.text('رمزك الشخصي'),findsOneWidget);
+  await t.pumpWidget(const SizedBox());await t.pump();
+ });
+
  test('booking QR is distinct from walk-in tokens',(){
   final token=List.filled(43,'a').join();
   expect(bookingToken('gymbooking:$token'),token);
@@ -22,6 +42,7 @@ void main(){
  });
  test('scheduled arrival window is inclusive and closed for settled bookings',(){
   final b=<String,dynamic>{'status':'RESERVED','scheduledAt':'2026-11-01T12:00:00Z','deadlineAt':'2026-11-01T13:00:00Z'};
+  expect(bookingWindow(b,DateTime.parse(b['scheduledAt']).subtract(const Duration(hours:1))),isTrue);
   expect(bookingWindow(b,DateTime.parse(b['scheduledAt'])),isTrue);
   expect(bookingWindow(b,DateTime.parse(b['deadlineAt'])),isTrue);
   expect(bookingWindow(b,DateTime.parse(b['deadlineAt']).add(const Duration(milliseconds:1))),isFalse);

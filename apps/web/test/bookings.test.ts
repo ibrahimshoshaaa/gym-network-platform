@@ -12,7 +12,7 @@ test('booking QR cannot be mistaken for a personal walk-in QR or external URL',(
 });
 test('arrival controls follow booking state and the inclusive saved deadline',()=>{
  const b={status:'RESERVED',scheduledAt:'2026-11-01T12:00:00Z',deadlineAt:'2026-11-01T13:00:00Z'};
- assert.equal(bookingWindow(b,Date.parse(b.scheduledAt)-1),false);
+ assert.equal(bookingWindow(b,Date.parse(b.scheduledAt)-3600000),true);
  assert.equal(bookingWindow(b,Date.parse(b.scheduledAt)),true);
  assert.equal(bookingWindow(b,Date.parse(b.deadlineAt)),true);
  assert.equal(bookingWindow(b,Date.parse(b.deadlineAt)+1),false);

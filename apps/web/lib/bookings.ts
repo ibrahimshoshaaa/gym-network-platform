@@ -16,5 +16,5 @@ export function bookingToken(value:string){
  const raw=value.trim();return raw.startsWith("gymbooking:")&&/^[A-Za-z0-9_-]{43}$/.test(raw.slice(11))?raw.slice(11):null;
 }
 export function bookingWindow(b:Pick<Booking,"status"|"scheduledAt"|"deadlineAt">,now:number){
- return b.status==="RESERVED"&&now>=Date.parse(b.scheduledAt)&&now<=Date.parse(b.deadlineAt);
+ return b.status==="RESERVED"&&now<=Date.parse(b.deadlineAt);
 }

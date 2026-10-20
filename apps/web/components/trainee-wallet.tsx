@@ -174,7 +174,7 @@ function WalletCard({ refresh,onQr,onTopup }: { refresh: string;onQr?:()=>void;o
             </p>
           )}
           {!expired && wallet.status === "VALID" && left !== null && left > 0 && left <= 15*86400 && <Notice text={`صلاحية نقاطك تنتهي خلال ${Math.max(1,Math.ceil(left/86400))} يوم. راجع تاريخ الصلاحية قبل التمرين أو الشحن.`}/>}
-          {(onQr||onTopup)&&<div className="trainee-quick-actions"><button className="primary" onClick={onQr}><QrCode size={20}/>حجوزاتي</button><button className="secondary" onClick={onTopup}><Plus size={20}/>اشحن رصيدك</button></div>}
+          {(onQr||onTopup)&&<div className="trainee-quick-actions"><button className="primary" onClick={onQr}><QrCode size={20}/>رمز الدخول</button><button className="secondary" onClick={onTopup}><Plus size={20}/>اشحن رصيدك</button></div>}
           {wallet.unavailablePoints>0&&<PortalNote>{wallet.unavailablePoints} نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.</PortalNote>}
           <details className="wallet-more wallet-diagnostics"><summary>تفاصيل الرصيد</summary><p>الرصيد المسجل: {wallet.balance} نقطة</p><small>آخر تحديث: {date(wallet.serverTime)}{loading ? " · تحديث…" : ""}</small><p className="muted">المتاح بيتراجع وقت كل عملية، وصلاحية النقاط ظاهرة فوق.</p></details>
         </>

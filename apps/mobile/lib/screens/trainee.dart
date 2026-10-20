@@ -136,7 +136,7 @@ class _TraineeHomeState extends State<TraineeHome> {
                       textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
                     onPressed: widget.showQr,
                     icon: const Icon(Icons.qr_code_2_rounded, size: 20),
-                    label: const Text('حجوزاتي'),
+                    label: const Text('رمز الدخول'),
                   ),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
@@ -350,7 +350,7 @@ class VisitsScreen extends StatelessWidget {
     emptyAction: showQr == null
         ? null
         : ActionButton(
-            'اعرض حجوزاتي',
+            'افتح رمز الدخول',
             icon: Icons.qr_code_2_rounded,
             onPressed: showQr,
           ),

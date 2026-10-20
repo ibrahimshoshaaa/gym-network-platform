@@ -33,17 +33,18 @@ test('scheduled escrow, refunds, physical QR arrival, no-shows and review permis
  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:wallet.id}})).balance,500);
  await cancelBooking(db,customer.id,b.id,{reason:'Retry cancellation'});
  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:wallet.id}})).balance,500);
- // A soon-to-start booking avoids mutating immutable scheduled facts in tests.
+ // Confirm early arrival while the immutable appointment remains one hour in the future.
  const bearer=randomUUID();
  await db.authSession.create({data:{userId:customer.id,tokenHash:hashToken(bearer),expiresAt:new Date(Date.now()+3600000)}});
- const arrival=await createBooking(db,customer.id,randomUUID(),{...input,scheduledAt:new Date(Date.now()+250).toISOString()});
- await setTimeout(300);
+ const arrival=await createBooking(db,customer.id,randomUUID(),{...input,scheduledAt:new Date(Date.now()+3600000).toISOString()});
  const qr=await issueBookingQr(db,customer.id,arrival.id,bearer);
  await assert.rejects(scanBooking(db,other.id,branch.id,{token:qr.token}));
  const scans=await Promise.allSettled([scanBooking(db,owner.id,branch.id,{token:qr.token}),scanBooking(db,owner.id,branch.id,{token:qr.token})]);
  assert.equal(scans.filter(x=>x.status==='fulfilled').length,1);
  const attended=await db.booking.findUniqueOrThrow({where:{id:arrival.id}});
  assert.equal(attended.status,'ATTENDED');assert.ok(attended.visitId);
+ assert.equal(attended.scheduledAt.toISOString(),arrival.scheduledAt.toISOString());
+ assert.ok((await db.visit.findUniqueOrThrow({where:{id:attended.visitId!}})).startedAt<attended.scheduledAt);
  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:wallet.id}})).balance,475);
  assert.equal(await db.visit.count({where:{id:attended.visitId!}}),1);
  const activePolicy=await db.bookingPolicy.findFirstOrThrow({orderBy:{version:'desc'}});
