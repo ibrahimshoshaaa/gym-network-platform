@@ -850,3 +850,12 @@ model CampaignAsset {
  createdAt DateTime @default(now())
  campaigns Campaign[]
 }
+
+// Immutable published booking rules; reservations will retain this version.
+model BookingPolicy {
+ id String @id @default(uuid()) @db.Uuid
+ version Int @unique
+ configuration Json
+ createdById String @db.Uuid
+ createdAt DateTime @default(now())
+}
