@@ -1358,5 +1358,9 @@ test('owner and delegated manager cannot reserve the same branch entitlement twi
  const retryKey=randomUUID(),retry=await requestWithdrawal(db,f.manager.id,f.gym.id,retryKey,{...body,branchId:f.branch.id});
  assert.equal((await requestWithdrawal(db,f.manager.id,f.gym.id,retryKey,{...body,branchId:f.branch.id})).id,retry.id);
  const row=await db.withdrawalRequest.findUniqueOrThrow({where:{id:retry.id}});assert.equal(row.branchId,f.branch.id);
+ const {decideWithdrawal}=await import('../src/withdrawals/service.js');const calendar=await db.withdrawalCalendar.findFirst({orderBy:{version:'desc'}});
+ const approval=decideWithdrawal(db,f.admin.id,retry.id,randomUUID(),{decision:'APPROVE',reason:'Synthetic delegated request review',calendarVersion:calendar?.version??1,destinationVerified:true});
+ if(calendar)assert.equal((await approval).status,'APPROVED');else await assert.rejects(approval,(e:unknown)=>typeof e==='object'&&e!==null&&'code' in e&&e.code==='CALENDAR_NOT_CONFIGURED');
+
  await assert.rejects(db.$executeRaw`UPDATE "WithdrawalAllocation" SET "amountPiasters"=1 WHERE "withdrawalId"=${retry.id}::uuid`);
 });

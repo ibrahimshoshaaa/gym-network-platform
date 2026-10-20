@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
 import { Prisma, type PrismaClient } from '@prisma/client';
+import {requirePermission} from '../auth/delegation.js';
+import {requireGymOwner} from '../auth/authorization.js';
 import { requireActor } from '../auth/authorization.js';
 import { DomainError } from '../domain/errors.js';
 
@@ -69,8 +71,11 @@ export async function accessReceipt(db: PrismaClient, storage: ReceiptStorage, a
   const user = await requireActor(db, actorId);
   const receipt = await db.receiptEvidence.findUnique({ where: { id } });
   if (!receipt) throw new DomainError('RECEIPT_ACCESS_DENIED');
-  if (receipt.ownerUserId !== actorId && user.role !== 'PLATFORM_ADMIN' && !await db.withdrawalRequest.findFirst({
-    where: { proofReceiptId: id, status: { in: ['PAID', 'DISPUTED'] }, gym: { ownerId: actorId, ownerAcceptedAt: { not: null } } }, select: { id: true }
-  }) && !await db.supportMessage.findFirst({where:{receiptId:id,ticket:{userId:actorId}},select:{id:true}})) throw new DomainError('RECEIPT_ACCESS_DENIED');
+  if(receipt.ownerUserId!==actorId&&user.role!=='PLATFORM_ADMIN'){
+    const payout=await db.withdrawalRequest.findFirst({where:{proofReceiptId:id,status:{in:['PAID','DISPUTED']}}});
+    let allowed=false;
+    if(payout){try{if(payout.branchId)await requirePermission(db,actorId,payout.gymId,'REQUEST_WITHDRAWAL',payout.branchId);else await requireGymOwner(db,actorId,payout.gymId,false);allowed=true;}catch{}}
+    if(!allowed&&!await db.supportMessage.findFirst({where:{receiptId:id,ticket:{userId:actorId}},select:{id:true}}))throw new DomainError('RECEIPT_ACCESS_DENIED');
+  }
   return { url: storage.readUrl(receipt.objectKey), expiresInSeconds: 60 };
 }

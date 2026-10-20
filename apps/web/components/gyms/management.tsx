@@ -188,7 +188,7 @@ function GymDetails({
     [invitation, setInvitation] = useState<NewInvite | null>(null),
     [history, setHistory] = useState<Branch | null>(null),
     [success, setSuccess] = useState("");
-  const [delegating,setDelegating]=useState<Staff|null>(null);
+  const [delegating,setDelegating]=useState<{user:{id:string;displayName:string};branchId:string}|null>(null);
   const [receivables, setReceivables] = useState<
     { type: string; balancePiasters: string }[]
   >([]);
@@ -703,6 +703,7 @@ function GymDetails({
                             </td>
                             <td data-label="الإجراءات">
                               <div className="row-actions">
+                                {gym?.canDelegate&&invite.role==='BRANCH_MANAGER'&&invite.branchId&&!invite.revokedAt&&!expired&&<button className="text-button" onClick={()=>setDelegating({user:{id:invite.userId,displayName:invite.user.displayName},branchId:invite.branchId!})}>تحديد صلاحيات المدير</button>}
                                 {!invite.acceptedAt &&
                                   !invite.revokedAt &&
                                   (admin || invite.type === "STAFF") && (

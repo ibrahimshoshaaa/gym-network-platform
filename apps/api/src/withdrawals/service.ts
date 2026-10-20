@@ -402,12 +402,7 @@ export async function decideWithdrawal(
           row.amountPiasters
         )
           throw new DomainError("INSUFFICIENT_FUNDS");
-        const gym = await requireGymOwner(
-          tx,
-          row.requestorId,
-          row.gymId,
-          false,
-        );
+        const gym = row.branchId?(await requirePermission(tx,row.requestorId,row.gymId,'REQUEST_WITHDRAWAL',row.branchId)).gym:await requireGymOwner(tx,row.requestorId,row.gymId,false);
         if (gym.status !== "ACTIVE") throw new DomainError("GYM_INACTIVE");
         const calendar = await tx.withdrawalCalendar.findFirst({
           orderBy: { version: "desc" },
