@@ -51,6 +51,7 @@ enum RequestStatus {
 }
 
 enum PointAccountType {
+  BOOKING_HOLD
   ISSUANCE
   BRANCH_INVENTORY
   GYM_INVENTORY
@@ -60,6 +61,8 @@ enum PointAccountType {
 }
 
 enum PointTxKind {
+  BOOKING_RESERVE
+  BOOKING_SETTLE
   ISSUE
   TRANSFER
   VISIT
@@ -858,4 +861,42 @@ model BookingPolicy {
  configuration Json
  createdById String @db.Uuid
  createdAt DateTime @default(now())
+}
+
+model Booking {
+ id String @id @default(uuid()) @db.Uuid
+ traineeId String @db.Uuid
+ branchId String @db.Uuid
+ policyId String @db.Uuid
+ policySnapshot Json
+ scheduledAt DateTime
+ deadlineAt DateTime
+ points Int
+ sessionMinutes Int
+ pricingPolicyId String @db.Uuid
+ unitPricePiasters BigInt
+ redemptionBps Int
+ branchPricingVersion Int
+ walletId String @db.Uuid
+ holdAccountId String @db.Uuid
+ status String @default("RESERVED")
+ idempotencyKey String @unique
+ requestHash String
+ reserveTransactionId String @unique @db.Uuid
+ resolutionTransactionId String? @unique @db.Uuid
+ moneyTransactionId String? @unique @db.Uuid
+ visitId String? @unique @db.Uuid
+ qrHash String? @unique
+ qrExpiresAt DateTime?
+ qrSessionId String? @db.Uuid
+ absenceReason String?
+ decisionReason String?
+ decidedById String? @db.Uuid
+ decidedAt DateTime?
+ traineePoints Int?
+ gymPoints Int?
+ platformPoints Int?
+ createdAt DateTime @default(now())
+ @@index([traineeId,createdAt])
+ @@index([status,deadlineAt])
 }
