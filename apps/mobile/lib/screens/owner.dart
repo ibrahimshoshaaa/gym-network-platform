@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
 import '../core/portal_ui.dart';
+import 'delegation.dart';
 import 'directory.dart';
 import 'topup.dart';
 import 'account.dart';
@@ -939,6 +940,7 @@ class _StaffAccessCardState extends State<StaffAccessCard> {
                 : 'تسجيل الزيارات وشحن المتدربين. الإلغاء يحتاج طلب مراجعة.',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
+          if(manager&&widget.assignment['canDelegate']==true)TextButton.icon(icon:const Icon(Icons.admin_panel_settings_outlined),label:const Text('تفويض الصلاحيات'),onPressed:()=>open(context,StaffDelegation(api:widget.api,gymId:widget.gymId,userId:'${widget.assignment['user']['id']}',branchId:'${widget.assignment['branchId']}',name:'${widget.assignment['user']['displayName']}'))),
           ErrorNote(error),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -965,10 +967,12 @@ class _StaffAccessCardState extends State<StaffAccessCard> {
 }
 
 class InviteStaff extends StatefulWidget {
+  final bool allowManager;
   final ApiClient api;
   final String gymId, branchId;
   const InviteStaff({
     super.key,
+    this.allowManager=true,
     required this.api,
     required this.gymId,
     required this.branchId,
@@ -1016,9 +1020,9 @@ class _InviteStaffState extends State<InviteStaff> {
           DropdownButtonFormField<String>(
             initialValue: role,
             decoration: const InputDecoration(labelText: 'الدور'),
-            items: const [
-              DropdownMenuItem(value: 'CASHIER', child: Text('كاشير')),
-              DropdownMenuItem(
+            items: [
+              const DropdownMenuItem(value: 'CASHIER', child: Text('كاشير')),
+              if(widget.allowManager)const DropdownMenuItem(
                 value: 'BRANCH_MANAGER',
                 child: Text('مدير فرع'),
               ),
@@ -1062,9 +1066,10 @@ class _InviteStaffState extends State<InviteStaff> {
             detail: 'شارك الرابط مع الموظف ليختار كلمة السر ويقبل الدعوة. الرابط مؤقت وسري.',
             icon: Icons.mark_email_read_outlined,
           ),
+          if(role=='BRANCH_MANAGER'&&result?['user']?['id']!=null)ActionButton('تحديد صلاحيات المدير',onPressed:()=>open(context,StaffDelegation(api:widget.api,gymId:widget.gymId,userId:result!['user']['id'],branchId:widget.branchId,name:name.text))),
           const SizedBox(height: 18),
           SelectableText(
-            'https://gym-network-platform.vercel.app/#invite=${result!['token']}',
+            'https://gym-network-platform.vercel.app/#invite=${result!['invitation']?['token']??result!['token']}',
             textDirection: TextDirection.ltr,
           ),
         ],

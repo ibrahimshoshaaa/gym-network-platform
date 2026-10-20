@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -92,13 +93,69 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('مساحة الإدارة على الويب'), findsNothing);
       expect(find.text('فرع شبين'), findsOneWidget);
-      await t.tap(find.text('فتح الفرع'));
-      await t.pumpAndSettle();
       expect(find.text('تسجيل زيارة'), findsOneWidget);
-      expect(find.text('شحن نقاط لمتدرب'), findsOneWidget);
+      expect(find.text('بيع نقاط لمتدرب'), findsOneWidget);
       expect(t.takeException(), isNull);
     });
   }
+  testWidgets('zero stock keeps attendance available and disables point sales', (t) async {
+    final api = client('CASHIER', (r) async => reply(
+      r.url.path.contains('reports/') ? {'visits': {'count': 0}, 'sales': {'points': 0, 'amountPiasters': '0'}}
+      : {'stock': 0, 'visitPricePoints': 20, 'sessionMinutes': 120}));
+    await t.pumpWidget(page(Scaffold(body: BranchDashboard(api: api, branch: branch))));
+    await t.pumpAndSettle();
+    expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'تسجيل زيارة')).onPressed, isNotNull);
+    expect(t.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'بيع نقاط لمتدرب')).onPressed, isNull);
+    expect(t.takeException(), isNull);
+  });
+  for (final manager in [false, true]) {
+    testWidgets('visit cancellation follows branch capability $manager', (t) async {
+      final api = client('BRANCH_MANAGER', (_) async => reply({}));
+      await t.pumpWidget(page(VisitCancellation(api: api, branch: {...branch, 'canCancel': manager},
+        visit: {'id': 'v1', 'pointsCharged': 20, 'startedAt': DateTime.now().toUtc().toIso8601String()})));
+      await t.pumpAndSettle();
+      expect(find.text('تأكيد إلغاء الزيارة'), manager ? findsOneWidget : findsNothing);
+      expect(find.text('إرسال طلب مراجعة'), manager ? findsNothing : findsOneWidget);
+      expect(find.byType(TextField), findsNWidgets(manager ? 1 : 2));
+      expect(t.takeException(), isNull);
+    });
+  }
+  testWidgets('selected assigned branch persists between sales and visits', (t) async {
+    final paths = <String>[];
+    final api = client('CASHIER', (r) async {
+      paths.add(r.url.path);
+      if (r.url.path.endsWith('operations/branches')) return reply({'items': [branch, {...branch, 'id': 'b2', 'name': 'فرع تاني', 'canCancel': true}]});
+      return reply({'items': [], 'stock': 100});
+    });
+    await t.pumpWidget(page(NativeShell(api: api, gyms: const [])));
+    await t.pumpAndSettle();
+    await t.tap(find.byType(DropdownButton<String>));
+    await t.pumpAndSettle();
+    await t.tap(find.text('فرع تاني').last);
+    await t.pumpAndSettle();
+    expect(find.text('مدير الفرع'), findsOneWidget);
+    await t.tap(find.text('المبيعات'));
+    await t.pumpAndSettle();
+    expect(paths.last, endsWith('/operations/branches/b2/sales'));
+    await t.tap(find.text('الزيارات'));
+    await t.pumpAndSettle();
+    expect(paths.last, endsWith('/operations/branches/b2/visits'));
+    expect(t.takeException(), isNull);
+  });
+  testWidgets('delayed daily report does not block stock and attendance', (t) async {
+    final delayed = Completer<http.Response>();
+    final api = client('CASHIER', (r) async => r.url.path.contains('reports/') ? delayed.future : reply({'stock': 50, 'visitPricePoints': 20, 'sessionMinutes': 120}));
+    await t.pumpWidget(page(Scaffold(body: BranchDashboard(api: api, branch: branch))));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.text('50 نقطة'), findsOneWidget);
+    expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'تسجيل زيارة')).onPressed, isNotNull);
+    delayed.complete(http.Response('{"code":"SERVICE_UNAVAILABLE"}', 503));
+    await t.pumpAndSettle();
+    expect(find.text('50 نقطة'), findsOneWidget);
+    expect(find.text('0 ج.م'), findsNothing);
+    expect(t.takeException(), isNull);
+  });
   testWidgets('unassigned staff sees a useful empty state', (t) async {
     final api = client('CASHIER', (_) async => reply({'items': []}));
     await t.pumpWidget(GymNetworkApp(api: api));
