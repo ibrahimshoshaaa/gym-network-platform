@@ -155,7 +155,7 @@ class _StockTransferState extends State<StockTransfer> {
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(key: ValueKey('$from:$to'), initialValue: to, isExpanded: true,
             decoration: const InputDecoration(labelText: 'إلى رصيد'),
-            items: accounts.where((a) => a['id'] != from && a['status'] == 'ACTIVE').map((a) => DropdownMenuItem<String>(value: a['id'],
+            items: accounts.where((a) => a['id'] != from).map((a) => DropdownMenuItem<String>(value: a['id'], enabled: a['status'] == 'ACTIVE',
               child: Text('${a['name']} · ${a['stock']} نقطة', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: locked ? null : (v) => setState(() => to = v)),
           const SizedBox(height: 16),

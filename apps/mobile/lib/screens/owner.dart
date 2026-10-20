@@ -101,6 +101,10 @@ class _OwnerHomeState extends State<OwnerHome> {
        child:const Text('شراء نقاط لرصيد الجيم',style:TextStyle(fontSize:12))),
      ])),
     if(walletError!=null)ErrorNote(walletError,retry:load),
+    if(wallet!=null&&'${wallet!['central']}'=='0'&&BigInt.tryParse('${wallet!['branchesTotal']}')!=null&&BigInt.parse('${wallet!['branchesTotal']}')>BigInt.zero)...[
+      const SizedBox(height:12),
+      const PortalNote('نقاطك موجودة في الفروع. من «إدارة النقاط» تقدر ترجع جزء منها لرصيدك أو تنقلها لفرع تاني.'),
+    ],
     const SectionTitle('شغل الجيم'),
     Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
       _ownerTask('إدارة النقاط','رصيدك، توزيع الفروع والتحويل بينها',Icons.swap_horiz_rounded,
