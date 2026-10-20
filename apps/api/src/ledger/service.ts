@@ -157,7 +157,7 @@ export function reverseLedger(db: PrismaClient, input: {
     if (p && await tx.pointDispatch.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     if (p && await tx.pointSale.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     if (p && await tx.topupRequest.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
-    if (p && ['VISIT', 'VISIT_REVERSAL', 'SALE_REVERSAL', 'EXPIRY'].includes(p.kind) ||
+    if (p && ['VISIT', 'VISIT_REVERSAL', 'SALE_REVERSAL', 'EXPIRY', 'BOOKING_RESERVE', 'BOOKING_SETTLE'].includes(p.kind) ||
         m && m.kind !== 'ADJUSTMENT') throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     return postInTransaction(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: input.reason,
       points: p ? { kind: 'ADJUSTMENT', reversalOfId: p.id, entries: p.postings.map(e => ({ accountId: e.accountId, delta: -BigInt(e.delta) })) } : undefined,
