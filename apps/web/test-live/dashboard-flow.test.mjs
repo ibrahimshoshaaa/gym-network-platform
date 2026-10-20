@@ -215,6 +215,40 @@ test(
       assert.equal(ownerLogin.status, 200);
       const ownerCookie = sessionCookie(ownerLogin);
       assert.ok(ownerCookie);
+
+      {
+      // Exercise native PUT through the real Next route, not only the API service.
+      const managerInvite = await request(`/api/backend/gyms/${gym.id}/staff-invitations`, {
+        cookie: ownerCookie, method: "POST",
+        body: {branchId: branch.id, role: "BRANCH_MANAGER", contact: {
+          displayName: "Synthetic Delegated Manager",
+          email: `delegated-manager-${id}@example.test`, phone: "01500000009",
+        }},
+      });
+      assert.equal(managerInvite.status, 201);
+      const pendingManager = await managerInvite.json();
+      const nativeLogin = await request("/api/mobile/auth/signin", {
+        method: "POST", body: {identifier: owner.email, password},
+      });
+      assert.equal(nativeLogin.status, 200);
+      const nativeSession = await nativeLogin.json();
+      const nativePath = `/api/mobile/gyms/${gym.id}/delegations`;
+      const grantBody = {userId: pendingManager.user.id, branchId: branch.id,
+        permissions: ["MANAGE_CASHIERS", "EDIT_BRANCH", "REQUEST_PRICING"],
+        fullAccess: false, active: true, expectedVersion: 0};
+      assert.equal((await request(nativePath, {method: "PUT", body: grantBody,
+        cookie: ownerCookie})).status, 401); // Cookies never authorize native calls.
+      const savedGrant = await request(nativePath, {method: "PUT", body: grantBody,
+        headers: {authorization: `Bearer ${nativeSession.accessToken}`}});
+      assert.equal(savedGrant.status, 200, await savedGrant.clone().text());
+      assert.equal((await savedGrant.json()).version, 1);
+      const nativeGrants = await request(nativePath, {
+        headers: {authorization: `Bearer ${nativeSession.accessToken}`}});
+      assert.equal(nativeGrants.status, 200);
+      assert.ok((await nativeGrants.json()).items.some(g =>
+        g.userId === pendingManager.user.id && g.permissions.includes("MANAGE_CASHIERS")));
+      }
+
       assert.equal(
         (
           await request("/api/backend/admin/topup-settings", {

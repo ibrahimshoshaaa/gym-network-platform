@@ -5,6 +5,7 @@ export const runtime='nodejs';
 const publicRoutes=new Set(['auth/signin','auth/register','auth/owners/register','auth/invitations/accept']);
 export async function GET(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function POST(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
+export async function PUT(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function PATCH(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  const {path:segments}=await c.params,path=segments.join('/'),method=r.method;
