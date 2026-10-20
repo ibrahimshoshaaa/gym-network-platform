@@ -136,7 +136,7 @@ class _TraineeHomeState extends State<TraineeHome> {
                       textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
                     onPressed: widget.showQr,
                     icon: const Icon(Icons.qr_code_2_rounded, size: 20),
-                    label: const Text('رمز الدخول'),
+                    label: const Text('حجوزاتي'),
                   ),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
@@ -346,11 +346,11 @@ class VisitsScreen extends StatelessWidget {
     path: 'trainee/visits',
     header: const TraineeSectionHeader('زياراتك', subtitle: 'كل تمرينة ونقاطها، في سجل واحد.'),
     empty: 'لسه مفيش زيارات',
-    emptyDetail: 'اختار جيمك واعرض رمز الدخول عند وصولك. الزيارة هتظهر هنا بعد تأكيد حضورك.',
+    emptyDetail: 'احجز موعدك من تفاصيل الجيم واعرض QR الحجز عند وصولك. الزيارة هتظهر هنا بعد تأكيد حضورك.',
     emptyAction: showQr == null
         ? null
         : ActionButton(
-            'افتح رمز الدخول',
+            'اعرض حجوزاتي',
             icon: Icons.qr_code_2_rounded,
             onPressed: showQr,
           ),

@@ -5,6 +5,7 @@ const origin=process.env.PARITY_ORIGIN??'http://127.0.0.1:3110';
 const gym={id:'11111111-1111-4111-8111-111111111111',name:'شوشه جيم',status:'ACTIVE',ownerAcceptedAt:'2026-10-01',owner:{isActive:true},description:'جيم للاختبار'};
 const branches=[1,2].map((i)=>({id:`22222222-2222-4222-8222-22222222222${i}`,gymId:gym.id,gymName:gym.name,name:`جولدن جيم ${i}`,status:'ACTIVE',address:'شما أشمون المنوفية',city:'أشمون',governorate:'المنوفية',visitPricePoints:i===1?20:30,sessionMinutes:i===1?180:120,priceApprovedAt:'2026-10-01',pricingVersion:1,pointAccounts:[{balance:100}],canSell:true,canCancel:true,permissions:[],latitude:'30.4',longitude:'31.0',gym}));
 const empty={items:[],nextCursor:null},now=new Date().toISOString();
+const booking={id:'33333333-3333-4333-8333-333333333333',branchId:branches[0].id,traineeId:'synthetic',scheduledAt:new Date(Date.now()-60000).toISOString(),deadlineAt:new Date(Date.now()+3600000).toISOString(),points:20,status:'RESERVED',policySnapshot:{mode:'MANUAL',graceMinutes:60},absenceReason:null,decisionReason:null,traineePoints:null,gymPoints:null,platformPoints:null,branch:branches[0]};
 const balances=['GYM_AVAILABLE','GYM_RESERVED','GYM_DISPUTED','GYM_PAID'].map(type=>({type,balancePiasters:type==='GYM_AVAILABLE'?'1600':'0'}));
 const options={policy:{id:'policy',version:1,pointPricePiasters:'100',gymDiscountBps:1000,redemptionBps:8000},paymentMethods:[{type:'WALLET',account:'01000000000',accountName:'حساب اختبار',version:1},{type:'INSTAPAY',account:'test@instapay',accountName:'حساب اختبار آخر',version:1}],packages:[{id:'p100',label:'100 نقطة',points:100,version:1},{id:'p200',label:'200 نقطة',points:200,version:1}]};
 async function fixture(browser,role,width=390){
@@ -21,6 +22,9 @@ async function fixture(browser,role,width=390){
  else if(path.endsWith('/receivables'))data={accounts:balances};
  else if(path.endsWith('/summary'))data={stock:100,visitPricePoints:20,sessionMinutes:180};
  else if(path==='trainee/wallet')data={balance:150,spendablePoints:150,unavailablePoints:0,expiresAt:new Date(Date.now()+86400000*60).toISOString(),status:'VALID',serverTime:now};
+ else if(path==='trainee/bookings')data=req.method()==='POST'?booking:{items:[booking],serverTime:new Date().toISOString()};
+ else if(/^trainee\/bookings\/.+\/qr$/.test(path))data={token:'A'.repeat(43),expiresAt:new Date(Date.now()+60000).toISOString(),serverTime:new Date().toISOString()};
+ else if(path==='booking-policy')data={policy:{id:'booking-policy',version:1,policy:{mode:'MANUAL',graceMinutes:60}}};
  else if(path==='trainee/qr')data={token:'A'.repeat(43),expiresAt:new Date(Date.now()+60000).toISOString(),serverTime:new Date().toISOString()};
  else if(path==='topup-options')data=options;
  else if(path==='topup-quotes')data={points:body.points??(body.packageId==='p200'?200:100),chargePiasters:role==='TRAINEE'?'10000':'9000',pricingVersion:1,unallocatedPiasters:'0'};
@@ -48,7 +52,7 @@ test('native web portals mirror trainee, owner and cashier flows without prematu
   for(const width of [390,1280]){
    const f=await fixture(browser,'TRAINEE',width),{page}=f;
    await page.getByText('150',{exact:false}).first().waitFor();await screenshot(page,`trainee-home-${width}`);await noOverflow(page);
-   await nav(page,'رمز الدخول');await page.getByText('رمزك الشخصي').waitFor();await page.locator('.native-qr-image svg').waitFor();assert.ok(f.calls.some(c=>c.path==='trainee/qr'));
+   await nav(page,'حجوزاتي');await page.getByText('حجز مؤكد · نقاط محجوزة').waitFor();await page.getByRole('button',{name:'اعرض QR الحجز',exact:true}).click();await page.locator('.native-qr-image svg').waitFor();assert.ok(f.calls.some(c=>c.path===`trainee/bookings/${booking.id}/qr`));await screenshot(page,`booking-qr-${width}`);await page.getByRole('button',{name:'إغلاق',exact:true}).click();
    await nav(page,'زياراتي');assert.equal(await page.getByText('حركات نقاطك').count(),0);
    await nav(page,'الرئيسية');await page.getByRole('button',{name:'اشحن رصيدك',exact:true}).click();await page.getByRole('heading',{name:'اختار رصيدك'}).waitFor();
    await page.getByRole('button',{name:'100 نقطة',exact:false}).first().click();await page.getByRole('button',{name:'متابعة لبيانات التحويل'}).click();await page.getByRole('heading',{name:'حوّل وارفع الإيصال'}).waitFor();assert.equal(await page.getByRole('heading',{name:'اختار رصيدك'}).count(),0);assert.ok(!f.calls.some(c=>c.path==='topups'&&c.method==='POST'));

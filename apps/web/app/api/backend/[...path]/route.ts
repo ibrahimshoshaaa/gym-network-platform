@@ -41,6 +41,7 @@ async function handle(request: Request, context: Context) {
           path,
         ) ||
         path === "admin/point-transfers" || /^gyms\/[^/]+\/point-transfers$/.test(path) ||
+        path === "trainee/bookings" ||
         path === "topups" ||
         path === "operation-reviews" ||
         /^operations\/branches\/[^/]+\/visits\/[^/]+\/cancel$/.test(path) ||

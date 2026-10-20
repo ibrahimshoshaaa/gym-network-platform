@@ -1,4 +1,5 @@
 "use client";
+import {BookingScanner} from "./bookings";
 import {BranchHome,type BranchDestination} from "./branch-home";
 import {Fact,FlowSteps,PortalIntro,PortalTask,PortalNote,ScreenBack} from "./portal-ui";
 import { RecordReference } from "./record-reference";
@@ -149,7 +150,7 @@ export function BranchOperations({ branch, initialTask,taskOnly=false }: { branc
           onDone={() => setRevision((n) => n + 1)}
         />
       ) : tab === "visit" ? (
-        <VisitForm branchId={branch.id} />
+        <><BookingScanner branchId={branch.id}/><details className="card"><summary>زيارة بدون حجز مسبق</summary><VisitForm branchId={branch.id}/></details></>
       ) : (
         <OperationHistory branchId={branch.id} canCancel={branch.canCancel} />
       )}

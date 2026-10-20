@@ -1816,7 +1816,7 @@ test(
           assert.ok(ownerWalletBounds.height<320,'owner stock card must keep the Flutter spacing');
           await expect(ownerPage.locator('.portal-app-header>img')).toHaveAttribute('src','/brand/gymbank-wordmark.png');
           await ownerPage.getByRole('button',{name:/محفظتي وإرسال النقاط/}).click();
-          await expect(ownerPage.getByText('رصيد صاحب الجيم المتاح للبيع',{exact:true})).toBeVisible();
+          await expect(ownerPage.getByRole('heading',{name:'هترسل لمين؟',exact:true})).toBeVisible();
           await ownerPage.getByLabel('رقم موبايل المتدرب',{exact:true}).fill(traineeBody.phone);
           await ownerPage.getByRole('button',{name:'متابعة',exact:true}).click();
           await expect(ownerPage.locator('.transfer-recipient')).toContainText(traineeBody.displayName);
@@ -1883,7 +1883,7 @@ test(
           await traineePage.goto(origin);
           const campaignCard=traineePage.locator('.campaign-banner').filter({has:traineePage.getByRole('button',{name:'فتح الإعلان',exact:true})});await expect(campaignCard).toBeVisible();
           assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'campaign must fit the personal mobile portal');
-          await campaignCard.getByRole('button',{name:'فتح الإعلان',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'رمز الدخول',exact:true})).toBeVisible();
+          await campaignCard.getByRole('button',{name:'فتح الإعلان',exact:true}).click();await expect(traineePage.getByRole('heading',{name:'حجوزاتي',exact:true})).toBeVisible();
           const campaignFeed=await request('/api/backend/notifications',{cookie:traineeCookie});assert.equal(campaignFeed.status,200);assert.ok((await campaignFeed.json()).items.some(c=>c.id===`campaign:${campaign.id}:1`));
           const posterBody={...campaignBody,title:'',body:'',imageId:posterAsset.id,destination:'NONE',channel:'AD',priority:99};
           const posterResponse=await request('/api/backend/admin/campaigns',{cookie,method:'POST',body:posterBody});assert.equal(posterResponse.status,200,await posterResponse.clone().text());const posterCampaign=await posterResponse.json();
@@ -1909,9 +1909,9 @@ test(
             assert.ok(Math.abs(first.y-second.y)<2,'QR and topup actions must share one row');
           }
           await traineePage.setViewportSize({width:393,height:851});
-          await traineePage.getByRole('button',{name:'زياراتي',exact:true}).click();
-          await expect(traineePage.getByRole('heading',{name:'حركات نقاطك'})).toBeVisible();
-          const records=traineePage.locator('.mobile-records tbody tr');
+          await traineePage.getByRole('button',{name:'السجل كامل',exact:true}).click();
+          await expect(traineePage.getByRole('heading',{name:'حركة نقاطك',exact:true})).toBeVisible();
+          const records=traineePage.locator('.native-record-list .native-movement-card');
           await expect(records.first()).toBeVisible();
           for(const width of [320,393,700]) {
             await traineePage.setViewportSize({width,height:851});
@@ -1919,14 +1919,15 @@ test(
             assert.ok(bounds.width>width*0.65,'ledger card must use the available width');
             assert.ok(bounds.height<650,'closed references must not inflate ledger rows');
             assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'ledger must fit mobile viewport');
-            assert.equal(await records.first().locator('td').first().evaluate(el=>getComputedStyle(el).display),'block');
+            assert.equal(await records.first().evaluate(el=>el.tagName),'ARTICLE');
           }
           const ref=records.first().locator('.record-reference').first();
           await ref.locator('summary').click();
           await expect(ref.locator('.record-reference-body code')).toHaveText(/^[a-f0-9-]{36}$/);
           assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'expanded UUID must not overflow');
           await traineePage.setViewportSize({width:1280,height:900});
-          assert.equal(await records.first().locator('td').first().evaluate(el=>getComputedStyle(el).display),'table-cell');
+          assert.equal(await records.first().evaluate(el=>el.tagName),'ARTICLE');
+          assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'desktop ledger cards must fit without horizontal overflow');
           await traineeContext.close();
         } finally {await browser.close();}
       }

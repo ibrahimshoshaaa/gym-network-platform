@@ -6,6 +6,8 @@ import 'core/api.dart';
 import 'core/ui.dart';
 import 'screens/auth.dart';
 import 'screens/trainee.dart';
+import 'screens/bookings.dart';
+import 'screens/booking_admin.dart';
 import 'screens/directory.dart';
 import 'screens/owner.dart';
 import 'screens/money.dart';
@@ -166,6 +168,7 @@ class _SessionGateState extends State<SessionGate> {
         ),
       );
     final role = widget.api.user!['role'];
+    if(role=='PLATFORM_ADMIN') return BookingAdminScreen(api:widget.api);
     if (role == 'GYM_OWNER' &&
         application != null &&
         application!['status'] != 'APPROVED')
@@ -260,7 +263,7 @@ class _NativeShellState extends State<NativeShell> {
         : const [
             (Icons.home_outlined, 'الرئيسية'),
             (Icons.near_me_outlined, 'الجيمات'),
-            (Icons.qr_code_2_rounded, 'رمز الدخول'),
+            (Icons.qr_code_2_rounded, 'حجوزاتي'),
             (Icons.history_rounded, 'زياراتي'),
             (Icons.person_outline_rounded, 'حسابي'),
           ];
@@ -294,7 +297,7 @@ class _NativeShellState extends State<NativeShell> {
           showQr: () => setState(() => index = 2),
         ),
         1 => DirectoryScreen(api: widget.api),
-        2 => QrScreen(api: widget.api),
+        2 => BookingsScreen(api: widget.api,embedded:true),
         3 => VisitsScreen(
           api: widget.api,
           showQr: () => setState(() => index = 2),

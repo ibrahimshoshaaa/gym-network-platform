@@ -69,6 +69,7 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^booking-policy$/, /^admin\/booking-policy$/, /^trainee\/bookings$/, /^admin\/bookings\/review$/,
     /^campaigns$/, /^admin\/campaigns$/,
     new RegExp(`^gyms/${uuid}/delegations$`),
     new RegExp(`^operations/branches/${uuid}/entitlements$`),
@@ -117,6 +118,10 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^trainee\/bookings$/, /^admin\/booking-policy$/, /^admin\/bookings\/process-due$/,
+    new RegExp(`^trainee/bookings/${uuid}/(?:cancel|qr)$`),
+    new RegExp(`^admin/bookings/${uuid}/decision$`),
+    new RegExp(`^operations/branches/${uuid}/bookings/scan$`),
     /^admin\/(campaigns|campaign-assets)$/,
     new RegExp(`^admin/gym-applications/${uuid}/review$`),
     /^me\/gym-application\/resubmit$/,
