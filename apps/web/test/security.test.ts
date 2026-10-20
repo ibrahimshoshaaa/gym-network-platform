@@ -270,3 +270,13 @@ test('inventory overview and immutable transfer history use explicit gym UUID ro
  assert.equal(allowedPath('POST',`gyms/${id}/inventory`),false);
  assert.equal(allowedPath('GET','gyms/not-a-uuid/inventory'),false);
 });
+
+// Both the cookie and native Bearer gateways use this allowlist.
+test("branch metadata is readable only through the explicit UUID GET route", () => {
+  const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
+  assert.equal(allowedPath("GET", `branches/${id}/manage`), true);
+  for (const method of ["POST", "PUT", "PATCH", "DELETE"])
+    assert.equal(allowedPath(method, `branches/${id}/manage`), false);
+  for (const path of ["branches/not-a-uuid/manage", `branches/${id}/manage/extra`, `branches/${id}`, `branches/${id}/secret`])
+    assert.equal(allowedPath("GET", path), false);
+});
