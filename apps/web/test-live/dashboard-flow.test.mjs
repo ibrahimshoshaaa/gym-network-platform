@@ -1816,7 +1816,7 @@ test(
           assert.ok(ownerWalletBounds.height<320,'owner stock card must keep the Flutter spacing');
           await expect(ownerPage.locator('.portal-app-header>img')).toHaveAttribute('src','/brand/gymbank-wordmark.png');
           await ownerPage.getByRole('button',{name:/محفظتي وإرسال النقاط/}).click();
-          await expect(ownerPage.getByText('رصيد صاحب الجيم المتاح للبيع',{exact:true})).toBeVisible();
+          await expect(ownerPage.getByRole('heading',{name:'هترسل لمين؟',exact:true})).toBeVisible();
           await ownerPage.getByLabel('رقم موبايل المتدرب',{exact:true}).fill(traineeBody.phone);
           await ownerPage.getByRole('button',{name:'متابعة',exact:true}).click();
           await expect(ownerPage.locator('.transfer-recipient')).toContainText(traineeBody.displayName);
