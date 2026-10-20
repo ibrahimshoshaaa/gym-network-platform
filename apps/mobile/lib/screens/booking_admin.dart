@@ -78,7 +78,7 @@ class _BookingAdminScreenState extends State<BookingAdminScreen>{
    if(minutes==null||minutes<0||minutes>10080||mode=='AUTOMATIC'&&kind.contains('_')&&(ratio==null||ratio!=ratio.round()||ratio<0||ratio>100))throw const ApiFailure('INVALID_INPUT');
    final policy=<String,dynamic>{'mode':mode,'graceMinutes':minutes,if(mode=='AUTOMATIC')'allocation':bookingAllocation(kind,ratio?.toInt()??50)};
    await widget.api.request('admin/booking-policy',method:'POST',body:{'expectedVersion':current?['version']??0,'policy':policy});
-   await load();if(mounted)setState(()=>success='تم حفظ سياسة الحجز للحجوزات الجديدة.');
+   await load();if(mounted){setState(()=>success='تم حفظ سياسة الحجز للحجوزات الجديدة.');ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(success)));}
   }catch(e){if(mounted)setState(()=>error=e);}
   finally{if(mounted)setState(()=>busy=false);}
  }

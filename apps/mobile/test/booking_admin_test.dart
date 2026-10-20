@@ -28,6 +28,6 @@ void main(){
   await t.ensureVisible(find.text('حفظ سياسة الحجز'));await t.tap(find.text('حفظ سياسة الحجز'));await t.pumpAndSettle();
   expect(writes,1);
   expect(posted,{'expectedVersion':0,'policy':{'mode':'MANUAL','graceMinutes':60}});
-  expect(find.text('تم حفظ سياسة الحجز للحجوزات الجديدة.'),findsOneWidget);
+  expect(find.descendant(of:find.byType(SnackBar),matching:find.text('تم حفظ سياسة الحجز للحجوزات الجديدة.')),findsOneWidget);
  });
 }
