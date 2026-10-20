@@ -33,3 +33,14 @@ test("role navigation hides owner purchases and admin setup from staff while pre
  for(const role of ["CASHIER","BRANCH_MANAGER"]){assert.ok(roleTabs[role]!.includes("cashier"));assert.ok(!roleTabs[role]!.includes("purchases"));assert.ok(!roleTabs[role]!.includes("payments"));}
  for(const [role,quick] of Object.entries(roleQuickTabs))for(const destination of quick)assert.ok(roleTabs[role]!.includes(destination));
 });
+
+test('directory uses native control order and prefers the gym logo over a branch cover',()=>{
+ const search=renderToStaticMarkup(createElement(BranchDirectory,{}));
+ assert.ok(search.indexOf('directory-search-row')<search.indexOf('directory-location-row'));
+ assert.ok(search.indexOf('directory-location-row')<search.indexOf('directory-filters'));
+ assert.doesNotMatch(search,/اختار جيم تمرينتك|شوف سعر الزيارة والمكان/);
+ const branch:DirectoryBranch={id:'logo-test',name:'فرع أول',address:'عنوان',governorate:'المنوفية',city:'أشمون',contactPhone:null,openingHours:null,latitude:'30.5',longitude:'31',visitPricePoints:20,sessionMinutes:180,pricingVersion:1,gym:{id:'gym',name:'شوشه جيم',description:''},images:[{id:'photo',url:'https://example.test/photo.jpg',purpose:'PHOTO'},{id:'logo',url:'https://example.test/logo.png',purpose:'LOGO'}]};
+ const card=renderToStaticMarkup(createElement(DirectoryCard,{branch,onOpen:()=>{}}));
+ assert.match(card,/src="https:\/\/example.test\/logo.png"/);assert.doesNotMatch(card,/photo.jpg|directory-cover|directory-address/);
+ assert.match(card,/تفاصيل الجيم والاتجاهات/);assert.match(card,/180/);
+});
