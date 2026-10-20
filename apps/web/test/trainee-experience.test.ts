@@ -27,5 +27,5 @@ test("trainee area has five personal destinations and no gym administration cont
 test('personal account groups profile, security, requests and help without operational controls',async()=>{
  const {PortalAccount}=await import('../components/portal-account');
  const html=renderToStaticMarkup(createElement(PortalAccount,{user:{id:'t',displayName:'متدرب',role:'TRAINEE',email:'test@example.test',phone:'+201500000000'},onPassword:()=>{},onPurchases:()=>{},onSupport:()=>{},logout:async()=>{},loggingOut:false}));
- assert.match(html,/بياناتك والأمان/);assert.match(html,/طلبات الشحن/);assert.match(html,/الدعم والمساعدة/);assert.doesNotMatch(html,/الفروع والموظفين/);
+ assert.match(html,/class="portal-account-page native-trainee-account"/);assert.doesNotMatch(html,/class="[^"]*(?:^|\s)trainee-account(?:\s|")/);assert.match(html,/بياناتك والأمان/);assert.match(html,/طلبات الشحن/);assert.match(html,/الدعم والمساعدة/);assert.doesNotMatch(html,/الفروع والموظفين/);
 });
