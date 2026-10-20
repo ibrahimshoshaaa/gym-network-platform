@@ -1,4 +1,5 @@
 "use client";
+import { pagePath } from "../../lib/page-path";
 import { invitationLink } from "../../lib/invitation-link";
 import { LocationPicker } from "./location-picker";
 import { requiredLocation } from "../../lib/location-point";
@@ -125,7 +126,7 @@ export function usePage<T extends { id: string }>(path: string | null) {
       setError("");
       try {
         const result = await api<Page<T>>(
-          `${path}${path.includes("?") ? "&" : "?"}limit=25${next ? `&cursor=${next}` : ""}`,
+          pagePath(path, next),
         );
         if (version.current === current) {
           setRows((old) =>
