@@ -13,7 +13,8 @@ async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  if(r.headers.has('origin'))checkOrigin(r);
  const isPublic=method==='POST'&&publicRoutes.has(path);
  const custom=(method==='GET'&&['me','me/access','me/gym-application'].includes(path))||(method==='POST'&&['auth/logout','me/gym-application/resubmit'].includes(path));
- if(!isPublic&&!custom&&(!allowedPath(method,path)||(path.startsWith('admin/')||path==='reports/export')))throw new GatewayError('NOT_FOUND',404);
+ const bookingAdmin=(method==='GET'&&['admin/booking-policy','admin/bookings/review'].includes(path))||(method==='POST'&&(path==='admin/booking-policy'||/^admin\/bookings\/[0-9a-f-]{36}\/decision$/i.test(path)));
+ if(!isPublic&&!custom&&(!allowedPath(method,path)||((path.startsWith('admin/')&&!bookingAdmin)||path==='reports/export')))throw new GatewayError('NOT_FOUND',404);
  const match=/^Bearer ([A-Za-z0-9_-]{43})$/.exec(r.headers.get('authorization')??'');
  if(!isPublic&&!match)throw new GatewayError('UNAUTHENTICATED',401);
  const headers=new Headers(),type=r.headers.get('content-type')??'';

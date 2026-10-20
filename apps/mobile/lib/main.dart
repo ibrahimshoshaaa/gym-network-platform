@@ -7,6 +7,7 @@ import 'core/ui.dart';
 import 'screens/auth.dart';
 import 'screens/trainee.dart';
 import 'screens/bookings.dart';
+import 'screens/booking_admin.dart';
 import 'screens/directory.dart';
 import 'screens/owner.dart';
 import 'screens/money.dart';
@@ -167,6 +168,7 @@ class _SessionGateState extends State<SessionGate> {
         ),
       );
     final role = widget.api.user!['role'];
+    if(role=='PLATFORM_ADMIN') return BookingAdminScreen(api:widget.api);
     if (role == 'GYM_OWNER' &&
         application != null &&
         application!['status'] != 'APPROVED')
