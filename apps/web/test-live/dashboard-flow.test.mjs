@@ -1818,7 +1818,7 @@ test(
           await page.getByRole('group',{name:'قائمة الطلبات',exact:true}).getByRole('button',{name:'الصيانة',exact:true}).click();
           await expect(page.getByRole('heading',{name:'الصيانة',exact:true})).toBeVisible();
           await page.getByLabel('حالة الطلب',{exact:true}).selectOption('COMPLETED');
-          await page.getByRole('button',{name:'تفاصيل الطلب ومتابعته',exact:true}).click();
+          await page.locator('article.card').filter({has:page.getByRole('heading',{name:'جهاز جري تجريبي',exact:true})}).getByRole('button',{name:'تفاصيل الطلب ومتابعته',exact:true}).click();
           await expect(page.getByRole('dialog')).toContainText('تم إصلاح السير وإعادة اختبار الجهاز');
           for(const width of [320,393,1280]){
             await page.setViewportSize({width,height:851});
@@ -1829,7 +1829,7 @@ test(
           assert.equal(browserRepair.status,200);
           const browserRepairId=(await browserRepair.json()).id;
           await page.getByLabel('حالة الطلب',{exact:true}).selectOption('NEW');
-          await page.getByRole('button',{name:'تفاصيل الطلب ومتابعته',exact:true}).click();
+          await page.locator('article.card').filter({has:page.getByRole('heading',{name:'إصلاح واجهة الاختبار',exact:true})}).getByRole('button',{name:'تفاصيل الطلب ومتابعته',exact:true}).click();
           await page.getByRole('button',{name:'إرسال عرض وموعد',exact:true}).click();
           await page.getByLabel('التكلفة المتوقعة بالجنيه',{exact:true}).fill('1250.50');
           await page.getByLabel('اسم مسؤول الصيانة',{exact:true}).fill('مسؤول اختبار الواجهة');
