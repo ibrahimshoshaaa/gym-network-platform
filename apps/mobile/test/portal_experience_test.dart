@@ -187,12 +187,12 @@ void main() {
         expect(t.takeException(), isNull);
         if (role == 'TRAINEE') {
           await t.scrollUntilVisible(
-            find.text('شحن من الجيم'),
+            find.text('أول زيارة مؤكدة هتظهر هنا. جاهز تبدأ؟'),
             160,
             scrollable: find.byType(Scrollable).first,
           );
           await t.pumpAndSettle();
-          expect(find.text('+20'), findsOneWidget);
+          expect(find.text('آخر الزيارات'), findsOneWidget);
         }
         if (role == 'GYM_OWNER') {
           await t.scrollUntilVisible(
@@ -352,7 +352,9 @@ void main() {
     )));
     await t.pumpAndSettle();
     expect(find.text('120 نقطة'),findsOneWidget);
-    expect(find.text('أول شحن أو زيارة هتظهر هنا.'),findsNothing);
+    await t.scrollUntilVisible(find.byType(ErrorNote),160,scrollable:find.byType(Scrollable).first);
+    await t.pumpAndSettle();
+    expect(find.text('أول زيارة مؤكدة هتظهر هنا. جاهز تبدأ؟'),findsNothing);
     expect(find.byType(ErrorNote),findsOneWidget);
     expect(t.takeException(),isNull);
   });
