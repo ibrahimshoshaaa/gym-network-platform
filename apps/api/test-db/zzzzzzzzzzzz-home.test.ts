@@ -1,3 +1,5 @@
+import sharp from 'sharp';
+import {uploadBusinessImage} from '../src/media/service.js';
 import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -46,4 +48,22 @@ test('only the trainee can rate an ended real visit, one rating per visit and no
  assert.equal(await db.visitRating.count({where:{visitId:visit.id}}),1);
  const page=await browseBranches(db,f.trainee.id,{latitude:30,longitude:31,limit:50});const branch=page.items.find(b=>b.id===f.branch.id);assert.ok(branch);assert.equal(branch.ratingAverage,5);assert.equal(branch.ratingCount,1);
  assert.deepEqual([await db.pointTransaction.count(),await db.moneyTransaction.count()],before);
+});
+
+test('owners replace branch covers without removing gallery photos and trainees see the selected cover',async()=>{
+ const f=await fixture(),other=await fixture(),removed:string[]=[];
+ const storage={upload:async(_data:Buffer,key:string)=>({objectKey:key,assetId:randomUUID(),publicUrl:'https://res.cloudinary.com/test/image/upload/'+randomUUID()+'.jpg'}),remove:async(key:string)=>{removed.push(key);}};
+ const bytes=await sharp({create:{width:32,height:24,channels:3,background:'#00E6A8'}}).jpeg().toBuffer();
+ await assert.rejects(uploadBusinessImage(db,storage,f.trainee.id,f.gym.id,f.branch.id,'COVER',bytes));
+ await assert.rejects(uploadBusinessImage(db,storage,f.manager.id,f.gym.id,f.branch.id,'COVER',bytes));
+ await assert.rejects(uploadBusinessImage(db,storage,f.owner.id,f.gym.id,other.branch.id,'COVER',bytes));
+ const gallery=await uploadBusinessImage(db,storage,f.owner.id,f.gym.id,f.branch.id,'PHOTO',bytes);
+ const first=await uploadBusinessImage(db,storage,f.owner.id,f.gym.id,f.branch.id,'COVER',bytes);
+ const previous=await db.businessImage.findUniqueOrThrow({where:{id:first.id}});
+ const second=await uploadBusinessImage(db,storage,f.owner.id,f.gym.id,f.branch.id,'COVER',bytes);
+ assert.notEqual(first.id,second.id);assert.ok(removed.includes(previous.objectKey));
+ assert.equal(await db.businessImage.count({where:{branchId:f.branch.id,purpose:'COVER'}}),1);
+ assert.ok(await db.businessImage.findUnique({where:{id:gallery.id}}));
+ const page=await browseBranches(db,f.trainee.id,{latitude:30,longitude:31,limit:50});
+ assert.ok(page.items.find(b=>b.id===f.branch.id)?.images.some(i=>i.id===second.id&&i.purpose==='COVER'));
 });

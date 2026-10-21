@@ -1,3 +1,4 @@
+import 'branch_cover.dart';
 import 'campaigns.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -527,6 +528,7 @@ class BranchesScreen extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     children: [
+                      TextButton.icon(onPressed:()async{await open(context,BranchCoverScreen(api:api,gymId:'${gym['id']}',branchId:'${b['id']}',branchName:'${b['name']}'));},icon:const Icon(Icons.photo_outlined,size:18),label:const Text('غلاف الفرع')),
                       TextButton.icon(
                         onPressed:
                             b['status'] != 'ACTIVE' || gym['status'] != 'ACTIVE'

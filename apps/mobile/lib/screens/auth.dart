@@ -16,7 +16,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool register = false, owner = false, busy = false, hidden = true;
-  bool rememberMe = false;
+  bool rememberMe = true;
   bool english = false, languageChosen = false, savingLanguage = false;
   Object? error;
   final form = GlobalKey<FormState>();
