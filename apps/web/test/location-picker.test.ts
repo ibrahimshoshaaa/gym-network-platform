@@ -33,10 +33,12 @@ test("selected points are bounded, normalized and retained in the branch request
 
 test("map security headers allow only same-origin geolocation and the tile image host", async () => {
   const { default: config } = await import("../next.config");
-  const rules = await config.headers!();
+  const resolved = await config("phase-production-build", {defaultConfig:{}});
+  const rules = await resolved.headers!();
   const headers = rules.find(rule => rule.source === "/:path*")!.headers;
   const value = (key: string) => headers.find(header => header.key === key)!.value;
   assert.match(value("Permissions-Policy"), /geolocation=\(self\)/);
   assert.match(value("Content-Security-Policy"), /https:\/\/tile\.openstreetmap\.org/);
   assert.match(value("Content-Security-Policy"), /connect-src 'self'/);
 });
+

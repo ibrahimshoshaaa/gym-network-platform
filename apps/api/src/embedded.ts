@@ -2,11 +2,38 @@ import { isIP } from 'node:net';
 import { PrismaClient } from '@prisma/client';
 import { buildApp } from './app.js';
 
+import { createBooking, expireScheduledBooking } from './bookings/service.js';
+import { consumeAuthLimit } from './auth/throttle.js';
+import { requireAdmin } from './auth/authorization.js';
+import { DomainError } from './domain/errors.js';
+
+let database: PrismaClient | undefined;
+function databaseClient(){
+ if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL is required');
+ return database??=new PrismaClient();
+}
+export async function reserveDurableBooking(actor:string,key:string,input:unknown){
+ try {
+  await consumeAuthLimit(databaseClient(),'booking-create',actor,30,900);
+  return {status:200,body:await createBooking(databaseClient(),actor,key,input)};
+ }catch(error){
+  if(!(error instanceof DomainError))throw error;
+  const statuses:Record<string,number>={INVALID_INPUT:400,ACCESS_DENIED:403,UNAUTHENTICATED:401,NOT_FOUND:404,RATE_LIMITED:429};
+  return {status:statuses[error.code]??409,body:{code:error.code}};
+ }
+}
+export function expireDurableBooking(id:string){return expireScheduledBooking(databaseClient(),id);}
+export async function reservedBookingTimers(actor:string,cursor?:string){
+ const db=databaseClient();
+ await requireAdmin(db,actor);
+ return db.booking.findMany({where:{status:'RESERVED',...(cursor?{id:{gt:cursor}}:{})},orderBy:{id:'asc'},take:100,select:{id:true,deadlineAt:true}});
+}
+
 let app: ReturnType<typeof buildApp> | undefined;
 function backend() {
   if (!app) {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
-    app = buildApp(new PrismaClient());
+    app = buildApp(databaseClient());
   }
   return app;
 }
