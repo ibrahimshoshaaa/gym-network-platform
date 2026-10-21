@@ -1,3 +1,4 @@
+import { bookingWorkflowRequest } from "../../../../lib/scheduled-reservation";
 import { cookies } from "next/headers";
 import {
   allowedPath,
@@ -52,6 +53,8 @@ async function handle(request: Request, context: Context) {
     }
     const query = new URL(request.url).search;
     if (query.length > (path === "directory/branches" ? 2048 : 1024)) throw new GatewayError("INVALID_INPUT", 400);
+    const scheduled = await bookingWorkflowRequest(path,request.method,token,body,request.headers.get("idempotency-key")??"");
+    if(scheduled)return scheduled;
     const response = await upstream(
       path + query,
       {

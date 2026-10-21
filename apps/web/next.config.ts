@@ -1,3 +1,4 @@
+import { withWorkflow } from "workflow/next";
 import type { NextConfig } from "next";
 import path from "node:path";
 const config: NextConfig = {
@@ -34,4 +35,4 @@ const config: NextConfig = {
     ];
   },
 };
-export default config;
+export default withWorkflow(config);

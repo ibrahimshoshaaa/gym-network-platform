@@ -125,6 +125,7 @@ test(
           ...process.env,
           NODE_ENV: "production",
           API_INTERNAL_URL: "http://127.0.0.1:1",
+          WORKFLOW_LOCAL_BASE_URL: origin,
           GYM_EMBEDDED_API: "true",
           WEB_ORIGIN: origin,
         },

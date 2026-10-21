@@ -161,3 +161,16 @@ export function listBookings(db:PrismaClient,actorId:string,admin:boolean){
   return {items:items.map(b=>({...bookingView(b),branch:branchMap.get(b.branchId),...(admin?{traineeName:peopleMap.get(b.traineeId)}:{})})),processed:due.length,serverTime:new Date()};
  });
 }
+
+export function expireScheduledBooking(db:PrismaClient,id:string){
+ parse(uuid,id);
+ return serializable(db,async tx=>{
+  const booking=await lockBooking(tx,id);
+  if(booking.status!=='RESERVED')return null;
+  if(booking.deadlineAt>=new Date())return booking.deadlineAt.toISOString();
+  const policy=await tx.bookingPolicy.findUniqueOrThrow({where:{id:booking.policyId},select:{createdById:true}});
+  await expire(tx,booking,policy.createdById);
+  await audit(tx,policy.createdById,'BOOKING_SCHEDULED_PROCESSING',id,'Durable booking timer applied the saved no-show policy');
+  return null;
+ });
+}
