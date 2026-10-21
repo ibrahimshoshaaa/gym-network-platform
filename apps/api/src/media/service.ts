@@ -13,11 +13,19 @@ export class CloudinaryBusinessStorage implements BusinessStorage {
  async remove(key:string){await cloudinary.uploader.destroy(key,{...this.credentials(),type:'upload',resource_type:'image',invalidate:true});}
 }
 export async function mediaAccess(tx:Prisma.TransactionClient,actorId:string,gymId:string,branchId?:string){const actor=await requireActor(tx,actorId);if(actor.role!=='PLATFORM_ADMIN')await requireGymOwner(tx,actorId,gymId,false);else if(!await tx.gym.findUnique({where:{id:gymId}}))throw new DomainError('NOT_FOUND');if(branchId && !await tx.branch.findFirst({where:{id:branchId,gymId}}))throw new DomainError('BRANCH_ACCESS_DENIED');}
-export async function uploadBusinessImage(db:PrismaClient,storage:BusinessStorage,actorId:string,gymId:string,branchId:string|undefined,purpose:'LOGO'|'PHOTO',bytes:Buffer){
+export async function uploadBusinessImage(db:PrismaClient,storage:BusinessStorage,actorId:string,gymId:string,branchId:string|undefined,purpose:'LOGO'|'PHOTO'|'COVER',bytes:Buffer){
  await mediaAccess(db,actorId,gymId,branchId);
  if((purpose==='LOGO')===Boolean(branchId))throw new DomainError('INVALID_INPUT');
  const cleaned=await cleanReceipt(bytes),image=await sharp(cleaned).resize({width:1600,height:1600,fit:'inside',withoutEnlargement:true}).jpeg({quality:85}).toBuffer();
  const object=await storage.upload(image,`gym-business/${gymId}/${randomUUID()}`);
- try{return await serializable(db,async tx=>{await mediaAccess(tx,actorId,gymId,branchId);await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${gymId},0))`;const count=await tx.businessImage.count({where:{gymId,branchId:branchId??null,purpose}});if(count>=(purpose==='LOGO'?1:6))throw new DomainError('IMAGE_LIMIT');const row=await tx.businessImage.create({data:{ownerId:actorId,gymId,branchId,purpose,...object}});return {id:row.id,url:row.publicUrl,purpose:row.purpose};});}
+ let previousKeys:string[]=[];
+ let result:{id:string;url:string;purpose:string};
+ try{result=await serializable(db,async tx=>{await mediaAccess(tx,actorId,gymId,branchId);await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${gymId},0))`;
+ const previous=purpose==='COVER'?await tx.businessImage.findMany({where:{gymId,branchId,purpose},select:{id:true,objectKey:true}}):[];
+ previousKeys=previous.map(p=>p.objectKey);
+ if(purpose==='COVER')await tx.businessImage.deleteMany({where:{id:{in:previous.map(p=>p.id)}}});
+ const count=await tx.businessImage.count({where:{gymId,branchId:branchId??null,purpose}});if(count>=(purpose==='PHOTO'?6:1))throw new DomainError('IMAGE_LIMIT');const row=await tx.businessImage.create({data:{ownerId:actorId,gymId,branchId,purpose,...object}});return {id:row.id,url:row.publicUrl,purpose:row.purpose};});}
  catch(e){await storage.remove(object.objectKey).catch(()=>{});throw e;}
+ for(const key of previousKeys)await storage.remove(key).catch(()=>{});
+ return result;
 }
