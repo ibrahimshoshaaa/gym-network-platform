@@ -1,0 +1,89 @@
+# Manual builds only: preserve the free Codemagic allowance.
+workflows:
+  gymbank-check:
+    name: GymBank - checks only
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.7
+      java: 17
+    scripts:
+      - name: Prepare Flutter Android host
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          backup_dir=$(mktemp -d)
+          trap 'rm -rf "$backup_dir"' EXIT
+          cp pubspec.yaml pubspec.lock "$backup_dir/"
+          cp -R lib "$backup_dir/lib"
+          flutter create --platforms=android --org net.shotech --project-name gym_network .
+          cp "$backup_dir/pubspec.yaml" "$backup_dir/pubspec.lock" .
+          cp -R "$backup_dir/lib/." lib/
+          rm -f test/widget_test.dart
+          python3 tool/prepare_platforms.py
+          python3 tool/configure_signing.py
+          flutter pub get
+      - name: Analyze and test
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          python3 -m unittest discover -s tool -p 'test_signing.py'
+          flutter analyze lib test --no-fatal-infos
+          flutter test
+
+  gymbank-android:
+    name: GymBank - signed Android APK
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.7
+      java: 17
+      groups:
+        - gymbank_android_signing
+    scripts:
+      - name: Prepare Flutter Android host
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          backup_dir=$(mktemp -d)
+          trap 'rm -rf "$backup_dir"' EXIT
+          cp pubspec.yaml pubspec.lock "$backup_dir/"
+          cp -R lib "$backup_dir/lib"
+          flutter create --platforms=android --org net.shotech --project-name gym_network .
+          cp "$backup_dir/pubspec.yaml" "$backup_dir/pubspec.lock" .
+          cp -R "$backup_dir/lib/." lib/
+          rm -f test/widget_test.dart
+          python3 tool/prepare_platforms.py
+          python3 tool/configure_signing.py
+          flutter pub get
+      - name: Analyze and test
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          python3 -m unittest discover -s tool -p 'test_signing.py'
+          flutter analyze lib test --no-fatal-infos
+          flutter test
+      - name: Build and verify permanent signed APKs
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          export GYMBANK_KEYSTORE_PATH="$CM_BUILD_DIR/.gymbank-signing/release.jks"
+          trap 'rm -rf "$CM_BUILD_DIR/.gymbank-signing"' EXIT
+          python3 tool/install_signing.py
+          # Separate, increasing range above the existing GitHub build numbers.
+          build_number=$((200000 + BUILD_NUMBER))
+          flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number"
+          python3 tool/verify_apks.py "$build_number"
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path('build/app/outputs/flutter-apk')
+          (root / 'SHA256SUMS.txt').write_text(''.join(
+              hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n'
+              for p in sorted(root.glob('*.apk'))
+          ))
+          PY
+    artifacts:
+      - apps/mobile/build/app/outputs/flutter-apk/*.apk
+      - apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
