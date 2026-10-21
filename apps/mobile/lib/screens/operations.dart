@@ -63,7 +63,7 @@ class StaffWorkplace extends StatelessWidget {
             else Text('${branch['name']}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             Text('${branch['gymName']}', style: const TextStyle(color: muted, fontSize: 11)),
           ])),
-          IconButton(tooltip: 'الإشعارات', icon: const Icon(Icons.notifications_none_rounded),
+          if (section != 0) IconButton(tooltip: 'الإشعارات', icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () => open(context, NotificationsScreen(api: api))),
         ])),
         Expanded(child: KeyedSubtree(key: ValueKey('${branch['id']}:$section'), child: switch(section) {
