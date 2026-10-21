@@ -21,7 +21,7 @@ async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  const headers=new Headers(),type=r.headers.get('content-type')??'';
  let body:Uint8Array|undefined;
  if(method!=='GET'){
-  const image=path==='receipts'||/^gyms\/[^/]+\/images$/.test(path)||/^gyms\/[^/]+\/branches\/[^/]+\/images$/.test(path);
+  const image=path==='market/assets'||path==='receipts'||/^gyms\/[^/]+\/images$/.test(path)||/^gyms\/[^/]+\/branches\/[^/]+\/images$/.test(path);
   if(image?!/^image\/(jpeg|png|webp)$/.test(type):!type.startsWith('application/json'))throw new GatewayError('INVALID_INPUT',400);
   headers.set('content-type',type);body=await boundedBody(r,image?4*1024*1024:8192);
   const key=r.headers.get('idempotency-key');if(key)headers.set('idempotency-key',key);

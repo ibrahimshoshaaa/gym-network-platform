@@ -7,6 +7,7 @@ import 'core/ui.dart';
 import 'screens/auth.dart';
 import 'screens/trainee.dart';
 import 'screens/bookings.dart';
+import 'screens/market.dart';
 import 'screens/booking_admin.dart';
 import 'screens/directory.dart';
 import 'screens/owner.dart';
@@ -250,7 +251,7 @@ class _NativeShellState extends State<NativeShell> {
             (Icons.dashboard_outlined, 'الرئيسية'),
             (Icons.storefront_outlined, 'الفروع'),
             (Icons.qr_code_scanner_rounded, 'التشغيل'),
-            (Icons.payments_outlined, 'مستحقاتي'),
+            (Icons.shopping_bag_outlined, 'الماركت'),
             (Icons.person_outline_rounded, 'حسابي'),
           ]
         : staff
@@ -258,13 +259,14 @@ class _NativeShellState extends State<NativeShell> {
             (Icons.dashboard_outlined, 'الرئيسية'),
             (Icons.directions_run_rounded, 'الزيارات'),
             (Icons.receipt_long_outlined, 'المبيعات'),
+            (Icons.shopping_bag_outlined, 'الماركت'),
             (Icons.person_outline_rounded, 'حسابي'),
           ]
         : const [
             (Icons.home_outlined, 'الرئيسية'),
             (Icons.near_me_outlined, 'الجيمات'),
             (Icons.qr_code_2_rounded, 'رمز الدخول'),
-            (Icons.history_rounded, 'زياراتي'),
+            (Icons.shopping_bag_outlined, 'الماركت'),
             (Icons.person_outline_rounded, 'حسابي'),
           ];
     Widget content;
@@ -274,12 +276,12 @@ class _NativeShellState extends State<NativeShell> {
           api: widget.api,
           gym: gym!,
           showBranches: () => setState(() => index = 1),
-          showMoney: () => setState(() => index = 3),
+          showMoney: () => open(context, MoneyScreen(api: widget.api, gym: gym)),
           showOperations: () => setState(() => index = 2),
         ),
         1 => BranchesScreen(api: widget.api, gym: gym!),
         2 => OperationsHome(api: widget.api, gymId: '${gym!['id']}'),
-        3 => MoneyScreen(api: widget.api, gym: gym!),
+        3 => MarketScreen(api: widget.api),
         _ => AccountScreen(api: widget.api, workplace: true, ownerView: true),
       };
     } else if (staff) {
@@ -288,7 +290,7 @@ class _NativeShellState extends State<NativeShell> {
               onBranchChanged: (id) => setState(() { staffBranchId = id; version++; }),
               showVisits: () => setState(() => index = 1),
               showSales: () => setState(() => index = 2))
-          : AccountScreen(api: widget.api, workplace: true);
+          : index == 3 ? MarketScreen(api: widget.api) : AccountScreen(api: widget.api, workplace: true);
     } else {
       content = switch (index) {
         0 => TraineeHome(
@@ -298,10 +300,7 @@ class _NativeShellState extends State<NativeShell> {
         ),
         1 => DirectoryScreen(api: widget.api),
         2 => GymEntryScreen(api: widget.api),
-        3 => VisitsScreen(
-          api: widget.api,
-          showQr: () => setState(() => index = 2),
-        ),
+        3 => MarketScreen(api: widget.api),
         _ => AccountScreen(api: widget.api),
       };
     }
@@ -326,7 +325,7 @@ class _NativeShellState extends State<NativeShell> {
       body: SafeArea(
         child: Column(
           children: [
-            if (owner && widget.gyms.length > 1)
+            if (owner && index != 3 && widget.gyms.length > 1)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
                 child: Row(
@@ -466,6 +465,7 @@ class _GymEntryScreenState extends State<GymEntryScreen>{
    const SizedBox(width:10),
    Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=true),child:const Text('حجوزاتي'))),
   ])),
+  TextButton.icon(onPressed:()=>open(context,VisitsScreen(api:widget.api,showQr:()=>Navigator.pop(context))),icon:const Icon(Icons.history_rounded),label:const Text('سجل زياراتي')),
   if(!bookings)const Padding(padding:EdgeInsets.symmetric(horizontal:20),child:Text('مش محتاج تحجز مسبقًا. اعرض رمز الدخول لموظف الجيم عند وصولك.',style:TextStyle(color:muted,fontSize:12))),
   Expanded(child:bookings?BookingsScreen(api:widget.api,embedded:true):QrScreen(api:widget.api)),
  ]);

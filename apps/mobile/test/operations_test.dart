@@ -67,13 +67,13 @@ void main() {
       });
       await t.pumpWidget(GymNetworkApp(api: api));
       await t.pumpAndSettle();
-      expect(find.text('زياراتي'), findsOneWidget);
+      expect(find.text('الماركت'), findsOneWidget);
       await t.tap(find.text('عملي في الجيم'));
       await t.pumpAndSettle();
       expect(find.text('فرع شبين'), findsOneWidget);
       await t.tap(find.text('حساب المتدرب'));
       await t.pumpAndSettle();
-      expect(find.text('زياراتي'), findsOneWidget);
+      expect(find.text('الماركت'), findsOneWidget);
       expect(t.takeException(), isNull);
     },
   );
@@ -285,3 +285,4 @@ void main() {
     expect(t.takeException(), isNull);
   });
 }
+

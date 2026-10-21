@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "leaflet/dist/leaflet.css";
 import "@fontsource-variable/noto-sans-arabic";
 import "./globals.css";
+import "./market.css";
 import "./identity.css";
 import "./portal-parity.css";
 export const metadata: Metadata = {
@@ -20,5 +21,6 @@ export default function RootLayout({
     </html>
   );
 }
+
 
 
