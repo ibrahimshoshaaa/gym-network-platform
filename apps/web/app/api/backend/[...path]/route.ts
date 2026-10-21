@@ -36,7 +36,8 @@ async function handle(request: Request, context: Context) {
       )
         throw new GatewayError("INVALID_INPUT", 400);
       headers["content-type"] = type;
-      body = await boundedBody(request, upload ? 4194304 : 8192);
+      const maintenance = /^(admin\/)?maintenance\/requests(?:\/[0-9a-f-]{36}\/action)?$/i.test(path);
+      body = await boundedBody(request, upload ? 4194304 : maintenance ? 24576 : 8192);
       if (
         /^(?:gyms\/[^/]+\/(?:withdrawals|stock-transfers)|(?:admin\/)?withdrawals\/[^/]+\/(?:cancel|feedback|review|payment))$/.test(
           path,

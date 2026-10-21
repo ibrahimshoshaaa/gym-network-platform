@@ -23,7 +23,8 @@ async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  if(method!=='GET'){
   const image=/^maintenance\/branches\/[0-9a-f-]{36}\/assets$/i.test(path)||path==='market/assets'||path==='receipts'||/^gyms\/[^/]+\/images$/.test(path)||/^gyms\/[^/]+\/branches\/[^/]+\/images$/.test(path);
   if(image?!/^image\/(jpeg|png|webp)$/.test(type):!type.startsWith('application/json'))throw new GatewayError('INVALID_INPUT',400);
-  headers.set('content-type',type);body=await boundedBody(r,image?4*1024*1024:8192);
+  const maintenance=/^(admin\/)?maintenance\/requests(?:\/[0-9a-f-]{36}\/action)?$/i.test(path);
+  headers.set('content-type',type);body=await boundedBody(r,image?4*1024*1024:maintenance?24*1024:8192);
   const key=r.headers.get('idempotency-key');if(key)headers.set('idempotency-key',key);
  }
  const url=new URL(r.url);if(url.search.length>2048)throw new GatewayError('INVALID_INPUT',400);const scheduled=await bookingWorkflowRequest(path,method,match?.[1]??'',body,r.headers.get('idempotency-key')??'');if(scheduled)return scheduled;const response=await upstream(path+url.search,{method,headers,...(body?{body:body as BodyInit}:{})},match?.[1],trustedClientAddress(r));

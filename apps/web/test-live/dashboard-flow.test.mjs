@@ -263,7 +263,7 @@ test(
       const repairCreated = await request('/api/mobile/maintenance/requests', {
         method: 'POST', headers: ownerNativeHeaders, body: {
           branchId: branch.id, clientKey: randomUUID(), equipment: 'جهاز جري تجريبي',
-          description: 'عطل تجريبي للتحقق من دورة الصيانة', contactPhone: '+201012345678', imageIds: [],
+          description: '修'.repeat(3000), contactPhone: '+201012345678', imageIds: [],
         },
       });
       assert.equal(repairCreated.status, 200);
