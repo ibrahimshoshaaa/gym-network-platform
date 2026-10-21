@@ -35,7 +35,7 @@ class _TraineeHomeState extends State<TraineeHome>{
  }
  Future<void> locate()async{
   final current=++locationGeneration;setState((){locating=true;locationError=null;});
-  try{final HomeLocation p;if(widget.locate!=null){p=await widget.locate!();}else{final gps=await currentPosition();p=(latitude:gps.latitude,longitude:gps.longitude);}
+  try{final HomeLocation p;if(widget.locate!=null){p=await widget.locate!();}else{final gps=await currentPosition().timeout(const Duration(seconds:25));p=(latitude:gps.latitude,longitude:gps.longitude);}
    final r=await widget.api.request('directory/branches?limit=8&latitude=${p.latitude}&longitude=${p.longitude}');if(mounted&&current==locationGeneration)setState((){location=p;nearby=rows(r);});
   }catch(e){if(mounted&&current==locationGeneration)setState((){locationError=e;location=null;nearby=[];});}finally{if(mounted&&current==locationGeneration)setState(()=>locating=false);}
  }

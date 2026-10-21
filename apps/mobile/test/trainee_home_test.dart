@@ -25,7 +25,7 @@ void main(){
   expect(t.getTopLeft(find.text('عروض ليك')).dy,lessThan(t.getTopLeft(find.text('آخر الزيارات')).dy));
   expect(find.text('عرض المنصة التجريبي'),findsOneWidget);
   await t.ensureVisible(find.text('قيّم زيارتك'));await t.tap(find.text('قيّم زيارتك'));await t.pumpAndSettle();
-  await t.tap(find.byTooltip('4 نجوم'));await t.tap(find.text('حفظ التقييم'));await t.pumpAndSettle();
+  await t.tap(find.byTooltip('4 نجوم'));await t.pump();await t.tap(find.text('حفظ التقييم'));await t.pumpAndSettle();
   expect(rating,{'score':4,'expectedVersion':0});expect(find.text('تقييمك 4 / 5 · تعديل'),findsOneWidget);expect(t.takeException(),isNull);
  });
  testWidgets('denied location does not invent nearby gyms and wallet actions remain usable at 320',(t)async{
