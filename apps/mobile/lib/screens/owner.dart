@@ -1,3 +1,4 @@
+import 'work_balance_hero.dart';
 import 'branch_cover.dart';
 import 'campaigns.dart';
 import 'package:flutter/material.dart';
@@ -66,28 +67,7 @@ class _OwnerHomeState extends State<OwnerHome> {
    padding:const EdgeInsets.fromLTRB(20,8,20,28),
    physics:const AlwaysScrollableScrollPhysics(),
    children:[
-    PortalIntro('${gym['name']}',detail:'رصيدك وتشغيل جيمك، من مكان واحد.',
-     trailing:IconButton(tooltip:'الإشعارات',icon:const Icon(Icons.notifications_none_rounded),
-      onPressed:()=>open(context,NotificationsScreen(api:widget.api)))),
-    CampaignBanner(api:widget.api),
-    if(!active)...[
-     const PortalNote('الجيم غير نشط حاليًا. تقدر تراجع بياناته، والتشغيل متاح بعد التفعيل.'),
-     const SizedBox(height:12),
-    ],
-    Panel(color:ink,padding:const EdgeInsets.all(20),child:Column(
-     crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('رصيد صاحب الجيم',style:TextStyle(color:Colors.white70,fontSize:12)),
-      const SizedBox(height:10),
-      if(walletLoading&&wallet==null)
-       const Padding(padding:EdgeInsets.all(12),child:CircularProgressIndicator(color:lime))
-      else if(wallet!=null)...[
-       FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,
-        child:Text('$available نقطة',style:const TextStyle(color:lime,fontSize:36,height:1.2,fontWeight:FontWeight.w900))),
-       const SizedBox(height:8),
-       Text('موزّع على الفروع ${wallet!['branchesTotal'] ?? wallet!['total']} نقطة',
-        style:const TextStyle(color:Colors.white70,fontSize:11)),
-      ]else const Text('تعذر تحميل رصيد النقاط',style:TextStyle(color:Colors.white)),
-      const SizedBox(height:16),
+    WorkBalanceHero(api:widget.api,scope:'صاحب الجيم · ${gym['name']}',label:'رصيد صاحب الجيم',points:wallet==null?null:'$available',loading:walletLoading,detail:wallet==null?'':'موزّع على الفروع ${wallet!['branchesTotal'] ?? wallet!['total']} نقطة',actions:[
       FilledButton.icon(
        style:FilledButton.styleFrom(backgroundColor:lime,foregroundColor:ink),
        onPressed:!active||wallet==null||walletLoading||widget.api.pending!=null
@@ -103,7 +83,13 @@ class _OwnerHomeState extends State<OwnerHome> {
        },
        style:TextButton.styleFrom(foregroundColor:Colors.white70),
        child:const Text('شراء نقاط لرصيد الجيم',style:TextStyle(fontSize:12))),
-     ])),
+    ]),
+    const SizedBox(height:12),
+    CampaignBanner(api:widget.api),
+    if(!active)...[
+     const PortalNote('الجيم غير نشط حاليًا. تقدر تراجع بياناته، والتشغيل متاح بعد التفعيل.'),
+     const SizedBox(height:12),
+    ],
     if(walletError!=null)ErrorNote(walletError,retry:load),
     if(wallet!=null&&'${wallet!['central']}'=='0'&&BigInt.tryParse('${wallet!['branchesTotal']}')!=null&&BigInt.parse('${wallet!['branchesTotal']}')>BigInt.zero)...[
       const SizedBox(height:12),

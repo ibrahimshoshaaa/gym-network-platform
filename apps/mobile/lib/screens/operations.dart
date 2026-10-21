@@ -1,3 +1,4 @@
+import 'work_balance_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -120,16 +121,9 @@ class _BranchDashboardState extends State<BranchDashboard> {
     final branch = widget.branch, locked = widget.api.pending != null;
     return RefreshIndicator(onRefresh: load, child: ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), physics: const AlwaysScrollableScrollPhysics(), children: [
+        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'رصيد الفرع لبيع النقاط',points:summary==null?null:'${summary!['stock']??'—'}',loading:summaryLoading,detail:summary==null?'':'الزيارة ${summary!['visitPricePoints']??'—'} نقطة · ${summary!['sessionMinutes']??'—'} دقيقة'),
+        const SizedBox(height:12),
         BranchFinance(key: ValueKey(generation), api: widget.api, branch: branch),
-        Panel(color: ink, padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('رصيد الفرع لبيع النقاط', style: TextStyle(color: Colors.white70, fontSize: 12)),
-          const SizedBox(height: 8),
-          if (summaryLoading && summary == null) const LinearProgressIndicator(color: lime)
-          else FittedBox(fit: BoxFit.scaleDown, child: Text(summary == null ? 'تعذر تحميل الرصيد' : '${summary!['stock'] ?? '—'} نقطة',
-            style: const TextStyle(color: lime, fontSize: 30, fontWeight: FontWeight.w900))),
-          const SizedBox(height: 10),
-          if (summary != null) Text('الزيارة ${summary!['visitPricePoints'] ?? '—'} نقطة · ${summary!['sessionMinutes'] ?? '—'} دقيقة', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-        ])),
         if (summaryError != null) ErrorNote(summaryError, retry: load),
         if (summary != null && '${summary!['stock']}' == '0') const Padding(padding: EdgeInsets.only(top: 12),
           child: PortalNote('رصيد بيع النقاط خلص. اطلب من صاحب الجيم يوزّع نقاط للفرع. تسجيل الزيارات متاح من رصيد المتدرب.')),
