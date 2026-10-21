@@ -1,3 +1,4 @@
+import 'work_balance_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -62,7 +63,7 @@ class StaffWorkplace extends StatelessWidget {
             else Text('${branch['name']}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             Text('${branch['gymName']}', style: const TextStyle(color: muted, fontSize: 11)),
           ])),
-          IconButton(tooltip: 'الإشعارات', icon: const Icon(Icons.notifications_none_rounded),
+          if (section != 0) IconButton(tooltip: 'الإشعارات', icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () => open(context, NotificationsScreen(api: api))),
         ])),
         Expanded(child: KeyedSubtree(key: ValueKey('${branch['id']}:$section'), child: switch(section) {
@@ -120,29 +121,15 @@ class _BranchDashboardState extends State<BranchDashboard> {
     final branch = widget.branch, locked = widget.api.pending != null;
     return RefreshIndicator(onRefresh: load, child: ListView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), physics: const AlwaysScrollableScrollPhysics(), children: [
+        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'رصيد الفرع لبيع النقاط',points:summary==null?null:'${summary!['stock']??'—'}',loading:summaryLoading,detail:summary==null?'':'الزيارة ${summary!['visitPricePoints']??'—'} نقطة · ${summary!['sessionMinutes']??'—'} دقيقة',actions:branch['canSell']!=true?[]:[
+          Row(children:[Expanded(child:FilledButton(onPressed:locked?null:()=>action(RecordVisit(api:widget.api,branch:branch)),child:const Text('تسجيل زيارة',textAlign:TextAlign.center))),const SizedBox(width:8),Expanded(child:OutlinedButton(onPressed:locked||summary==null||summaryLoading||'${summary!['stock']}'=='0'?null:()=>action(BranchSale(api:widget.api,branch:branch)),child:const Text('بيع نقاط لمتدرب',textAlign:TextAlign.center)))]),
+          TextButton.icon(onPressed:locked?null:()=>action(ScanBookingScreen(api:widget.api,branch:branch)),icon:const Icon(Icons.qr_code_scanner_rounded,size:18),label:const Text('تأكيد حضور حجز')),
+        ]),
+        const SizedBox(height:12),
         BranchFinance(key: ValueKey(generation), api: widget.api, branch: branch),
-        Panel(color: ink, padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('رصيد الفرع لبيع النقاط', style: TextStyle(color: Colors.white70, fontSize: 12)),
-          const SizedBox(height: 8),
-          if (summaryLoading && summary == null) const LinearProgressIndicator(color: lime)
-          else FittedBox(fit: BoxFit.scaleDown, child: Text(summary == null ? 'تعذر تحميل الرصيد' : '${summary!['stock'] ?? '—'} نقطة',
-            style: const TextStyle(color: lime, fontSize: 30, fontWeight: FontWeight.w900))),
-          const SizedBox(height: 10),
-          if (summary != null) Text('الزيارة ${summary!['visitPricePoints'] ?? '—'} نقطة · ${summary!['sessionMinutes'] ?? '—'} دقيقة', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-        ])),
         if (summaryError != null) ErrorNote(summaryError, retry: load),
         if (summary != null && '${summary!['stock']}' == '0') const Padding(padding: EdgeInsets.only(top: 12),
           child: PortalNote('رصيد بيع النقاط خلص. اطلب من صاحب الجيم يوزّع نقاط للفرع. تسجيل الزيارات متاح من رصيد المتدرب.')),
-        const SectionTitle('إجراء سريع'),
-        if (branch['canSell'] == true) ...[
-          ActionButton('تأكيد حضور حجز',icon:Icons.qr_code_scanner_rounded,onPressed:locked?null:()=>action(ScanBookingScreen(api:widget.api,branch:branch))),
-          const SizedBox(height:10),
-          ActionButton('تسجيل زيارة', icon: Icons.qr_code_scanner_rounded,
-            onPressed: locked ? null : () => action(RecordVisit(api: widget.api, branch: branch))),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(icon: const Icon(Icons.add_card_rounded), label: const Text('بيع نقاط لمتدرب'),
-            onPressed: locked || summary == null || summaryLoading || '${summary!['stock']}' == '0' ? null : () => action(BranchSale(api: widget.api, branch: branch))),
-        ],
         const SectionTitle('حركة الفرع النهارده'),
         Panel(padding: const EdgeInsets.all(16), child: Column(children: [
           if (reportLoading && report == null) const LinearProgressIndicator(minHeight: 2),
