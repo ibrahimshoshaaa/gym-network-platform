@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -298,6 +299,7 @@ class _NativeShellState extends State<NativeShell> {
           api: widget.api,
           showGyms: () => setState(() => index = 1),
           showQr: () => setState(() => index = 2),
+          showWork: widget.assignedWork ? () => setState(() {workMode = true;index = 0;version++;}) : null,
         ),
         1 => DirectoryScreen(api: widget.api),
         2 => GymEntryScreen(api: widget.api),
@@ -305,8 +307,9 @@ class _NativeShellState extends State<NativeShell> {
         _ => AccountScreen(api: widget.api),
       };
     }
-    return Scaffold(
-      appBar: AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(value: !workMode && index == 0 ? SystemUiOverlayStyle.light.copyWith(statusBarColor: ink) : SystemUiOverlayStyle.dark, child: Scaffold(
+      backgroundColor: !workMode && index == 0 ? ink : canvas,
+      appBar: !workMode && index == 0 ? null : AppBar(
         title: const Brand(),
         centerTitle: !workMode,
         actions: [
@@ -450,7 +453,7 @@ class _NativeShellState extends State<NativeShell> {
             .map((t) => NavigationDestination(icon: Icon(t.$1), label: t.$2))
             .toList(),
       ),
-    );
+    ));
   }
 }
 

@@ -28,7 +28,9 @@ const projection = Prisma.sql`SELECT b.id,b.name,b.address,b.governorate,b.city,
 const eligible = Prisma.sql`b.status='ACTIVE' AND g.status='ACTIVE' AND g."ownerAcceptedAt" IS NOT NULL AND u."isActive" AND b."pricingVersion">0 AND b."priceApprovedAt" IS NOT NULL AND b."visitPricePoints">0 AND b."sessionMinutes">0 AND length(btrim(b.address))>0 AND length(btrim(b.governorate))>0 AND length(btrim(b.city))>0 AND b.latitude BETWEEN -90 AND 90 AND b.longitude BETWEEN -180 AND 180`;
 export async function directoryImages<T extends {id:string;gym:{id:string}}>(tx: Tx, branches: T[]) {
  const images=await tx.businessImage.findMany({where:{OR:[{branchId:{in:branches.map(b=>b.id)}},{gymId:{in:branches.map(b=>b.gym.id)},purpose:"LOGO",branchId:null}]},select:{id:true,branchId:true,gymId:true,purpose:true,publicUrl:true}});
- return branches.map(b=>({...b,images:images.filter(i=>i.branchId===b.id||(i.gymId===b.gym.id&&i.purpose==="LOGO")).map(i=>({id:i.id,url:i.publicUrl,purpose:i.purpose}))}));
+ const ratings=await tx.visitRating.groupBy({by:['branchId'],where:{branchId:{in:branches.map(b=>b.id)},visit:{status:{not:'CANCELLED'},expiresAt:{lte:new Date()}}},_avg:{score:true},_count:{_all:true}});
+ const totals=new Map(ratings.map(r=>[r.branchId,r]));
+ return branches.map(b=>({...b,ratingAverage:totals.get(b.id)?._avg.score??null,ratingCount:totals.get(b.id)?._count._all??0,images:images.filter(i=>i.branchId===b.id||(i.gymId===b.gym.id&&i.purpose==="LOGO")).map(i=>({id:i.id,url:i.publicUrl,purpose:i.purpose}))}));
 }
 const view = ({ gymId, gymName, description, ...branch }: Branch) => ({
   ...branch,

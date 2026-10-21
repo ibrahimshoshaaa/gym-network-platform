@@ -1,4 +1,6 @@
-import 'campaigns.dart';
+import 'home_cards.dart';
+import 'directory.dart';
+import 'ratings.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -10,219 +12,51 @@ import '../core/portal_ui.dart';
 import 'topup.dart';
 import 'account.dart';
 
+typedef HomeLocation = ({double latitude,double longitude});
 class TraineeHome extends StatefulWidget {
-  final ApiClient api;
-  final VoidCallback showGyms, showQr;
-  const TraineeHome({
-    super.key,
-    required this.api,
-    required this.showGyms,
-    required this.showQr,
-  });
-  @override
-  State<TraineeHome> createState() => _TraineeHomeState();
+ final ApiClient api;
+ final VoidCallback showGyms,showQr;
+ final VoidCallback? showWork;
+ final Future<HomeLocation> Function()? locate;
+ const TraineeHome({super.key,required this.api,required this.showGyms,required this.showQr,this.showWork,this.locate});
+ @override State<TraineeHome> createState()=>_TraineeHomeState();
 }
-
-class _TraineeHomeState extends State<TraineeHome> {
-  Json? wallet;
-  List<Json>? visits, movements;
-  Object? walletError, visitsError, movementsError;
-  bool walletLoading = true, visitsLoading = true, movementsLoading = true;
-  int generation = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    load();
-  }
-
-  Future<void> load() async {
-    final current = ++generation;
-    setState(() {
-      walletLoading = visitsLoading = movementsLoading = true;
-      walletError = visitsError = movementsError = null;
-    });
-    // Each section commits independently: a slow history must not hide the wallet.
-    Future<void> part(String path, void Function(dynamic) success,
-        void Function(Object) failure, void Function() finish) async {
-      try {
-        final result = await widget.api.request(path);
-        if (mounted && current == generation) setState(() => success(result));
-      } catch (e) {
-        if (mounted && current == generation) setState(() => failure(e));
-      } finally {
-        if (mounted && current == generation) setState(finish);
-      }
-    }
-    await Future.wait([
-      part('trainee/wallet', (r) => wallet = Map<String, dynamic>.from(r),
-          (e) { wallet = null; walletError = e; }, () => walletLoading = false),
-      part('trainee/active-visits', (r) => visits = rows(r),
-          (e) { visits = null; visitsError = e; }, () => visitsLoading = false),
-      part('trainee/wallet/movements?limit=3', (r) => movements = rows(r),
-          (e) { movements = null; movementsError = e; }, () => movementsLoading = false),
-    ]);
-  }
-
-  Future<void> topup() async {
-    await open(context, TopupScreen(api: widget.api));
-    if (mounted) await load();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final unavailable = int.tryParse('${wallet?['unavailablePoints']}') ?? 0;
-    return RefreshIndicator(
-      onRefresh: load,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-        children: [
-          Row(children: [
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('أهلًا ${widget.api.user!['displayName'].toString().split(' ').first}',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                const Text('جاهز لتمرينتك؟', style: TextStyle(color: muted, fontSize: 12)),
-              ],
-            )),
-            IconButton(
-              tooltip: 'الإشعارات',
-              icon: const Icon(Icons.notifications_none_rounded),
-              onPressed: () => open(context, NotificationsScreen(api: widget.api)),
-            ),
-          ]),
-          const SizedBox(height: 18),
-          CampaignBanner(api:widget.api),
-          Panel(
-            color: ink,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('رصيدك المتاح', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                const SizedBox(height: 10),
-                if (walletLoading && wallet == null)
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 12),
-                    child: CircularProgressIndicator(color: lime))
-                else if (wallet != null) ...[
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text('${wallet!['spendablePoints']} نقطة',
-                      style: const TextStyle(fontSize: 36, height: 1.2,
-                        fontWeight: FontWeight.w900, color: lime)),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(wallet!['status'] == 'EXPIRED'
-                    ? 'انتهت صلاحية الرصيد · راجع الإدارة'
-                    : wallet!['expiresAt'] != null
-                    ? 'صالح حتى ${shortDate(wallet!['expiresAt']).split(' · ').first}'
-                    : 'اشحن رصيدك وابدأ تمرينك',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                ] else
-                  const Text('تعذر تحميل الرصيد', style: TextStyle(color: Colors.white)),
-                if (walletLoading && wallet != null) ...[
-                  const SizedBox(height: 8),
-                  const LinearProgressIndicator(color: lime, minHeight: 2),
-                ],
-                const SizedBox(height: 16),
-                Wrap(spacing: 10, runSpacing: 10, children: [
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink,
-                      minimumSize:const Size(0,46),padding:const EdgeInsets.symmetric(horizontal:10),
-                      textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
-                    onPressed: widget.showQr,
-                    icon: const Icon(Icons.qr_code_2_rounded, size: 20),
-                    label: const Text('رمز الدخول'),
-                  ),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      minimumSize:const Size(0,46),padding:const EdgeInsets.symmetric(horizontal:10),
-                      textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w700),
-                      side: const BorderSide(color: Colors.white38)),
-                    onPressed: topup,
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                    label: const Text('اشحن رصيدك'),
-                  ),
-                ]),
-              ],
-            ),
-          ),
-          if (walletError != null) ErrorNote(walletError, retry: load),
-          if (unavailable > 0) ...[
-            const SizedBox(height: 12),
-            PortalNote('$unavailable نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.'),
-          ],
-          if (visitsLoading)
-            const Padding(padding: EdgeInsets.symmetric(vertical: 12),
-              child: LinearProgressIndicator(minHeight: 2))
-          else if (visitsError != null)
-            ErrorNote(visitsError, retry: load)
-          else if (visits?.isNotEmpty == true) ...[
-            const SectionTitle('جلستك الحالية'),
-            ...visits!.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 12), child: VisitCard(v))),
-          ],
-          const SizedBox(height: 16),
-          Panel(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: const Icon(Icons.near_me_outlined, color: green),
-              title: const Text('اختار جيم قريب',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              subtitle: const Text('شوف المكان ونقاط الزيارة',
-                style: TextStyle(color: muted, fontSize: 11)),
-              trailing: const Icon(Icons.arrow_back_rounded, size: 18),
-              onTap: widget.showGyms,
-            ),
-          ),
-          SectionTitle('آخر حركة في رصيدك', trailing: TextButton(
-            onPressed: () => open(context, WalletHistory(api: widget.api)),
-            child: const Text('السجل كامل'))),
-          if (movementsLoading && movements == null)
-            const Center(child: CircularProgressIndicator())
-          else if (movementsError != null)
-            ErrorNote(movementsError, retry: load)
-          else if (movements?.isEmpty == true)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('أول شحن أو زيارة هتظهر هنا.',
-                style: TextStyle(color: muted, fontSize: 12)),
-            )
-          else if (movements != null)
-            Panel(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Column(children: [
-                for (final r in movements!)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon((r['delta'] as num) > 0
-                      ? Icons.south_west_rounded : Icons.north_east_rounded, color: green),
-                    title: Text('${r['sourceLabel'] ?? r['branch']?['name'] ?? 'حركة نقاط'}',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                    subtitle: Text(shortDate(r['eventAt']), style: const TextStyle(fontSize: 11)),
-                    trailing: Text('${(r['delta'] as num) > 0 ? '+' : ''}${r['delta']}',
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: green)),
-                    onTap: () => open(context, WalletHistory(api: widget.api)),
-                  ),
-              ]),
-            ),
-          const SizedBox(height: 12),
-          TextButton.icon(
-            onPressed: () => open(context, TopupHistory(api: widget.api)),
-            icon: const Icon(Icons.pending_actions_rounded, size: 18),
-            label: const Text('متابعة طلبات الشحن'),
-          ),
-        ],
-      ),
-    );
-  }
+class _TraineeHomeState extends State<TraineeHome>{
+ Json? wallet;List<Json>? visits;List<Json> nearby=[];
+ Object? walletError,visitsError,locationError;
+ bool walletLoading=true,visitsLoading=true,locating=true;
+ HomeLocation? location;int generation=0,locationGeneration=0;
+ @override void initState(){super.initState();load();locate();}
+ @override void dispose(){generation++;locationGeneration++;super.dispose();}
+ Future<void> load()async{
+  final current=++generation;setState((){walletLoading=visitsLoading=true;walletError=visitsError=null;});
+  Future<void> part(bool balance)async{try{final r=await widget.api.request(balance?'trainee/wallet':'trainee/visits?limit=3');if(mounted&&current==generation)setState((){if(balance){wallet=Map<String,dynamic>.from(r);}else{visits=rows(r);}});}catch(e){if(mounted&&current==generation)setState((){if(balance){wallet=null;walletError=e;}else{visits=null;visitsError=e;}});}finally{if(mounted&&current==generation)setState((){if(balance){walletLoading=false;}else{visitsLoading=false;}});}}
+  await Future.wait([part(true),part(false)]);
+ }
+ Future<void> locate()async{
+  final current=++locationGeneration;setState((){locating=true;locationError=null;});
+  try{final HomeLocation p;if(widget.locate!=null){p=await widget.locate!();}else{final gps=await currentPosition();p=(latitude:gps.latitude,longitude:gps.longitude);}
+   final r=await widget.api.request('directory/branches?limit=8&latitude=${p.latitude}&longitude=${p.longitude}');if(mounted&&current==locationGeneration)setState((){location=p;nearby=rows(r);});
+  }catch(e){if(mounted&&current==locationGeneration)setState(()=>locationError=e);}finally{if(mounted&&current==locationGeneration)setState(()=>locating=false);}
+ }
+ Future<void> topup()async{await open(context,TopupScreen(api:widget.api));if(mounted)await load();}
+ @override Widget build(BuildContext context)=>ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:()async{await Future.wait([load(),locate()]);},child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.only(bottom:28),children:[
+  TraineeBalanceHero(api:widget.api,wallet:wallet,loading:walletLoading,topup:topup,qr:widget.showQr,history:()=>open(context,WalletHistory(api:widget.api)),notifications:()=>open(context,NotificationsScreen(api:widget.api)),workplace:widget.showWork),
+  if(walletError!=null)Padding(padding:const EdgeInsets.all(16),child:ErrorNote(walletError,retry:load)),
+  if((int.tryParse('${wallet?['unavailablePoints']}')??0)>0)Padding(padding:const EdgeInsets.all(16),child:PortalNote('${wallet!['unavailablePoints']} نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.')),
+  Padding(padding:const EdgeInsets.fromLTRB(20,20,20,12),child:SectionTitle('جيمات قريبة منك',trailing:TextButton(onPressed:widget.showGyms,child:const Text('عرض الكل')))),
+  if(locating)const Padding(padding:EdgeInsets.all(20),child:LinearProgressIndicator(minHeight:2))
+  else if(locationError!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('موقعك يوصّلك للجيم الأقرب',style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:8),const Text('اسمح بالموقع أو ابحث عن الجيم بنفسك.',style:TextStyle(color:muted,fontSize:12)),const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[TextButton.icon(onPressed:locate,icon:const Icon(Icons.my_location_rounded),label:const Text('تفعيل الموقع')),TextButton(onPressed:widget.showGyms,child:const Text('البحث عن جيم'))])]))),
+  if(!locating&&locationError==null&&nearby.isEmpty)const Padding(padding:EdgeInsets.symmetric(horizontal:20,vertical:12),child:Text('مفيش فروع متاحة حاليًا في النتائج.',style:TextStyle(color:muted))),
+  if(nearby.isNotEmpty)SizedBox(height:270,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:20),itemCount:nearby.length,separatorBuilder:(_,_)=>const SizedBox(width:14),itemBuilder:(context,i)=>SizedBox(width:(MediaQuery.sizeOf(context).width*.72).clamp(230.0,320.0).toDouble(),child:NearbyGymCard(branch:nearby[i],onTap:()=>open(context,BranchDetail(api:widget.api,id:'${nearby[i]['id']}')))))),
+  const Padding(padding:EdgeInsets.fromLTRB(20,24,20,12),child:SectionTitle('عروض ليك')),
+  HomeOffers(api:widget.api,latitude:location?.latitude,longitude:location?.longitude),
+  Padding(padding:const EdgeInsets.fromLTRB(20,20,20,8),child:SectionTitle('آخر الزيارات',trailing:TextButton(onPressed:()=>open(context,Screen(title:'زياراتك',child:VisitsScreen(api:widget.api))),child:const Text('كل الزيارات')))),
+  if(visitsLoading)const Padding(padding:EdgeInsets.all(20),child:LinearProgressIndicator(minHeight:2))
+  else if(visitsError!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:ErrorNote(visitsError,retry:load))
+  else if(visits?.isEmpty==true)const Padding(padding:EdgeInsets.symmetric(horizontal:20,vertical:12),child:Text('أول زيارة مؤكدة هتظهر هنا. جاهز تبدأ؟',style:TextStyle(color:muted,fontSize:12)))
+  else ...?visits?.map((v)=>Padding(padding:const EdgeInsets.fromLTRB(20,0,20,14),child:RatedVisitCard(api:widget.api,visit:v))),
+ ])));
 }
 
 class WalletHistory extends StatelessWidget {
@@ -354,7 +188,7 @@ class VisitsScreen extends StatelessWidget {
             icon: Icons.qr_code_2_rounded,
             onPressed: showQr,
           ),
-    item: (r) => VisitCard(r),
+    item: (r) => RatedVisitCard(api: api, visit: r),
   );
 }
 
