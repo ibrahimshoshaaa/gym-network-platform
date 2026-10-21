@@ -49,8 +49,9 @@ class StaffWorkplace extends StatelessWidget {
     load: () => api.request('operations/branches'),
     builder: (data, reload) {
       final branches = rows(data);
-      if (branches.isEmpty) return ListView(padding: const EdgeInsets.all(20), children: const [
-        EmptyState('مفيش فرع متاح للتشغيل', detail: 'راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.'),
+      if (branches.isEmpty) return ListView(padding: const EdgeInsets.all(20), children: [
+        if(section==0 && homeTools!=null) homeTools!,
+        const EmptyState('مفيش فرع متاح للتشغيل', detail: 'راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.'),
       ]);
       final branch = branches.where((b) => b['id'] == branchId).firstOrNull ?? branches.first;
       return Column(children: [

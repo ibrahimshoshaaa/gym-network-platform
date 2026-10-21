@@ -105,7 +105,7 @@ void main() {
     await t.pumpWidget(page(Scaffold(body: BranchDashboard(api: api, branch: branch))));
     await t.pumpAndSettle();
     expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'تسجيل زيارة')).onPressed, isNotNull);
-    expect(t.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'بيع نقاط لمتدرب')).onPressed, isNull);
+    expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'بيع نقاط لمتدرب')).onPressed, isNull);
     expect(t.takeException(), isNull);
   });
   for (final manager in [false, true]) {
@@ -133,7 +133,8 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('فرع تاني').last);
     await t.pumpAndSettle();
-    expect(find.text('مدير الفرع'), findsOneWidget);
+    expect(find.textContaining('مدير الفرع ·'), findsOneWidget);
+    expect(find.textContaining('فرع تاني'), findsWidgets);
     await t.tap(find.text('المبيعات'));
     await t.pumpAndSettle();
     expect(paths.last, endsWith('/operations/branches/b2/sales'));

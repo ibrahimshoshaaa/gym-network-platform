@@ -315,7 +315,7 @@ class _NativeShellState extends State<NativeShell> {
                 ),
               ),
      Wrap(alignment:WrapAlignment.end,spacing:8,children:[
-      TextButton.icon(onPressed:()=>open(context,MaintenanceScreen(api:widget.api)),icon:const Icon(Icons.build_outlined,size:18),label:const Text('الصيانة')),
+      Tooltip(message:'الصيانة',child:TextButton.icon(onPressed:()=>open(context,MaintenanceScreen(api:widget.api)),icon:const Icon(Icons.build_outlined,size:18),label:const Text('الصيانة'))),
       if(widget.api.user?['role']=='TRAINEE'&&widget.assignedWork)TextButton(onPressed:widget.api.pending!=null?null:()=>setState((){workMode=false;index=0;version++;}),child:const Text('حساب المتدرب')),
      ]),
     ]);
