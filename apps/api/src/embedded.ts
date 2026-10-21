@@ -2,11 +2,20 @@ import { isIP } from 'node:net';
 import { PrismaClient } from '@prisma/client';
 import { buildApp } from './app.js';
 
+import { processDueBookings } from './bookings/service.js';
+
+let database: PrismaClient | undefined;
+function databaseClient(){
+ if(!process.env.DATABASE_URL)throw new Error('DATABASE_URL is required');
+ return database??=new PrismaClient();
+}
+export function runScheduledBookingExpiry(){return processDueBookings(databaseClient());}
+
 let app: ReturnType<typeof buildApp> | undefined;
 function backend() {
   if (!app) {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
-    app = buildApp(new PrismaClient());
+    app = buildApp(databaseClient());
   }
   return app;
 }

@@ -5,7 +5,7 @@ import {setTimeout} from 'node:timers/promises';
 import {PrismaClient} from '@prisma/client';
 import {postLedger} from '../src/ledger/service.js';
 import {publishBookingPolicy} from '../src/bookings/settings.js';
-import {createBooking,cancelBooking,issueBookingQr,scanBooking,listBookings,decideBooking} from '../src/bookings/service.js';
+import {createBooking,cancelBooking,issueBookingQr,scanBooking,listBookings,decideBooking,processDueBookings} from '../src/bookings/service.js';
 import {hashToken} from '../src/auth/sessions.js';
 const url=new URL(process.env.DATABASE_URL??'');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw new Error('Disposable local test database required');
@@ -67,4 +67,29 @@ test('scheduled escrow, refunds, physical QR arrival, no-shows and review permis
  assert.equal(resolved.gymPoints!+resolved.platformPoints!,25);
  assert.equal(resolved.traineePoints,0);
  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'BOOKING_HOLD',ownerUserId:customer.id}}})).balance,0);
+ // No trainee/admin screen reads: the server worker alone must expire the bookings.
+ const at=new Date(Date.now()+5000).toISOString();
+ const firstDue=await createBooking(db,customer.id,randomUUID(),{...input,policyVersion:auto.version,scheduledAt:at});
+ const secondDue=await createBooking(db,customer.id,randomUUID(),{...input,policyVersion:auto.version,scheduledAt:at});
+ const newManual=await publishBookingPolicy(db,admin.id,{expectedVersion:auto.version,policy:{graceMinutes:0,mode:'MANUAL'}});
+ const manualDue=await createBooking(db,customer.id,randomUUID(),{...input,policyVersion:newManual.version,scheduledAt:at});
+ const future=await createBooking(db,customer.id,randomUUID(),{...input,policyVersion:newManual.version,scheduledAt:new Date(Date.now()+3600000).toISOString()});
+ assert.equal((await processDueBookings(db)).processed,0);
+ await setTimeout(5100);
+ const batch=await processDueBookings(db,1);
+ assert.equal(batch.processed,1);assert.equal(batch.failed,0);assert.equal(batch.hasMore,true);
+ await Promise.all([processDueBookings(db,1),processDueBookings(db,1),listBookings(db,customer.id,false)]);
+ const repeated=await processDueBookings(db);
+ assert.equal(repeated.processed,0);assert.equal(repeated.failed,0);assert.equal(repeated.hasMore,false);
+ for(const booking of [firstDue,secondDue]){
+  const row=await db.booking.findUniqueOrThrow({where:{id:booking.id}});
+  assert.equal(row.status,'RESOLVED');assert.equal(row.traineePoints,0);
+  assert.equal(row.gymPoints!+row.platformPoints!,25);
+  assert.equal(await db.pointTransaction.count({where:{idempotencyKey:'booking-resolution:'+row.id}}),1);
+ }
+ const queued=await db.booking.findUniqueOrThrow({where:{id:manualDue.id}});
+ assert.equal(queued.status,'PENDING_REVIEW');assert.equal(queued.resolutionTransactionId,null);
+ assert.equal((await db.booking.findUniqueOrThrow({where:{id:future.id}})).status,'RESERVED');
+ await assert.rejects(processDueBookings(db,51));
+
 });

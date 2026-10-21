@@ -161,3 +161,36 @@ export function listBookings(db:PrismaClient,actorId:string,admin:boolean){
   return {items:items.map(b=>({...bookingView(b),branch:branchMap.get(b.branchId),...(admin?{traineeName:peopleMap.get(b.traineeId)}:{})})),processed:due.length,serverTime:new Date()};
  });
 }
+
+/** Server-only scheduler. No client session or platform-admin password is needed. */
+export async function processDueBookings(db:PrismaClient, limit=25) {
+ if(!Number.isInteger(limit)||limit<1||limit>50)throw new DomainError('INVALID_INPUT');
+ const cutoff=new Date(), stopAt=Date.now()+40000;
+ const due=await db.booking.findMany({where:{status:'RESERVED',deadlineAt:{lt:cutoff}},orderBy:[{deadlineAt:'asc'},{id:'asc'}],take:limit,select:{id:true}});
+ let processed=0,failed=0;
+ for(const candidate of due){
+  if(Date.now()>=stopAt)break;
+  try {
+   const changed=await serializable(db,async tx=>{
+    // Skip a scan/cancellation or another worker currently holding this booking.
+    const locked=await tx.$queryRaw<{id:string}[]>`SELECT id FROM "Booking" WHERE id=${candidate.id}::uuid AND status='RESERVED' AND "deadlineAt"<${cutoff} FOR UPDATE SKIP LOCKED`;
+    if(!locked.length)return false;
+    const booking=await tx.booking.findUniqueOrThrow({where:{id:candidate.id}});
+    const policy=await tx.bookingPolicy.findUniqueOrThrow({where:{id:booking.policyId},select:{createdById:true}});
+    // Attribution uses the author of the policy authorized when booking was made.
+    // expire() uses the immutable snapshot, never the current platform policy.
+    const updated=await expire(tx,booking,policy.createdById);
+    if(updated.status===booking.status)return false;
+    await audit(tx,policy.createdById,'BOOKING_SCHEDULED_PROCESSING',booking.id,'Scheduled no-show processor applied the saved booking policy');
+    return true;
+   });
+   if(changed)processed++;
+  }catch{
+   failed++;
+   // A failed item stays RESERVED after rollback and is retried next invocation.
+   // Do not expose booking or trainee details to the scheduler response/logs.
+  }
+ }
+ const hasMore=Boolean(await db.booking.findFirst({where:{status:'RESERVED',deadlineAt:{lt:cutoff}},select:{id:true}}));
+ return {processed,failed,hasMore,asOf:cutoff};
+}
