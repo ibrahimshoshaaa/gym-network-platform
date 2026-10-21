@@ -133,6 +133,9 @@ model User {
   recoveryTokens AccountRecovery[] @relation("RecoveryUser")
   issuedRecoveryTokens AccountRecovery[] @relation("RecoveryIssuer")
   businessImages BusinessImage[]
+  marketListings MarketListing[]
+  marketImages MarketImage[]
+  marketReports MarketReport[]
 }
 
 model Gym {
@@ -899,4 +902,60 @@ model Booking {
  createdAt DateTime @default(now())
  @@index([traineeId,createdAt])
  @@index([status,deadlineAt])
+}
+
+model MarketListing {
+ id String @id @default(uuid()) @db.Uuid
+ sellerId String @db.Uuid
+ seller User @relation(fields:[sellerId],references:[id],onDelete:Restrict)
+ title String
+ description String
+ category String
+ condition String
+ pricePiasters BigInt
+ governorate String
+ city String
+ contactPhone String
+ searchText String
+ status String @default("PENDING")
+ version Int @default(1)
+ clientKey String @db.Uuid
+ requestHash String
+ reviewReason String?
+ reviewedById String? @db.Uuid
+ reviewedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ images MarketImage[]
+ reports MarketReport[]
+ @@unique([sellerId,clientKey])
+ @@index([status,createdAt,id])
+ @@index([status,pricePiasters,id])
+ @@index([sellerId,createdAt])
+}
+model MarketImage {
+ id String @id @default(uuid()) @db.Uuid
+ ownerId String @db.Uuid
+ owner User @relation(fields:[ownerId],references:[id],onDelete:Restrict)
+ listingId String? @db.Uuid
+ listing MarketListing? @relation(fields:[listingId],references:[id],onDelete:SetNull)
+ objectKey String @unique
+ assetId String @unique
+ publicUrl String
+ createdAt DateTime @default(now())
+ @@index([listingId,createdAt])
+}
+model MarketReport {
+ id String @id @default(uuid()) @db.Uuid
+ listingId String @db.Uuid
+ listing MarketListing @relation(fields:[listingId],references:[id],onDelete:Restrict)
+ reporterId String @db.Uuid
+ reporter User @relation(fields:[reporterId],references:[id],onDelete:Restrict)
+ reason String
+ status String @default("OPEN")
+ reviewedById String? @db.Uuid
+ reviewedAt DateTime?
+ createdAt DateTime @default(now())
+ @@unique([listingId,reporterId])
+ @@index([status,createdAt])
 }

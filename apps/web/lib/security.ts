@@ -69,6 +69,7 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^market\/(options|listings|mine)$/, new RegExp(`^market/listings/${uuid}$`), /^admin\/market\/(listings|reports)$/ ,
     new RegExp(`^branches/${uuid}/manage$`),
     /^booking-policy$/, /^admin\/booking-policy$/, /^trainee\/bookings$/, /^admin\/bookings\/review$/,
     /^campaigns$/, /^admin\/campaigns$/,
@@ -119,6 +120,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^market\/(listings|assets)$/, new RegExp(`^market/listings/${uuid}/(status|report)$`), new RegExp(`^market/assets/${uuid}/remove$`), new RegExp(`^admin/market/listings/${uuid}/review$`), new RegExp(`^admin/market/reports/${uuid}/resolve$`),
     /^trainee\/bookings$/, /^admin\/booking-policy$/, /^admin\/bookings\/process-due$/,
     new RegExp(`^trainee/bookings/${uuid}/(?:cancel|qr)$`),
     new RegExp(`^admin/bookings/${uuid}/decision$`),
@@ -164,6 +166,7 @@ const rules: Record<string, RegExp[]> = {
     /^auth\/password\/change$/,
   ],
   PATCH: [
+    new RegExp(`^market/listings/${uuid}$`),
     /^me\/profile$/,
     new RegExp(`^admin/users/${uuid}/access$`),
     new RegExp(`^admin/gyms/${uuid}/status$`),

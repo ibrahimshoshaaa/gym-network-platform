@@ -232,6 +232,35 @@ test(
       assert.equal((await request(`/api/mobile/branches/${branch.id}/manage`)).status, 401);
       assert.equal((await request(`/api/backend/branches/${randomUUID()}/manage`, {cookie: ownerCookie})).status, 403);
       assert.equal((await request(`/api/mobile/branches/${randomUUID()}/manage`, {headers: ownerNativeHeaders})).status, 403);
+      // Real native create -> admin web review -> shared marketplace browse.
+      const marketImage = await db.marketImage.create({data: {
+        ownerId: owner.id, objectKey: 'synthetic-market/' + randomUUID(),
+        assetId: randomUUID(), publicUrl: 'https://res.cloudinary.com/test/image/upload/synthetic.jpg',
+      }});
+      const marketCreate = await request('/api/mobile/market/listings', {
+        method: 'POST', headers: ownerNativeHeaders, body: {
+          title: 'جهاز اختبار الماركت', description: 'إعلان تجريبي لاختبار المسارات والصلاحيات',
+          category: 'EQUIPMENT', condition: 'USED', pricePiasters: '125050',
+          governorate: 'المنوفية', city: 'شبين الكوم', contactPhone: '+201012345678',
+          imageIds: [marketImage.id], clientKey: randomUUID(),
+        },
+      });
+      assert.equal(marketCreate.status, 200);
+      const marketListing = await marketCreate.json();
+      assert.equal(marketListing.status, 'PENDING');
+      assert.equal((await request('/api/mobile/market/listings')).status, 401);
+      assert.equal((await request('/api/backend/admin/market/listings', {cookie: ownerCookie})).status, 403);
+      const marketReview = await request('/api/backend/admin/market/listings/' + marketListing.id + '/review', {
+        method: 'POST', cookie, body: {expectedVersion: marketListing.version, status: 'APPROVED', reason: 'Synthetic approval'},
+      });
+      assert.equal(marketReview.status, 200);
+      const marketBrowse = await request('/api/mobile/market/listings?q=' + encodeURIComponent('جهاز اختبار الماركت'), {headers: ownerNativeHeaders});
+      assert.equal(marketBrowse.status, 200);
+      assert.ok((await marketBrowse.json()).items.some(row => row.id === marketListing.id && row.pricePiasters === '125050'));
+      const marketDetail = await request('/api/backend/market/listings/' + marketListing.id, {cookie: ownerCookie});
+      assert.equal(marketDetail.status, 200);
+      assert.equal((await marketDetail.json()).contactPhone, '+201012345678');
+
 
       assert.equal(
         (
@@ -1990,5 +2019,6 @@ test(
     }
   },
 );
+
 
 
