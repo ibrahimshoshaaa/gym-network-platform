@@ -276,7 +276,7 @@ class _NativeShellState extends State<NativeShell> {
           api: widget.api,
           gym: gym!,
           showBranches: () => setState(() => index = 1),
-          showMoney: () => open(context, MoneyScreen(api: widget.api, gym: gym!)),
+          showMoney: () => open(context, MoneyScreen(api: widget.api, gym: gym)),
           showOperations: () => setState(() => index = 2),
         ),
         1 => BranchesScreen(api: widget.api, gym: gym!),
