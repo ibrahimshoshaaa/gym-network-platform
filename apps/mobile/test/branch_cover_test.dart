@@ -1,11 +1,14 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/screens/branch_cover.dart';
 import 'package:gym_network/screens/auth.dart';
 import 'operations_test.dart' show client,page,reply;
 void main(){
  testWidgets('owner uploads a cover to the selected branch and can replace it',(t)async{
+  await t.binding.setSurfaceSize(const Size(393,850));addTearDown(()=>t.binding.setSurfaceSize(null));
   var uploaded=false;final calls=<Uri>[];
   final api=client('GYM_OWNER',(r)async{
    calls.add(r.url);
@@ -20,7 +23,7 @@ void main(){
  testWidgets('login remembers the native session by default',(t)async{
   await t.binding.setSurfaceSize(const Size(393,1200));addTearDown(()=>t.binding.setSurfaceSize(null));
   final api=client('TRAINEE',(_)async=>reply({}));await api.storage.write('auth.language','ar');
-  await t.pumpWidget(page(AuthScreen(api:api)));await t.pumpAndSettle();
+  await t.pumpWidget(MaterialApp(theme:appTheme(),supportedLocales:const [Locale('ar'),Locale('en')],localizationsDelegates:const [GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,GlobalCupertinoLocalizations.delegate],home:AuthScreen(api:api)));await t.pumpAndSettle();
   expect(t.widget<Checkbox>(find.byType(Checkbox).first).value,true);expect(t.takeException(),isNull);
  });
 }

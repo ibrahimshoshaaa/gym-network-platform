@@ -24,7 +24,7 @@ void main() {
     final store=MemoryStore();
     final transport=MockClient((r)async=>http.Response(jsonEncode(r.url.path.endsWith('/me')?{'id':'one','role':'TRAINEE'}:{'user':{'id':'one','role':'TRAINEE'},'accessToken':'saved-session'}),200));
     final first=ApiClient(storage:store,transport:transport);
-    await first.authenticate('auth/login',{'identifier':'synthetic','password':'synthetic'});
+    await first.authenticate('auth/signin',{'identifier':'synthetic','password':'synthetic'});
     final reopened=ApiClient(storage:store,transport:transport);
     await reopened.restore();expect(reopened.token,'saved-session');expect(reopened.user?['id'],'one');
     await reopened.logout();
