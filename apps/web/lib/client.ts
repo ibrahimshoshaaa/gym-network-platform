@@ -57,6 +57,7 @@ export type Page<T> = { items: T[]; nextCursor: string | null };
 const errors: Record<string, string> = {
   RECOVERY_INVALID: "رابط الاستعادة انتهى أو استُخدم. اطلب رابطًا جديدًا من الإدارة.",
   IMAGE_LIMIT: "وصلت للحد المسموح للصور. احذف صورة قبل إضافة غيرها.",
+  MAINTENANCE_REAPPROVAL_REQUIRED: "التكلفة النهائية أكبر من المعتمد. أرسل عرضًا جديدًا لاعتماده أولًا.",
   MARKET_LISTING_LIMIT: "وصلت للحد المسموح للإعلانات النشطة (٣٠ إعلان).",
   WALLET_BUSY: "تعذر تحميل المحفظة الآن. حاول مرة أخرى بعد قليل.",
   DIRECTORY_BUSY: "دليل الفروع مشغول حاليًا. حاول مرة أخرى أو استخدم بحثًا أدق.",

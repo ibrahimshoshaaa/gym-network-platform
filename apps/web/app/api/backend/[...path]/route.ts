@@ -24,7 +24,7 @@ async function handle(request: Request, context: Context) {
     if (request.method !== "GET") checkOrigin(request);
     const token = await sessionToken();
     if (!token) return json({ code: "UNAUTHENTICATED" }, 401);
-    const upload = path === "market/assets" || path === "receipts" || path === "admin/campaign-assets" || /^gyms\/[^/]+\/images$/.test(path),
+    const upload = /^maintenance\/branches\/[0-9a-f-]{36}\/assets$/i.test(path) || path === "market/assets" || path === "receipts" || path === "admin/campaign-assets" || /^gyms\/[^/]+\/images$/.test(path),
       headers: Record<string, string> = {};
     let body: Uint8Array | undefined;
     if (request.method !== "GET") {
@@ -36,7 +36,8 @@ async function handle(request: Request, context: Context) {
       )
         throw new GatewayError("INVALID_INPUT", 400);
       headers["content-type"] = type;
-      body = await boundedBody(request, upload ? 4194304 : 8192);
+      const maintenance = /^(admin\/)?maintenance\/requests(?:\/[0-9a-f-]{36}\/action)?$/i.test(path);
+      body = await boundedBody(request, upload ? 4194304 : maintenance ? 24576 : 8192);
       if (
         /^(?:gyms\/[^/]+\/(?:withdrawals|stock-transfers)|(?:admin\/)?withdrawals\/[^/]+\/(?:cancel|feedback|review|payment))$/.test(
           path,

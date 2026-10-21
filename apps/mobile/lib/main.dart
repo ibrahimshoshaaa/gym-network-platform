@@ -8,6 +8,7 @@ import 'screens/auth.dart';
 import 'screens/trainee.dart';
 import 'screens/bookings.dart';
 import 'screens/market.dart';
+import 'screens/maintenance.dart';
 import 'screens/booking_admin.dart';
 import 'screens/directory.dart';
 import 'screens/owner.dart';
@@ -309,6 +310,7 @@ class _NativeShellState extends State<NativeShell> {
         title: const Brand(),
         centerTitle: !workMode,
         actions: [
+          if (workMode) IconButton(tooltip: 'الصيانة', icon: const Icon(Icons.build_outlined), onPressed: () => open(context, MaintenanceScreen(api: widget.api))),
           if (widget.api.user?['role'] == 'TRAINEE' && widget.assignedWork)
             TextButton(
               onPressed: widget.api.pending != null

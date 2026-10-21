@@ -3,6 +3,7 @@ import "leaflet/dist/leaflet.css";
 import "@fontsource-variable/noto-sans-arabic";
 import "./globals.css";
 import "./market.css";
+import "./maintenance.css";
 import "./identity.css";
 import "./portal-parity.css";
 export const metadata: Metadata = {

@@ -133,6 +133,9 @@ model User {
   recoveryTokens AccountRecovery[] @relation("RecoveryUser")
   issuedRecoveryTokens AccountRecovery[] @relation("RecoveryIssuer")
   businessImages BusinessImage[]
+  maintenanceRequests MaintenanceRequest[]
+  maintenanceImages MaintenanceImage[]
+  maintenanceEvents MaintenanceEvent[]
   marketListings MarketListing[]
   marketImages MarketImage[]
   marketReports MarketReport[]
@@ -162,6 +165,8 @@ model Gym {
 }
 
 model Branch {
+  maintenanceRequests MaintenanceRequest[]
+  maintenanceImages MaintenanceImage[]
   businessImages BusinessImage[]
   id                String                 @id @default(uuid()) @db.Uuid
   gymId             String                 @db.Uuid
@@ -958,4 +963,64 @@ model MarketReport {
  createdAt DateTime @default(now())
  @@unique([listingId,reporterId])
  @@index([status,createdAt])
+}
+
+model MaintenanceRequest {
+ id String @id @default(uuid()) @db.Uuid
+ branchId String @db.Uuid
+ branch Branch @relation(fields:[branchId],references:[id],onDelete:Restrict)
+ createdById String @db.Uuid
+ createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
+ equipment String
+ description String
+ contactPhone String
+ status String @default("NEW")
+ version Int @default(1)
+ clientKey String @db.Uuid
+ requestHash String
+ estimatedPiasters BigInt?
+ approvedPiasters BigInt?
+ finalPiasters BigInt?
+ technicianName String?
+ technicianPhone String?
+ appointmentAt DateTime?
+ approvedById String? @db.Uuid
+ approvedAt DateTime?
+ resumeStatus String?
+ workSummary String?
+ confirmedById String? @db.Uuid
+ confirmedAt DateTime?
+ images MaintenanceImage[]
+ events MaintenanceEvent[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@unique([createdById,clientKey])
+ @@index([branchId,createdAt,id])
+ @@index([status,createdAt,id])
+}
+model MaintenanceImage {
+ id String @id @default(uuid()) @db.Uuid
+ ownerId String @db.Uuid
+ owner User @relation(fields:[ownerId],references:[id],onDelete:Restrict)
+ branchId String @db.Uuid
+ branch Branch @relation(fields:[branchId],references:[id],onDelete:Restrict)
+ requestId String? @db.Uuid
+ request MaintenanceRequest? @relation(fields:[requestId],references:[id],onDelete:Restrict)
+ objectKey String @unique
+ assetId String @unique
+ publicUrl String
+ createdAt DateTime @default(now())
+ @@index([requestId,createdAt])
+}
+model MaintenanceEvent {
+ id String @id @default(uuid()) @db.Uuid
+ requestId String @db.Uuid
+ request MaintenanceRequest @relation(fields:[requestId],references:[id],onDelete:Restrict)
+ actorId String @db.Uuid
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
+ status String
+ note String
+ data Json
+ createdAt DateTime @default(now())
+ @@index([requestId,createdAt,id])
 }

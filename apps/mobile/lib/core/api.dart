@@ -37,6 +37,7 @@ String? piasters(String value) {
 }
 
 const messages = {
+  'MAINTENANCE_REAPPROVAL_REQUIRED': 'التكلفة زادت عن المعتمد. لازم عرض جديد وموافقة صاحب الجيم أولًا.',
   'MARKET_LISTING_LIMIT': 'وصلت للحد المسموح للإعلانات النشطة (٣٠ إعلان).',
   'INVALID_CREDENTIALS': 'الإيميل أو رقم الموبايل أو كلمة السر غير صحيح.',
   'ACCOUNT_UNAVAILABLE':

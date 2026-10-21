@@ -2,11 +2,13 @@
 import {BookingAdmin} from "./booking-admin";
 import {StaffPortal} from "./staff-portal";
 import {AdminSideNav} from "./admin-side-nav";
+import {MaintenanceAdmin} from "./maintenance-admin";
 import {MarketAdmin} from "./market-admin";
 import {Campaigns} from "./campaigns";
 import { NetworkMark } from "./platform-identity";
 import { useEffect, useState, type FormEvent } from "react";
 import {
+  Wrench,
   FileCheck2,
   Coins,
   CreditCard,
@@ -61,6 +63,7 @@ import { AccountRecovery, recoveryToken } from "./account-recovery";
 import { PointWallet } from "./point-wallet";
 import { GymApplications } from "./gym-applications";
 type Tab =
+  | "maintenance"
   | "market"
   | "booking-policy"
   | "campaigns"
@@ -84,6 +87,7 @@ type Tab =
   | "packages"
   | "purchases";
 const tabs = [
+  {id:"maintenance" as const,label:"الصيانة",icon:Wrench,description:"أعطال الفروع وعروض الصيانة والمتابعة"},
   {id:"market" as const,label:"الماركت",icon:Coins,description:"مراجعة المعروض والبلاغات وإعلانات المنصة"},
   {id:"booking-policy" as const,label:"الحجوزات وسياسة الحضور",icon:ClipboardCheck,description:"مهلة السماح ومراجعة أسباب عدم الحضور وتوزيع النقاط"},
   {id:"campaigns" as const,label:"الإعلانات والإشعارات",icon:Send,description:"الجمهور ومواعيد الظهور والحملات"},
@@ -375,7 +379,7 @@ export function Dashboard() {
             {adminSection.items.map(id=>{const item=available.find(t=>t.id===id)!;return <button key={id} aria-current={contentTab===id?"page":undefined} className={contentTab===id?"active":""} onClick={()=>navigate(id)}>{item.label}</button>;})}
           </nav>:null}
           <Notice text={error} />
-          {contentTab === "market" ? <MarketAdmin/> : contentTab === "campaigns" ? <Campaigns/> : contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" || contentTab === "point-wallet" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
+          {contentTab === "maintenance" ? <MaintenanceAdmin/> : contentTab === "market" ? <MarketAdmin/> : contentTab === "campaigns" ? <Campaigns/> : contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" || contentTab === "point-wallet" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : contentTab === "directory" ? (
             <BranchDirectory />
