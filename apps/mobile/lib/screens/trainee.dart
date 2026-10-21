@@ -37,7 +37,7 @@ class _TraineeHomeState extends State<TraineeHome>{
   final current=++locationGeneration;setState((){locating=true;locationError=null;});
   try{final HomeLocation p;if(widget.locate!=null){p=await widget.locate!();}else{final gps=await currentPosition();p=(latitude:gps.latitude,longitude:gps.longitude);}
    final r=await widget.api.request('directory/branches?limit=8&latitude=${p.latitude}&longitude=${p.longitude}');if(mounted&&current==locationGeneration)setState((){location=p;nearby=rows(r);});
-  }catch(e){if(mounted&&current==locationGeneration)setState(()=>locationError=e);}finally{if(mounted&&current==locationGeneration)setState(()=>locating=false);}
+  }catch(e){if(mounted&&current==locationGeneration)setState((){locationError=e;location=null;nearby=[];});}finally{if(mounted&&current==locationGeneration)setState(()=>locating=false);}
  }
  Future<void> topup()async{await open(context,TopupScreen(api:widget.api));if(mounted)await load();}
  @override Widget build(BuildContext context)=>ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:()async{await Future.wait([load(),locate()]);},child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.only(bottom:28),children:[

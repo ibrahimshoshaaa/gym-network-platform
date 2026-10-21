@@ -61,7 +61,7 @@ class _HomeOffersState extends State<HomeOffers>{
  @override void didUpdateWidget(HomeOffers old){super.didUpdateWidget(old);if(old.latitude!=widget.latitude||old.longitude!=widget.longitude)load();}
  @override void dispose(){refresh?.cancel();generation++;super.dispose();}
  Future<void> load()async{
-  final current=++generation;setState((){loading=true;error=null;});
+  final current=++generation;setState((){loading=true;error=null;if(widget.latitude==null||widget.longitude==null)nearby=[];});
   Future<void> part(bool local)async{try{final path=local?'trainee/nearby-promotions?latitude=${widget.latitude}&longitude=${widget.longitude}':'campaigns?placement=HOME';final r=await widget.api.request(path);if(mounted&&current==generation)setState((){if(local){nearby=rows(r);}else{platform=rows(r);}});}catch(e){if(mounted&&current==generation)setState((){error=e;if(local){nearby=[];}else{platform=[];}});}}
   await Future.wait([part(false),if(widget.latitude!=null&&widget.longitude!=null)part(true)]);
   if(mounted&&current==generation)setState(()=>loading=false);
@@ -71,7 +71,8 @@ class _HomeOffersState extends State<HomeOffers>{
   if(loading&&items.isEmpty)return const Padding(padding:EdgeInsets.symmetric(vertical:20),child:LinearProgressIndicator(minHeight:2));
   if(items.isEmpty)return Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:12),child:error!=null?ErrorNote(error,retry:load):const Text('مفيش عروض متاحة حاليًا. تابعنا علشان تشوف الجديد.',style:TextStyle(color:muted,fontSize:12)));
   final width=(MediaQuery.sizeOf(context).width*.86).clamp(260.0,440.0).toDouble();
-  return SizedBox(height:255,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:20),itemCount:items.length,separatorBuilder:(_,_)=>const SizedBox(width:14),itemBuilder:(context,i){final r=items[i],isPlatform=r['platform']==true;final image=r['imageUrl'];return SizedBox(width:width,child:Material(color:ink,borderRadius:BorderRadius.circular(28),clipBehavior:Clip.antiAlias,child:InkWell(onTap:isPlatform?(r['hasAction']==true?()=>openCampaign(context,widget.api,'${r['destination']}'):null):()=>open(context,BranchDetail(api:widget.api,id:'${r['branch']}')),child:Stack(fit:StackFit.expand,children:[
+  final height=255.0+(MediaQuery.textScalerOf(context).scale(100)-100).clamp(0.0,180.0);
+  return SizedBox(height:height,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:20),itemCount:items.length,separatorBuilder:(_,_)=>const SizedBox(width:14),itemBuilder:(context,i){final r=items[i],isPlatform=r['platform']==true;final image=r['imageUrl'];return SizedBox(width:width,child:Material(color:ink,borderRadius:BorderRadius.circular(28),clipBehavior:Clip.antiAlias,child:InkWell(onTap:isPlatform?(r['hasAction']==true?()=>openCampaign(context,widget.api,'${r['destination']}'):null):()=>open(context,BranchDetail(api:widget.api,id:'${r['branch']}')),child:Stack(fit:StackFit.expand,children:[
    if(image!=null)Image.network('$image',fit:isPlatform?BoxFit.contain:BoxFit.cover,errorBuilder:(_,_,_)=>const ColoredBox(color:ink)),
    if(!isPlatform||image==null)const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0x10101719),Color(0xf0101719)]))),
    Positioned(top:14,right:14,child:Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:6),decoration:BoxDecoration(color:lime,borderRadius:BorderRadius.circular(18)),child:Text(isPlatform?'عرض المنصة':'عرض قريب منك',style:const TextStyle(color:ink,fontSize:10,fontWeight:FontWeight.w800)))),

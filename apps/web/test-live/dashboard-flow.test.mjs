@@ -97,6 +97,8 @@ test(
         gymId: gym.id,
         name: "Synthetic HTTP Branch",
         status: "ACTIVE",
+        address: 'شارع اختبار الإعلان', governorate: 'المنوفية', city: 'شبين الكوم',
+        latitude: 30, longitude: 31, pricingVersion: 1, priceApprovedAt: new Date(),
         visitPricePoints: 20,
         sessionMinutes: 120,
       },
@@ -232,6 +234,16 @@ test(
       assert.equal((await request(`/api/mobile/branches/${branch.id}/manage`)).status, 401);
       assert.equal((await request(`/api/backend/branches/${randomUUID()}/manage`, {cookie: ownerCookie})).status, 403);
       assert.equal((await request(`/api/mobile/branches/${randomUUID()}/manage`, {headers: ownerNativeHeaders})).status, 403);
+      // Native branch ad -> admin quote -> owner consent -> location-filtered trainee feed.
+      const adCreate = await request('/api/mobile/promotions/requests',{method:'POST',headers:ownerNativeHeaders,body:{branchId:branch.id,clientKey:randomUUID(),title:'عرض الفرع التجريبي',body:'تفاصيل عرض الفرع لاختبار دورة الموافقة',imageId:null}});
+      assert.equal(adCreate.status,200,await adCreate.clone().text());
+      let ad = await adCreate.json();
+      assert.equal((await request('/api/backend/admin/promotions/requests',{cookie:ownerCookie})).status,403);
+      assert.equal((await request('/api/mobile/promotions/requests')).status,401);
+      const adQuote = await request('/api/backend/admin/promotions/requests/'+ad.id+'/review',{method:'POST',cookie,body:{action:'QUOTE',expectedVersion:ad.version,reason:'اعتماد عرض الفرع التجريبي',feePiasters:'125050',startsAt:new Date(Date.now()-60000).toISOString(),endsAt:new Date(Date.now()+86400000).toISOString(),radiusKm:20}});
+      assert.equal(adQuote.status,200,await adQuote.clone().text());ad=await adQuote.json();assert.equal(ad.status,'AWAITING_ACCEPTANCE');
+      const adAccept=await request('/api/mobile/promotions/requests/'+ad.id+'/action',{method:'POST',headers:ownerNativeHeaders,body:{action:'ACCEPT',expectedVersion:ad.version}});
+      assert.equal(adAccept.status,200,await adAccept.clone().text());ad=await adAccept.json();assert.equal(ad.status,'APPROVED');
       // Real native create -> admin web review -> shared marketplace browse.
       const marketImage = await db.marketImage.create({data: {
         ownerId: owner.id, objectKey: 'synthetic-market/' + randomUUID(),
@@ -661,6 +673,10 @@ test(
       assert.equal(traineeLogin.status, 200);
       const traineeCookie = sessionCookie(traineeLogin);
       assert.ok(traineeCookie);
+      const localAds=await request('/api/backend/trainee/nearby-promotions?latitude=30&longitude=31',{cookie:traineeCookie});
+      assert.equal(localAds.status,200,await localAds.clone().text());assert.ok((await localAds.json()).items.some(r=>r.id===ad.id));
+      const noLocationAds=await request('/api/backend/trainee/nearby-promotions',{cookie:traineeCookie});assert.equal(noLocationAds.status,200);assert.equal((await noLocationAds.json()).items.length,0);
+
       const optionResponse = await request(
         "/api/backend/topup-options?kind=BRANCH_STOCK",
         { cookie: invitedOwnerCookie },
@@ -785,6 +801,9 @@ test(
       assert.equal(entryResponse.status, 201);
       const entered = await entryResponse.json();
       assert.equal((await (await enter()).json()).visit.id, entered.visit.id);
+      const prematureRating=await request('/api/backend/trainee/visits/'+entered.visit.id+'/rating',{method:'POST',cookie:traineeCookie,body:{score:5,expectedVersion:0}});
+      assert.equal(prematureRating.status,409); // A visit still in progress cannot be rated.
+
       const traineeWallet = await request("/api/backend/trainee/wallet", {
         cookie: traineeCookie,
       });
