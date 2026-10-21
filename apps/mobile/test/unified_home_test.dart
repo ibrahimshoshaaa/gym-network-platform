@@ -21,7 +21,7 @@ void main(){
    });
    await t.pumpWidget(GymNetworkApp(key:ValueKey(role),api:api));await t.pumpAndSettle();
    expect(find.byType(AccountBalanceHero),findsOneWidget,reason:role);expect(find.byType(AppBar),findsNothing);
-   final card=t.getRect(find.byType(AccountBalanceHero));expect(card.left,0);expect(card.width,393);expect(card.top,0);expect(card.height,lessThan(290));heights.add(card.height);
+   final card=t.getRect(find.byType(AccountBalanceHero));expect(card.left,0);expect(card.width,393);expect(card.top,0);expect(card.height,lessThan(290),reason:role);heights.add(card.height);
    final logo=t.getRect(find.byKey(const ValueKey('account-hero-brand'))),bell=t.getRect(find.byKey(const ValueKey('account-hero-notifications')));
    expect(logo.right+8,lessThanOrEqualTo(bell.left+.01));expect((logo.center.dy-bell.center.dy).abs(),lessThan(.01));expect(logo.left,greaterThanOrEqualTo(card.left+12));
    expect(find.textContaining('صالح حتى'),findsNothing);expect(t.takeException(),isNull);
