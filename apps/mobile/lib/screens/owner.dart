@@ -1,3 +1,4 @@
+import 'branch_services.dart';
 import 'work_balance_hero.dart';
 import 'branch_cover.dart';
 import 'campaigns.dart';
@@ -557,6 +558,7 @@ class BranchesScreen extends StatelessWidget {
                         },
                         child: const Text('تعديل البيانات'),
                       ),
+                      TextButton(onPressed:()=>open(context,BranchServicesScreen(api:api,gymId:'${gym['id']}',branchId:'${b['id']}',branchName:'${b['name']}')),child:const Text('خدمات الفرع')),
                       TextButton(
                         onPressed: () => open(
                           context,
@@ -1115,4 +1117,5 @@ class OwnerReport extends StatelessWidget {
     ),
   );
 }
+
 
