@@ -1,4 +1,5 @@
 import 'campaigns.dart';
+import 'maintenance.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -154,6 +155,7 @@ class _AccountScreenState extends State<AccountScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         child: Column(
           children: [
+            _item('الصيانة', Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
             _item(
               'تعديل الاسم',
               Icons.person_outline_rounded,

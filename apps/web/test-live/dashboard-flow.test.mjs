@@ -260,6 +260,37 @@ test(
       const marketDetail = await request('/api/backend/market/listings/' + marketListing.id, {cookie: ownerCookie});
       assert.equal(marketDetail.status, 200);
       assert.equal((await marketDetail.json()).contactPhone, '+201012345678');
+      const repairCreated = await request('/api/mobile/maintenance/requests', {
+        method: 'POST', headers: ownerNativeHeaders, body: {
+          branchId: branch.id, clientKey: randomUUID(), equipment: 'جهاز جري تجريبي',
+          description: 'عطل تجريبي للتحقق من دورة الصيانة', contactPhone: '+201012345678', imageIds: [],
+        },
+      });
+      assert.equal(repairCreated.status, 200);
+      let repairRow = await repairCreated.json();
+      const repairAction = async (action, data = {}, admin = true) => {
+        const response = await request((admin ? '/api/backend/admin' : '/api/mobile') + '/maintenance/requests/' + repairRow.id + '/action', {
+          method: 'POST', ...(admin ? {cookie} : {headers: ownerNativeHeaders}),
+          body: {action, expectedVersion: repairRow.version, ...data},
+        });
+        assert.equal(response.status, 200, await response.clone().text());
+        repairRow = await response.json();
+      };
+      assert.equal((await request('/api/mobile/maintenance/requests')).status, 401);
+      assert.equal((await request('/api/backend/admin/maintenance/requests', {cookie: ownerCookie})).status, 403);
+      await repairAction('QUOTE', {note: 'فحص السير وإصلاح العطل', estimatedPiasters: '125050', technicianName: 'فني اختبار الصيانة', technicianPhone: '+201012345678', appointmentAt: new Date(Date.now()+86400000).toISOString()});
+      assert.equal(repairRow.status, 'AWAITING_APPROVAL');
+      await repairAction('APPROVE', {}, false);
+      assert.equal(repairRow.status, 'SCHEDULED');
+      await repairAction('START', {note: 'بدء أعمال الاختبار'});
+      await repairAction('FINISH', {note: 'انتهاء أعمال الاختبار', finalPiasters: '120000', workSummary: 'تم إصلاح السير وإعادة اختبار الجهاز'});
+      assert.equal(repairRow.status, 'AWAITING_CONFIRMATION');
+      await repairAction('CONFIRM', {}, false);
+      assert.equal(repairRow.status, 'COMPLETED');
+      const repairDetail = await request('/api/mobile/maintenance/requests/' + repairRow.id, {headers: ownerNativeHeaders});
+      assert.equal(repairDetail.status, 200);
+      assert.equal((await repairDetail.json()).events.length, 6);
+
 
 
       assert.equal(
