@@ -69,6 +69,7 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^promotions\/(branches|requests)$/, new RegExp(`^promotions/requests/${uuid}$`), /^admin\/promotions\/requests$/, /^trainee\/nearby-promotions$/,
     /^maintenance\/(branches|requests)$/, new RegExp(`^maintenance/requests/${uuid}$`), /^admin\/maintenance\/requests$/,
     /^market\/(options|listings|mine)$/, new RegExp(`^market/listings/${uuid}$`), /^admin\/market\/(listings|reports)$/ ,
     new RegExp(`^branches/${uuid}/manage$`),
@@ -121,6 +122,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^promotions\/requests$/, new RegExp(`^promotions/requests/${uuid}/action$`), new RegExp(`^promotions/branches/${uuid}/assets$`), new RegExp(`^admin/promotions/requests/${uuid}/review$`), new RegExp(`^trainee/visits/${uuid}/rating$`),
     /^maintenance\/requests$/, new RegExp(`^maintenance/branches/${uuid}/assets$`), new RegExp(`^maintenance/requests/${uuid}/action$`), new RegExp(`^admin/maintenance/requests/${uuid}/action$`),
     /^market\/(listings|assets)$/, new RegExp(`^market/listings/${uuid}/(status|report)$`), new RegExp(`^market/assets/${uuid}/remove$`), new RegExp(`^admin/market/listings/${uuid}/review$`), new RegExp(`^admin/market/reports/${uuid}/resolve$`),
     /^trainee\/bookings$/, /^admin\/booking-policy$/, /^admin\/bookings\/process-due$/,

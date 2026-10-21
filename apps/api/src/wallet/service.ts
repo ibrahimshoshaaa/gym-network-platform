@@ -121,6 +121,7 @@ export async function traineeVisits(
       take: p.limit + 1,
       select: {
         id: true,
+        rating: {select:{score:true,version:true}},
         pointsCharged: true,
         status: true,
         startedAt: true,
@@ -142,6 +143,7 @@ export async function traineeVisits(
         .slice(0, p.limit)
         .map((v) => ({
           ...v,
+          canRate: v.status !== "CANCELLED" && v.expiresAt <= now,
           status:
             v.status === "ACTIVE" && v.expiresAt <= now ? "EXPIRED" : v.status,
           serverTime: now,

@@ -1,5 +1,6 @@
 import 'campaigns.dart';
 import 'maintenance.dart';
+import 'promotions.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,6 +23,9 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
+  bool canPromote = false;
+  @override void initState(){super.initState();if(widget.workplace)loadPromotions();}
+  Future<void> loadPromotions()async{try{final r=await widget.api.request('promotions/branches');if(mounted)setState(()=>canPromote=rows(r).isNotEmpty);}catch(_) {}}
   bool busy = false;
   Object? error;
   Future<void> logout() async {
@@ -155,6 +159,7 @@ class _AccountScreenState extends State<AccountScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         child: Column(
           children: [
+            if(canPromote)_item('إعلانات الفروع', Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
             _item('الصيانة', Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
             _item(
               'تعديل الاسم',

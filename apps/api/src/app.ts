@@ -1,5 +1,6 @@
 import { registerReservationRoutes } from './bookings/reservations.js';
 import { registerBookingPolicyRoutes } from './bookings/routes.js';
+import {registerPromotionRoutes} from "./promotions/routes.js";
 import {registerMaintenanceRoutes} from "./maintenance/routes.js";
 import {registerMarketRoutes} from "./market/routes.js";
 import {registerCampaignRoutes} from "./campaigns/routes.js";
@@ -59,6 +60,7 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
     registerCampaignRoutes(app,db);
     registerMarketRoutes(app,db);
     registerMaintenanceRoutes(app,db);
+    registerPromotionRoutes(app,db);
     registerApplicationRoutes(app,db);
     registerPointRoutes(app,db);
     registerMediaRoutes(app, db);

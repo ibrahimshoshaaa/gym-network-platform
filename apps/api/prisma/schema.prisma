@@ -133,6 +133,9 @@ model User {
   recoveryTokens AccountRecovery[] @relation("RecoveryUser")
   issuedRecoveryTokens AccountRecovery[] @relation("RecoveryIssuer")
   businessImages BusinessImage[]
+  promotionRequests PromotionRequest[]
+  promotionImages PromotionImage[]
+  visitRatings VisitRating[]
   maintenanceRequests MaintenanceRequest[]
   maintenanceImages MaintenanceImage[]
   maintenanceEvents MaintenanceEvent[]
@@ -165,6 +168,9 @@ model Gym {
 }
 
 model Branch {
+  promotionRequests PromotionRequest[]
+  promotionImages PromotionImage[]
+  visitRatings VisitRating[]
   maintenanceRequests MaintenanceRequest[]
   maintenanceImages MaintenanceImage[]
   businessImages BusinessImage[]
@@ -344,6 +350,7 @@ model VisitEntry {
 }
 
 model Visit {
+  rating VisitRating?
   id                   String           @id @default(uuid()) @db.Uuid
   traineeId            String           @db.Uuid
   trainee              User             @relation("TraineeVisits", fields: [traineeId], references: [id])
@@ -1023,4 +1030,59 @@ model MaintenanceEvent {
  data Json
  createdAt DateTime @default(now())
  @@index([requestId,createdAt,id])
+}
+
+model PromotionRequest {
+ id String @id @default(uuid()) @db.Uuid
+ requestedById String @db.Uuid
+ requestedBy User @relation(fields:[requestedById],references:[id],onDelete:Restrict)
+ branchId String @db.Uuid
+ branch Branch @relation(fields:[branchId],references:[id],onDelete:Restrict)
+ title String
+ body String
+ imageId String? @unique @db.Uuid
+ image PromotionImage? @relation(fields:[imageId],references:[id],onDelete:Restrict)
+ status String @default("PENDING")
+ version Int @default(1)
+ feePiasters BigInt?
+ startsAt DateTime?
+ endsAt DateTime?
+ radiusKm Int @default(20)
+ reviewReason String?
+ reviewedById String? @db.Uuid
+ acceptedById String? @db.Uuid
+ acceptedAt DateTime?
+ clientKey String @db.Uuid
+ requestHash String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@unique([requestedById,clientKey])
+ @@index([status,startsAt,endsAt])
+ @@index([branchId,createdAt,id])
+}
+model PromotionImage {
+ id String @id @default(uuid()) @db.Uuid
+ ownerId String @db.Uuid
+ owner User @relation(fields:[ownerId],references:[id],onDelete:Restrict)
+ branchId String @db.Uuid
+ branch Branch @relation(fields:[branchId],references:[id],onDelete:Restrict)
+ objectKey String @unique
+ assetId String @unique
+ publicUrl String
+ request PromotionRequest?
+ createdAt DateTime @default(now())
+}
+model VisitRating {
+ id String @id @default(uuid()) @db.Uuid
+ visitId String @unique @db.Uuid
+ visit Visit @relation(fields:[visitId],references:[id],onDelete:Restrict)
+ traineeId String @db.Uuid
+ trainee User @relation(fields:[traineeId],references:[id],onDelete:Restrict)
+ branchId String @db.Uuid
+ branch Branch @relation(fields:[branchId],references:[id],onDelete:Restrict)
+ score Int
+ version Int @default(1)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([branchId])
 }

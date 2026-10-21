@@ -187,12 +187,12 @@ void main() {
         expect(t.takeException(), isNull);
         if (role == 'TRAINEE') {
           await t.scrollUntilVisible(
-            find.text('شحن من الجيم'),
+            find.text('أول زيارة مؤكدة هتظهر هنا. جاهز تبدأ؟'),
             160,
             scrollable: find.byType(Scrollable).first,
           );
           await t.pumpAndSettle();
-          expect(find.text('+20'), findsOneWidget);
+          expect(find.text('آخر الزيارات'), findsOneWidget);
         }
         if (role == 'GYM_OWNER') {
           await t.scrollUntilVisible(
@@ -309,7 +309,7 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
-  testWidgets('wallet and entry stay usable while movement history is still loading', (t) async {
+  testWidgets('wallet and entry stay usable while visit history is still loading', (t) async {
     t.view.physicalSize = const Size(320, 740);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.resetPhysicalSize);
@@ -317,7 +317,7 @@ void main() {
     final history = Completer<http.Response>();
     var qrOpened = false;
     final api = ApiClient(storage: MemoryStore(), transport: MockClient((r) async {
-      if (r.url.path.endsWith('wallet/movements')) return history.future;
+      if (r.url.path.endsWith('trainee/visits')) return history.future;
       if (r.url.path.endsWith('trainee/wallet')) return reply({
         'spendablePoints': 120, 'unavailablePoints': 0,
         'expiresAt': '2027-01-01T12:00:00Z', 'status': 'VALID',
@@ -341,7 +341,7 @@ void main() {
   });
   testWidgets('history failure does not replace a valid wallet or claim an empty history', (t) async {
     final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
-      if(r.url.path.endsWith('wallet/movements')) return http.Response('{"code":"SERVICE_UNAVAILABLE"}',503);
+      if(r.url.path.endsWith('trainee/visits')) return http.Response('{"code":"SERVICE_UNAVAILABLE"}',503);
       if(r.url.path.endsWith('trainee/wallet'))return reply({
         'spendablePoints':120,'unavailablePoints':0,'expiresAt':null,
       });
@@ -352,7 +352,9 @@ void main() {
     )));
     await t.pumpAndSettle();
     expect(find.text('120 نقطة'),findsOneWidget);
-    expect(find.text('أول شحن أو زيارة هتظهر هنا.'),findsNothing);
+    await t.scrollUntilVisible(find.byType(ErrorNote),160,scrollable:find.byType(Scrollable).first);
+    await t.pumpAndSettle();
+    expect(find.text('أول زيارة مؤكدة هتظهر هنا. جاهز تبدأ؟'),findsNothing);
     expect(find.byType(ErrorNote),findsOneWidget);
     expect(t.takeException(),isNull);
   });

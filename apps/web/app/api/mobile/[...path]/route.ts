@@ -21,7 +21,7 @@ async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  const headers=new Headers(),type=r.headers.get('content-type')??'';
  let body:Uint8Array|undefined;
  if(method!=='GET'){
-  const image=/^maintenance\/branches\/[0-9a-f-]{36}\/assets$/i.test(path)||path==='market/assets'||path==='receipts'||/^gyms\/[^/]+\/images$/.test(path)||/^gyms\/[^/]+\/branches\/[^/]+\/images$/.test(path);
+  const image=/^(maintenance|promotions)\/branches\/[0-9a-f-]{36}\/assets$/i.test(path)||path==='market/assets'||path==='receipts'||/^gyms\/[^/]+\/images$/.test(path)||/^gyms\/[^/]+\/branches\/[^/]+\/images$/.test(path);
   if(image?!/^image\/(jpeg|png|webp)$/.test(type):!type.startsWith('application/json'))throw new GatewayError('INVALID_INPUT',400);
   const maintenance=/^(admin\/)?maintenance\/requests(?:\/[0-9a-f-]{36}\/action)?$/i.test(path);
   headers.set('content-type',type);body=await boundedBody(r,image?4*1024*1024:maintenance?24*1024:8192);
