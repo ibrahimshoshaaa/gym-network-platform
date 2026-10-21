@@ -87,3 +87,48 @@ workflows:
     artifacts:
       - apps/mobile/build/app/outputs/flutter-apk/*.apk
       - apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
+
+  gymbank-api:
+    name: GymBank - API and ledger checks
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      node: 22
+      vars:
+        DATABASE_URL: "postgresql://ci:ci@127.0.0.1:55432/gym_ci?schema=public"
+    scripts:
+      - name: Install dependencies and validate API
+        script: |
+          set -euo pipefail
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm --filter @gym/api db:generate
+          pnpm --filter @gym/api db:validate
+          pnpm --filter @gym/api typecheck
+          pnpm --filter @gym/api build
+          pnpm --filter @gym/api test
+          pnpm --filter @gym/api test:runtime
+      - name: Test migrations and ledger on disposable PostgreSQL
+        script: |
+          set -euo pipefail
+          brew list postgresql@16 >/dev/null 2>&1 || brew install postgresql@16
+          export PATH="$(brew --prefix postgresql@16)/bin:$PATH"
+          ci_database_dir=$(mktemp -d)
+          trap 'pg_ctl -D "$ci_database_dir" -m immediate stop >/dev/null 2>&1 || true; rm -rf "$ci_database_dir"' EXIT
+          initdb -D "$ci_database_dir" -U ci --auth=trust
+          pg_ctl -D "$ci_database_dir" -l "$ci_database_dir/server.log" -o "-h 127.0.0.1 -p 55432" -w start
+          createdb -h 127.0.0.1 -p 55432 -U ci gym_ci
+          pnpm --filter @gym/api db:deploy
+          psql -h 127.0.0.1 -p 55432 -U ci -d gym_ci -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE gym_app LOGIN PASSWORD 'gym_app' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+          GRANT CONNECT ON DATABASE gym_ci TO gym_app;
+          GRANT USAGE ON SCHEMA public TO gym_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO gym_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO gym_app;
+          SQL
+          DATABASE_URL='postgresql://gym_app:gym_app@127.0.0.1:55432/gym_ci?schema=public' pnpm --filter @gym/api test:db
+      - name: Validate dashboard types and gateway tests
+        script: |
+          set -euo pipefail
+          pnpm --filter @gym/web typecheck
+          pnpm --filter @gym/web test
