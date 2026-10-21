@@ -70,8 +70,9 @@ class _OwnerHomeState extends State<OwnerHome> {
     WorkBalanceHero(api:widget.api,scope:'صاحب الجيم · ${gym['name']}',label:'رصيد صاحب الجيم',points:wallet==null?null:'$available',loading:walletLoading,
      primary:BalanceHeroAction('شراء نقاط لرصيد الجيم',Icons.add_rounded,!active?null:()async{await open(context,TopupScreen(api:widget.api,gymId:gym['id']));if(mounted)await load();}),
      secondary:BalanceHeroAction('بيع نقاط لمتدرب',Icons.arrow_outward_rounded,!active||wallet==null||walletLoading||widget.api.pending!=null?null:()async{await open(context,SendPoints(api:widget.api,gym:gym));if(mounted)await load();}),
-     footer:BalanceHeroAction('الفروع والموظفين',Icons.storefront_outlined,widget.showBranches)),
+     footer:BalanceHeroAction('إدارة الفروع',Icons.storefront_outlined,widget.showBranches)),
     if(widget.homeTools!=null)widget.homeTools!,
+    if(wallet!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text('موزّع على الفروع ${wallet!['branchesTotal']??wallet!['total']} نقطة',style:const TextStyle(color:muted,fontSize:11))),
     const SizedBox(height:12),
     CampaignBanner(api:widget.api),
     if(!active)...[
