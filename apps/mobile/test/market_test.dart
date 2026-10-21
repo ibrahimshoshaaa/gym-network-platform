@@ -8,6 +8,8 @@ import 'operations_test.dart' show client, page, reply;
 void main() {
   for (final role in ['TRAINEE', 'GYM_OWNER', 'BRANCH_MANAGER', 'CASHIER']) {
     testWidgets('$role can open the shared market without a branch assignment', (t) async {
+      await t.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => t.binding.setSurfaceSize(null));
       final requested = <Uri>[];
       final api = client(role, (r) async {
         requested.add(r.url);
