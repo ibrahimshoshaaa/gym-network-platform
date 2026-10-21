@@ -1812,6 +1812,37 @@ test(
           const approvedNative=(await (await request('/api/mobile/me/gym-application',{headers:nativeHeaders})).json()).application;
           assert.equal(approvedNative.status,'APPROVED');assert.ok(approvedNative.gymId);
           assert.equal((await db.gym.findUniqueOrThrow({where:{id:approvedNative.gymId}})).ownerId,nativeOwner.user.id);
+          // Verify the actual admin maintenance screen, its narrow layout and quote form.
+          await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
+          if(await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true}).getAttribute('aria-expanded')!=='true')await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'الطلبات',exact:true}).click();
+          await page.getByRole('group',{name:'قائمة الطلبات',exact:true}).getByRole('button',{name:'الصيانة',exact:true}).click();
+          await expect(page.getByRole('heading',{name:'الصيانة',exact:true})).toBeVisible();
+          await page.getByLabel('حالة الطلب',{exact:true}).selectOption('COMPLETED');
+          await page.getByRole('button',{name:'تفاصيل الطلب ومتابعته',exact:true}).click();
+          await expect(page.getByRole('dialog')).toContainText('تم إصلاح السير وإعادة اختبار الجهاز');
+          for(const width of [320,393,1280]){
+            await page.setViewportSize({width,height:851});
+            assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'maintenance details must fit phone and desktop');
+          }
+          await page.getByRole('button',{name:'إغلاق',exact:true}).click();
+          const browserRepair = await request('/api/mobile/maintenance/requests',{method:'POST',headers:ownerNativeHeaders,body:{branchId:branch.id,clientKey:randomUUID(),equipment:'إصلاح واجهة الاختبار',description:'عطل تجريبي لاختبار نموذج الإدارة',contactPhone:'+201012345678',imageIds:[]}});
+          assert.equal(browserRepair.status,200);
+          const browserRepairId=(await browserRepair.json()).id;
+          await page.getByLabel('حالة الطلب',{exact:true}).selectOption('NEW');
+          await page.getByRole('button',{name:'تفاصيل الطلب ومتابعته',exact:true}).click();
+          await page.getByRole('button',{name:'إرسال عرض وموعد',exact:true}).click();
+          await page.getByLabel('التكلفة المتوقعة بالجنيه',{exact:true}).fill('1250.50');
+          await page.getByLabel('اسم مسؤول الصيانة',{exact:true}).fill('مسؤول اختبار الواجهة');
+          await page.getByLabel('رقم مسؤول الصيانة',{exact:true}).fill('01012345678');
+          await page.getByLabel('موعد الزيارة',{exact:true}).fill(new Date(Date.now()+86400000).toISOString().slice(0,16));
+          await page.getByLabel('سبب التحديث / ملاحظات للجيم',{exact:true}).fill('إصلاح الجهاز بعد مراجعة العطل');
+          await page.getByRole('button',{name:'حفظ وإرسال التحديث',exact:true}).click();
+          await expect(page.getByRole('dialog')).toContainText('بانتظار اعتماد التكلفة');
+          const browserQuote=await db.maintenanceRequest.findUniqueOrThrow({where:{id:browserRepairId}});
+          assert.equal(browserQuote.estimatedPiasters,125050n);assert.equal(browserQuote.technicianPhone,'+201012345678');
+          await page.getByRole('button',{name:'إغلاق',exact:true}).click();
+          await page.setViewportSize({width:393,height:851});
+
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
           if(await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).getAttribute('aria-expanded')!=='true')await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
           await page.getByRole('group',{name:'قائمة المالية',exact:true}).getByRole('button',{name:'نظرة عامة',exact:true}).click();
