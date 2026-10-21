@@ -271,6 +271,54 @@ class _NativeShellState extends State<NativeShell> {
             (Icons.shopping_bag_outlined, 'الماركت'),
             (Icons.person_outline_rounded, 'حسابي'),
           ];
+    final workHomeTools=Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            if (owner && index != 3 && widget.gyms.length > 1)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.storefront_outlined,
+                      color: green,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Semantics(
+                        label: 'الجيم الحالي',
+                        child: DropdownButton<int>(
+                          value: gymIndex,
+                          isExpanded: true,
+                          underline: const SizedBox.shrink(),
+                          items: [
+                            for (var i = 0; i < widget.gyms.length; i++)
+                              DropdownMenuItem(
+                                value: i,
+                                child: Text(
+                                  '${widget.gyms[i]['name']}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                          ],
+                          onChanged: widget.api.pending != null
+                              ? null
+                              : (v) => setState(() {
+                                  gymIndex = v!;
+                                  version++;
+                                }),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+     Wrap(alignment:WrapAlignment.end,spacing:8,children:[
+      TextButton.icon(onPressed:()=>open(context,MaintenanceScreen(api:widget.api)),icon:const Icon(Icons.build_outlined,size:18),label:const Text('الصيانة')),
+      if(widget.api.user?['role']=='TRAINEE'&&widget.assignedWork)TextButton(onPressed:widget.api.pending!=null?null:()=>setState((){workMode=false;index=0;version++;}),child:const Text('حساب المتدرب')),
+     ]),
+    ]);
     Widget content;
     if (owner) {
       content = switch (index) {
@@ -280,6 +328,7 @@ class _NativeShellState extends State<NativeShell> {
           showBranches: () => setState(() => index = 1),
           showMoney: () => open(context, MoneyScreen(api: widget.api, gym: gym)),
           showOperations: () => setState(() => index = 2),
+          homeTools:workHomeTools,
         ),
         1 => BranchesScreen(api: widget.api, gym: gym!),
         2 => OperationsHome(api: widget.api, gymId: '${gym!['id']}'),
@@ -288,7 +337,7 @@ class _NativeShellState extends State<NativeShell> {
       };
     } else if (staff) {
       content = index < 3
-          ? StaffWorkplace(api: widget.api, section: index, branchId: staffBranchId,
+          ? StaffWorkplace(api: widget.api, section: index, branchId: staffBranchId,homeTools:workHomeTools,
               onBranchChanged: (id) => setState(() { staffBranchId = id; version++; }),
               showVisits: () => setState(() => index = 1),
               showSales: () => setState(() => index = 2))
@@ -307,9 +356,9 @@ class _NativeShellState extends State<NativeShell> {
         _ => AccountScreen(api: widget.api),
       };
     }
-    return AnnotatedRegion<SystemUiOverlayStyle>(value: !workMode && index == 0 ? SystemUiOverlayStyle.light.copyWith(statusBarColor: ink) : SystemUiOverlayStyle.dark, child: Scaffold(
-      backgroundColor: !workMode && index == 0 ? ink : canvas,
-      appBar: !workMode && index == 0 ? null : AppBar(
+    return AnnotatedRegion<SystemUiOverlayStyle>(value: index == 0 ? SystemUiOverlayStyle.light.copyWith(statusBarColor: ink) : SystemUiOverlayStyle.dark, child: Scaffold(
+      backgroundColor: index == 0 ? ink : canvas,
+      appBar: index == 0 ? null : AppBar(
         title: const Brand(),
         centerTitle: !workMode,
         actions: [
@@ -330,7 +379,7 @@ class _NativeShellState extends State<NativeShell> {
       body: SafeArea(
         child: Column(
           children: [
-            if (owner && index != 3 && widget.gyms.length > 1)
+            if (owner && index != 0 && index != 3 && widget.gyms.length > 1)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
                 child: Row(

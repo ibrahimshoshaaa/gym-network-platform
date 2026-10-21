@@ -42,6 +42,7 @@ class _TraineeHomeState extends State<TraineeHome>{
  Future<void> topup()async{await open(context,TopupScreen(api:widget.api));if(mounted)await load();}
  @override Widget build(BuildContext context)=>ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:()async{await Future.wait([load(),locate()]);},child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.only(bottom:28),children:[
   TraineeBalanceHero(api:widget.api,wallet:wallet,loading:walletLoading,topup:topup,qr:widget.showQr,history:()=>open(context,WalletHistory(api:widget.api)),notifications:()=>open(context,NotificationsScreen(api:widget.api)),workplace:widget.showWork),
+  if(widget.showWork!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Align(alignment:AlignmentDirectional.centerEnd,child:TextButton(onPressed:widget.showWork,child:const Text('عملي في الجيم')))),
   if(walletError!=null)Padding(padding:const EdgeInsets.all(16),child:ErrorNote(walletError,retry:load)),
   if((int.tryParse('${wallet?['unavailablePoints']}')??0)>0)Padding(padding:const EdgeInsets.all(16),child:PortalNote('${wallet!['unavailablePoints']} نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.')),
   Padding(padding:const EdgeInsets.fromLTRB(20,20,20,12),child:SectionTitle('جيمات قريبة منك',trailing:TextButton(onPressed:widget.showGyms,child:const Text('عرض الكل')))),

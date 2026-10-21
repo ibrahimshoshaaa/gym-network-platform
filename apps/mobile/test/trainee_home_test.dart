@@ -20,7 +20,7 @@ void main(){
   await t.pumpWidget(page(Scaffold(body:TraineeHome(api:api,showGyms:(){},showQr:(){},locate:()async=>(latitude:30.0,longitude:31.0)))));await t.pumpAndSettle();
   expect(find.text('120 نقطة'),findsOneWidget);expect(find.byType(NearbyGymCard),findsOneWidget);
   final clip=t.widget<ClipRRect>(find.descendant(of:find.byType(TraineeBalanceHero),matching:find.byType(ClipRRect)).first);
-  expect(clip.borderRadius,const BorderRadius.only(bottomLeft:Radius.circular(42),bottomRight:Radius.circular(42)));
+  expect(clip.borderRadius,const BorderRadius.only(bottomLeft:Radius.circular(36),bottomRight:Radius.circular(36)));
   expect(t.getSize(find.byType(TraineeBalanceHero)).height,lessThan(340));
   expect(calls.firstWhere((u)=>u.path.endsWith('/directory/branches')).queryParameters['latitude'],'30.0');
   expect(t.getTopLeft(find.byType(TraineeBalanceHero)).dy,lessThan(t.getTopLeft(find.text('جيمات قريبة منك')).dy));

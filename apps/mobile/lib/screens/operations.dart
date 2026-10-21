@@ -41,8 +41,9 @@ class StaffWorkplace extends StatelessWidget {
   final String? branchId;
   final ValueChanged<String> onBranchChanged;
   final VoidCallback showVisits, showSales;
+  final Widget? homeTools;
   const StaffWorkplace({super.key, required this.api, required this.section,
-    required this.branchId, required this.onBranchChanged, required this.showVisits, required this.showSales});
+    required this.branchId, required this.onBranchChanged, required this.showVisits, required this.showSales,this.homeTools});
   @override
   Widget build(BuildContext context) => DataView(
     load: () => api.request('operations/branches'),
@@ -53,7 +54,7 @@ class StaffWorkplace extends StatelessWidget {
       ]);
       final branch = branches.where((b) => b['id'] == branchId).firstOrNull ?? branches.first;
       return Column(children: [
-        Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 12), child: Row(children: [
+        if(section!=0) Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 12), child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(branch['canCancel'] == true ? 'مدير الفرع' : 'كاشير الفرع', style: const TextStyle(color: green, fontSize: 12, fontWeight: FontWeight.w700)),
             if (branches.length > 1) DropdownButton<String>(value: branch['id'], isExpanded: true,
@@ -69,7 +70,11 @@ class StaffWorkplace extends StatelessWidget {
         Expanded(child: KeyedSubtree(key: ValueKey('${branch['id']}:$section'), child: switch(section) {
           1 => BranchRecords(api: api, branch: branch, kind: 'visits', embedded: true),
           2 => BranchRecords(api: api, branch: branch, kind: 'sales', embedded: true),
-          _ => BranchDashboard(api: api, branch: branch, showVisits: showVisits, showSales: showSales),
+          _ => BranchDashboard(api: api, branch: branch, showVisits: showVisits, showSales: showSales,controls:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+           if(branches.length>1) DropdownButton<String>(value:branch['id'],isExpanded:true,items:branches.map((b)=>DropdownMenuItem<String>(value:b['id'],child:Text('${b['name']}',maxLines:1,overflow:TextOverflow.ellipsis))).toList(),onChanged:api.pending!=null?null:(id)=>onBranchChanged(id!))
+           else Padding(padding:const EdgeInsets.only(top:10),child:Text('${branch['name']}',style:const TextStyle(color:green,fontSize:12))),
+           if(homeTools!=null)homeTools!,
+          ])),
         })),
       ]);
     },
@@ -80,7 +85,8 @@ class BranchDashboard extends StatefulWidget {
   final ApiClient api;
   final Json branch;
   final VoidCallback? showVisits, showSales;
-  const BranchDashboard({super.key, required this.api, required this.branch, this.showVisits, this.showSales});
+  final Widget? controls;
+  const BranchDashboard({super.key, required this.api, required this.branch, this.showVisits, this.showSales,this.controls});
   @override
   State<BranchDashboard> createState() => _BranchDashboardState();
 }
@@ -119,12 +125,13 @@ class _BranchDashboardState extends State<BranchDashboard> {
   @override
   Widget build(BuildContext context) {
     final branch = widget.branch, locked = widget.api.pending != null;
-    return RefreshIndicator(onRefresh: load, child: ListView(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), physics: const AlwaysScrollableScrollPhysics(), children: [
-        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'رصيد الفرع لبيع النقاط',points:summary==null?null:'${summary!['stock']??'—'}',loading:summaryLoading,detail:summary==null?'':'الزيارة ${summary!['visitPricePoints']??'—'} نقطة · ${summary!['sessionMinutes']??'—'} دقيقة',actions:branch['canSell']!=true?[]:[
-          Row(children:[Expanded(child:FilledButton(onPressed:locked?null:()=>action(RecordVisit(api:widget.api,branch:branch)),child:const Text('تسجيل زيارة',textAlign:TextAlign.center))),const SizedBox(width:8),Expanded(child:OutlinedButton(onPressed:locked||summary==null||summaryLoading||'${summary!['stock']}'=='0'?null:()=>action(BranchSale(api:widget.api,branch:branch)),child:const Text('بيع نقاط لمتدرب',textAlign:TextAlign.center)))]),
-          TextButton.icon(onPressed:locked?null:()=>action(ScanBookingScreen(api:widget.api,branch:branch)),icon:const Icon(Icons.qr_code_scanner_rounded,size:18),label:const Text('تأكيد حضور حجز')),
-        ]),
+    return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh: load, child: ListView(
+      padding: const EdgeInsets.only(bottom:28), physics: const AlwaysScrollableScrollPhysics(), children: [
+        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'رصيد الفرع لبيع النقاط',points:summary==null?null:'${summary!['stock']??'—'}',loading:summaryLoading,
+         primary:BalanceHeroAction('تسجيل زيارة',Icons.qr_code_scanner_rounded,locked||branch['canSell']!=true?null:()=>action(RecordVisit(api:widget.api,branch:branch))),
+         secondary:BalanceHeroAction('بيع نقاط لمتدرب',Icons.arrow_outward_rounded,locked||branch['canSell']!=true||summary==null||summaryLoading||'${summary!['stock']}'=='0'?null:()=>action(BranchSale(api:widget.api,branch:branch))),
+         footer:BalanceHeroAction('تأكيد حضور حجز',Icons.qr_code_2_rounded,locked||branch['canSell']!=true?null:()=>action(ScanBookingScreen(api:widget.api,branch:branch)))),
+        if(widget.controls!=null)widget.controls!,
         const SizedBox(height:12),
         BranchFinance(key: ValueKey(generation), api: widget.api, branch: branch),
         if (summaryError != null) ErrorNote(summaryError, retry: load),
@@ -164,8 +171,8 @@ class _BranchDashboardState extends State<BranchDashboard> {
         ])),
         TextButton.icon(onPressed: () => open(context, OperationReviewsScreen(api: widget.api)),
           icon: const Icon(Icons.fact_check_outlined), label: const Text('طلبات المراجعة')),
-      ],
-    ));
+      ].asMap().entries.map((e)=>e.key==0?e.value:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:e.value)).toList(),
+    )));
   }
 }
 

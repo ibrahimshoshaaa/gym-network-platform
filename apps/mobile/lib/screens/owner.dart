@@ -24,8 +24,9 @@ class OwnerHome extends StatefulWidget {
  final ApiClient api;
  final Json gym;
  final VoidCallback showBranches,showMoney,showOperations;
+ final Widget? homeTools;
  const OwnerHome({super.key,required this.api,required this.gym,
-   required this.showBranches,required this.showMoney,required this.showOperations});
+   required this.showBranches,required this.showMoney,required this.showOperations,this.homeTools});
  @override State<OwnerHome> createState()=>_OwnerHomeState();
 }
 class _OwnerHomeState extends State<OwnerHome> {
@@ -62,27 +63,15 @@ class _OwnerHomeState extends State<OwnerHome> {
  @override Widget build(BuildContext context){
   final gym=widget.gym,active=gym['status']=='ACTIVE';
   final available=wallet?['available'];
-  return RefreshIndicator(onRefresh:load,child:ListView(
-   padding:const EdgeInsets.fromLTRB(20,8,20,28),
+  return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:load,child:ListView(
+   padding:const EdgeInsets.only(bottom:28),
    physics:const AlwaysScrollableScrollPhysics(),
    children:[
-    WorkBalanceHero(api:widget.api,scope:'صاحب الجيم · ${gym['name']}',label:'رصيد صاحب الجيم',points:wallet==null?null:'$available',loading:walletLoading,detail:wallet==null?'':'موزّع على الفروع ${wallet!['branchesTotal'] ?? wallet!['total']} نقطة',actions:[
-      FilledButton.icon(
-       style:FilledButton.styleFrom(backgroundColor:lime,foregroundColor:ink),
-       onPressed:!active||wallet==null||walletLoading||widget.api.pending!=null
-        ?null:()async{
-          await open(context,SendPoints(api:widget.api,gym:gym));
-          if(mounted)await load();
-        },
-       icon:const Icon(Icons.north_west_rounded,size:20),
-       label:const Text('بيع نقاط لمتدرب')),
-      TextButton(onPressed:!active?null:()async{
-        await open(context,TopupScreen(api:widget.api,gymId:gym['id']));
-        if(mounted)await load();
-       },
-       style:TextButton.styleFrom(foregroundColor:Colors.white70),
-       child:const Text('شراء نقاط لرصيد الجيم',style:TextStyle(fontSize:12))),
-    ]),
+    WorkBalanceHero(api:widget.api,scope:'صاحب الجيم · ${gym['name']}',label:'رصيد صاحب الجيم',points:wallet==null?null:'$available',loading:walletLoading,
+     primary:BalanceHeroAction('شراء نقاط لرصيد الجيم',Icons.add_rounded,!active?null:()async{await open(context,TopupScreen(api:widget.api,gymId:gym['id']));if(mounted)await load();}),
+     secondary:BalanceHeroAction('بيع نقاط لمتدرب',Icons.arrow_outward_rounded,!active||wallet==null||walletLoading||widget.api.pending!=null?null:()async{await open(context,SendPoints(api:widget.api,gym:gym));if(mounted)await load();}),
+     footer:BalanceHeroAction('الفروع والموظفين',Icons.storefront_outlined,widget.showBranches)),
+    if(widget.homeTools!=null)widget.homeTools!,
     const SizedBox(height:12),
     CampaignBanner(api:widget.api),
     if(!active)...[
@@ -135,8 +124,8 @@ class _OwnerHomeState extends State<OwnerHome> {
     const SizedBox(height:12),
     TextButton.icon(onPressed:()=>open(context,DispatchHistory(api:widget.api,gymId:gym['id'])),
       icon:const Icon(Icons.history_rounded,size:18),label:const Text('سجل إرسال وشحن محفظة الجيم')),
-   ],
-  ));
+   ].asMap().entries.map((e)=>e.key==0?e.value:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:e.value)).toList(),
+  )));
  }
 }
 Widget _ownerTask(String title,String detail,IconData icon,VoidCallback? tap)=>ListTile(
