@@ -7,7 +7,6 @@ import '../core/api.dart';
 import '../core/ui.dart';
 import '../core/portal_ui.dart';
 import 'account.dart';
-import 'bookings.dart';
 import 'managed_branch.dart';
 import 'branch_finance.dart';
 
