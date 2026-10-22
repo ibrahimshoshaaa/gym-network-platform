@@ -211,7 +211,14 @@ class ApiClient extends ChangeNotifier {
     try {
       token = await storage.read('session');
       if (token != null) {
-        user = Map<String, dynamic>.from(await request('me'));
+        try {
+          user = Map<String, dynamic>.from(await request('me'));
+        } on ApiFailure catch (e) {
+          // A rejected saved session should return to sign-in, not block startup.
+          // request() clears the session only for an authenticated 401 response.
+          if (e.status != 401 || e.code != 'UNAUTHENTICATED' || token != null) rethrow;
+          return;
+        }
         await _readPending();
       }
     } finally {
