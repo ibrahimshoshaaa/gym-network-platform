@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Prisma, type PrismaClient, type Booking } from '@prisma/client';
 import { z } from 'zod';
 import { requireActor, requireAdmin, requireBranchAccess } from '../auth/authorization.js';
@@ -10,6 +10,7 @@ import { postInTransaction, serializable } from '../ledger/service.js';
 import { allocationSchema, allocatePoints, cancellationDeadline, snapshotPolicy } from './policy.js';
 
 import { requireSessionFits, attendanceEnd, type DailyHours } from './hours.js';
+import { validatePresence } from './presence.js';
 
 type Tx = Prisma.TransactionClient;
 const uuid = z.string().uuid();
@@ -23,6 +24,51 @@ export const createBookingSchema = z.object({
 export const reasonSchema = z.object({reason:z.string().trim().min(1).max(1000)}).strict();
 export const decisionSchema = reasonSchema.extend({allocation:allocationSchema}).strict();
 export const scanSchema = z.object({token:z.string().regex(/^[A-Za-z0-9_-]{43}$/)}).strict();
+export const checkInSchema = z.object({
+ branchId:uuid,token:z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+ latitude:z.number().min(-90).max(90),longitude:z.number().min(-180).max(180),
+ accuracy:z.number().min(0).max(50),capturedAt:z.string().datetime({offset:true}),isMocked:z.literal(false),
+}).strict();
+const usesServices=(b:Booking)=>Array.isArray(b.serviceSnapshots)&&b.serviceSnapshots.length>0;
+
+export function branchEntryQr(db:PrismaClient,actorId:string,branchId:string,input:unknown,rotate=false){
+ parse(uuid,branchId);
+ const expectedVersion=rotate?parse(z.object({expectedVersion:z.number().int().positive()}).strict(),input).expectedVersion:undefined;
+ if(!rotate)parse(z.object({}).strict(),input);
+ return serializable(db,async tx=>{
+  await tx.$queryRaw`SELECT id FROM "Branch" WHERE id=${branchId}::uuid FOR UPDATE`;
+  let branch=await requireBranchAccess(tx,actorId,branchId,rotate?'CANCEL_VISIT':'SELL_POINTS');
+  if(rotate&&branch.entryQrVersion!==expectedVersion)throw new DomainError('STALE_SETTINGS');
+  if(!branch.entryQrToken||rotate){
+   const updated=await tx.branch.update({where:{id:branchId},data:{entryQrToken:randomBytes(32).toString('base64url'),entryQrVersion:{increment:1}}});
+   branch={...branch,...updated};
+   await audit(tx,actorId,rotate?'BRANCH_ENTRY_QR_ROTATED':'BRANCH_ENTRY_QR_CREATED',branchId,'Fixed reception QR; attendance still requires an owned booking and fresh nearby location');
+  }
+  return {branchId,name:branch.name,version:branch.entryQrVersion,payload:`gymbranch:${branchId}:${branch.entryQrToken}`};
+ });
+}
+
+export function checkInBooking(db:PrismaClient,actorId:string,id:string,input:unknown){
+ parse(uuid,id);const data=parse(checkInSchema,input);
+ return serializable(db,async tx=>{
+  await trainee(tx,actorId);
+  const b=await lockBooking(tx,id);
+  if(b.traineeId!==actorId)throw new DomainError('ACCESS_DENIED');
+  if(b.branchId!==data.branchId)throw new DomainError('QR_WRONG_BRANCH');
+  // A safe replay returns the completed attendance without moving either ledger.
+  if(b.status==='ATTENDED')return bookingView(b);
+  const now=new Date();
+  if(b.status!=='RESERVED'||now>=b.deadlineAt)throw new DomainError('INVALID_STATE');
+  // Serialize QR rotation and location/status edits with attendance validation.
+  await tx.$queryRaw`SELECT id FROM "Branch" WHERE id=${b.branchId}::uuid FOR UPDATE`;
+  const branch=await tx.branch.findUnique({where:{id:b.branchId},include:{gym:{include:{owner:{select:{isActive:true}}}}}});
+  if(!branch||branch.status!=='ACTIVE'||branch.gym.status!=='ACTIVE'||!branch.gym.ownerAcceptedAt||!branch.gym.owner.isActive)throw new DomainError('BRANCH_NOT_READY');
+  if(!branch.entryQrToken||!timingSafeEqual(Buffer.from(branch.entryQrToken),Buffer.from(data.token)))throw new DomainError('QR_INVALID');
+  if(branch.latitude==null||branch.longitude==null)throw new DomainError('BRANCH_LOCATION_REQUIRED');
+  validatePresence(data,{latitude:Number(branch.latitude),longitude:Number(branch.longitude)},now);
+  return bookingView(await settle(tx,b,actorId,{traineeBps:0,gymBps:10000,platformBps:0},'ATTENDED','Trainee scanned fixed branch QR with a fresh nearby location'));
+ });
+}
 const digest = (v:unknown) => createHash('sha256').update(JSON.stringify(v)).digest('hex');
 export function bookingView(b:Booking) {
  const {qrHash, qrSessionId, walletId, holdAccountId, requestHash, idempotencyKey, unitPricePiasters, ...view}=b;
@@ -156,6 +202,7 @@ export function issueBookingQr(db:PrismaClient,actorId:string,id:string,bearer:s
  return serializable(db,async tx=>{
   await trainee(tx,actorId);const b=await lockBooking(tx,id);
   if(b.traineeId!==actorId)throw new DomainError('ACCESS_DENIED');
+  if(usesServices(b))throw new DomainError('BRANCH_QR_REQUIRED');
   const now=new Date();
   if(b.status!=='RESERVED'||now>=b.deadlineAt)throw new DomainError('INVALID_STATE');
   const session=await tx.authSession.findUnique({where:{tokenHash:hashToken(bearer)}});
@@ -172,6 +219,7 @@ export function scanBooking(db:PrismaClient,actorId:string,branchId:string,input
   const found=await tx.booking.findUnique({where:{qrHash:hashToken(data.token)}});
   if(!found)throw new DomainError('QR_INVALID');
   const b=await lockBooking(tx,found.id),now=new Date();
+  if(usesServices(b))throw new DomainError('BRANCH_QR_REQUIRED');
   if(b.qrHash!==hashToken(data.token)||b.branchId!==branchId||b.status!=='RESERVED'||!b.qrExpiresAt||b.qrExpiresAt<now||now>=b.deadlineAt)throw new DomainError('QR_INVALID');
   const session=b.qrSessionId?await tx.authSession.findUnique({where:{id:b.qrSessionId}}):null;
   if(!session||session.userId!==b.traineeId||session.revokedAt||session.expiresAt<=now)throw new DomainError('QR_INVALID');

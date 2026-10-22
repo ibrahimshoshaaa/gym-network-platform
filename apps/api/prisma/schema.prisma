@@ -190,6 +190,8 @@ model Branch {
   bookingOpenMinute Int?
   bookingCloseMinute Int?
   bookingHoursVersion Int @default(0)
+  entryQrToken String? @unique
+  entryQrVersion Int @default(0)
   pricingVersion    Int                    @default(0)
   priceApprovedAt   DateTime?
   priceApprovedById String?                @db.Uuid

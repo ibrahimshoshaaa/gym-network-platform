@@ -1,3 +1,4 @@
+import 'branch_entry.dart';
 import 'work_balance_hero.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -131,7 +132,7 @@ class _BranchDashboardState extends State<BranchDashboard> {
         WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'رصيد الفرع لبيع النقاط',points:summary==null?null:'${summary!['stock']??'—'}',loading:summaryLoading,
          primary:BalanceHeroAction('تسجيل زيارة',Icons.qr_code_scanner_rounded,locked||branch['canSell']!=true?null:()=>action(RecordVisit(api:widget.api,branch:branch))),
          secondary:BalanceHeroAction('بيع نقاط لمتدرب',Icons.arrow_outward_rounded,locked||branch['canSell']!=true||summary==null||summaryLoading||'${summary!['stock']}'=='0'?null:()=>action(BranchSale(api:widget.api,branch:branch))),
-         footer:BalanceHeroAction('تأكيد حضور حجز',Icons.qr_code_2_rounded,locked||branch['canSell']!=true?null:()=>action(ScanBookingScreen(api:widget.api,branch:branch)))),
+         footer:BalanceHeroAction('كود حضور الفرع',Icons.qr_code_2_rounded,locked||branch['canSell']!=true?null:()=>action(BranchEntryQrScreen(api:widget.api,branch:branch)))),
         if(widget.controls!=null)widget.controls!,
         if(summary!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text('الزيارة ${summary!['visitPricePoints']??'—'} نقطة · ${summary!['sessionMinutes']??'—'} دقيقة',style:const TextStyle(color:muted,fontSize:11))),
         const SizedBox(height:12),
@@ -251,7 +252,7 @@ class OperationsHome extends StatelessWidget {
                       const SizedBox(height: 14),
                       PortalGrid(
                         children: [
-                          PortalTask('تأكيد حضور حجز',icon:Icons.calendar_month_outlined,detail:'مسح QR الحجز',onTap:()async{await open(context,ScanBookingScreen(api:api,branch:branch));await reload();}),
+                          PortalTask('كود حضور الفرع',icon:Icons.qr_code_2_rounded,detail:'اعرضه في الاستقبال للمتدربين',onTap:()=>open(context,BranchEntryQrScreen(api:api,branch:branch))),
                           PortalTask(
                             'تسجيل زيارة',
                             icon: Icons.qr_code_scanner_rounded,

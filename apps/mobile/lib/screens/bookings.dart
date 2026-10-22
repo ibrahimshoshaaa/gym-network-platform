@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'branch_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -121,7 +122,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
     const SizedBox(height:16),
     Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      const Text('سياسة الحجز',style:TextStyle(fontWeight:FontWeight.w800)),
-     const Text('النقاط تتحجز الآن، وتتحول للجيم لما يمسح QR حجزك عند وصولك.'),
+     const Text('النقاط تتحجز الآن، وتتحول للجيم لما تمسح كود الفرع عند وصولك ويتأكد موقعك.'),
      Text('مهلة السماح: ${p['graceMinutes']} دقيقة بعد موعد الزيارة.'),
      if(when!=null&&!startNow)Text('الإلغاء ورد النقاط بالكامل حتى ${shortDate(when!.add(Duration(minutes:p['graceMinutes'] as int)).toIso8601String())}.'),
      Text(policySummary(p)),
@@ -205,8 +206,8 @@ class _BookingCardState extends State<_BookingCard>{
    if(b['decisionReason']!=null)Text('القرار: ${b['decisionReason']}'),
    if(b['traineePoints']!=null)Text('لك: ${b['traineePoints']} · للجيم: ${b['gymPoints']} · للمنصة: ${b['platformPoints']} نقطة'),
    ErrorNote(error),
-   if(bookingWindow(b,now))ActionButton('اعرض QR الحجز',icon:Icons.qr_code_2_rounded,onPressed:()async{await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>BookingQrScreen(api:widget.api,booking:b)));if(mounted)await widget.reload();}),
-   if(b['status']=='RESERVED'&&!late)const Text('رمز الحجز متاح الآن، وتقدر تدخل قبل موعدك.',style:TextStyle(color:muted,fontSize:12)),
+   if(bookingWindow(b,now))ActionButton('تأكيد حضوري · مسح كود الفرع',icon:Icons.qr_code_scanner_rounded,onPressed:()async{await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>BranchCheckInScreen(api:widget.api,booking:b)));if(mounted)await widget.reload();}),
+   if(b['status']=='RESERVED'&&!late)const Text('تقدر تأكد حضورك مبكرًا أثناء ساعات العمل من داخل الفرع.',style:TextStyle(color:muted,fontSize:12)),
    if(['RESERVED','PENDING_REVIEW'].contains(b['status']))TextButton(onPressed:busy?null:cancel,child:Text(busy?'جاري الإرسال…':late||b['status']=='PENDING_REVIEW'?'إضافة سبب عدم الحضور':'إلغاء الحجز')),
   ]));
  }
