@@ -43,7 +43,7 @@ test('fixed branch QR checks ownership, rotation, fresh proximity, exact-once at
  const rotated=await branchEntryQr(db,owner.id,branch.id,{expectedVersion:qr.version},true);
  await assert.rejects(checkInBooking(db,trainee.id,booking.id,body),/QR_INVALID/);
  const valid={...body,token:rotated.payload.split(':')[2],capturedAt:new Date().toISOString()};
- await assert.rejects(checkInBooking(db,trainee.id,booking.id,{...valid,accuracy:80}),/INVALID_INPUT/);
+ assert.throws(()=>checkInBooking(db,trainee.id,booking.id,{...valid,accuracy:80}),/INVALID_INPUT/);
  await db.branch.update({where:{id:branch.id},data:{status:'SUSPENDED'}});
  await assert.rejects(checkInBooking(db,trainee.id,booking.id,valid),/BRANCH_NOT_READY/);
  await db.branch.update({where:{id:branch.id},data:{status:'ACTIVE'}});
