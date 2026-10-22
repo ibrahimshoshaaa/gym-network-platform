@@ -16,7 +16,7 @@ CREATE INDEX "GymChargeCollection_gymId_createdAt_idx" ON "GymChargeCollection"(
 CREATE FUNCTION guard_service_charge() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Service charges are retained'; END IF;
- IF (to_jsonb(NEW)-'voidedAt') IS DISTINCT FROM (to_jsonb(OLD)-'voidedAt') OR OLD."voidedAt" IS NOT NULL OR NEW."voidedAt" IS NULL OR OLD."dueAt"<=CURRENT_TIMESTAMP OR EXISTS(SELECT 1 FROM "GymChargeCollection" WHERE "chargeId"=OLD.id) THEN RAISE EXCEPTION 'Service charge is immutable'; END IF;
+ IF (to_jsonb(NEW)-'voidedAt') IS DISTINCT FROM (to_jsonb(OLD)-'voidedAt') OR OLD."voidedAt" IS NOT NULL OR NEW."voidedAt" IS NULL OR OLD."dueAt"<=clock_timestamp() OR EXISTS(SELECT 1 FROM "GymChargeCollection" WHERE "chargeId"=OLD.id) THEN RAISE EXCEPTION 'Service charge is immutable'; END IF;
  RETURN NEW;
 END $$;
 CREATE TRIGGER service_charge_immutable BEFORE UPDATE OR DELETE ON "GymServiceCharge" FOR EACH ROW EXECUTE FUNCTION guard_service_charge();
@@ -24,7 +24,7 @@ CREATE FUNCTION verify_service_collection() RETURNS trigger LANGUAGE plpgsql AS 
 DECLARE c "GymServiceCharge"; n BIGINT; legs INT;
 BEGIN
  SELECT * INTO c FROM "GymServiceCharge" WHERE id=NEW."chargeId" FOR UPDATE;
- IF c."gymId"<>NEW."gymId" OR c."voidedAt" IS NOT NULL OR c."dueAt">CURRENT_TIMESTAMP THEN RAISE EXCEPTION 'Invalid charge collection'; END IF;
+ IF c."gymId"<>NEW."gymId" OR c."voidedAt" IS NOT NULL OR c."dueAt">clock_timestamp() THEN RAISE EXCEPTION 'Invalid charge collection'; END IF;
  SELECT sum("amountPiasters") INTO n FROM "GymChargeCollection" WHERE "chargeId"=c.id;
  IF n>c."amountPiasters" THEN RAISE EXCEPTION 'Charge overcollection'; END IF;
  SELECT count(*) INTO legs FROM "MoneyPosting" p JOIN "MoneyAccount" a ON a.id=p."accountId" JOIN "MoneyTransaction" t ON t.id=p."transactionId"
