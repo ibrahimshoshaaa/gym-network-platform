@@ -6,6 +6,7 @@ import {createBooking,cancelBooking} from '../src/bookings/service.js';
 import {publishBookingPolicy} from '../src/bookings/settings.js';
 import {postLedger} from '../src/ledger/service.js';
 import {setBookingHours} from '../src/services/service.js';
+import {sessionWindow} from '../src/bookings/hours.js';
 const url=new URL(process.env.DATABASE_URL??'');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw Error('Disposable database required');
 const db=new PrismaClient();after(()=>db.$disconnect());
@@ -20,7 +21,9 @@ test('multi-service escrow captures approved terms, rejects stale/foreign servic
  await setBookingHours(db,owner.id,branch.id,{openMinute:0,closeMinute:1439,expectedVersion:0});
  const active=await db.bookingPolicy.findFirst({orderBy:{version:'desc'}});
  const policy=await publishBookingPolicy(db,admin.id,{expectedVersion:active?.version??0,policy:{graceMinutes:60,mode:'MANUAL'}});
- if(!await db.pricingPolicy.findFirst())await db.pricingPolicy.create({data:{version:1,pointPricePiasters:100n,gymDiscountBps:0,redemptionBps:8000,createdById:admin.id}});
+ // This suite runs after the existing pricing bootstrap suites; it must not
+ // create global pricing settings before their expected-version-zero checks.
+ await db.pricingPolicy.findFirstOrThrow({orderBy:{version:'desc'}});
  const services=await Promise.all([15,20].map((points,i)=>db.branchService.create({data:{branchId:branch.id,name:'Original service '+i,points,durationMinutes:i?60:30,version:1,active:true,approvedAt:new Date(),approvedById:admin.id}})));
  const issuance=await db.pointAccount.findFirst({where:{type:'ISSUANCE'}})??await db.pointAccount.create({data:{type:'ISSUANCE'}});
  const wallet=await db.pointAccount.create({data:{type:'TRAINEE_WALLET',ownerUserId:customer.id,expiresAt:new Date(Date.now()+10*86400000)}});
@@ -40,8 +43,11 @@ test('multi-service escrow captures approved terms, rejects stale/foreign servic
  await assert.rejects(createBooking(db,customer.id,randomUUID(),{...input,services:[{id:randomUUID(),version:1}]}),/BOOKING_SERVICE_UNAVAILABLE/);
  await assert.rejects(createBooking(db,customer.id,randomUUID(),{branchId:branch.id,scheduledAt,policyVersion:policy.version,branchPricingVersion:1}),/SERVICE_SELECTION_REQUIRED/);
  const latest={...input,services:input.services.map(s=>({...s,version:s.id===services[0]!.id?2:1}))};
- // 23:30 Cairo cannot fit a ninety-minute session before 23:59.
- await assert.rejects(createBooking(db,customer.id,randomUUID(),{...latest,scheduledAt:day+'T23:30:00+02:00'}),/SESSION_ENDS_AFTER_CLOSING|OUTSIDE_OPENING_HOURS/);
+ // Choose a real instant thirty minutes before Cairo closing, regardless of DST.
+ const closing=sessionWindow(new Date(scheduledAt),{openMinute:0,closeMinute:1439}).closesAt;
+ const tooLate=new Date(closing.getTime()-30*60000).toISOString();
+ await assert.rejects(createBooking(db,customer.id,randomUUID(),{...latest,scheduledAt:tooLate}),/SESSION_ENDS_AFTER_CLOSING/);
+ assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:wallet.id}})).balance,165);
  await Promise.all([cancelBooking(db,customer.id,booking.id,{reason:'Cannot attend'}),cancelBooking(db,customer.id,booking.id,{reason:'Cannot attend'})]);
  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:wallet.id}})).balance,200);
  assert.equal(await db.pointTransaction.count({where:{idempotencyKey:'booking-resolution:'+booking.id}}),1);
