@@ -37,6 +37,14 @@ String? piasters(String value) {
 }
 
 const messages = {
+  'BRANCH_QR_REQUIRED': 'تأكيد حضور هذا الحجز يتم بمسح كود الفرع من تطبيق المتدرب.',
+  'QR_WRONG_BRANCH': 'الكود لفرع مختلف عن الفرع المحجوز.',
+  'BRANCH_LOCATION_REQUIRED': 'الفرع لم يحدد موقعه بعد. تواصل مع الإدارة.',
+  'LOCATION_PERMISSION_REQUIRED': 'شغّل الموقع واسمح للتطبيق بالوصول إليه لتأكيد حضورك.',
+  'LOCATION_STALE': 'موقعك قديم. حدّث موقعك وأعد المحاولة.',
+  'LOCATION_INACCURATE': 'دقة الموقع غير كافية. شغّل الموقع الدقيق وأعد المحاولة.',
+  'GO_TO_BRANCH': 'برجاء التوجه للفرع لتأكيد حضورك.',
+
   'BOOKING_SERVICE_UNAVAILABLE': 'إحدى الخدمات لم تعد متاحة. حدّث الخدمات واختر من جديد.',
   'BOOKING_HOURS_NOT_CONFIGURED': 'الفرع لم يحدد مواعيد الحجز بعد.',
   'OUTSIDE_OPENING_HOURS': 'اختار موعدًا داخل ساعات عمل الفرع.',

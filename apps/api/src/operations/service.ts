@@ -332,6 +332,7 @@ async function visitQuote(
     branchId,
     "SELL_POINTS",
   );
+  if (await tx.branchService.count({where:{branchId}})) throw new DomainError("SERVICE_SELECTION_REQUIRED");
   if (!branch.priceApprovedAt || branch.pricingVersion < 1)
     throw new DomainError("BRANCH_NOT_READY");
   const { qr, user } = await ticket(tx, token, branchId),

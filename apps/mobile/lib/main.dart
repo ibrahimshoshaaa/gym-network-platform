@@ -520,7 +520,10 @@ class _GymEntryScreenState extends State<GymEntryScreen>{
    Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=true),child:const Text('حجوزاتي'))),
   ])),
   TextButton.icon(onPressed:()=>open(context,VisitsScreen(api:widget.api,showQr:()=>Navigator.pop(context))),icon:const Icon(Icons.history_rounded),label:const Text('سجل زياراتي')),
-  if(!bookings)const Padding(padding:EdgeInsets.symmetric(horizontal:20),child:Text('مش محتاج تحجز مسبقًا. اعرض رمز الدخول لموظف الجيم عند وصولك.',style:TextStyle(color:muted,fontSize:12))),
+  if(!bookings)...[
+   const Padding(padding:EdgeInsets.symmetric(horizontal:20),child:Text('وصلت من غير حجز؟ اختار الفرع والخدمات واضغط «احجز الآن»، وبعدها امسح كود الفرع من حجزك. رمزك الشخصي متاح لعمليات النقاط.',style:TextStyle(color:muted,fontSize:12))),
+   TextButton.icon(onPressed:()=>open(context,DirectoryScreen(api:widget.api)),icon:const Icon(Icons.place_outlined),label:const Text('اختار الفرع واحجز الآن')),
+  ],
   Expanded(child:bookings?BookingsScreen(api:widget.api,embedded:true):QrScreen(api:widget.api)),
  ]);
 }

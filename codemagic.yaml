@@ -243,6 +243,99 @@ workflows:
       - apps/mobile/build/app/outputs/flutter-apk/*.apk
       - apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
 
+  gymbank-branch-qr-preview:
+    name: GymBank - branch QR preview APK
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.7
+      java: 17
+      groups:
+        - gymbank_android_signing
+    scripts:
+      - name: Verify isolated services preview
+        script: |
+          set -euo pipefail
+          test "$CM_BRANCH" = "codex/branch-qr-attendance" || { echo "Select codex/branch-qr-attendance for this preview."; exit 1; }
+          python3 - <<'PY'
+          import json
+          import urllib.request
+          url = 'https://gym-network-platform-git-codex-service-selection-8a960a-shosha4.vercel.app/api/health'
+          with urllib.request.urlopen(url, timeout=30) as response:
+              if response.status != 200 or 'json' not in response.headers.get('Content-Type', ''):
+                  raise SystemExit('Preview API is not publicly reachable. Check deployment protection.')
+              json.load(response)
+          from urllib.error import HTTPError
+          request = urllib.request.Request(url.replace('/api/health', '/api/mobile/me'),
+              headers={'Authorization': 'Bearer ' + 'A' * 43})
+          try:
+              urllib.request.urlopen(request, timeout=30)
+          except HTTPError as error:
+              if error.code != 401 or json.load(error).get('code') != 'UNAUTHENTICATED':
+                  raise SystemExit('Preview database/session check failed.')
+          else:
+              raise SystemExit('Preview session endpoint unexpectedly allowed an invalid token.')
+          feature = urllib.request.Request(
+              url.replace('/api/health', '/api/mobile/trainee/bookings/00000000-0000-4000-8000-000000000001/check-in'),
+              data=b'{}', method='POST',
+              headers={'Authorization': 'Bearer ' + 'A' * 43, 'Content-Type': 'application/json'})
+          try:
+              urllib.request.urlopen(feature, timeout=30)
+          except HTTPError as error:
+              if error.code != 401 or json.load(error).get('code') != 'UNAUTHENTICATED':
+                  raise SystemExit('Branch QR API is not ready on the preview alias.')
+          else:
+              raise SystemExit('Branch QR endpoint unexpectedly accepted an invalid token.')
+          print('Branch QR API and database checks passed.')
+          PY
+      - name: Prepare Flutter Android host
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          backup_dir=$(mktemp -d)
+          trap 'rm -rf "$backup_dir"' EXIT
+          cp pubspec.yaml pubspec.lock "$backup_dir/"
+          cp -R lib "$backup_dir/lib"
+          flutter create --platforms=android --org net.shotech --project-name gym_network .
+          cp "$backup_dir/pubspec.yaml" "$backup_dir/pubspec.lock" .
+          cp -R "$backup_dir/lib/." lib/
+          rm -f test/widget_test.dart
+          python3 tool/prepare_platforms.py
+          python3 tool/configure_signing.py
+          flutter pub get
+      - name: Analyze and test
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          python3 -m unittest discover -s tool -p 'test_signing.py'
+          flutter analyze lib test --no-fatal-infos
+          flutter test
+      - name: Build and verify permanent signed APKs
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          export GYMBANK_KEYSTORE_PATH="$CM_BUILD_DIR/.gymbank-signing/release.jks"
+          trap 'rm -rf "$CM_BUILD_DIR/.gymbank-signing"' EXIT
+          python3 tool/install_signing.py
+          # Use a shared clock-based range: workflow counters restart independently.
+          # Seconds since 2026-01-01 plus a floor above previous build codes.
+          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_API_ORIGIN=https://gym-network-platform-git-codex-service-selection-8a960a-shosha4.vercel.app
+          python3 tool/verify_apks.py "$build_number"
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path('build/app/outputs/flutter-apk')
+          (root / 'SHA256SUMS.txt').write_text(''.join(
+              hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n'
+              for p in sorted(root.glob('*.apk'))
+          ))
+          PY
+    artifacts:
+      - apps/mobile/build/app/outputs/flutter-apk/*.apk
+      - apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
+
   gymbank-api:
     name: GymBank - API and ledger checks
     instance_type: mac_mini_m2
