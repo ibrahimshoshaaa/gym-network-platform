@@ -15,3 +15,5 @@ Service bookings cannot use the legacy staff-scanned QR. Direct legacy visit pri
 Additive migration: 202610220003_branch_entry_qr. Production has not been changed by this development task.
 
 Local verification: API/test and web TypeScript, Prisma validation, location unit tests, gateway tests, Dart syntax. Added disposable PostgreSQL tests for scope, rotation, proximity, repeated attendance and cancellation races; added Flutter widget tests for QR parsing, wrong branch, fresh location and permission failure. Full DB/Flutter execution is required on Codemagic.
+
+Preview: reuse the existing approved test database and public preview alias. The branch-specific DATABASE_URL/WEB_ORIGIN are configured. The migration is applied only on the isolated test database. The shared preview alias must be assigned to the READY deployment of this branch before manual testing; verify the deployment commit each time. Codemagic: run gymbank-api, then gymbank-branch-qr-preview. The APK preflight checks health, database authentication, and the new check-in endpoint before spending build time.
