@@ -10,11 +10,12 @@ final payload='gymbranch:$branchId:$token';
 final booking=<String,dynamic>{'id':'booking','branchId':branchId,'points':25};
 Future<void> paste(WidgetTester t,String text) async {
   final expand=find.text('لصق كود الفرع بدل الكاميرا');
-  await t.scrollUntilVisible(expand,180);await t.pumpAndSettle();await t.tap(expand);await t.pumpAndSettle();
+  final screenScroll=find.descendant(of:find.byType(ListView),matching:find.byType(Scrollable)).first;
+  await t.scrollUntilVisible(expand,180,scrollable:screenScroll);await t.pumpAndSettle();await t.tap(expand);await t.pumpAndSettle();
   await t.enterText(find.byType(TextField),text);
   FocusManager.instance.primaryFocus?.unfocus();await t.pumpAndSettle();
   final submit=find.widgetWithText(FilledButton,'تأكيد حضوري');
-  await t.scrollUntilVisible(submit,180);await t.pumpAndSettle();await t.tap(submit.hitTestable());await t.pumpAndSettle();
+  await t.scrollUntilVisible(submit,180,scrollable:screenScroll);await t.pumpAndSettle();await t.tap(submit.hitTestable());await t.pumpAndSettle();
 }
 void main(){
   test('branch QR cannot be confused with a personal or booking token',(){
