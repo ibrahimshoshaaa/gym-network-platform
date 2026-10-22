@@ -21,8 +21,14 @@ void main() {
       await t.ensureVisible(field);
       await t.enterText(field, values[i]);
     }
-    await t.ensureVisible(find.text('إرسال للمراجعة'));
-    await t.tap(find.text('إرسال للمراجعة'));
+    // Finish focus-driven scrolling before locating and tapping the submit button.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await t.pumpAndSettle();
+    final submit = find.widgetWithText(FilledButton, 'إرسال للمراجعة');
+    await t.ensureVisible(submit);
+    await t.pumpAndSettle();
+    expect(submit.hitTestable(), findsOneWidget);
+    await t.tap(submit.hitTestable());
     await t.pumpAndSettle();
     expect(posted, {'name': 'كارديو', 'description': 'تمرين كارديو', 'points': 15, 'durationMinutes': 30, 'reason': 'إضافة خدمة جديدة'});
     expect(find.byType(BranchServiceForm), findsNothing);
