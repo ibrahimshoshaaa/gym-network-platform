@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { allocatePoints, bookingPolicySchema, cancellationDeadline, isWithinGrace, noShowDecision, snapshotPolicy } from '../src/bookings/policy.js';
 
-test('grace starts at scheduled visit, including the exact boundary', () => {
+test('grace starts at scheduled visit and excludes the exact deadline', () => {
   const scheduled = new Date('2026-10-20T18:00:00Z');
   const policy = { graceMinutes: 60, mode: 'MANUAL' };
   assert.equal(cancellationDeadline(scheduled, policy).toISOString(), '2026-10-20T19:00:00.000Z');
-  assert.equal(isWithinGrace(scheduled, new Date('2026-10-20T19:00:00Z'), policy), true);
+  assert.equal(isWithinGrace(scheduled, new Date('2026-10-20T18:59:59.999Z'), policy), true);
+  assert.equal(isWithinGrace(scheduled, new Date('2026-10-20T19:00:00Z'), policy), false);
   assert.equal(isWithinGrace(scheduled, new Date('2026-10-20T19:00:00.001Z'), policy), false);
 });
 test('manual no-show leaves the entire allocation undecided', () => {

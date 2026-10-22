@@ -187,6 +187,9 @@ model Branch {
   city              String                 @default("")
   contactPhone      String?
   openingHours      String?
+  bookingOpenMinute Int?
+  bookingCloseMinute Int?
+  bookingHoursVersion Int @default(0)
   pricingVersion    Int                    @default(0)
   priceApprovedAt   DateTime?
   priceApprovedById String?                @db.Uuid
@@ -885,6 +888,9 @@ model Booking {
  branchId String @db.Uuid
  policyId String @db.Uuid
  policySnapshot Json
+ serviceSnapshots Json @default("[]")
+ hoursSnapshot Json?
+ scheduledClosesAt DateTime?
  scheduledAt DateTime
  deadlineAt DateTime
  points Int

@@ -1,0 +1,3 @@
+ALTER TABLE "Branch" ADD COLUMN "bookingOpenMinute" INTEGER, ADD COLUMN "bookingCloseMinute" INTEGER, ADD COLUMN "bookingHoursVersion" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Branch" ADD CONSTRAINT "Branch_booking_hours_check" CHECK (("bookingOpenMinute" IS NULL AND "bookingCloseMinute" IS NULL) OR ("bookingOpenMinute" IS NOT NULL AND "bookingCloseMinute" IS NOT NULL AND "bookingOpenMinute" BETWEEN 0 AND 1439 AND "bookingCloseMinute" BETWEEN 0 AND 1439 AND "bookingOpenMinute" <> "bookingCloseMinute"));
+ALTER TABLE "Booking" ADD COLUMN "serviceSnapshots" JSONB NOT NULL DEFAULT '[]', ADD COLUMN "hoursSnapshot" JSONB, ADD COLUMN "scheduledClosesAt" TIMESTAMP(3);

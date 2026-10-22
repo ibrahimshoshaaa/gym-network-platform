@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { actorId } from '../gyms/routes.js';
 import { parse } from '../gyms/validation.js';
 import { requireAdmin } from '../auth/authorization.js';
-import { createService, listServices, requestServiceChange, reviewService, setServiceActive } from './service.js';
+import { createService, listServices, requestServiceChange, reviewService, setServiceActive, setBookingHours } from './service.js';
 
 export function registerServiceRoutes(app: FastifyInstance, db: PrismaClient) {
   const id = (value: unknown) => parse(z.string().uuid(), value);
@@ -21,6 +21,7 @@ export function registerServiceRoutes(app: FastifyInstance, db: PrismaClient) {
     return branchId;
   }
   app.get<{ Params: Params }>(base, async r => listServices(db, await actorId(db, r), await branch(r.params), true));
+  app.patch<{ Params: Params }>(`${base}/booking-hours`, async r => setBookingHours(db, await actorId(db, r), await branch(r.params), r.body));
   app.post<{ Params: Params }>(base, async (r, reply) => reply.code(201).send(await createService(db, await actorId(db, r), await branch(r.params), r.body)));
   app.post<{ Params: Params }>(`${base}/:serviceId/price-requests`, async (r, reply) => reply.code(201).send(await requestServiceChange(db, await actorId(db, r), await branch(r.params), id(r.params.serviceId), r.body)));
   app.patch<{ Params: Params }>(`${base}/:serviceId/availability`, async r => setServiceActive(db, await actorId(db, r), await branch(r.params), id(r.params.serviceId), r.body));

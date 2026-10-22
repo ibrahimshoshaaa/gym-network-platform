@@ -370,8 +370,8 @@ class BranchTile extends StatelessWidget {
         const SizedBox(height:14),
         Wrap(spacing:8,runSpacing:8,children:[
           if(branch['ratingAverage']!=null)_DirectoryChip('${(branch['ratingAverage'] as num).toStringAsFixed(1)} · ${branch['ratingCount']} تقييم',Icons.star_rounded),
-          _DirectoryChip('${branch['visitPricePoints']} نقطة / زيارة',Icons.toll_rounded,primary:true),
-          _DirectoryChip('${branch['sessionMinutes']} دقيقة',Icons.schedule_rounded),
+          _DirectoryChip(branch['serviceBooking']==true?(branch['minimumServicePoints']==null?'الخدمات قريبًا':'تبدأ من ${branch['minimumServicePoints']} نقطة'):'${branch['visitPricePoints']} نقطة / زيارة',Icons.toll_rounded,primary:true),
+          _DirectoryChip(branch['serviceBooking']==true?'المدة حسب الخدمات':'${branch['sessionMinutes']} دقيقة',Icons.schedule_rounded),
           if(branch['distanceKm']!=null)
             _DirectoryChip('${(branch['distanceKm'] as num).toStringAsFixed(1)} كم',Icons.near_me_outlined),
         ]),
