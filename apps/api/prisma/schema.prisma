@@ -168,6 +168,7 @@ model Gym {
 }
 
 model Branch {
+  services BranchService[]
   promotionRequests PromotionRequest[]
   promotionImages PromotionImage[]
   visitRatings VisitRating[]
@@ -1085,4 +1086,43 @@ model VisitRating {
  createdAt DateTime @default(now())
  updatedAt DateTime @updatedAt
  @@index([branchId])
+}
+
+
+model BranchService {
+  id String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id])
+  name String
+  description String @default("")
+  points Int?
+  durationMinutes Int?
+  active Boolean @default(false)
+  version Int @default(0)
+  approvedAt DateTime?
+  approvedById String? @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  requests ServicePriceRequest[]
+  @@index([branchId, active, id])
+}
+
+model ServicePriceRequest {
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @db.Uuid
+  service BranchService @relation(fields: [serviceId], references: [id])
+  baseVersion Int
+  name String
+  description String @default("")
+  points Int
+  durationMinutes Int
+  status String @default("PENDING")
+  requestedById String @db.Uuid
+  reason String
+  reviewedById String? @db.Uuid
+  reviewReason String?
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([status, id])
+  @@index([serviceId, status])
 }

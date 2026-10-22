@@ -20,6 +20,26 @@ class MemoryStore implements TokenStore {
 }
 
 void main() {
+  test('rejected saved session opens signed-out state without a startup error', () async {
+    final store = MemoryStore()..values['session'] = 'expired-session';
+    final api = ApiClient(storage: store, transport: MockClient((_) async =>
+      http.Response('{"code":"UNAUTHENTICATED"}', 401)));
+    await api.restore();
+    expect(api.restored, isTrue);
+    expect(api.token, isNull);
+    expect(api.user, isNull);
+    expect(store.values.containsKey('session'), isFalse);
+  });
+
+  test('startup service failure retains saved session and remains retryable', () async {
+    final store = MemoryStore()..values['session'] = 'saved-session';
+    final api = ApiClient(storage: store, transport: MockClient((_) async =>
+      http.Response('{"code":"SERVICE_UNAVAILABLE"}', 503)));
+    await expectLater(api.restore(), throwsA(isA<ApiFailure>()));
+    expect(api.token, 'saved-session');
+    expect(store.values['session'], 'saved-session');
+  });
+
   test('normal mobile login survives a fresh client and explicit logout clears it',()async{
     final store=MemoryStore();
     final transport=MockClient((r)async=>http.Response(jsonEncode(r.url.path.endsWith('/me')?{'id':'one','role':'TRAINEE'}:{'user':{'id':'one','role':'TRAINEE'},'accessToken':'saved-session'}),200));
