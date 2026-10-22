@@ -40,11 +40,11 @@ void main(){
   expect(bookingToken('gymqr:$token'),isNull);
   expect(bookingToken('https://example.test/$token'),isNull);
  });
- test('scheduled arrival window is inclusive and closed for settled bookings',(){
+ test('scheduled arrival window closes strictly at the grace deadline',(){
   final b=<String,dynamic>{'status':'RESERVED','scheduledAt':'2026-11-01T12:00:00Z','deadlineAt':'2026-11-01T13:00:00Z'};
   expect(bookingWindow(b,DateTime.parse(b['scheduledAt']).subtract(const Duration(hours:1))),isTrue);
   expect(bookingWindow(b,DateTime.parse(b['scheduledAt'])),isTrue);
-  expect(bookingWindow(b,DateTime.parse(b['deadlineAt'])),isTrue);
+  expect(bookingWindow(b,DateTime.parse(b['deadlineAt'])),isFalse);
   expect(bookingWindow(b,DateTime.parse(b['deadlineAt']).add(const Duration(milliseconds:1))),isFalse);
   expect(bookingWindow({...b,'status':'ATTENDED'},DateTime.parse(b['scheduledAt'])),isFalse);
  });

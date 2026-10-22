@@ -37,6 +37,11 @@ String? piasters(String value) {
 }
 
 const messages = {
+  'BOOKING_SERVICE_UNAVAILABLE': 'إحدى الخدمات لم تعد متاحة. حدّث الخدمات واختر من جديد.',
+  'BOOKING_HOURS_NOT_CONFIGURED': 'الفرع لم يحدد مواعيد الحجز بعد.',
+  'OUTSIDE_OPENING_HOURS': 'اختار موعدًا داخل ساعات عمل الفرع.',
+  'SESSION_ENDS_AFTER_CLOSING': 'مدة الخدمات تتجاوز إغلاق الفرع. اختار موعدًا أبكر أو خدمات أقل.',
+  'SERVICE_SELECTION_REQUIRED': 'اختار الخدمات المطلوبة قبل تأكيد الحجز.',
   'MAINTENANCE_REAPPROVAL_REQUIRED': 'التكلفة زادت عن المعتمد. لازم عرض جديد وموافقة صاحب الجيم أولًا.',
   'MARKET_LISTING_LIMIT': 'وصلت للحد المسموح للإعلانات النشطة (٣٠ إعلان).',
   'INVALID_CREDENTIALS': 'الإيميل أو رقم الموبايل أو كلمة السر غير صحيح.',

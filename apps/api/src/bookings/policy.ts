@@ -28,10 +28,10 @@ export function cancellationDeadline(scheduledAt: Date, input: unknown): Date {
   if (!Number.isFinite(time) || !Number.isFinite(new Date(time).getTime())) throw new DomainError('INVALID_INPUT');
   return new Date(time);
 }
-// At the exact deadline cancellation is still allowed; after it, apply no-show policy.
+// Cancellation must occur strictly before the grace deadline.
 export function isWithinGrace(scheduledAt: Date, now: Date, policy: unknown): boolean {
   if (!Number.isFinite(now.getTime())) throw new DomainError('INVALID_INPUT');
-  return now.getTime() <= cancellationDeadline(scheduledAt, policy).getTime();
+  return now.getTime() < cancellationDeadline(scheduledAt, policy).getTime();
 }
 export function allocatePoints(points: number, input: unknown) {
   if (!Number.isSafeInteger(points) || points <= 0 || points > 2147483647) throw new DomainError('INVALID_INPUT');

@@ -9,12 +9,17 @@ import { audit } from '../gyms/service.js';
 import { postInTransaction, serializable } from '../ledger/service.js';
 import { allocationSchema, allocatePoints, cancellationDeadline, snapshotPolicy } from './policy.js';
 
+import { requireSessionFits, attendanceEnd, type DailyHours } from './hours.js';
+
 type Tx = Prisma.TransactionClient;
 const uuid = z.string().uuid();
 export const createBookingSchema = z.object({
- branchId: uuid, scheduledAt: z.string().datetime({offset:true}),
- policyVersion: z.number().int().positive(), branchPricingVersion: z.number().int().positive(),
-}).strict();
+ branchId: uuid, scheduledAt: z.string().datetime({offset:true}).optional(), startNow: z.literal(true).optional(),
+ policyVersion: z.number().int().positive(), branchPricingVersion: z.number().int().positive().optional(),
+ services: z.array(z.object({id:uuid,version:z.number().int().positive()}).strict()).min(1).max(20).optional(),
+ hoursVersion: z.number().int().positive().optional(),
+}).strict().refine(v => Boolean(v.scheduledAt) !== Boolean(v.startNow))
+ .refine(v => v.services ? Boolean(v.hoursVersion) && new Set(v.services.map(s=>s.id)).size===v.services.length : Boolean(v.branchPricingVersion) && !v.startNow);
 export const reasonSchema = z.object({reason:z.string().trim().min(1).max(1000)}).strict();
 export const decisionSchema = reasonSchema.extend({allocation:allocationSchema}).strict();
 export const scanSchema = z.object({token:z.string().regex(/^[A-Za-z0-9_-]{43}$/)}).strict();
@@ -35,27 +40,48 @@ async function trainee(tx:Tx,id:string) {
 }
 export function createBooking(db:PrismaClient,actorId:string,key:string,input:unknown) {
  const data=parse(createBookingSchema,input);parse(uuid,key);
+ if(data.services)data.services.sort((a,b)=>a.id.localeCompare(b.id));
  const idempotencyKey='booking:'+actorId+':'+key,requestHash=digest(data);
  return serializable(db,async tx=>{
   await trainee(tx,actorId);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey},0))`;
   const old=await tx.booking.findUnique({where:{idempotencyKey}});
   if(old){if(old.requestHash!==requestHash)throw new DomainError('IDEMPOTENCY_CONFLICT');return bookingView(old);}
-  const now=new Date(),scheduledAt=new Date(data.scheduledAt);
-  if(scheduledAt<=now)throw new DomainError('INVALID_INPUT');
+  const now=new Date(),scheduledAt=data.startNow?now:new Date(data.scheduledAt!);
+  if(!data.startNow&&scheduledAt<=now)throw new DomainError('INVALID_INPUT');
   const branch=await tx.branch.findUnique({where:{id:data.branchId},include:{gym:{include:{owner:true}}}});
-  if(!branch||branch.status!=='ACTIVE'||branch.gym.status!=='ACTIVE'||!branch.gym.ownerAcceptedAt||!branch.gym.owner.isActive||!branch.priceApprovedAt)throw new DomainError('BRANCH_NOT_READY');
+  if(!branch||branch.status!=='ACTIVE'||branch.gym.status!=='ACTIVE'||!branch.gym.ownerAcceptedAt||!branch.gym.owner.isActive||(!data.services&&!branch.priceApprovedAt))throw new DomainError('BRANCH_NOT_READY');
   const p=await tx.bookingPolicy.findFirst({orderBy:{version:'desc'}});
   const pricing=await tx.pricingPolicy.findFirst({orderBy:{version:'desc'}});
   if(!p||!pricing)throw new DomainError('PRICING_NOT_CONFIGURED');
-  if(p.version!==data.policyVersion||branch.pricingVersion!==data.branchPricingVersion)throw new DomainError('STALE_SETTINGS');
+  if(p.version!==data.policyVersion||(!data.services&&branch.pricingVersion!==data.branchPricingVersion))throw new DomainError('STALE_SETTINGS');
+  let points=branch.visitPricePoints,sessionMinutes=branch.sessionMinutes;
+  let serviceSnapshots:Prisma.InputJsonValue=[];
+  let hoursSnapshot:DailyHours|undefined,scheduledClosesAt:Date|undefined;
+  if(data.services){
+   if(branch.bookingOpenMinute==null||branch.bookingCloseMinute==null)throw new DomainError('BOOKING_HOURS_NOT_CONFIGURED');
+   if(branch.bookingHoursVersion!==data.hoursVersion)throw new DomainError('STALE_SETTINGS');
+   // Sorted row locks serialize price approval/availability changes with snapshot capture.
+   for(const selected of data.services)await tx.$queryRaw`SELECT id FROM "BranchService" WHERE id=${selected.id}::uuid FOR UPDATE`;
+   const services=await tx.branchService.findMany({where:{id:{in:data.services.map(s=>s.id)},branchId:branch.id,active:true,approvedAt:{not:null}}});
+   if(services.length!==data.services.length)throw new DomainError('BOOKING_SERVICE_UNAVAILABLE');
+   for(const selected of data.services)if(services.find(s=>s.id===selected.id)!.version!==selected.version)throw new DomainError('STALE_SETTINGS');
+   points=services.reduce((sum,s)=>sum+s.points!,0);sessionMinutes=services.reduce((sum,s)=>sum+s.durationMinutes!,0);
+   if(points>1000000||sessionMinutes>1440)throw new DomainError('INVALID_INPUT');
+   serviceSnapshots=services.sort((a,b)=>a.id.localeCompare(b.id)).map(s=>({id:s.id,name:s.name,points:s.points!,durationMinutes:s.durationMinutes!,version:s.version}));
+   hoursSnapshot={openMinute:branch.bookingOpenMinute,closeMinute:branch.bookingCloseMinute};
+   scheduledClosesAt=requireSessionFits(scheduledAt,sessionMinutes,hoursSnapshot).closesAt;
+  }else if(await tx.branchService.count({where:{branchId:branch.id}})){
+   // An old client may not bypass the service catalog using the former branch price.
+   throw new DomainError('SERVICE_SELECTION_REQUIRED');
+  }
   const wallet=await tx.pointAccount.findUnique({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:actorId}}});
   if(!wallet)throw new DomainError('ACCOUNT_NOT_FOUND');
   if(!wallet.expiresAt||wallet.expiresAt<=now)throw new DomainError('WALLET_EXPIRY_REVIEW_REQUIRED');
   const hold=await tx.pointAccount.upsert({where:{type_ownerUserId:{type:'BOOKING_HOLD',ownerUserId:actorId}},create:{type:'BOOKING_HOLD',ownerUserId:actorId},update:{}});
   const id=randomUUID(),policySnapshot=snapshotPolicy(p.configuration);
-  const posted=await postInTransaction(tx,{actorId,idempotencyKey,referenceId:id,reason:'Reserve points for scheduled booking',points:{kind:'BOOKING_RESERVE',entries:[{accountId:wallet.id,delta:-BigInt(branch.visitPricePoints)},{accountId:hold.id,delta:BigInt(branch.visitPricePoints)}]}});
-  const b=await tx.booking.create({data:{id,traineeId:actorId,branchId:branch.id,policyId:p.id,policySnapshot,scheduledAt,deadlineAt:cancellationDeadline(scheduledAt,policySnapshot),points:branch.visitPricePoints,sessionMinutes:branch.sessionMinutes,pricingPolicyId:pricing.id,unitPricePiasters:pricing.pointPricePiasters,redemptionBps:pricing.redemptionBps,branchPricingVersion:branch.pricingVersion,walletId:wallet.id,holdAccountId:hold.id,idempotencyKey,requestHash,reserveTransactionId:posted.pointTransactionId!}});
+  const posted=await postInTransaction(tx,{actorId,idempotencyKey,referenceId:id,reason:'Reserve points for scheduled booking',points:{kind:'BOOKING_RESERVE',entries:[{accountId:wallet.id,delta:-BigInt(points)},{accountId:hold.id,delta:BigInt(points)}]}});
+  const b=await tx.booking.create({data:{id,traineeId:actorId,branchId:branch.id,policyId:p.id,policySnapshot,scheduledAt,deadlineAt:cancellationDeadline(scheduledAt,policySnapshot),points,sessionMinutes,serviceSnapshots,...(hoursSnapshot?{hoursSnapshot,scheduledClosesAt}:{}),pricingPolicyId:pricing.id,unitPricePiasters:pricing.pointPricePiasters,redemptionBps:pricing.redemptionBps,branchPricingVersion:branch.pricingVersion,walletId:wallet.id,holdAccountId:hold.id,idempotencyKey,requestHash,reserveTransactionId:posted.pointTransactionId!}});
   await audit(tx,actorId,'BOOKING_CREATED',id,'Scheduled visit; points held and no gym receivable created');
   return bookingView(b);
  });
@@ -82,9 +108,13 @@ async function settle(tx:Tx,b:Booking,actorId:string,allocation:unknown,status:'
  const posted=await postInTransaction(tx,{actorId,idempotencyKey:'booking-resolution:'+b.id,referenceId:b.id,reason,points:{kind:'BOOKING_SETTLE',entries},money});
  let visitId:string|undefined;
  if(status==='ATTENDED'){
+  let endsAt=new Date(now.getTime()+b.sessionMinutes*60000);
+  if(b.hoursSnapshot){
+   endsAt=attendanceEnd(now,b.sessionMinutes,b.hoursSnapshot as unknown as DailyHours,b.scheduledClosesAt);
+  }
   await tx.visit.updateMany({where:{traineeId:b.traineeId,branchId:b.branchId,status:'ACTIVE',expiresAt:{lte:now}},data:{status:'EXPIRED'}});
   if(await tx.visit.findFirst({where:{traineeId:b.traineeId,branchId:b.branchId,status:'ACTIVE'}}))throw new DomainError('INVALID_STATE');
-  const visit=await tx.visit.create({data:{traineeId:b.traineeId,branchId:b.branchId,cashierId:actorId,pointsCharged:b.points,settlementPiasters:amount,policyId:b.pricingPolicyId,unitPricePiasters:b.unitPricePiasters,redemptionBps:b.redemptionBps,branchPricingVersion:b.branchPricingVersion,startedAt:now,expiresAt:new Date(now.getTime()+b.sessionMinutes*60000),pointTransactionId:posted.pointTransactionId!,moneyTransactionId:posted.moneyTransactionId!}});
+  const visit=await tx.visit.create({data:{traineeId:b.traineeId,branchId:b.branchId,cashierId:actorId,pointsCharged:b.points,settlementPiasters:amount,policyId:b.pricingPolicyId,unitPricePiasters:b.unitPricePiasters,redemptionBps:b.redemptionBps,branchPricingVersion:b.branchPricingVersion,startedAt:now,expiresAt:endsAt,pointTransactionId:posted.pointTransactionId!,moneyTransactionId:posted.moneyTransactionId!}});
   visitId=visit.id;
  }
  const updated=await tx.booking.update({where:{id:b.id},data:{status,...split,resolutionTransactionId:posted.pointTransactionId,moneyTransactionId:posted.moneyTransactionId,visitId,decisionReason:reason,decidedById:actorId,decidedAt:now,qrHash:null,qrExpiresAt:null,qrSessionId:null}});
@@ -92,7 +122,7 @@ async function settle(tx:Tx,b:Booking,actorId:string,allocation:unknown,status:'
  return updated;
 }
 async function expire(tx:Tx,b:Booking,actorId:string){
- if(b.status!=='RESERVED'||b.deadlineAt>=new Date())return b;
+ if(b.status!=='RESERVED'||b.deadlineAt>new Date())return b;
  const policy=snapshotPolicy(b.policySnapshot);
  if(policy.mode==='AUTOMATIC')return settle(tx,b,actorId,policy.allocation,'RESOLVED','Automatic no-show policy');
  const updated=await tx.booking.update({where:{id:b.id},data:{status:'PENDING_REVIEW',qrHash:null,qrExpiresAt:null,qrSessionId:null}});
@@ -107,7 +137,7 @@ export function cancelBooking(db:PrismaClient,actorId:string,id:string,input:unk
   if(b.status==='CANCELLED')return bookingView(b);
   if(!['RESERVED','PENDING_REVIEW'].includes(b.status))throw new DomainError('INVALID_STATE');
   b=await tx.booking.update({where:{id},data:{absenceReason:data.reason}});
-  if(b.status==='RESERVED'&&b.deadlineAt>=new Date())b=await settle(tx,b,actorId,{traineeBps:10000,gymBps:0,platformBps:0},'CANCELLED',data.reason);
+  if(b.status==='RESERVED'&&b.deadlineAt>new Date())b=await settle(tx,b,actorId,{traineeBps:10000,gymBps:0,platformBps:0},'CANCELLED',data.reason);
   else b=await expire(tx,b,actorId);
   return bookingView(b);
  });
@@ -127,7 +157,7 @@ export function issueBookingQr(db:PrismaClient,actorId:string,id:string,bearer:s
   await trainee(tx,actorId);const b=await lockBooking(tx,id);
   if(b.traineeId!==actorId)throw new DomainError('ACCESS_DENIED');
   const now=new Date();
-  if(b.status!=='RESERVED'||now>b.deadlineAt)throw new DomainError('INVALID_STATE');
+  if(b.status!=='RESERVED'||now>=b.deadlineAt)throw new DomainError('INVALID_STATE');
   const session=await tx.authSession.findUnique({where:{tokenHash:hashToken(bearer)}});
   if(!session||session.userId!==actorId||session.revokedAt||session.expiresAt<=now)throw new DomainError('UNAUTHENTICATED');
   const token=randomBytes(32).toString('base64url'),expiresAt=new Date(Math.min(now.getTime()+60000,b.deadlineAt.getTime(),session.expiresAt.getTime()));
@@ -142,7 +172,7 @@ export function scanBooking(db:PrismaClient,actorId:string,branchId:string,input
   const found=await tx.booking.findUnique({where:{qrHash:hashToken(data.token)}});
   if(!found)throw new DomainError('QR_INVALID');
   const b=await lockBooking(tx,found.id),now=new Date();
-  if(b.qrHash!==hashToken(data.token)||b.branchId!==branchId||b.status!=='RESERVED'||!b.qrExpiresAt||b.qrExpiresAt<now||now>b.deadlineAt)throw new DomainError('QR_INVALID');
+  if(b.qrHash!==hashToken(data.token)||b.branchId!==branchId||b.status!=='RESERVED'||!b.qrExpiresAt||b.qrExpiresAt<now||now>=b.deadlineAt)throw new DomainError('QR_INVALID');
   const session=b.qrSessionId?await tx.authSession.findUnique({where:{id:b.qrSessionId}}):null;
   if(!session||session.userId!==b.traineeId||session.revokedAt||session.expiresAt<=now)throw new DomainError('QR_INVALID');
   await trainee(tx,b.traineeId);
@@ -167,7 +197,7 @@ export function expireScheduledBooking(db:PrismaClient,id:string){
  return serializable(db,async tx=>{
   const booking=await lockBooking(tx,id);
   if(booking.status!=='RESERVED')return null;
-  if(booking.deadlineAt>=new Date())return booking.deadlineAt.toISOString();
+  if(booking.deadlineAt>new Date())return booking.deadlineAt.toISOString();
   const policy=await tx.bookingPolicy.findUniqueOrThrow({where:{id:booking.policyId},select:{createdById:true}});
   await expire(tx,booking,policy.createdById);
   await audit(tx,policy.createdById,'BOOKING_SCHEDULED_PROCESSING',id,'Durable booking timer applied the saved no-show policy');

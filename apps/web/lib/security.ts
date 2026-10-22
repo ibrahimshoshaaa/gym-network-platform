@@ -177,6 +177,7 @@ const rules: Record<string, RegExp[]> = {
   ],
   PATCH: [
     new RegExp(`^gyms/${uuid}/branches/${uuid}/services/${uuid}/availability$`),
+    new RegExp(`^gyms/${uuid}/branches/${uuid}/services/booking-hours$`),
     new RegExp(`^market/listings/${uuid}$`),
     /^me\/profile$/,
     new RegExp(`^admin/users/${uuid}/access$`),

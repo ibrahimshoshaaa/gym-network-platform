@@ -9,6 +9,7 @@ test('service routes pass through gateways only with exact methods and UUID scop
     ['POST', `gyms/${id}/branches/${id}/services`],
     ['POST', `gyms/${id}/branches/${id}/services/${id}/price-requests`],
     ['PATCH', `gyms/${id}/branches/${id}/services/${id}/availability`],
+    ['PATCH', `gyms/${id}/branches/${id}/services/booking-hours`],
     ['GET', 'admin/service-price-requests'],
     ['POST', `admin/service-price-requests/${id}/review`],
   ];

@@ -6,6 +6,19 @@ import { parse } from '../gyms/validation.js';
 import { audit } from '../gyms/service.js';
 import { serializable } from '../ledger/service.js';
 import { serviceInput, serviceChangeInput, serviceReviewInput, serviceStatusInput } from './validation.js';
+import { z } from 'zod';
+
+export function setBookingHours(db: PrismaClient, actor: string, branchId: string, body: unknown) {
+  const input = parse(z.object({ openMinute: z.number().int().min(0).max(1439), closeMinute: z.number().int().min(0).max(1439), expectedVersion: z.number().int().min(0) }).strict().refine(v => v.openMinute !== v.closeMinute), body);
+  return serializable(db, async tx => {
+    await tx.$queryRaw`SELECT id FROM "Branch" WHERE id=${branchId}::uuid FOR UPDATE`;
+    const branch = await editable(tx, actor, branchId);
+    if (branch.bookingHoursVersion !== input.expectedVersion) throw new DomainError('STALE_SETTINGS');
+    const updated = await tx.branch.update({ where: { id: branchId }, data: { bookingOpenMinute: input.openMinute, bookingCloseMinute: input.closeMinute, bookingHoursVersion: { increment: 1 } } });
+    await audit(tx, actor, 'BRANCH_BOOKING_HOURS_CHANGED', branchId, 'Daily opening and closing time in Africa/Cairo');
+    return { hours: { openMinute: updated.bookingOpenMinute, closeMinute: updated.bookingCloseMinute, version: updated.bookingHoursVersion, timeZone: 'Africa/Cairo' } };
+  });
+}
 
 async function editable(tx: Prisma.TransactionClient, actor: string, branchId: string) {
   const branch = await tx.branch.findUnique({ where: { id: branchId } });
@@ -93,13 +106,15 @@ export function listServices(db: PrismaClient, actor: string, branchId: string, 
     await requireActor(tx, actor);
     if (management) {
       await editable(tx, actor, branchId);
-      return { items: await tx.branchService.findMany({ where: { branchId }, orderBy: { id: 'asc' }, take: 100,
+      const branch = await tx.branch.findUniqueOrThrow({ where: { id: branchId } });
+      return { hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' }, items: await tx.branchService.findMany({ where: { branchId }, orderBy: { id: 'asc' }, take: 100,
         include: { requests: { orderBy: { createdAt: 'desc' }, take: 1 } } }) };
     }
     const branch = await tx.branch.findFirst({ where: { id: branchId, status: 'ACTIVE', gym: { status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } } });
     if (!branch) throw new DomainError('NOT_FOUND');
     const items = await tx.branchService.findMany({ where: { branchId, active: true, approvedAt: { not: null } }, orderBy: [{ points: 'asc' }, { id: 'asc' }], take: 100,
       select: { id: true, branchId: true, name: true, description: true, points: true, durationMinutes: true, version: true } });
-    return { items, minimumPoints: items[0]?.points ?? null };
+    const catalogCount = await tx.branchService.count({ where: { branchId } });
+    return { items, minimumPoints: items[0]?.points ?? null, serviceBooking: catalogCount > 0, hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' } };
   });
 }

@@ -6,6 +6,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
 
+String minuteLabel(int value) => '${(value~/60).toString().padLeft(2,'0')}:${(value%60).toString().padLeft(2,'0')}';
+
 String bookingStatus(dynamic status) => const {
  'RESERVED':'حجز مؤكد · نقاط محجوزة',
  'PENDING_REVIEW':'بانتظار قرار الإدارة',
@@ -30,7 +32,7 @@ String? bookingToken(String input) {
  return RegExp(r'^[A-Za-z0-9_-]{43}$').hasMatch(value)?value:null;
 }
 bool bookingWindow(Json b,DateTime now) => b['status']=='RESERVED' &&
- !now.isAfter(DateTime.parse(b['deadlineAt']));
+ now.isBefore(DateTime.parse(b['deadlineAt']));
 
 class CreateBookingScreen extends StatefulWidget {
  final ApiClient api;
@@ -39,14 +41,28 @@ class CreateBookingScreen extends StatefulWidget {
  @override State<CreateBookingScreen> createState()=>_CreateBookingScreenState();
 }
 class _CreateBookingScreenState extends State<CreateBookingScreen>{
- Json? policy,result,frozenBody;
+ Json? policy,result,frozenBody,hours;
+ List<Json> services=[];
+ final selected=<String>{};
+ bool serviceBooking=false,startNow=false;
+ int get points => serviceBooking?services.where((s)=>selected.contains(s['id'])).fold(0,(sum,s)=>sum+(s['points'] as int)):(widget.branch['visitPricePoints'] as num? ?? 0).toInt();
+ int get minutes => serviceBooking?services.where((s)=>selected.contains(s['id'])).fold(0,(sum,s)=>sum+(s['durationMinutes'] as int)):(widget.branch['sessionMinutes'] as num? ?? 0).toInt();
+ bool get ready => !serviceBooking || (selected.isNotEmpty && hours?['openMinute']!=null && points<=1000000 && minutes<=1440);
  DateTime? when;
  bool loading=true,busy=false,accepted=false;
  Object? error;
  @override void initState(){super.initState();load();}
  Future<void> load() async {
   setState((){loading=true;error=null;});
-  try{final d=await widget.api.request('booking-policy');if(mounted)setState(()=>policy=d['policy']==null?null:Map<String,dynamic>.from(d['policy']));}
+  try{
+   final values=await Future.wait([widget.api.request('booking-policy'),widget.api.request('directory/branches/${widget.branch['id']}/services')]);
+   final d=values[0],catalog=values[1];
+   if(mounted)setState((){
+    policy=d['policy']==null?null:Map<String,dynamic>.from(d['policy']);
+    services=rows(catalog);serviceBooking=catalog['serviceBooking']==true;
+    hours=catalog['hours']==null?null:Map<String,dynamic>.from(catalog['hours']);
+   });
+  }
   catch(e){if(mounted)setState(()=>error=e);}
   finally{if(mounted)setState(()=>loading=false);}
  }
@@ -58,10 +74,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
   if(time!=null&&mounted)setState((){when=DateTime(day.year,day.month,day.day,time.hour,time.minute);accepted=false;});
  }
  Future<void> book() async {
-  if(busy||policy==null||when==null||!accepted)return;
-  if(frozenBody==null&&when!.isBefore(DateTime.now())){setState(()=>error=const ApiFailure('INVALID_INPUT'));return;}
+  if(busy||policy==null||(!startNow&&when==null)||!accepted||!ready)return;
+  if(frozenBody==null&&!startNow&&when!.isBefore(DateTime.now())){setState(()=>error=const ApiFailure('INVALID_INPUT'));return;}
   setState((){busy=true;error=null;});
-  frozenBody??={'branchId':widget.branch['id'],'scheduledAt':when!.toUtc().toIso8601String(),'policyVersion':policy!['version'],'branchPricingVersion':widget.branch['pricingVersion']};
+  frozenBody??={'branchId':widget.branch['id'],if(startNow)'startNow':true else 'scheduledAt':when!.toUtc().toIso8601String(),'policyVersion':policy!['version'],
+   if(serviceBooking)...{'services':[for(final s in services)if(selected.contains(s['id'])){'id':s['id'],'version':s['version']}],'hoursVersion':hours!['version']}
+   else 'branchPricingVersion':widget.branch['pricingVersion']};
   try{final r=await widget.api.transact('trainee/bookings',frozenBody!);if(mounted)setState(()=>result=r);}
   catch(e){if(mounted)setState((){error=e;if(widget.api.pending==null)frozenBody=null;});}
   finally{if(mounted)setState(()=>busy=false);}
@@ -72,8 +90,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
   return Screen(title:'احجز زيارتك',child:ListView(padding:const EdgeInsets.all(20),children:[
    Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Text('${widget.branch['gym']?['name']??''} · ${widget.branch['name']}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800)),
-    Fact('نقاط الزيارة','${widget.branch['visitPricePoints']} نقطة',strong:true),
-    Fact('مدة الجلسة','${widget.branch['sessionMinutes']} دقيقة'),
+    Fact('إجمالي النقاط','$points نقطة',strong:true),
+    Fact('إجمالي المدة','$minutes دقيقة'),
    ])),
    const SizedBox(height:16),ErrorNote(error),
    if(result!=null)...[
@@ -85,18 +103,31 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
     const EmptyState('الحجز غير متاح حاليًا',detail:'الإدارة لم تضبط سياسة الحجز بعد.'),
     ActionButton('إعادة المحاولة',onPressed:load),
    ]else...[
-    OutlinedButton.icon(onPressed:locked?null:choose,icon:const Icon(Icons.calendar_month_outlined),label:Text(when==null?'اختار اليوم والساعة':shortDate(when!.toIso8601String()))),
+    TextButton(onPressed:locked?null:(){setState((){accepted=false;selected.clear();});load();},child:const Text('تحديث الخدمات والسياسة')),
+    if(serviceBooking)...[
+     const SectionTitle('اختار الخدمات'),
+     for(final service in services)CheckboxListTile(contentPadding:EdgeInsets.zero,value:selected.contains(service['id']),
+      onChanged:locked?null:(value)=>setState((){if(value==true)selected.add(service['id'] as String);else selected.remove(service['id']);accepted=false;}),
+      title:Text('${service['name']}'),subtitle:Text('${service['points']} نقطة · ${service['durationMinutes']} دقيقة')),
+     if(services.isEmpty)const Text('لا توجد خدمات معتمدة متاحة للحجز حاليًا.'),
+     if(hours?['openMinute']==null)const Text('الفرع لم يحدد مواعيد الحجز بعد.'),
+     if(hours?['openMinute']!=null)Text('يوميًا من ${minuteLabel(hours!['openMinute'] as int)} إلى ${minuteLabel(hours!['closeMinute'] as int)} · توقيت القاهرة'),
+     if(points>1000000||minutes>1440)const Text('إجمالي الخدمات يتجاوز الحد المسموح لحجز واحد.'),
+     const Text('مدد الخدمات متتالية في جلسة واحدة، ولازم الموعد ينتهي قبل إغلاق الفرع.'),
+     SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('احجز الآن'),value:startNow,onChanged:locked?null:(v)=>setState((){startNow=v;accepted=false;})),
+    ],
+    if(!startNow)OutlinedButton.icon(onPressed:locked?null:choose,icon:const Icon(Icons.calendar_month_outlined),label:Text(when==null?'اختار اليوم والساعة':shortDate(when!.toIso8601String()))),
     const Text('الموعد حسب توقيت جهازك.',style:TextStyle(color:muted,fontSize:12)),
     const SizedBox(height:16),
     Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
      const Text('سياسة الحجز',style:TextStyle(fontWeight:FontWeight.w800)),
      const Text('النقاط تتحجز الآن، وتتحول للجيم لما يمسح QR حجزك عند وصولك.'),
      Text('مهلة السماح: ${p['graceMinutes']} دقيقة بعد موعد الزيارة.'),
-     if(when!=null)Text('الإلغاء ورد النقاط بالكامل حتى ${shortDate(when!.add(Duration(minutes:p['graceMinutes'] as int)).toIso8601String())}.'),
+     if(when!=null&&!startNow)Text('الإلغاء ورد النقاط بالكامل حتى ${shortDate(when!.add(Duration(minutes:p['graceMinutes'] as int)).toIso8601String())}.'),
      Text(policySummary(p)),
     ])),
     CheckboxListTile(contentPadding:EdgeInsets.zero,value:accepted,onChanged:locked?null:(v)=>setState(()=>accepted=v??false),title:const Text('راجعت الموعد وسياسة الإلغاء وعدم الحضور')),
-    ActionButton(widget.api.pending!=null?'إعادة نفس الحجز بأمان':'تأكيد الحجز · ${widget.branch['visitPricePoints']} نقطة',busy:busy,onPressed:accepted&&when!=null?book:null),
+    ActionButton(widget.api.pending!=null?'إعادة نفس الحجز بأمان':'تأكيد الحجز · $points نقطة',busy:busy,onPressed:accepted&&(startNow||when!=null)&&ready?book:null),
     if(widget.api.pending!=null)const Text('نتيجة الطلب غير مؤكدة. أعد نفس الحجز بأمان قبل بدء طلب جديد.'),
    ],
   ]));
@@ -145,7 +176,7 @@ class _BookingCardState extends State<_BookingCard>{
   if(busy)return;
   String reason='';
   final now=widget.now,b=widget.booking;
-  final late=now.isAfter(DateTime.parse(b['deadlineAt']));
+  final late=!now.isBefore(DateTime.parse(b['deadlineAt']));
   final value=await showDialog<String>(context:context,builder:(c)=>AlertDialog(
    title:Text(late?'سبب عدم الحضور':'إلغاء الحجز'),
    content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -162,11 +193,12 @@ class _BookingCardState extends State<_BookingCard>{
   finally{if(mounted)setState(()=>busy=false);}
  }
  @override Widget build(BuildContext context){
-  final b=widget.booking,now=widget.now,late=widget.now.isAfter(DateTime.parse(widget.booking['deadlineAt']));
+  final b=widget.booking,now=widget.now,late=!widget.now.isBefore(DateTime.parse(widget.booking['deadlineAt']));
   return Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Text(bookingStatus(b['status']),style:const TextStyle(color:green,fontWeight:FontWeight.w700)),
    const SizedBox(height:6),Text('${b['branch']?['gym']?['name']??'زيارة محجوزة'} · ${b['branch']?['name']??''}',style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800)),
    Fact('موعد الزيارة',shortDate(b['scheduledAt'])),Fact('النقاط','${b['points']} نقطة',strong:true),
+   for(final service in (b['serviceSnapshots'] as List? ?? []))Text('${service['name']} · ${service['points']} نقطة · ${service['durationMinutes']} دقيقة'),
    Fact('نهاية مهلة السماح',shortDate(b['deadlineAt'])),
    ExpansionTile(tilePadding:EdgeInsets.zero,title:const Text('سياسة هذا الحجز'),children:[Text(policySummary(Map<String,dynamic>.from(b['policySnapshot'])))]),
    if(b['absenceReason']!=null)Text('سبب عدم الحضور: ${b['absenceReason']}'),
