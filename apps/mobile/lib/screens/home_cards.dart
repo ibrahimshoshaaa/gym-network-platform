@@ -1,3 +1,4 @@
+import 'account_balance_hero.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/api.dart';
@@ -12,28 +13,9 @@ class TraineeBalanceHero extends StatelessWidget {
  final VoidCallback topup, qr, history, notifications;
  final VoidCallback? workplace;
  const TraineeBalanceHero({super.key,required this.api,required this.wallet,required this.loading,required this.topup,required this.qr,required this.history,required this.notifications,this.workplace});
- @override Widget build(BuildContext context) {
-  final name='${api.user?['displayName']??'متدرب'}'.trim();
-  return ClipRRect(borderRadius:const BorderRadius.only(bottomLeft:Radius.circular(42),bottomRight:Radius.circular(42)),child:DecoratedBox(decoration:const BoxDecoration(gradient:LinearGradient(begin:Alignment.topRight,end:Alignment.bottomLeft,colors:[Color(0xff183c34),ink,Color(0xff0b2524)])),child:Stack(children:[
-   Positioned(top:-90,right:-70,child:Container(width:220,height:220,decoration:BoxDecoration(shape:BoxShape.circle,color:lime.withValues(alpha:.06),boxShadow:[BoxShadow(color:lime.withValues(alpha:.09),blurRadius:90,spreadRadius:15)]))),
-   Padding(padding:const EdgeInsets.fromLTRB(20,16,20,8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Row(children:[Container(width:48,height:48,decoration:BoxDecoration(shape:BoxShape.circle,color:lime.withValues(alpha:.14),border:Border.all(color:lime.withValues(alpha:.6),width:2)),child:Center(child:Text(name.isEmpty?'؟':name.characters.first,style:const TextStyle(color:lime,fontSize:23,fontWeight:FontWeight.w800)))),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('جاهز لتمرينتك؟',style:TextStyle(color:Colors.white60,fontSize:12)),Text('أهلًا، ${name.split(' ').first}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w800))])),const SizedBox(width:8),Container(decoration:BoxDecoration(color:Colors.white.withValues(alpha:.08),borderRadius:BorderRadius.circular(17)),child:IconButton(tooltip:'الإشعارات',onPressed:notifications,icon:const Icon(Icons.notifications_none_rounded,color:Colors.white)))]),
-    if(workplace!=null)TextButton(onPressed:workplace,style:TextButton.styleFrom(foregroundColor:lime),child:const Text('عملي في الجيم')),
-    const SizedBox(height:14),
-    Wrap(spacing:12,runSpacing:8,crossAxisAlignment:WrapCrossAlignment.center,children:[const Text('رصيدك الحالي',style:TextStyle(color:Colors.white60,fontSize:13)),if(wallet!=null)Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),decoration:BoxDecoration(color:lime.withValues(alpha:.11),borderRadius:BorderRadius.circular(20)),child:Text(wallet!['status']=='EXPIRED'?'الرصيد منتهي':wallet!['status']=='VALID'?'رصيد متاح':'محفظتك',style:const TextStyle(color:lime,fontSize:10,fontWeight:FontWeight.w700)))]),
-    const SizedBox(height:8),
-    if(loading&&wallet==null)const Padding(padding:EdgeInsets.symmetric(vertical:14),child:CircularProgressIndicator(color:lime))
-    else if(wallet!=null)SizedBox(width:double.infinity,child:FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,child:Text.rich(TextSpan(children:[TextSpan(text:'${wallet!['spendablePoints']}',style:const TextStyle(color:Colors.white,fontSize:42,fontWeight:FontWeight.w900,height:1.15)),const TextSpan(text:' نقطة',style:TextStyle(color:lime,fontSize:19,fontWeight:FontWeight.w800))]))))
-    else const Text('تعذر تحميل الرصيد',style:TextStyle(color:Colors.white)),
-    const SizedBox(height:9),Text(wallet?['status']=='EXPIRED'?'انتهت صلاحية الرصيد · راجع الإدارة':wallet?['expiresAt']!=null?'صالح حتى ${shortDate(wallet!['expiresAt']).split(' · ').first}':'رصيد واحد.. كل الجيمات',style:const TextStyle(color:Colors.white54,fontSize:11)),
-    if(loading&&wallet!=null)const Padding(padding:EdgeInsets.only(top:8),child:LinearProgressIndicator(color:lime,minHeight:2)),
-    const SizedBox(height:14),
-    Row(children:[Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:lime,foregroundColor:ink,minimumSize:const Size(0,48),padding:const EdgeInsets.symmetric(horizontal:8),textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w800),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),onPressed:topup,icon:const Icon(Icons.add_rounded,size:20),label:const Text('اشحن رصيدك',textAlign:TextAlign.center))),const SizedBox(width:12),Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:Colors.white.withValues(alpha:.10),foregroundColor:Colors.white,minimumSize:const Size(0,48),padding:const EdgeInsets.symmetric(horizontal:8),textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w800),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(20))),onPressed:qr,icon:const Icon(Icons.qr_code_2_rounded,size:20),label:const Text('رمز الدخول',textAlign:TextAlign.center)))]),
-    Align(alignment:AlignmentDirectional.centerEnd,child:TextButton(onPressed:history,style:TextButton.styleFrom(foregroundColor:Colors.white60,textStyle:const TextStyle(fontSize:11)),child:const Text('السجل كامل'))),
-   ])),
-  ])));
- }
+ @override Widget build(BuildContext context)=>AccountBalanceHero(api:api,subtitle:'جاهز لتمرينتك؟',label:'رصيدك الحالي',status:wallet?['status']=='EXPIRED'?'الرصيد منتهي':wallet?['status']=='VALID'?'رصيد متاح':'محفظتك',points:wallet==null?null:'${wallet!['spendablePoints']}',loading:loading,notifications:notifications,primary:BalanceHeroAction('اشحن رصيدك',Icons.add_rounded,topup),secondary:BalanceHeroAction('رمز الدخول',Icons.qr_code_2_rounded,qr),footer:BalanceHeroAction('السجل كامل',Icons.history_rounded,history));
 }
+
 class NearbyGymCard extends StatelessWidget {
  final Json branch;
  final VoidCallback onTap;

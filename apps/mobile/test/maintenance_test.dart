@@ -28,6 +28,8 @@ void main() {
       await t.pumpWidget(page(NativeShell(api: api, gyms: role == 'GYM_OWNER'
         ? [{'id': 'g1', 'name': 'جيم اختبار', 'status': 'ACTIVE'}] : const [])));
       await t.pumpAndSettle();
+      await t.scrollUntilVisible(find.byTooltip('الصيانة'), 180,
+        scrollable: find.byType(Scrollable).first);
       await t.tap(find.byTooltip('الصيانة'));
       await t.pumpAndSettle();
       expect(find.byType(MaintenanceScreen), findsOneWidget);
