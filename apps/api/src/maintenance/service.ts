@@ -1,3 +1,4 @@
+import {recordCharge} from '../charges/service.js';
 import {createHash,randomUUID} from 'node:crypto';
 import type {Prisma,PrismaClient} from '@prisma/client';
 import {requireActor,requireAdmin} from '../auth/authorization.js';
@@ -82,6 +83,7 @@ export function changeRequest(db:PrismaClient,actor:string,id:string,input:unkno
    case 'REOPEN':must(row.status==='AWAITING_CONFIRMATION');status='IN_PROGRESS';extra={finalPiasters:null,workSummary:null};break;
    case 'CANCEL':must(!['COMPLETED','CANCELLED'].includes(row.status));if(!admin)must(['NEW','REVIEWING','AWAITING_APPROVAL','SCHEDULED'].includes(row.status));status='CANCELLED';break;
   }
+  if(d.action==='CONFIRM'){if(row.finalPiasters===null)throw new DomainError('INVALID_STATE');await recordCharge(tx,{gymId:a.branch.gymId,branchId:row.branchId,kind:'MAINTENANCE',sourceId:row.id,amountPiasters:row.finalPiasters,description:'صيانة '+row.equipment});}
   await tx.maintenanceRequest.update({where:{id},data:{...extra,status,version:{increment:1}}});
   await event(tx,actor,id,status,note,data);
   return view(await tx.maintenanceRequest.findUniqueOrThrow({where:{id},include}));

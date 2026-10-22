@@ -146,6 +146,7 @@ export function reverseLedger(db: PrismaClient, input: {
     const p = input.pointTransactionId ? await tx.pointTransaction.findUnique({ where: { id: input.pointTransactionId }, include: { postings: true } }) : null;
     const m = input.moneyTransactionId ? await tx.moneyTransaction.findUnique({ where: { id: input.moneyTransactionId }, include: { postings: true } }) : null;
     if ((!p && !m) || (input.pointTransactionId && !p?.posted) || (input.moneyTransactionId && !m?.posted)) throw new DomainError('TRANSACTION_NOT_FOUND');
+    if(m&&await tx.gymChargeCollection.findUnique({where:{moneyTransactionId:m.id}}))throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     // A bundle must be reversed together; mixing unrelated money and points
     // transactions, or reversing only half a bundle, is rejected.
     const key = p?.idempotencyKey ?? m!.idempotencyKey;

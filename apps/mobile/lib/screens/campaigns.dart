@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
 import 'account.dart';
+import 'maintenance.dart';
+import 'promotions.dart';
+import 'market.dart';
 import 'directory.dart';
 import 'money.dart';
 import 'operations.dart';
@@ -11,6 +14,9 @@ import 'topup.dart';
 import 'trainee.dart';
 Future<void> openCampaign(BuildContext context,ApiClient api,String destination)async{
  if(api.pending!=null)return;
+ if(destination=='maintenance'){await open(context,MaintenanceScreen(api:api));return;}
+ if(destination=='promotion-requests'){await open(context,PromotionsScreen(api:api));return;}
+ if(destination=='market'){await open(context,Screen(title:'الماركت',child:MarketScreen(api:api)));return;}
  if(destination=='wallet'||destination=='home'){Navigator.of(context).popUntil((r)=>r.isFirst);return;}
  if(destination=='support'){await open(context,SupportScreen(api:api));return;}
  if(destination=='qr'){await open(context,Screen(title:'رمز الدخول',child:QrScreen(api:api)));return;}

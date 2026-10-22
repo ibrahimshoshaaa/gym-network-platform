@@ -1,0 +1,66 @@
+import test,{after} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {PrismaClient} from '@prisma/client';
+import {serializable,postLedger,reverseLedger} from '../src/ledger/service.js';
+import {recordCharge,chargeSummary,collectDueCharges} from '../src/charges/service.js';
+import {requestWithdrawal,cancelWithdrawal} from '../src/withdrawals/service.js';
+import {createPromotion,changePromotion,nearbyPromotions} from '../src/promotions/service.js';
+const url=new URL(process.env.DATABASE_URL??'');
+if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw Error('Disposable database required');
+const db=new PrismaClient();after(()=>db.$disconnect());
+async function fixture(){
+ const user=(role:'GYM_OWNER'|'PLATFORM_ADMIN'|'TRAINEE')=>db.user.create({data:{role,displayName:'Debt test',phoneE164:'+debt'+randomUUID()}});
+ const owner=await user('GYM_OWNER'),admin=await user('PLATFORM_ADMIN'),trainee=await user('TRAINEE');
+ const gym=await db.gym.create({data:{name:'Debt test gym',ownerId:owner.id,status:'ACTIVE',ownerAcceptedAt:new Date()}});
+ const branch=await db.branch.create({data:{name:'Services only',gymId:gym.id,visitPricePoints:20,sessionMinutes:30,status:'ACTIVE',latitude:30,longitude:31,address:'اختبار عنوان',city:'مدينة',governorate:'القاهرة'}});
+ const available=await db.moneyAccount.create({data:{gymId:gym.id,type:'GYM_AVAILABLE'}});
+ const offset=await db.moneyAccount.findFirstOrThrow({where:{type:'PLATFORM_OFFSET',gymId:null,branchId:null}});
+ const fund=(amount:bigint)=>postLedger(db,{actorId:admin.id,idempotencyKey:randomUUID(),reason:'Synthetic debt funding',money:{kind:'ADJUSTMENT',entries:[{accountId:offset.id,delta:-amount},{accountId:available.id,delta:amount}]}});
+ return {owner,admin,trainee,gym,branch,available,fund};
+}
+test('payout deducts service debts exactly once, protects reserved funds, and retains partial balances',async()=>{
+ const f=await fixture();await f.fund(100000n);
+ const sourceId=randomUUID(),input={gymId:f.gym.id,branchId:f.branch.id,kind:'MAINTENANCE' as const,sourceId,amountPiasters:30000n,description:'صيانة تجريبية'};
+ const charge=await serializable(db,tx=>recordCharge(tx,input));
+ assert.equal((await serializable(db,tx=>recordCharge(tx,input))).id,charge.id);
+ assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).netAvailablePiasters,'70000');
+ const body={paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic owner',amountPiasters:'70000'};
+ await assert.rejects(requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{...body,amountPiasters:'100000'}),/INSUFFICIENT_FUNDS/);
+ assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),0);
+ const key=randomUUID();const results=await Promise.all([requestWithdrawal(db,f.owner.id,f.gym.id,key,body),requestWithdrawal(db,f.owner.id,f.gym.id,key,body)]);
+ assert.equal(results[0].id,results[1].id);
+ assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),1);
+ assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).debtPiasters,'0');
+ assert.equal((await db.moneyAccount.findUniqueOrThrow({where:{id:f.available.id}})).balancePiasters,0n);
+ const collection=await db.gymChargeCollection.findFirstOrThrow({where:{chargeId:charge.id}});
+ await assert.rejects(reverseLedger(db,{actorId:f.admin.id,idempotencyKey:randomUUID(),reason:'No bypass of service debt',moneyTransactionId:collection.moneyTransactionId}),/DOMAIN_APPROVAL_REQUIRED/);
+ await cancelWithdrawal(db,f.owner.id,results[0].id,randomUUID(),{reason:'تغيير حساب الاستلام التجريبي'});
+ assert.equal((await db.moneyAccount.findUniqueOrThrow({where:{id:f.available.id}})).balancePiasters,70000n);
+ assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),1);
+ const second=await serializable(db,tx=>recordCharge(tx,{...input,sourceId:randomUUID(),amountPiasters:90000n}));
+ await serializable(db,tx=>collectDueCharges(tx,f.gym.id,f.owner.id,randomUUID()));
+ const summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));assert.equal(summary.debtPiasters,'20000');assert.equal(summary.netAvailablePiasters,'0');
+ await f.fund(30000n);await requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{...body,amountPiasters:'10000'});
+ assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).debtPiasters,'0');
+ assert.equal((await db.gymChargeCollection.aggregate({where:{chargeId:second.id},_sum:{amountPiasters:true}}))._sum.amountPiasters,90000n);
+});
+test('service-only branch advertises approved service; future ad debt is voided before start',async()=>{
+ const f=await fixture();
+ const service=await db.branchService.create({data:{branchId:f.branch.id,name:'كارديو',points:20,durationMinutes:30,active:true,version:1,approvedAt:new Date(),approvedById:f.admin.id}});
+ const r=await createPromotion(db,f.owner.id,{branchId:f.branch.id,serviceId:service.id,clientKey:randomUUID(),title:'عرض كارديو',body:'عرض تجريبي مرتبط بخدمة معتمدة',imageId:null});
+ let ad=await changePromotion(db,f.admin.id,r.id,{action:'QUOTE',expectedVersion:r.version,reason:'عرض تجريبي للخدمة',feePiasters:'1000',startsAt:new Date(Date.now()+3600000).toISOString(),endsAt:new Date(Date.now()+86400000).toISOString(),radiusKm:20},true);
+ ad=await changePromotion(db,f.owner.id,r.id,{action:'ACCEPT',expectedVersion:ad.version});
+ let summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));assert.equal(summary.debtPiasters,'0');assert.equal(summary.scheduledPiasters,'1000');
+ await changePromotion(db,f.owner.id,r.id,{action:'WITHDRAW',expectedVersion:ad.version});
+ summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));assert.equal(summary.scheduledPiasters,'0');
+ assert.equal((await nearbyPromotions(db,f.trainee.id,{latitude:30,longitude:31})).items.some(x=>x.id===r.id),false);
+ const live=await createPromotion(db,f.owner.id,{branchId:f.branch.id,serviceId:service.id,clientKey:randomUUID(),title:'إعلان خدمة نشط',body:'عرض خدمة بدون سعر زيارة قديم',imageId:null});
+ let liveRow=await changePromotion(db,f.admin.id,live.id,{action:'QUOTE',expectedVersion:live.version,reason:'إعلان الخدمة الفعلي',feePiasters:'2000',startsAt:new Date(Date.now()-3600000).toISOString(),endsAt:new Date(Date.now()+86400000).toISOString(),radiusKm:20},true);
+ liveRow=await changePromotion(db,f.owner.id,live.id,{action:'ACCEPT',expectedVersion:liveRow.version});
+ const card=(await nearbyPromotions(db,f.trainee.id,{latitude:30,longitude:31})).items.find(x=>x.id===live.id);assert.ok(card);assert.equal(card.serviceId,service.id);
+ await assert.rejects(changePromotion(db,f.owner.id,live.id,{action:'ACCEPT',expectedVersion:liveRow.version}),/INVALID_STATE/);
+ assert.equal(await db.gymServiceCharge.count({where:{sourceId:live.id}}),1);
+ assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).debtPiasters,'2000');
+
+});

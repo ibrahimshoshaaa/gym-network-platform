@@ -1,3 +1,4 @@
+import {collectDueCharges} from '../charges/service.js';
 import {authority,requirePermission} from "../auth/delegation.js";
 import {allocateWithdrawal} from "./allocation.js";
 import { createHash, randomUUID } from "node:crypto";
@@ -220,6 +221,7 @@ export async function requestWithdrawal(
     if (gym.status !== "ACTIVE") throw new DomainError("GYM_INACTIVE");
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`withdrawal-allocation:${gymId}`},0))`;
     const id = randomUUID(), amountPiasters = BigInt(data.amountPiasters);
+    await collectDueCharges(tx,gymId,actorId,id);
     const allocations=await allocateWithdrawal(tx,gymId,amountPiasters,data.branchId);
     const reserveTransactionId = await move(
       tx,

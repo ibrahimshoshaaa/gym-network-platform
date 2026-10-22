@@ -35,7 +35,9 @@ type Withdrawal = {
   delayReason: string | null;
   overdue: boolean;
 };
+type ChargeSummary={debtPiasters:string;scheduledPiasters:string;grossAvailablePiasters:string;netAvailablePiasters:string;items:{id:string;description:string;amountPiasters:string;collectedPiasters:string;outstandingPiasters:string}[]};
 type Detail = {
+  serviceCharges?:ChargeSummary;
   withdrawal: Withdrawal;
   gymName: string;
   balances: WithdrawalBalances;
@@ -365,6 +367,7 @@ function WithdrawalDetail({
               {detail.gymName} · {decimal(w.amountPiasters)} ج.م
             </h3>
             <p>{stateName(w.status)}</p>
+            {detail.serviceCharges&&<section className="card"><h3>مديونيات الصيانة والإعلانات</h3><Fact label="مديونية مستحقة">{decimal(detail.serviceCharges.debtPiasters)} ج.م</Fact><Fact label="صافي متاح للسحب">{decimal(detail.serviceCharges.netAvailablePiasters)} ج.م</Fact>{detail.serviceCharges.items.map(c=><div key={c.id}><strong>{c.description}</strong><p>التكلفة {decimal(c.amountPiasters)} · المخصوم {decimal(c.collectedPiasters)} · المتبقي {decimal(c.outstandingPiasters)} ج.م</p></div>)}</section>}
             <WithdrawalBalanceCard balances={detail.balances} amount={w.amountPiasters} status={w.status}/>
             <button className="secondary full" disabled={busy || uploading || uncertain || refreshing} onClick={()=>void refreshBalances()}>{refreshing?<Busy>جاري تحديث المستحقات</Busy>:"تحديث المستحقات وحالة الطلب"}</button>
             <div className="subtle-box">

@@ -1,3 +1,4 @@
+import {chargeSummary} from '../charges/service.js';
 import {authority} from "../auth/delegation.js";
 import { platformFinance } from "./platform.js";
 import { Prisma, type PrismaClient } from "@prisma/client";
@@ -239,6 +240,7 @@ export async function reportSummary(
       paidWithdrawals,
       currentStockPoints: stock!.points,
       currentBalances: balances,
+      serviceCharges:s.finance&&s.gymId&&!s.branchId?await chargeSummary(tx,s.gymId):null,
       alerts: backlog,
       reconciliation,
     };

@@ -1,3 +1,4 @@
+import {promotionBranches} from '../promotions/service.js';
 import {activeCampaigns} from '../campaigns/service.js';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
@@ -16,6 +17,13 @@ export async function notificationFeed(db:PrismaClient,id:string){return db.$tra
  const actor=await requireActor(tx,id),admin=actor.role==='PLATFORM_ADMIN',trainee=actor.role==='TRAINEE',{gymIds,branchIds}=await scopeIds(tx,id);
  const events:FeedItem[]=[];
  for(const c of await activeCampaigns(tx,id,'NOTIFICATION'))events.push({id:`campaign:${c.id}:${c.version}`,title:c.title||'إعلان جديد من GymBank',description:c.description,at:c.at,destination:c.destination});const add=(kind:string,key:string,state:string,title:string,at:Date,destination:string,description='')=>events.push({id:`${kind}:${key}:${state}`,title,description,at,destination,referenceId:key});
+ const repairs=await tx.maintenanceRequest.findMany({where:admin?{status:{notIn:['COMPLETED','CANCELLED']}}:{branchId:{in:branchIds}},orderBy:{updatedAt:'desc'},take:25});
+ for(const r of repairs)add('maintenance',r.id,String(r.version),'الصيانة · '+r.equipment,r.updatedAt,'maintenance','حالة الطلب: '+r.status);
+ const promotionIds=admin?[]:(await promotionBranches(tx,id)).map(b=>b.id);
+ const offers=await tx.promotionRequest.findMany({where:admin?{status:'PENDING'}:{branchId:{in:promotionIds}},orderBy:{updatedAt:'desc'},take:25});
+ for(const r of offers)add('promotion',r.id,String(r.version),'إعلان الفرع · '+r.title,r.updatedAt,'promotion-requests',r.reviewReason??'تابع حالة الإعلان وتكلفته');
+ const listings=await tx.marketListing.findMany({where:admin?{status:'PENDING'}:{sellerId:id},orderBy:{updatedAt:'desc'},take:25});
+ for(const r of listings)add('market',r.id,String(r.version),'الماركت · '+r.title,r.updatedAt,'market',r.reviewReason??('حالة الإعلان: '+(names[r.status]??r.status)));
  const topups=await tx.topupRequest.findMany({where:admin?{status:'PENDING'}:{requestorUserId:id},orderBy:{createdAt:'desc'},take:50,select:{id:true,status:true,points:true,createdAt:true,reviewedAt:true,reviewReason:true}});
  for(const t of topups)add('topup',t.id,t.status,`شحن ${t.points} نقطة · ${names[t.status]??t.status}`,t.reviewedAt??t.createdAt,admin?'reviews':trainee?'topup':'purchases',admin?'يوجد طلب شحن يحتاج قرارك':t.reviewReason??'تابع حالة الطلب');
  const withdrawals=await tx.withdrawalRequest.findMany({where:admin?{status:{in:['REQUESTED','APPROVED','DISPUTED']}}:{gymId:{in:gymIds}},orderBy:{requestedAt:'desc'},take:50,select:{id:true,status:true,requestedAt:true,acceptedAt:true,paidAt:true,closedAt:true,dueAt:true}});

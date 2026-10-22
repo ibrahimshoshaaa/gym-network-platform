@@ -8,8 +8,11 @@ export async function branchEntitlements(tx:Prisma.TransactionClient,gymId:strin
  const holds=await tx.financialHold.findMany({where:{gymId,state:'OPEN'},select:{amountPiasters:true,visitId:true}});
  const heldVisits=await tx.visit.findMany({where:{id:{in:holds.map(h=>h.visitId)}},select:{id:true,branchId:true}});
  const used=await tx.withdrawalAllocation.groupBy({by:['branchId'],where:{withdrawal:{gymId,status:{in:[...committed]}}},_sum:{amountPiasters:true}});
+ const fees=await tx.gymChargeCollection.findMany({where:{gymId},select:{allocations:true}});
+ const feeByBranch=new Map<string,bigint>();
+ for(const f of fees)for(const a of f.allocations as {branchId:string|null;amountPiasters:string}[])if(a.branchId)feeByBranch.set(a.branchId,(feeByBranch.get(a.branchId)??0n)+BigInt(a.amountPiasters));
  const legacy=(await tx.withdrawalRequest.aggregate({where:{gymId,allocationVersion:0,status:{in:[...committed]}},_sum:{amountPiasters:true}}))._sum.amountPiasters??0n;
- return branches.map(b=>{const total=earned.find(e=>e.branchId===b.id)?._sum.settlementPiasters??0n,reserved=used.find(e=>e.branchId===b.id)?._sum.amountPiasters??0n,disputed=holds.filter(h=>heldVisits.find(v=>v.id===h.visitId)?.branchId===b.id).reduce((n,h)=>n+h.amountPiasters,0n);const free=total-reserved-disputed-legacy;
+ return branches.map(b=>{const total=earned.find(e=>e.branchId===b.id)?._sum.settlementPiasters??0n,reserved=used.find(e=>e.branchId===b.id)?._sum.amountPiasters??0n,disputed=holds.filter(h=>heldVisits.find(v=>v.id===h.visitId)?.branchId===b.id).reduce((n,h)=>n+h.amountPiasters,0n);const free=total-reserved-disputed-legacy-(feeByBranch.get(b.id)??0n);
   return {...b,earned:total,committed:reserved,disputed,available:free>0n?free:0n,legacyReviewRequired:legacy>0n};});
 }
 export async function allocateWithdrawal(tx:Prisma.TransactionClient,gymId:string,amount:bigint,branchId?:string){
