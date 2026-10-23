@@ -1,0 +1,65 @@
+import test,{after} from 'node:test';
+import assert from 'node:assert/strict';
+import {PrismaClient} from '@prisma/client';
+import {buildApp} from '../src/app.js';
+import {requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword,previewPhones} from '../src/auth/phone-preview.js';
+import {loginTrainee} from '../src/auth/trainees.js';
+import {authenticate} from '../src/auth/sessions.js';
+const url=new URL(process.env.DATABASE_URL??'');
+if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw Error('Disposable local test database required');
+const db=new PrismaClient();after(()=>db.$disconnect());
+test('phone OTP preview signs up, logs in and resets only dedicated test identities without touching money',async()=>{
+ const previous={mode:process.env.GYMBANK_OTP_MODE,vercel:process.env.VERCEL_ENV,node:process.env.NODE_ENV};
+ const app=buildApp(db),phone=previewPhones[0],password='Synthetic initial phone password';
+ const set=(key:string,value:string|undefined)=>{if(value===undefined)delete process.env[key];else process.env[key]=value;};
+ try{
+  delete process.env.GYMBANK_OTP_MODE;process.env.NODE_ENV='test';delete process.env.VERCEL_ENV;
+  assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,false);
+  await assert.rejects(requestPhoneChallenge(db,{phone,purpose:'REGISTER'}),/PHONE_OTP_DISABLED/);
+  process.env.GYMBANK_OTP_MODE='test';
+  assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().testMode,true);
+  await assert.rejects(requestPhoneChallenge(db,{phone:'+201000000001',purpose:'REGISTER'}),/PHONE_OTP_TEST_NUMBER/);
+  const challenge=await requestPhoneChallenge(db,{phone,purpose:'REGISTER'});
+  await assert.rejects(requestPhoneChallenge(db,{phone,purpose:'REGISTER'}),/PHONE_OTP_WAIT/);
+  const body={phone,challengeId:challenge.challengeId,code:'123456',displayName:'Synthetic phone trainee',password};
+  const wrong={...body,code:'000000'};
+  await assert.rejects(registerPhonePreview(db,wrong),/PHONE_OTP_INVALID/);
+  assert.equal((await db.phoneOtpChallenge.findUniqueOrThrow({where:{id:challenge.challengeId}})).attempts,1);
+  const result=await registerPhonePreview(db,body);
+  assert.equal(result.user.email,null);assert.equal(result.user.phone,phone);assert.equal(result.user.phoneVerified,false);assert.equal(result.testMode,true);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:result.user.id}}})).balance,0);
+  await assert.rejects(registerPhonePreview(db,body),/PHONE_OTP_INVALID/);
+  const login=await loginTrainee(db,{identifier:phone,password});assert.equal(login.user.id,result.user.id);
+  const reset=await requestPhoneChallenge(db,{phone,purpose:'RESET'}),newPassword='Synthetic replacement phone password';
+  await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:challenge.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
+  await resetPhonePreviewPassword(db,{phone,challengeId:reset.challengeId,code:'123456',newPassword});
+  await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:reset.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
+  assert.equal(await authenticate(db,'Bearer '+result.accessToken),null);assert.equal(await authenticate(db,'Bearer '+login.accessToken),null);
+  await assert.rejects(loginTrainee(db,{identifier:phone,password}),/INVALID_CREDENTIALS/);
+  assert.equal((await loginTrainee(db,{identifier:phone,password:newPassword})).user.id,result.user.id);
+  assert.equal(await db.pointTransaction.count({where:{actorId:result.user.id}}),0);
+  assert.equal(await db.moneyTransaction.count({where:{actorId:result.user.id}}),0);
+  // A legacy account, even on a reserved preview number, has no test marker.
+  const legacy=await db.user.create({data:{phoneE164:previewPhones[1],displayName:'Synthetic legacy',role:'TRAINEE'}});
+  const legacyReset=await requestPhoneChallenge(db,{phone:previewPhones[1],purpose:'RESET'});
+  await assert.rejects(resetPhonePreviewPassword(db,{phone:previewPhones[1],challengeId:legacyReset.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
+  await db.user.delete({where:{id:legacy.id}});
+  const ownerChallenge=await requestPhoneChallenge(db,{phone:previewPhones[1],purpose:'REGISTER'});
+  const owner=await registerPhonePreview(db,{...body,phone:previewPhones[1],challengeId:ownerChallenge.challengeId,accountType:'owner',gym:{gymName:'Synthetic phone gym',governorate:'القاهرة',city:'اختبار',address:'عنوان اختبار'}});
+  assert.equal(owner.user.role,'GYM_OWNER');assert.equal((await db.gymApplication.findUniqueOrThrow({where:{ownerId:owner.user.id}})).status,'PENDING');
+  assert.equal(await db.gym.count({where:{ownerId:owner.user.id}}),0);
+  // Wrong attempts persist across failed requests and lock the challenge at five.
+  await db.phoneOtpChallenge.update({where:{id:reset.challengeId},data:{createdAt:new Date(Date.now()-61000)}});
+  const locked=await requestPhoneChallenge(db,{phone,purpose:'RESET'});
+  for(let n=0;n<5;n++)await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:locked.challengeId,code:'999999',newPassword}),/PHONE_OTP_INVALID/);
+  await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:locked.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
+  assert.equal((await db.phoneOtpChallenge.findUniqueOrThrow({where:{id:locked.challengeId}})).attempts,5);
+  await db.phoneOtpChallenge.update({where:{id:locked.challengeId},data:{createdAt:new Date(Date.now()-61000)}});
+  const expired=await requestPhoneChallenge(db,{phone,purpose:'RESET'});
+  await db.phoneOtpChallenge.update({where:{id:expired.challengeId},data:{expiresAt:new Date(Date.now()-1000)}});
+  await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:expired.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
+  process.env.NODE_ENV='production';process.env.VERCEL_ENV='production';
+  assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,false);
+  assert.equal((await app.inject({method:'POST',url:'/auth/phone/reset',payload:{phone,challengeId:expired.challengeId,code:'123456',newPassword}})).statusCode,503);
+ }finally{set('GYMBANK_OTP_MODE',previous.mode);set('VERCEL_ENV',previous.vercel);set('NODE_ENV',previous.node);await app.close();}
+});

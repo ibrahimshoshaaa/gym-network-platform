@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
+import 'phone_otp.dart';
 
 const _authTeal = Color(0xff101719);
 
@@ -41,6 +42,7 @@ class _AuthScreenState extends State<AuthScreen> {
   void initState() {
     super.initState();
     restoreLanguage();
+    if(phoneOtpPreview)fields['phone']!.text=testTraineePhone;
   }
 
   Future<void> restoreLanguage() async {
@@ -98,7 +100,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ? <String, dynamic>{
               for (final k in [
                 'displayName',
-                'email',
+                if (!phoneOtpPreview) 'email',
                 'phone',
                 'password',
                 if (owner) ...[
@@ -115,13 +117,17 @@ class _AuthScreenState extends State<AuthScreen> {
               'identifier': fields['identifier']!.text,
               'password': fields['password']!.text,
             };
-      await widget.api.authenticate(
-        register
-            ? (owner ? 'auth/owners/register' : 'auth/register')
-            : 'auth/signin',
-        body,
-        rememberSession: register || rememberMe,
-      );
+      if(register&&phoneOtpPreview){
+        await requestPhoneCode(context,widget.api,fields['phone']!.text,'REGISTER',onConfirm:(proof)async{
+          await widget.api.authenticate('auth/phone/register',<String,dynamic>{
+            'displayName':body['displayName'],'phone':body['phone'],'password':body['password'],...proof,
+            'accountType':owner?'owner':'trainee',
+            if(owner)'gym':{for(final k in ['gymName','description','governorate','city','address'])k:body[k]},
+          },rememberSession:true);
+        });
+      }else{
+        await widget.api.authenticate(register?(owner?'auth/owners/register':'auth/register'):'auth/signin',body,rememberSession:register||rememberMe);
+      }
     } catch (e) {
       if (mounted) setState(() => error = e);
     } finally {
@@ -504,6 +510,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 24),
+                                if(phoneOtpPreview)...[
+                                  const Text('تجربة الموبايل بدون SMS — الكود 123456. استخدم +15555550123 للمتدرب أو +15555550124 لصاحب الجيم.',style:TextStyle(color:muted,fontSize:12)),
+                                  if(!register)TextButton(onPressed:busy?null:()=>open(context,PhonePasswordReset(api:widget.api)),child:const Text('استرجاع كلمة السر بكود الموبايل — تجربة')),
+                                  const SizedBox(height:12),
+                                ],
                                 if (register) ...[
                                   IntrinsicHeight(
                                     child: Row(
@@ -557,7 +568,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                             'الاسم بالكامل',
                                             'Full name',
                                           ),
-                                          field(
+                                          if (!phoneOtpPreview) field(
                                             'email',
                                             'الإيميل',
                                             'Email address',
@@ -1293,3 +1304,4 @@ class _AcceptInviteScreenState extends State<AcceptInviteScreen> {
     ),
   );
 }
+

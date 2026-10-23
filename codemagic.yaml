@@ -429,6 +429,83 @@ workflows:
       - apps/mobile/build/app/outputs/flutter-apk/*.apk
       - apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
 
+  gymbank-phone-otp-preview:
+    name: GymBank - phone OTP preview APK
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.7
+      java: 17
+      groups:
+        - gymbank_android_signing
+    scripts:
+      - name: Verify isolated phone OTP preview
+        script: |
+          set -euo pipefail
+          test "$CM_BRANCH" = "codex/phone-otp-preview"
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from urllib.parse import urlparse
+          origin = os.environ.get('GYMBANK_PHONE_PREVIEW_ORIGIN', '').rstrip('/')
+          parsed = urlparse(origin)
+          if parsed.scheme != 'https' or not parsed.hostname or parsed.path or parsed.query or parsed.fragment or parsed.username or parsed.password:
+              raise SystemExit('Set GYMBANK_PHONE_PREVIEW_ORIGIN to the approved isolated HTTPS preview origin.')
+          if parsed.hostname == 'gym-network-platform.vercel.app':
+              raise SystemExit('Production origin is not allowed for the fixed-code preview.')
+          with urllib.request.urlopen(origin + '/api/mobile/auth/phone/status', timeout=30) as response:
+              status = json.load(response)
+          if not status.get('enabled') or not status.get('testMode'):
+              raise SystemExit('Phone OTP test mode is not enabled on this preview.')
+          print('Phone OTP preview reachable and explicitly enabled.')
+          PY
+      - name: Prepare Flutter Android host
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          backup_dir=$(mktemp -d)
+          trap 'rm -rf "$backup_dir"' EXIT
+          cp pubspec.yaml pubspec.lock "$backup_dir/"
+          cp -R lib "$backup_dir/lib"
+          flutter create --platforms=android --org net.shotech --project-name gym_network .
+          cp "$backup_dir/pubspec.yaml" "$backup_dir/pubspec.lock" .
+          cp -R "$backup_dir/lib/." lib/
+          rm -f test/widget_test.dart
+          python3 tool/prepare_platforms.py
+          python3 tool/configure_signing.py
+          flutter pub get
+      - name: Analyze and test
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          python3 -m unittest discover -s tool -p 'test_signing.py'
+          flutter analyze lib test --no-fatal-infos
+          flutter test
+      - name: Build and verify permanent signed APKs
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          export GYMBANK_KEYSTORE_PATH="$CM_BUILD_DIR/.gymbank-signing/release.jks"
+          trap 'rm -rf "$CM_BUILD_DIR/.gymbank-signing"' EXIT
+          python3 tool/install_signing.py
+          # Use a shared clock-based range: workflow counters restart independently.
+          # Seconds since 2026-01-01 plus a floor above previous build codes.
+          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_PHONE_OTP_PREVIEW=true --dart-define=GYM_API_ORIGIN="$GYMBANK_PHONE_PREVIEW_ORIGIN"
+          python3 tool/verify_apks.py "$build_number"
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path('build/app/outputs/flutter-apk')
+          (root / 'SHA256SUMS.txt').write_text(''.join(
+              hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n'
+              for p in sorted(root.glob('*.apk'))
+          ))
+          PY
+    artifacts:
+      - apps/mobile/build/app/outputs/flutter-apk/*.apk
+      - apps/mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
+
   gymbank-api:
     name: GymBank - API and ledger checks
     instance_type: mac_mini_m2
@@ -473,3 +550,4 @@ workflows:
           set -euo pipefail
           pnpm --filter @gym/web typecheck
           pnpm --filter @gym/web test
+

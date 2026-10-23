@@ -8,8 +8,19 @@ import { loginAdmin } from './admin.js';
 import { loginSchema } from './validation.js';
 import { changeTraineePassword, loginTrainee, registerTrainee } from './trainees.js';
 import { acceptInvitation, invitationAcceptSchema, loginStaff } from './staff.js';
+import {phonePreviewStatus,requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword} from './phone-preview.js';
 
 export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
+  app.get('/auth/phone/status',async()=>phonePreviewStatus());
+  for(const [path,run] of [
+    ['challenge',requestPhoneChallenge],['register',registerPhonePreview],['reset',resetPhonePreviewPassword],
+  ] as const)app.post(`/auth/phone/${path}`,{
+    bodyLimit:8192,
+    onRequest:async r=>{await consumeAuthLimit(db,'phone-otp-ip',r.ip,20,900);},
+  },async r=>{
+    // The backend validates and normalizes the phone before issuing any proof.
+    return run(db,r.body);
+  });
   app.post('/auth/signin', {
     bodyLimit: 8192,
     onRequest: async request => { await consumeAuthLimit(db, 'login-ip', request.ip, 30, 900); },
@@ -66,3 +77,4 @@ export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
     return changeTraineePassword(db, user.id, request.headers.authorization!.slice(7), request.body);
   });
 }
+

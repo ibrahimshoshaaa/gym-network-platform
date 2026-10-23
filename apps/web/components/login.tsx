@@ -4,17 +4,20 @@ import { Eye, EyeOff, Globe2, Mail, LockKeyhole, UserRound, Smartphone, Store, D
 import { type Identity, request, send, message, ApiError } from "../lib/client";
 import { invitationToken } from "../lib/invitation-link";
 import { Busy } from "./ui";
+import {PhoneAuthPreview} from './phone-auth-preview';
 type View = "signin" | "register" | "invite";
 type Locale = "ar" | "en";
 export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
  const [view,setView]=useState<View>("signin"),[locale,setLocale]=useState<Locale>("ar"),[owner,setOwner]=useState(false),[remember,setRemember]=useState(false),[token,setToken]=useState(""),[linkedInvite,setLinkedInvite]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState<unknown>(null),[show,setShow]=useState(false),[social,setSocial]=useState("");
  const submitting=useRef(false),english=locale==="en";
+ const [phonePreview,setPhonePreview]=useState(false),[phoneReset,setPhoneReset]=useState(false);
  const t=(ar:string,en:string)=>english?en:ar;
  useEffect(()=>{
   try {if(localStorage.getItem("gym.auth.language.v1")==="en")setLocale("en");}catch{}
   const invite=invitationToken(window.location.hash);
   if(invite){setToken(invite);setLinkedInvite(true);setView("invite");window.history.replaceState(window.history.state,"",window.location.pathname+window.location.search);}
  },[]);
+ useEffect(()=>{let active=true;request<{enabled:boolean}>('/api/phone-auth/status').then(r=>{if(active)setPhonePreview(r.enabled);}).catch(()=>{});return()=>{active=false;};},[]);
  function language(){const next=english?"ar":"en";setLocale(next);try{localStorage.setItem("gym.auth.language.v1",next);}catch{}}
  function change(next:View){if(submitting.current)return;setView(next);setError(null);setSocial("");setShow(false);}
  async function submit(e:FormEvent<HTMLFormElement>){
@@ -36,7 +39,7 @@ export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
    <section className="web-auth-sheet" aria-label={t("الدخول والتسجيل","Account access")}>
     <div className="web-auth-tabs" aria-label={t("نوع العملية","Account action")}>{(["signin","register"] as const).map(mode=><button type="button" key={mode} aria-pressed={view===mode} disabled={busy} onClick={()=>change(mode)}>{mode==="signin"?t("دخول","Log in"):t("حساب جديد","Sign up")}</button>)}</div>
     {view==="register"&&<div className="web-auth-roles" role="group" aria-label={t("نوع الحساب","Account type")}>{[false,true].map(value=><button key={String(value)} type="button" aria-pressed={owner===value} disabled={busy} onClick={()=>setOwner(value)}>{value?<Store size={23}/>:<Dumbbell size={23}/>}<strong>{value?t("صاحب جيم","Gym owner"):t("متدرب","Trainee")}</strong><small>{value?t("إدارة جيمك وفروعك","Manage your gyms"):t("اختار جيمك واتمرّن","Find your next workout")}</small></button>)}</div>}
-    <form onSubmit={submit} key={view}>
+    {phonePreview&&view==='register'?<PhoneAuthPreview key={owner?'owner':'trainee'} owner={owner} onLogin={onLogin}/>:<form onSubmit={submit} key={view}>
      <fieldset disabled={busy}>
       {view==="register"?<><AuthField label={t("الاسم بالكامل","Full name")} name="displayName" icon={<UserRound/>} required minLength={2} maxLength={100} autoComplete="name" placeholder={t("اكتب اسمك بالكامل","Enter your full name")}/><AuthField label={t("الإيميل","Email address")} icon={<Mail/>} name="email" type="email" required maxLength={254} autoComplete="email" dir="ltr" placeholder={t("اكتب الإيميل","Enter your email")}/><AuthField label={t("رقم الموبايل","Mobile number")} name="phone" icon={<Smartphone/>} type="tel" required maxLength={40} autoComplete="tel" dir="ltr" placeholder={t("اكتب رقم الموبايل","Enter mobile number")}/></>:view==="signin"?<AuthField label={t("الإيميل أو رقم الموبايل","Email or mobile number")} name="identifier" icon={<Mail/>} required maxLength={254} autoComplete="username" dir="ltr" placeholder={t("اكتب الإيميل أو رقم الموبايل","Enter email or mobile number")}/>:linkedInvite?<p className="web-auth-note">{t("الدعوة جاهزة؛ اكتب كلمة السر لتفعيل حسابك.","Your invitation is ready. Enter your password to activate your account.")}</p>:null}
       {view==="invite"&&!linkedInvite&&<AuthField label={t("رمز الدعوة","Invitation code")} icon={<TicketCheck/>} required minLength={43} maxLength={43} value={token} onChange={e=>setToken(e.target.value.trim())} dir="ltr" autoComplete="off"/>}
@@ -46,7 +49,9 @@ export function Login({onLogin}:{onLogin:(user:Identity)=>void}) {
       {errorText&&<p className="web-auth-error" role="alert">{errorText}</p>}
       <button className="web-auth-submit" type="submit">{busy?<Busy>{t("جاري التنفيذ","Please wait")}</Busy>:view==="signin"?t("تسجيل الدخول","Log in"):view==="register"?(owner?t("إنشاء حساب وإرسال الطلب","Create account & apply"):t("إنشاء حساب متدرب","Create trainee account")):t("قبول الدعوة والدخول","Accept invitation & log in")}</button>
      </fieldset>
-    </form>
+    </form>}
+    {phonePreview&&view==='signin'&&<button type="button" disabled={busy} onClick={()=>setPhoneReset(v=>!v)}>نسيت كلمة السر؟ استرجاع بالموبايل — تجربة</button>}
+    {phonePreview&&phoneReset&&view==='signin'&&<PhoneAuthPreview reset onClose={()=>setPhoneReset(false)}/>}
     {view!=="invite"&&<><div className="web-auth-divider"><span>{t("أو كمّل باستخدام","Or continue with")}</span></div><div className="web-auth-social">{["Google","Apple"].map(provider=><button type="button" key={provider} disabled={busy} onClick={()=>setSocial(provider)}><span dir="ltr">{provider==="Google"?<img src="/brand/google-g.png" width={20} height={20} alt=""/>:<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.1 12.3c0-2.1 1.7-3.1 1.8-3.2-1-1.5-2.5-1.7-3-1.7-1.3-.1-2.6.8-3.2.8-.7 0-1.8-.8-2.9-.7-1.5 0-2.9.9-3.7 2.2-1.6 2.7-.4 6.8 1.1 9 .7 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.7-2.2c.9-1.2 1.3-2.4 1.3-2.5-.1 0-2.9-1.1-2.9-3.9ZM14.9 5.9c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.6-1.2 1.8-1.1 2.8 1.1.1 2.2-.5 2.9-1.2Z"/></svg>}{provider}</span><small>{t("قريبًا","Soon")}</small></button>)}</div>{social&&<p className="web-auth-note" role="status">{t(`الدخول والتسجيل باستخدام ${social} هيتاح قريبًا. استخدم الإيميل حاليًا.`,`${social} sign-in and sign-up are coming soon. Please use email for now.`)}</p>}</>}
     <div className="web-auth-switch"><span>{view==="signin"?t("لسه معندكش حساب؟","Don't have an account?"):t("عندك حساب بالفعل؟","Already a member?")}</span><button type="button" disabled={busy} onClick={()=>change(view==="signin"?"register":"signin")}>{view==="signin"?t("إنشاء حساب","Create account"):t("سجّل دخولك","Log in")}</button></div>
     {view!=="invite"&&<button className="web-auth-invite" type="button" disabled={busy} onClick={()=>change("invite")}><TicketCheck size={19}/>{t("وصلك دعوة؟ قبول الدعوة","Got an invitation? Accept invite")}</button>}
@@ -59,3 +64,4 @@ function AuthField({label,icon,action,hint,...props}:InputHTMLAttributes<HTMLInp
  return <label className="web-auth-field"><span>{label}</span><span className="web-auth-input">{icon}<input {...props}/>{action}</span>{hint&&<small>{hint}</small>}</label>;
 }
 function ForgotHelp({english}:{english:boolean}){const [phone,setPhone]=useState<string|null>(null),[error,setError]=useState("");return <details className="web-auth-recovery" onToggle={e=>{if(e.currentTarget.open&&!phone)request<{whatsapp:string|null}>("/api/support-contact").then(r=>setPhone(r.whatsapp)).catch(e=>setError(message(e)));}}><summary>{english?"Forgot password?":"نسيت كلمة السر؟"}</summary><div><p>{english?"Contact platform support to verify your identity and receive a temporary recovery link.":"تواصل مع إدارة المنصة للتحقق من هويتك واستلام رابط استعادة مؤقت."}</p>{phone&&<a href={"https://wa.me/"+phone.replace("+","")} target="_blank" rel="noopener noreferrer">{english?"Contact support":"تواصل مع الدعم"}</a>}{error&&<p role="alert">{english?"Unable to load support. Try again.":error}</p>}</div></details>;}
+
