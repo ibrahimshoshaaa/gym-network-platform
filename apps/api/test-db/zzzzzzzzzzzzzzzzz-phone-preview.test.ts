@@ -7,7 +7,7 @@ import {loginTrainee} from '../src/auth/trainees.js';
 import {authenticate} from '../src/auth/sessions.js';
 const url=new URL(process.env.DATABASE_URL??'');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw Error('Disposable local test database required');
-const previewPhones=['+201055550123','+201155550124'];
+const previewPhones=['+201055550123','+201155550124'] as const;
 const db=new PrismaClient();after(()=>db.$disconnect());
 test('phone OTP preview signs up, logs in and resets only dedicated test identities without touching money',async()=>{
  const previous={mode:process.env.GYMBANK_OTP_MODE,vercel:process.env.VERCEL_ENV,node:process.env.NODE_ENV};

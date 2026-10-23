@@ -104,7 +104,7 @@ void main() {
     },
   );
   testWidgets(
-    'auth language preserves entries and persists; social buttons never authenticate',
+    'auth language preserves phone entries and persists; social sign-in is absent',
     (t) async {
       t.view.physicalSize = const Size(320, 740);
       t.view.devicePixelRatio = 1;
@@ -119,14 +119,14 @@ void main() {
       await t.pumpAndSettle();
       await t.enterText(
         find.byKey(const ValueKey('auth.identifier')),
-        'member@example.test',
+        '01055550915',
       );
       await t.ensureVisible(find.byKey(const ValueKey('auth.language')));
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('auth.language')));
       await t.pumpAndSettle();
       expect(find.text('Welcome back'), findsOneWidget);
-      expect(find.text('member@example.test'), findsOneWidget);
+      expect(find.text('01055550915'), findsOneWidget);
       expect(await api.storage.read('auth.language'), 'en');
       expect(
         Directionality.of(
@@ -142,21 +142,9 @@ void main() {
           await t.pumpAndSettle();
           expect(find.text('Email address'), findsOneWidget);
         }
-        for (final provider in ['Google', 'Apple']) {
-          final button = find.byKey(ValueKey('auth.social.$provider'));
-          await t.ensureVisible(button);
-          await t.pumpAndSettle();
-          await t.tap(button);
-          await t.pumpAndSettle();
-          expect(
-            find.text(
-              '$provider sign-in and sign-up are coming soon. Please use email for now.',
-            ),
-            findsOneWidget,
-          );
-          await t.pump(const Duration(seconds: 5));
-          await t.pumpAndSettle();
-        }
+        expect(find.byKey(const ValueKey('auth.social.Google')), findsNothing);
+        expect(find.byKey(const ValueKey('auth.social.Apple')), findsNothing);
+        expect(find.text('Or continue with'), findsNothing);
       }
       expect(calls, 0);
       expect(api.token, isNull);
@@ -282,3 +270,4 @@ void main() {
     },
   );
 }
+
