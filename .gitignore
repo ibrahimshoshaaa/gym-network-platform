@@ -21,3 +21,9 @@ coverage/
 *.keystore
 **/key.properties
 **/gymbank-signing-backup/
+
+# Generated iOS host and Apple signing material.
+apps/mobile/ios/
+*.p8
+*.p12
+*.mobileprovision
