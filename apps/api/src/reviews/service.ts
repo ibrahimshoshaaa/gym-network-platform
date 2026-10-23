@@ -16,6 +16,7 @@ import { audit } from "../gyms/service.js";
 import { parse } from "../gyms/validation.js";
 import { postInTransaction, serializable } from "../ledger/service.js";
 import { uuid, visitView } from "../operations/service.js";
+import {lockGymCharges,restoreCollectedFees} from "../charges/service.js";
 type Tx = Prisma.TransactionClient;
 const reason = z.string().trim().min(5).max(1000);
 export const cancellationSchema = z.object({ reason }).strict();
@@ -83,9 +84,10 @@ async function reverseVisit(
       postings: { include: { account: true } },
     },
   });
-  const wallet = originalPoints.postings.find(
-    (p) => p.account.type === "TRAINEE_WALLET",
-  );
+  const booking = await tx.booking.findUnique({where:{visitId:v.id}});
+  if(booking)await tx.$queryRaw`SELECT id FROM "Booking" WHERE id=${booking.id}::uuid FOR UPDATE`;
+  const source = originalPoints.postings.find(p=>p.account.type===(booking?'BOOKING_HOLD':'TRAINEE_WALLET'));
+  const wallet = booking ? await tx.pointAccount.findUnique({where:{id:booking.walletId}}) : source?.account;
   const available = originalMoney.postings.find(
     (p) => p.account.type === "GYM_AVAILABLE",
   );
@@ -101,28 +103,30 @@ async function reverseVisit(
     originalMoney.postings.length !== 2 ||
     originalPoints.reversedBy ||
     originalMoney.reversedBy ||
-    wallet?.delta !== -v.pointsCharged ||
+    source?.delta !== -v.pointsCharged ||
     redeemed?.delta !== v.pointsCharged ||
     available?.deltaPiasters !== v.settlementPiasters ||
     offset?.deltaPiasters !== -v.settlementPiasters ||
     available?.account.gymId !== host.gymId ||
     available?.account.branchId !== null ||
     !originalPoints.posted ||
-    originalPoints.kind !== "VISIT" ||
+    originalPoints.kind !== (booking?"BOOKING_SETTLE":"VISIT") ||
     !originalMoney.posted ||
     originalMoney.kind !== "VISIT_SETTLEMENT" ||
     !wallet ||
-    wallet.account.ownerUserId !== v.traineeId ||
+    wallet.type !== 'TRAINEE_WALLET' || wallet.ownerUserId !== v.traineeId ||
+    (booking && (booking.status!=='ATTENDED'||booking.traineeId!==v.traineeId||booking.branchId!==v.branchId||booking.points!==v.pointsCharged||booking.gymPoints!==v.pointsCharged||booking.resolutionTransactionId!==originalPoints.id||booking.moneyTransactionId!==originalMoney.id||booking.holdAccountId!==source?.accountId||source?.account.ownerUserId!==v.traineeId)) ||
     !available
   )
     throw new DomainError("SETTLEMENT_REVIEW_REQUIRED");
   // A reversal is not a new top-up: never renew or revive expired points.
-  if (!wallet.account.expiresAt || wallet.account.expiresAt <= new Date())
+  if (!wallet.expiresAt || wallet.expiresAt <= new Date())
     throw new DomainError("WALLET_EXPIRY_REVIEW_REQUIRED");
-  // Aggregated available cash does not prove this particular visit was unpaid.
-  // Until payouts allocate settlement lots, any intervening non-reversal debit
-  // requires an explicit settlement review, even if later visits refilled cash.
+  await lockGymCharges(tx,host.gymId);
+  // Payouts and unknown adjustments still require settlement review. Verified
+  // service collections can be restored atomically without touching payouts.
   if(await tx.financialHold.count({where:{visitId:v.id,state:"OPEN"}}))throw new DomainError("SETTLEMENT_REVIEW_REQUIRED");
+  const collections=await tx.gymChargeCollection.findMany({where:{gymId:host.gymId},select:{moneyTransactionId:true}});
   const outflow = await tx.moneyPosting.findFirst({
     where: {
       accountId: available.accountId,
@@ -130,11 +134,16 @@ async function reverseVisit(
       transaction: {
         createdAt: { gte: originalMoney.createdAt },
         kind: { notIn: ["VISIT_REVERSAL","DISPUTE_HOLD","DISPUTE_RELEASE"] },
+        id: {notIn:collections.map(c=>c.moneyTransactionId)},
       },
     },
   });
-  if (outflow || available.account.balancePiasters < v.settlementPiasters)
-    throw new DomainError("SETTLEMENT_REVIEW_REQUIRED");
+  if (outflow)throw new DomainError("SETTLEMENT_REVIEW_REQUIRED");
+  // Rebuild fee attribution even when later visits refilled available cash;
+  // otherwise a cancelled branch could keep fees allocated to lost earnings.
+  await restoreCollectedFees(tx,{gymId:host.gymId,visitId:v.id,actorId,since:originalMoney.createdAt});
+  const cash=await tx.moneyAccount.findUniqueOrThrow({where:{id:available.accountId}});
+  if(cash.balancePiasters<v.settlementPiasters)throw new DomainError('SETTLEMENT_REVIEW_REQUIRED');
   const id = randomUUID();
   const posted = await postInTransaction(tx, {
     actorId,
@@ -158,6 +167,12 @@ async function reverseVisit(
       })),
     },
   });
+  if(booking){
+    // The exact reversal above returns points to escrow. Release only this
+    // booking's amount to the original wallet, leaving other bookings held.
+    await postInTransaction(tx,{actorId,idempotencyKey:`visit-booking-refund:${v.id}`,referenceId:id,reason,points:{kind:'BOOKING_SETTLE',entries:[{accountId:booking.holdAccountId,delta:-BigInt(v.pointsCharged)},{accountId:wallet.id,delta:BigInt(v.pointsCharged)}]}});
+    await tx.booking.update({where:{id:booking.id},data:{status:'CANCELLED',traineePoints:v.pointsCharged,gymPoints:0,platformPoints:0,decisionReason:reason,decidedById:actorId,decidedAt:new Date()}});
+  }
   const cancellation = await tx.visitCancellation.create({
     data: {
       id,
@@ -389,3 +404,4 @@ export async function decideReview(
     return reviewView(updated);
   });
 }
+

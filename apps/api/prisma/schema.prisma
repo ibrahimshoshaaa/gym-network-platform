@@ -1161,5 +1161,17 @@ model GymChargeCollection {
  moneyTransactionId String @unique @db.Uuid
  allocations Json
  createdAt DateTime @default(now())
+ reversal GymChargeCollectionReversal?
  @@index([gymId,createdAt])
 }
+
+model GymChargeCollectionReversal {
+ id String @id @default(uuid()) @db.Uuid
+ collectionId String @unique @db.Uuid
+ collection GymChargeCollection @relation(fields:[collectionId],references:[id],onDelete:Restrict)
+ visitId String @db.Uuid
+ moneyTransactionId String @unique @db.Uuid
+ createdAt DateTime @default(now())
+ @@index([visitId])
+}
+
