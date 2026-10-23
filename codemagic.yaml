@@ -553,3 +553,75 @@ workflows:
           pnpm --filter @gym/web typecheck
           pnpm --filter @gym/web test
 
+
+  gymbank-ios-check:
+    name: GymBank - iOS simulator check
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.7
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Prepare iOS host
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          bash tool/prepare_ios_host.sh
+      - name: Analyze and test
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          flutter analyze lib test --no-fatal-infos
+          flutter test
+      - name: Build simulator application (no Apple account needed)
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          flutter build ios --simulator --debug
+          flutter build ios --release --no-codesign
+          python3 tool/verify_ios.py
+          python3 tool/ios_smoke.py
+          ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/gymbank-simulator.zip
+    artifacts:
+      - apps/mobile/build/ios/gymbank-simulator.zip
+      - apps/mobile/build/ios/verification/**
+
+  gymbank-ios:
+    name: GymBank - signed iOS IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.7
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: net.shotech.gymbank
+    scripts:
+      - name: Prepare iOS host
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          bash tool/prepare_ios_host.sh
+      - name: Analyze and test
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          flutter analyze lib test --no-fatal-infos
+          flutter test
+      - name: Apply uploaded Apple signing identities
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          xcode-project use-profiles
+      - name: Build signed App Store archive
+        script: |
+          set -euo pipefail
+          cd apps/mobile
+          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          flutter build ipa --release --build-name 0.2.7 --build-number "$build_number" --export-options-plist="$HOME/export_options.plist"
+    artifacts:
+      - apps/mobile/build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log

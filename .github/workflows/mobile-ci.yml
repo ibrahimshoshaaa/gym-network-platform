@@ -82,3 +82,42 @@ jobs:
           path: apps/mobile/build/app/outputs/flutter-apk/*.apk
           retention-days: 30
 
+
+  ios-simulator:
+    name: Verify iOS simulator and device Release
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - name: Generate and configure iOS host
+        working-directory: apps/mobile
+        run: bash tool/prepare_ios_host.sh
+      - name: Build iOS simulator application
+        working-directory: apps/mobile
+        run: flutter build ios --simulator --debug
+      - name: Compile unsigned device Release
+        working-directory: apps/mobile
+        run: |
+          flutter build ios --release --no-codesign
+          python3 tool/verify_ios.py
+      - name: Launch on iPhone simulator
+        working-directory: apps/mobile
+        run: python3 tool/ios_smoke.py
+      - name: Package simulator application
+        working-directory: apps/mobile
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/gymbank-simulator.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gymbank-ios-simulator
+          path: |
+            apps/mobile/build/ios/gymbank-simulator.zip
+            apps/mobile/build/ios/verification/
+          retention-days: 7

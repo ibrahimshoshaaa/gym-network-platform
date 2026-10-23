@@ -55,10 +55,10 @@ class _AccountScreenState extends State<AccountScreen> {
             ])),
           ]),
           const SizedBox(height:16),
-          Text('${user['email']}',textDirection:TextDirection.ltr,
+          if ('${user['email'] ?? ''}'.trim().isNotEmpty) Text('${user['email']}',textDirection:TextDirection.ltr,
             style:const TextStyle(color:Colors.white70,fontSize:12)),
           const SizedBox(height:4),
-          Text('${user['phone']}',textDirection:TextDirection.ltr,
+          if ('${user['phone'] ?? ''}'.trim().isNotEmpty) Text('${user['phone']}',textDirection:TextDirection.ltr,
             style:const TextStyle(color:Colors.white70,fontSize:12)),
         ])),
       const SectionTitle('بياناتك والأمان'),
@@ -91,7 +91,7 @@ class _AccountScreenState extends State<AccountScreen> {
         style:OutlinedButton.styleFrom(foregroundColor:const Color(0xffa33740),
           minimumSize:const Size(double.infinity,48))),
       const SizedBox(height:18),
-      const Text('GYMBANK · 0.2.6\nShoTech Solutions',
+      const Text('GYMBANK · 0.2.7\nShoTech Solutions',
         textAlign:TextAlign.center,style:TextStyle(color:muted,fontSize:10)),
     ]);
   }
@@ -141,12 +141,12 @@ class _AccountScreenState extends State<AccountScreen> {
               '${widget.api.user!['displayName']}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            Text(
+            if ('${widget.api.user!['email'] ?? ''}'.trim().isNotEmpty) Text(
               '${widget.api.user!['email']}',
               textDirection: TextDirection.ltr,
               style: const TextStyle(color: muted, fontSize: 12),
             ),
-            Text(
+            if ('${widget.api.user!['phone'] ?? ''}'.trim().isNotEmpty) Text(
               '${widget.api.user!['phone']}',
               textDirection: TextDirection.ltr,
               style: const TextStyle(color: muted, fontSize: 12),
@@ -210,7 +210,7 @@ class _AccountScreenState extends State<AccountScreen> {
       ),
       const SizedBox(height: 26),
       const Text(
-        'GYMBANK\nنسخة 0.2.6 · ShoTech Solutions',
+        'GYMBANK\nنسخة 0.2.7 · ShoTech Solutions',
         textAlign: TextAlign.center,
         style: TextStyle(color: muted, fontSize: 11),
       ),
