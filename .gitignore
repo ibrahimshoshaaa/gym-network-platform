@@ -27,3 +27,5 @@ apps/mobile/ios/
 *.p8
 *.p12
 *.mobileprovision
+
+__pycache__/

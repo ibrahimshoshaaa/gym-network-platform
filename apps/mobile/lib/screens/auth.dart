@@ -117,7 +117,7 @@ class _AuthScreenState extends State<AuthScreen> {
               'password': fields['password']!.text,
             };
       if(register&&phoneOtpPreview){
-        await requestPhoneCode(context,widget.api,fields['phone']!.text,'REGISTER',onConfirm:(proof)async{
+        await requestPhoneCode(context,widget.api,fields['phone']!.text,'REGISTER',english:english,onConfirm:(proof)async{
           await widget.api.authenticate('auth/phone/register',<String,dynamic>{
             'displayName':body['displayName'],'phone':body['phone'],'password':body['password'],...proof,
             'accountType':owner?'owner':'trainee',
@@ -495,8 +495,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 if(phoneOtpPreview)...[
-                                  const Text('سجّل برقم موبايلك. تجربة بدون SMS — الكود 123456 بيتملّى تلقائيًا.',style:TextStyle(color:muted,fontSize:12)),
-                                  if(!register)TextButton(onPressed:busy?null:()=>open(context,PhonePasswordReset(api:widget.api)),child:const Text('استرجاع كلمة السر بكود الموبايل — تجربة')),
+                                  Text(tr('سجّل برقم موبايلك. تجربة بدون SMS — الكود 123456 بيتملّى تلقائيًا.','Register with your mobile number. No SMS is sent in test mode; code 123456 is autofilled.'),style:TextStyle(color:muted,fontSize:12)),
+                                  if(!register)TextButton(onPressed:busy?null:()=>open(context,PhonePasswordReset(api:widget.api,english:english)),child:Text(tr('استرجاع كلمة السر بكود الموبايل — تجربة','Reset password by mobile code — test'))),
                                   const SizedBox(height:12),
                                 ],
                                 if (register) ...[

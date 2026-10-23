@@ -7,11 +7,15 @@ database changes are required for this foundation.
 ## First compile (no Apple credentials)
 
 On this branch choose `gymbank-ios-check` in Codemagic. The GitHub mobile CI also
-compiles an iOS simulator application on macOS. Its ZIP runs in Apple's Simulator
+compiles and launches an iOS simulator application on macOS, captures a startup
+screenshot and compiles an unsigned arm64 device Release. Verification reports
+include the built version, localized permission resources and bundled dependency
+privacy manifests. An unsigned Release is not installable on a real iPhone. Its ZIP runs in Apple's Simulator
 on a Mac; it cannot be installed on an iPhone and is not an IPA.
 
 The generated host targets iOS 15.5+, uses bundle ID `net.shotech.gymbank`, includes
-GymBank's opaque icon, camera/photo/location descriptions, and a Keychain
+GymBank's opaque icon, a dark branded launch screen, Arabic/English
+camera/photo/location descriptions, and a Keychain
 entitlements file. Location access is foreground only. CocoaPods is used
 explicitly for the locked native plugins. Android generation is unaffected.
 
@@ -60,3 +64,24 @@ this build foundation.
 References:
 - https://docs.flutter.dev/deployment/ios
 - https://docs.codemagic.io/yaml-code-signing/signing-ios/
+
+## Remaining public-release work
+
+Successful compilation is not App Store approval. These are confirmed open items:
+
+- Apple Developer enrollment, registered app, signing identities and real-device
+  acceptance. None can be completed against an account that does not exist yet.
+- Real SMS verification to replace the explicitly approved fixed-code trial.
+- A public privacy policy with the project owner's controller/contact details,
+  retention decisions and an in-app entry. Those owner decisions are not present
+  in the repository; no placeholder policy or invented retention period is added.
+- A complete in-app account-deletion lifecycle, including financial settlement,
+  personal-data erasure and user-content cleanup. Generic support tickets and
+  disabling an account do not constitute implemented deletion.
+- Marketplace user-blocking and moderation readiness, store metadata/screenshots,
+  App Privacy declarations, and export-compliance answers supported by the signed
+  archive. Existing listing reporting must not be mistaken for user blocking.
+
+References for account deletion and app review:
+- https://developer.apple.com/support/offering-account-deletion-in-your-app/
+- https://developer.apple.com/app-store/review/guidelines/
