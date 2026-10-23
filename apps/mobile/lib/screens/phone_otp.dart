@@ -4,8 +4,6 @@ import '../core/api.dart';
 import '../core/ui.dart';
 
 const phoneOtpPreview = bool.fromEnvironment('GYM_PHONE_OTP_PREVIEW');
-const testTraineePhone = '+15555550123';
-const testOwnerPhone = '+15555550124';
 
 Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm}) async {
  final challenge=Map<String,dynamic>.from(await api.request('auth/phone/challenge',method:'POST',body:{'phone':phone,'purpose':purpose}));
@@ -36,7 +34,7 @@ class PhonePasswordReset extends StatefulWidget{
  @override State<PhonePasswordReset> createState()=>_PhonePasswordResetState();
 }
 class _PhonePasswordResetState extends State<PhonePasswordReset>{
- final phone=TextEditingController(text:testTraineePhone),password=TextEditingController();bool busy=false,done=false;Object? error;
+ final phone=TextEditingController(),password=TextEditingController();bool busy=false,done=false;Object? error;
  @override void dispose(){phone.dispose();password.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>Screen(title:'استرجاع كلمة السر بالموبايل',child:ListView(padding:const EdgeInsets.all(22),children:[
   const Text('تجربة بدون SMS، لحسابات الموبايل التجريبية فقط. الحسابات القديمة تُسترجع من خلال الدعم.'),const SizedBox(height:16),

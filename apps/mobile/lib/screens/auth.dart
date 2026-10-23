@@ -42,7 +42,6 @@ class _AuthScreenState extends State<AuthScreen> {
   void initState() {
     super.initState();
     restoreLanguage();
-    if(phoneOtpPreview)fields['phone']!.text=testTraineePhone;
   }
 
   Future<void> restoreLanguage() async {
@@ -207,9 +206,9 @@ class _AuthScreenState extends State<AuthScreen> {
               prefixIcon: Icon(
                 password
                     ? Icons.lock_outline_rounded
-                    : k == 'identifier' || k == 'email'
+                    : k == 'email'
                     ? Icons.mail_outline_rounded
-                    : k == 'phone'
+                    : k == 'phone' || k == 'identifier'
                     ? Icons.phone_iphone_rounded
                     : k == 'displayName'
                     ? Icons.person_outline_rounded
@@ -259,28 +258,13 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!english) return error.toString();
     return switch (error is ApiFailure ? (error as ApiFailure).code : '') {
       'INVALID_CREDENTIALS' =>
-        'Your email, mobile number or password is incorrect.',
+        'Your mobile number or password is incorrect.',
       'ACCOUNT_UNAVAILABLE' =>
-        'This email or mobile number is already registered. Try signing in.',
+        'This mobile number is already registered. Try signing in.',
       'INVALID_INPUT' => 'Check the required fields and try again.',
       'RATE_LIMITED' => 'Too many attempts. Please wait and try again.',
       _ => 'Unable to connect right now. Please try again.',
     };
-  }
-
-  void social(BuildContext context, String provider) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            tr(
-              'الدخول والتسجيل باستخدام $provider هيتاح قريبًا. استخدم الإيميل حاليًا.',
-              '$provider sign-in and sign-up are coming soon. Please use email for now.',
-            ),
-          ),
-        ),
-      );
   }
 
   @override
@@ -511,7 +495,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 if(phoneOtpPreview)...[
-                                  const Text('تجربة الموبايل بدون SMS — الكود 123456. استخدم +15555550123 للمتدرب أو +15555550124 لصاحب الجيم.',style:TextStyle(color:muted,fontSize:12)),
+                                  const Text('سجّل برقم موبايلك. تجربة بدون SMS — الكود 123456 بيتملّى تلقائيًا.',style:TextStyle(color:muted,fontSize:12)),
                                   if(!register)TextButton(onPressed:busy?null:()=>open(context,PhonePasswordReset(api:widget.api)),child:const Text('استرجاع كلمة السر بكود الموبايل — تجربة')),
                                   const SizedBox(height:12),
                                 ],
@@ -584,10 +568,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                         ] else
                                           field(
                                             'identifier',
-                                            'الإيميل أو رقم الموبايل',
-                                            'Email or mobile number',
-                                            keyboard:
-                                                TextInputType.emailAddress,
+                                            'رقم الموبايل',
+                                            'Mobile number',
+                                            keyboard: TextInputType.phone,
                                           ),
                                         field(
                                           'password',
@@ -738,52 +721,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                       ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 25),
-                                Row(
-                                  children: [
-                                    const Expanded(child: Divider()),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      child: Text(
-                                        tr(
-                                          'أو كمّل باستخدام',
-                                          'Or continue with',
-                                        ),
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: muted,
-                                        ),
-                                      ),
-                                    ),
-                                    const Expanded(child: Divider()),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _SocialButton(
-                                        provider: 'Google',
-                                        soon: tr('قريبًا', 'Soon'),
-                                        onPressed: busy
-                                            ? null
-                                            : () => social(context, 'Google'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _SocialButton(
-                                        provider: 'Apple',
-                                        soon: tr('قريبًا', 'Soon'),
-                                        onPressed: busy
-                                            ? null
-                                            : () => social(context, 'Apple'),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                                 const SizedBox(height: 20),
                                 Wrap(
@@ -950,55 +887,6 @@ class _RoleChoice extends StatelessWidget {
           ),
         ),
       ),
-    ),
-  );
-}
-
-class _SocialButton extends StatelessWidget {
-  final String provider, soon;
-  final VoidCallback? onPressed;
-  const _SocialButton({
-    required this.provider,
-    required this.soon,
-    required this.onPressed,
-  });
-  @override
-  Widget build(BuildContext context) => OutlinedButton(
-    key: ValueKey('auth.social.$provider'),
-    onPressed: onPressed,
-    style: OutlinedButton.styleFrom(
-      foregroundColor: ink,
-      backgroundColor: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-      side: const BorderSide(color: Color(0xffe1e6e8)),
-      shape: const StadiumBorder(),
-    ),
-    child: Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          textDirection: TextDirection.ltr,
-          children: [
-            if (provider == 'Apple')
-              const Icon(Icons.apple, size: 23, color: Colors.black)
-            else
-              Image.asset(
-                'assets/brand/google-g.png',
-                width: 20,
-                height: 20,
-                fit: BoxFit.contain,
-                excludeFromSemantics: true,
-              ),
-            const SizedBox(width: 8),
-            Text(
-              provider,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            ),
-          ],
-        ),
-        const SizedBox(height: 2),
-        Text(soon, style: const TextStyle(fontSize: 10, color: muted)),
-      ],
     ),
   );
 }

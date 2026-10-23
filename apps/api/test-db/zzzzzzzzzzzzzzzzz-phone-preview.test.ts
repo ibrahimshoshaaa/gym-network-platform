@@ -2,11 +2,12 @@ import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {PrismaClient} from '@prisma/client';
 import {buildApp} from '../src/app.js';
-import {requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword,previewPhones} from '../src/auth/phone-preview.js';
+import {requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword} from '../src/auth/phone-preview.js';
 import {loginTrainee} from '../src/auth/trainees.js';
 import {authenticate} from '../src/auth/sessions.js';
 const url=new URL(process.env.DATABASE_URL??'');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw Error('Disposable local test database required');
+const previewPhones=['+201055550123','+201155550124'];
 const db=new PrismaClient();after(()=>db.$disconnect());
 test('phone OTP preview signs up, logs in and resets only dedicated test identities without touching money',async()=>{
  const previous={mode:process.env.GYMBANK_OTP_MODE,vercel:process.env.VERCEL_ENV,node:process.env.NODE_ENV};
@@ -18,8 +19,8 @@ test('phone OTP preview signs up, logs in and resets only dedicated test identit
   await assert.rejects(requestPhoneChallenge(db,{phone,purpose:'REGISTER'}),/PHONE_OTP_DISABLED/);
   process.env.GYMBANK_OTP_MODE='test';
   assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().testMode,true);
-  await assert.rejects(requestPhoneChallenge(db,{phone:'+201000000001',purpose:'REGISTER'}),/PHONE_OTP_TEST_NUMBER/);
-  const challenge=await requestPhoneChallenge(db,{phone,purpose:'REGISTER'});
+  await assert.rejects(requestPhoneChallenge(db,{phone:'not-a-phone',purpose:'REGISTER'}),/INVALID_INPUT/);
+  const challenge=await requestPhoneChallenge(db,{phone:'01055550123',purpose:'REGISTER'});
   await assert.rejects(requestPhoneChallenge(db,{phone,purpose:'REGISTER'}),/PHONE_OTP_WAIT/);
   const body={phone,challengeId:challenge.challengeId,code:'123456',displayName:'Synthetic phone trainee',password};
   const wrong={...body,code:'000000'};
@@ -39,7 +40,7 @@ test('phone OTP preview signs up, logs in and resets only dedicated test identit
   assert.equal((await loginTrainee(db,{identifier:phone,password:newPassword})).user.id,result.user.id);
   assert.equal(await db.pointTransaction.count({where:{actorId:result.user.id}}),0);
   assert.equal(await db.moneyTransaction.count({where:{actorId:result.user.id}}),0);
-  // A legacy account, even on a reserved preview number, has no test marker.
+  // An existing account on a normal phone has no test marker and cannot be recovered by a fixed code.
   const legacy=await db.user.create({data:{phoneE164:previewPhones[1],displayName:'Synthetic legacy',role:'TRAINEE'}});
   const legacyReset=await requestPhoneChallenge(db,{phone:previewPhones[1],purpose:'RESET'});
   await assert.rejects(resetPhonePreviewPassword(db,{phone:previewPhones[1],challengeId:legacyReset.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);

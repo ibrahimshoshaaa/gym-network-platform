@@ -14,7 +14,7 @@ void main() {
     Json? accepted;
     await t.pumpWidget(page(Builder(builder: (context) => TextButton(
       onPressed: () async {
-        accepted = await requestPhoneCode(context, api, testTraineePhone, 'REGISTER', onConfirm: (proof) async {
+        accepted = await requestPhoneCode(context, api, '+201055550123', 'REGISTER', onConfirm: (proof) async {
           confirmations++;
           if (proof['code'] != '123456') throw const ApiFailure('PHONE_OTP_INVALID');
         });
