@@ -436,6 +436,8 @@ workflows:
     environment:
       flutter: 3.47.7
       java: 17
+      vars:
+        GYMBANK_PHONE_PREVIEW_ORIGIN: "https://gym-network-platform-git-codex-phone-otp-preview-shosha4.vercel.app"
       groups:
         - gymbank_android_signing
     scripts:
