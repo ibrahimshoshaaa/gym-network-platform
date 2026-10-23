@@ -31,7 +31,8 @@ void main() {
     expect(t.takeException(), isNull);
     t.view.viewInsets = const FakeViewPadding();
     await t.pumpAndSettle();
-    await t.ensureVisible(find.byKey(const ValueKey('auth.language')));
+    await t.scrollUntilVisible(find.byKey(const ValueKey('auth.language')), -250,
+        scrollable: find.byType(Scrollable).first);
     await t.tap(find.byKey(const ValueKey('auth.language')));
     await t.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);
