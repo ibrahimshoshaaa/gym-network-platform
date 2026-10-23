@@ -1175,3 +1175,22 @@ model GymChargeCollectionReversal {
  @@index([visitId])
 }
 
+model PhoneOtpChallenge {
+ id String @id @default(uuid()) @db.Uuid
+ phone String
+ purpose String
+ mode String
+ codeHash String
+ attempts Int @default(0)
+ expiresAt DateTime
+ consumedAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([phone,purpose,createdAt])
+}
+
+model PhoneTestIdentity {
+ userId String @id @db.Uuid
+ phone String @unique
+ createdAt DateTime @default(now())
+}
+

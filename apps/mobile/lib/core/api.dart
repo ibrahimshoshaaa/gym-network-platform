@@ -37,6 +37,9 @@ String? piasters(String value) {
 }
 
 const messages = {
+  'PHONE_OTP_DISABLED': 'تجربة OTP مش مفعّلة على السيرفر ده. افتح نسخة التجربة المخصصة.',
+  'PHONE_OTP_WAIT': 'انتظر دقيقة قبل طلب كود جديد.',
+  'PHONE_OTP_INVALID': 'الكود غير صحيح أو انتهت صلاحيته أو استُخدم. اطلب كود جديد؛ الاسترجاع لحسابات التجربة فقط.',
   'BRANCH_QR_REQUIRED': 'تأكيد حضور هذا الحجز يتم بمسح كود الفرع من تطبيق المتدرب.',
   'QR_WRONG_BRANCH': 'الكود لفرع مختلف عن الفرع المحجوز.',
   'BRANCH_LOCATION_REQUIRED': 'الفرع لم يحدد موقعه بعد. تواصل مع الإدارة.',
@@ -366,4 +369,5 @@ String statusName(dynamic s) =>
       'CLOSED': 'مغلق',
     }['$s'] ??
     '$s';
+
 

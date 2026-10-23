@@ -1783,17 +1783,16 @@ test(
           await publicPage.setViewportSize({width:320,height:900});
           await publicPage.getByRole('button',{name:'English',exact:true}).click();
           await expect(publicPage.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
-          await publicPage.getByLabel('Email or mobile number',{exact:true}).fill(webOwnerUser.email);
-          await publicPage.getByRole('button',{name:/Google/}).click();
-          await expect(publicPage.getByRole('status')).toContainText('coming soon');
-          await expect(publicPage.getByLabel('Email or mobile number',{exact:true})).toHaveValue(webOwnerUser.email);
-          const googleMark=publicPage.locator('.web-auth-social img');await expect(googleMark).toBeVisible();assert.equal(await googleMark.evaluate(img=>img.complete&&img.naturalWidth>0),true);
+          await publicPage.getByLabel('Mobile number',{exact:true}).fill(webOwnerUser.phone);
+          await expect(publicPage.getByRole('button',{name:/Google|Apple/})).toHaveCount(0);
+          await expect(publicPage.getByLabel('Mobile number',{exact:true})).toHaveValue(webOwnerUser.phone);
+
           await publicPage.getByRole('button',{name:'Sign up',exact:true}).click();
           await publicPage.getByRole('button',{name:/Gym owner/}).click();
           await expect(publicPage.getByLabel('Gym name',{exact:true})).toBeVisible();
           assert.equal(await publicPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true);
           await publicPage.reload();await expect(publicPage.getByRole('heading',{name:'Welcome back',exact:true})).toBeVisible();
-          await publicPage.getByLabel('Email or mobile number',{exact:true}).fill(webOwnerUser.email);
+          await publicPage.getByLabel('Mobile number',{exact:true}).fill(webOwnerUser.phone);
           await publicPage.getByLabel('Password',{exact:true}).fill(password);
           await expect(publicPage.getByRole('checkbox',{name:'Remember me'})).not.toBeChecked();
           await publicPage.getByRole('button',{name:'Log in',exact:true}).last().click();
@@ -2100,6 +2099,7 @@ test(
     }
   },
 );
+
 
 
 
