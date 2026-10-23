@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
 
-const phoneOtpPreview = bool.fromEnvironment('GYM_PHONE_OTP_PREVIEW');
+const phoneOtpPreview = bool.fromEnvironment('GYM_PHONE_OTP_PREVIEW', defaultValue: true);
 
 Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm}) async {
  final challenge=Map<String,dynamic>.from(await api.request('auth/phone/challenge',method:'POST',body:{'phone':phone,'purpose':purpose}));

@@ -10,11 +10,11 @@ if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.t
 const previewPhones=['+201055550123','+201155550124'] as const;
 const db=new PrismaClient();after(()=>db.$disconnect());
 test('phone OTP preview signs up, logs in and resets only dedicated test identities without touching money',async()=>{
- const previous={mode:process.env.GYMBANK_OTP_MODE,vercel:process.env.VERCEL_ENV,node:process.env.NODE_ENV};
+ const previous={mode:process.env.GYMBANK_OTP_MODE,vercel:process.env.VERCEL_ENV,node:process.env.NODE_ENV,productionOptIn:process.env.GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION};
  const app=buildApp(db),phone=previewPhones[0],password='Synthetic initial phone password';
  const set=(key:string,value:string|undefined)=>{if(value===undefined)delete process.env[key];else process.env[key]=value;};
  try{
-  delete process.env.GYMBANK_OTP_MODE;process.env.NODE_ENV='test';delete process.env.VERCEL_ENV;
+  delete process.env.GYMBANK_OTP_MODE;delete process.env.GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION;process.env.NODE_ENV='test';delete process.env.VERCEL_ENV;
   assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,false);
   await assert.rejects(requestPhoneChallenge(db,{phone,purpose:'REGISTER'}),/PHONE_OTP_DISABLED/);
   process.env.GYMBANK_OTP_MODE='test';
@@ -62,5 +62,15 @@ test('phone OTP preview signs up, logs in and resets only dedicated test identit
   process.env.NODE_ENV='production';process.env.VERCEL_ENV='production';
   assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,false);
   assert.equal((await app.inject({method:'POST',url:'/auth/phone/reset',payload:{phone,challengeId:expired.challengeId,code:'123456',newPassword}})).statusCode,503);
- }finally{set('GYMBANK_OTP_MODE',previous.mode);set('VERCEL_ENV',previous.vercel);set('NODE_ENV',previous.node);await app.close();}
+  process.env.GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION='true';
+  assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,true);
+  const mainPhone='01255550125';
+  const mainChallenge=await requestPhoneChallenge(db,{phone:mainPhone,purpose:'REGISTER'});
+  const mainUser=await registerPhonePreview(db,{phone:mainPhone,challengeId:mainChallenge.challengeId,code:'123456',displayName:'Main phone registration',password});
+  assert.equal(mainUser.user.phone,'+201255550125');assert.equal(mainUser.user.phoneVerified,false);
+  const mainLogin=await loginTrainee(db,{identifier:mainPhone,password});assert.equal(mainLogin.user.id,mainUser.user.id);
+  const mainReset=await requestPhoneChallenge(db,{phone:mainPhone,purpose:'RESET'});
+  await resetPhonePreviewPassword(db,{phone:mainPhone,challengeId:mainReset.challengeId,code:'123456',newPassword});
+  assert.equal(await authenticate(db,'Bearer '+mainLogin.accessToken),null);
+ }finally{set('GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION',previous.productionOptIn);set('GYMBANK_OTP_MODE',previous.mode);set('VERCEL_ENV',previous.vercel);set('NODE_ENV',previous.node);await app.close();}
 });

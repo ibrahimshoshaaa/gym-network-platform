@@ -75,7 +75,7 @@ void main() {
   );
 
   testWidgets(
-    'Arabic login and both registration paths fit narrow mobile and retain email entry',
+    'Arabic login and phone registration for both roles fit narrow mobile',
     (t) async {
       t.view.physicalSize = const Size(320, 740);
       t.view.devicePixelRatio = 1;
@@ -89,7 +89,9 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('auth.mode.link')));
       await t.pumpAndSettle();
-      expect(find.text('الإيميل'), findsOneWidget);
+      expect(find.text('الإيميل'), findsNothing);
+      expect(find.byKey(const ValueKey('auth.phone')), findsOneWidget);
+      expect(t.widget<TextFormField>(find.byKey(const ValueKey('auth.phone'))).controller!.text, isEmpty);
       await t.drag(find.byType(CustomScrollView).first, const Offset(0, 900));
       await t.pumpAndSettle();
       await t.tap(find.text('صاحب جيم'));
@@ -140,7 +142,8 @@ void main() {
           await t.pumpAndSettle();
           await t.tap(find.byKey(const ValueKey('auth.signup.tab')));
           await t.pumpAndSettle();
-          expect(find.text('Email address'), findsOneWidget);
+          expect(find.text('Email address'), findsNothing);
+          expect(find.byKey(const ValueKey('auth.phone')), findsOneWidget);
         }
         expect(find.byKey(const ValueKey('auth.social.Google')), findsNothing);
         expect(find.byKey(const ValueKey('auth.social.Apple')), findsNothing);
