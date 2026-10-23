@@ -81,13 +81,14 @@ test('partial fees collect without a withdrawal, repeated reconciliation is safe
  assert.equal((await db.gymChargeCollection.aggregate({where:{chargeId:charge.id},_sum:{amountPiasters:true}}))._sum.amountPiasters,12000n);
  assert.equal(await db.withdrawalRequest.count({where:{gymId:f.gym.id}}),0);
 });
-test('future fees remain untouched and existing due balances reconcile independently of payout failure',async t=>{
+test('future fees remain untouched and existing due balances reconcile independently of payout failure',async()=>{
  const f=await fixture();await f.fund(2400n);
- const charge=await serializable(db,tx=>recordCharge(tx,{gymId:f.gym.id,branchId:f.branch.id,kind:'PROMOTION',sourceId:randomUUID(),amountPiasters:12000n,description:'إعلان مجدول',dueAt:new Date(Date.now()+3600000)}));
+ const charge=await serializable(db,tx=>recordCharge(tx,{gymId:f.gym.id,branchId:f.branch.id,kind:'PROMOTION',sourceId:randomUUID(),amountPiasters:12000n,description:'إعلان مجدول',dueAt:new Date(Date.now()+2000)}));
  let summary=await settleGymCharges(db,f.gym.id,f.owner.id);
  assert.equal(summary.scheduledPiasters,'12000');assert.equal(summary.grossAvailablePiasters,'2400');
  assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),0);
- t.mock.timers.enable({apis:['Date'],now:Date.now()+3601000});
+ // Let both the application and PostgreSQL clocks reach the immutable dueAt.
+ await new Promise(resolve=>setTimeout(resolve,Math.max(0,charge.dueAt.getTime()-Date.now()+50)));
  summary=await settleGymCharges(db,f.gym.id,f.owner.id);
  assert.equal(summary.debtPiasters,'9600');assert.equal(summary.items[0]!.collectedPiasters,'2400');
  await assert.rejects(requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic owner',amountPiasters:'100'}),/INSUFFICIENT_FUNDS/);
