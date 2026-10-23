@@ -5,14 +5,21 @@ const committed=['REQUESTED','APPROVED','PAID','DISPUTED'] as const;
 export async function branchEntitlements(tx:Prisma.TransactionClient,gymId:string){
  const branches=await tx.branch.findMany({where:{gymId},select:{id:true,name:true},orderBy:{id:'asc'}});
  const earned=await tx.visit.groupBy({by:['branchId'],where:{branch:{gymId},status:{not:'CANCELLED'}},_sum:{settlementPiasters:true}});
+ // No-show resolutions can pay a gym share without creating an attendance
+ // Visit. Read the posted money leg to preserve per-booking rounding exactly.
+ const resolutions=await tx.booking.findMany({where:{branchId:{in:branches.map(b=>b.id)},status:'RESOLVED',visitId:null,moneyTransactionId:{not:null}},select:{branchId:true,moneyTransactionId:true}});
+ const resolutionCredits=await tx.moneyPosting.findMany({where:{transactionId:{in:resolutions.map(b=>b.moneyTransactionId!)},deltaPiasters:{gt:0n},transaction:{posted:true,kind:'VISIT_SETTLEMENT',reversedBy:null},account:{type:'GYM_AVAILABLE',gymId,branchId:null}},select:{transactionId:true,deltaPiasters:true}});
+ const extraByBranch=new Map<string,bigint>();
+ const creditByTransaction=new Map(resolutionCredits.map(p=>[p.transactionId,p.deltaPiasters]));
+ for(const b of resolutions){const amount=creditByTransaction.get(b.moneyTransactionId!)??0n;extraByBranch.set(b.branchId,(extraByBranch.get(b.branchId)??0n)+amount);}
  const holds=await tx.financialHold.findMany({where:{gymId,state:'OPEN'},select:{amountPiasters:true,visitId:true}});
  const heldVisits=await tx.visit.findMany({where:{id:{in:holds.map(h=>h.visitId)}},select:{id:true,branchId:true}});
  const used=await tx.withdrawalAllocation.groupBy({by:['branchId'],where:{withdrawal:{gymId,status:{in:[...committed]}}},_sum:{amountPiasters:true}});
- const fees=await tx.gymChargeCollection.findMany({where:{gymId},select:{allocations:true}});
+ const fees=await tx.gymChargeCollection.findMany({where:{gymId,reversal:null},select:{allocations:true}});
  const feeByBranch=new Map<string,bigint>();
  for(const f of fees)for(const a of f.allocations as {branchId:string|null;amountPiasters:string}[])if(a.branchId)feeByBranch.set(a.branchId,(feeByBranch.get(a.branchId)??0n)+BigInt(a.amountPiasters));
  const legacy=(await tx.withdrawalRequest.aggregate({where:{gymId,allocationVersion:0,status:{in:[...committed]}},_sum:{amountPiasters:true}}))._sum.amountPiasters??0n;
- return branches.map(b=>{const total=earned.find(e=>e.branchId===b.id)?._sum.settlementPiasters??0n,reserved=used.find(e=>e.branchId===b.id)?._sum.amountPiasters??0n,disputed=holds.filter(h=>heldVisits.find(v=>v.id===h.visitId)?.branchId===b.id).reduce((n,h)=>n+h.amountPiasters,0n);const free=total-reserved-disputed-legacy-(feeByBranch.get(b.id)??0n);
+ return branches.map(b=>{const total=(earned.find(e=>e.branchId===b.id)?._sum.settlementPiasters??0n)+(extraByBranch.get(b.id)??0n),reserved=used.find(e=>e.branchId===b.id)?._sum.amountPiasters??0n,disputed=holds.filter(h=>heldVisits.find(v=>v.id===h.visitId)?.branchId===b.id).reduce((n,h)=>n+h.amountPiasters,0n);const free=total-reserved-disputed-legacy-(feeByBranch.get(b.id)??0n);
   return {...b,earned:total,committed:reserved,disputed,available:free>0n?free:0n,legacyReviewRequired:legacy>0n};});
 }
 export async function allocateWithdrawal(tx:Prisma.TransactionClient,gymId:string,amount:bigint,branchId?:string){
@@ -25,3 +32,4 @@ export async function allocateWithdrawal(tx:Prisma.TransactionClient,gymId:strin
  if(remaining>0n)allocations.push({branchId:null,amountPiasters:remaining});
  return allocations;
 }
+

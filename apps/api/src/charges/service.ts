@@ -30,7 +30,7 @@ export async function chargeSummary(tx:Tx,gymId:string){
  const now=new Date();
  const [charges,collections,cash]=await Promise.all([
   tx.gymServiceCharge.findMany({where:{gymId,voidedAt:null},orderBy:[{dueAt:'asc'},{id:'asc'}]}),
-  tx.gymChargeCollection.findMany({where:{gymId},select:{chargeId:true,amountPiasters:true}}),
+  tx.gymChargeCollection.findMany({where:{gymId,reversal:null},select:{chargeId:true,amountPiasters:true}}),
   tx.moneyAccount.findFirst({where:{gymId,branchId:null,type:'GYM_AVAILABLE'}}),
  ]);
  const collectedByCharge=new Map<string,bigint>();for(const p of collections)collectedByCharge.set(p.chargeId,(collectedByCharge.get(p.chargeId)??0n)+p.amountPiasters);
@@ -39,6 +39,21 @@ export async function chargeSummary(tx:Tx,gymId:string){
  const scheduled=items.filter(c=>c.dueAt>now).reduce((a,c)=>a+c.outstanding,0n);
  const available=cash?.balancePiasters??0n;
  return {debtPiasters:debt.toString(),scheduledPiasters:scheduled.toString(),grossAvailablePiasters:available.toString(),netAvailablePiasters:(available>debt?available-debt:0n).toString(),items:items.map(c=>({...c,amountPiasters:c.amountPiasters.toString(),collectedPiasters:c.collected.toString(),outstandingPiasters:c.outstanding.toString(),collected:undefined,outstanding:undefined}))};
+}
+
+/** Restore collected fees only as part of an atomic visit cancellation. The
+ * original collection stays immutable; a receipt reopens that service debt.
+ * Whole collections are reversed, then the transaction-end collector applies
+ * any cash remaining after the visit reversal to the outstanding debt again. */
+export async function restoreCollectedFees(tx:Tx,input:{gymId:string;visitId:string;actorId:string;since:Date}){
+ await lockGymCharges(tx,input.gymId);
+ const collections=await tx.gymChargeCollection.findMany({where:{gymId:input.gymId,reversal:null,createdAt:{gte:input.since}},orderBy:[{createdAt:'desc'},{id:'desc'}]});
+ for(const collection of collections){
+  const from=await tx.moneyAccount.findFirstOrThrow({where:{type:'PLATFORM_OFFSET',gymId:null,branchId:null}});
+  const to=await tx.moneyAccount.findFirstOrThrow({where:{type:'GYM_AVAILABLE',gymId:input.gymId,branchId:null}});
+  const leg=await postInTransaction(tx,{actorId:input.actorId,idempotencyKey:`service-refund:${input.visitId}:${collection.id}`,referenceId:input.visitId,reason:'إعادة مديونية الخدمة لإلغاء الزيارة ورد نقاط المتدرب',money:{kind:'ADJUSTMENT',reversalOfId:collection.moneyTransactionId,entries:[{accountId:from.id,delta:-collection.amountPiasters},{accountId:to.id,delta:collection.amountPiasters}]}});
+  await tx.gymChargeCollectionReversal.create({data:{collectionId:collection.id,visitId:input.visitId,moneyTransactionId:leg.moneyTransactionId!}});
+ }
 }
 /** Set off due fees independently of payouts. Reserved/paid/disputed money is untouched. */
 export async function collectDueCharges(tx:Tx,gymId:string,actorId:string,requestId:string){
@@ -60,3 +75,4 @@ export async function collectDueCharges(tx:Tx,gymId:string,actorId:string,reques
   available-=amount;
  }
 }
+
