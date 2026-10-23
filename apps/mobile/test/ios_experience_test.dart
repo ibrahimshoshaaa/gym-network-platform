@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_network/main.dart';
@@ -10,8 +9,6 @@ import 'operations_test.dart' show client, page, reply;
 
 void main() {
   testWidgets('iPhone safe areas and keyboard keep phone login reachable', (t) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
     t.view.physicalSize = const Size(375, 812);
     t.view.devicePixelRatio = 1;
     t.view.padding = const FakeViewPadding(top: 44, bottom: 34);
@@ -46,7 +43,7 @@ void main() {
     expect(find.text('Reset password by phone'), findsOneWidget);
     expect(Directionality.of(t.element(find.byKey(const ValueKey('phone.reset.phone')))), TextDirection.ltr);
     expect(t.takeException(), isNull);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('English OTP remains open and disables back during confirmation', (t) async {
     final done = Completer<void>();
