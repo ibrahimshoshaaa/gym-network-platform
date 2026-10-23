@@ -149,7 +149,7 @@ class _MaintenanceCreateState extends State<MaintenanceCreate> {
       decoration: InputDecoration(labelText: label), validator: (v) => v == null || v.trim().length < minimum ? 'راجع $label' : null));
   @override Widget build(BuildContext context) => Screen(title: 'طلب صيانة جديد', child: Form(key: form, child: ListView(padding: const EdgeInsets.all(20), children: [
     const Text('احكي لنا عن العطل', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w800)),
-    const SizedBox(height: 8), const Text('الفحص والتكلفة والموعد هيتحددوا مع إدارة المنصة. التكلفة النهائية تُضاف لمديونية الجيم بعد تأكيد الاستلام وتُخصم من مستحقاته عند السحب.', style: TextStyle(color: muted)),
+    const SizedBox(height: 8), const Text('الفحص والتكلفة والموعد هيتحددوا مع إدارة المنصة. التكلفة النهائية تُضاف لمديونية الجيم بعد تأكيد الاستلام وتُخصم تلقائيًا من مستحقاته المتاحة، والباقي من التحصيل القادم.', style: TextStyle(color: muted)),
     const SizedBox(height: 20),
     DropdownButtonFormField<String>(initialValue: branch, isExpanded: true, decoration: const InputDecoration(labelText: 'الفرع'),
       items: widget.branches.map((b) => DropdownMenuItem(value: '${b['id']}', child: Text('${b['gymName']} · ${b['name']}', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
@@ -183,7 +183,7 @@ class _MaintenanceDetailState extends State<MaintenanceDetail> {
     final needsReason = ['REJECT_QUOTE', 'CANCEL', 'REOPEN'].contains(action);
     final label = {'APPROVE': 'اعتماد التكلفة والموعد', 'CONFIRM': 'تأكيد استلام الصيانة', 'CANCEL': 'إلغاء الطلب', 'REOPEN': 'الإبلاغ أن العطل مستمر', 'REJECT_QUOTE': 'رفض العرض'}[action]!;
     final confirmed = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: Text(label), content: Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(action == 'APPROVE' ? 'التكلفة: ${repairAmount(r['estimatedPiasters'])}\nالموعد: ${repairDate(r['appointmentAt'])}\nالتكلفة النهائية بعد تأكيد الاستلام تُسجل مديونية وتُخصم من مستحقات الجيم عند السحب.' : action == 'CONFIRM' ? 'هل تم إصلاح العطل واستلام الجهاز؟\nالتكلفة النهائية: ${repairAmount(r['finalPiasters'])}\nبالتأكيد تُضاف التكلفة لمديونية الجيم وتُخصم من مستحقاته عند السحب.' : 'اكتب السبب ليظهر لإدارة المنصة.'),
+      Text(action == 'APPROVE' ? 'التكلفة: ${repairAmount(r['estimatedPiasters'])}\nالموعد: ${repairDate(r['appointmentAt'])}\nالتكلفة النهائية بعد تأكيد الاستلام تُسجل مديونية وتُخصم تلقائيًا من مستحقات الجيم المتاحة، والباقي من التحصيل القادم.' : action == 'CONFIRM' ? 'هل تم إصلاح العطل واستلام الجهاز؟\nالتكلفة النهائية: ${repairAmount(r['finalPiasters'])}\nبالتأكيد تُضاف التكلفة لمديونية الجيم وتُخصم تلقائيًا من مستحقاته المتاحة، والباقي من التحصيل القادم.' : 'اكتب السبب ليظهر لإدارة المنصة.'),
       if (needsReason) TextField(onChanged: (value) => reason = value, maxLength: 1000, maxLines: 3, decoration: const InputDecoration(labelText: 'السبب')),
     ]), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('رجوع')), TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('تأكيد'))]));
     final note = reason.trim();
@@ -233,3 +233,4 @@ class _MaintenanceDetailState extends State<MaintenanceDetail> {
       ]);
     }));
 }
+

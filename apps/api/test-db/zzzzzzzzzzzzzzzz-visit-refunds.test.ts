@@ -12,6 +12,7 @@ import {recordCharge,chargeSummary,settleGymCharges} from '../src/charges/servic
 import {branchEntitlements} from '../src/withdrawals/allocation.js';
 import {requestWithdrawal} from '../src/withdrawals/service.js';
 import {saveDelegation} from '../src/gyms/delegations.js';
+import {buildApp} from '../src/app.js';
 
 const url=new URL(process.env.DATABASE_URL??'');
 if(!['localhost','127.0.0.1'].includes(url.hostname)||!/^\/(gym_ci|gym_test)$/.test(url.pathname))throw Error('Disposable local test database required');
@@ -71,6 +72,20 @@ for(const booked of [false,true])for(const fee of [0n,1000n,12000n]){
    await assert.rejects(db.gymChargeCollectionReversal.delete({where:{id:refunds[0].id}}));
    await assert.rejects(reverseLedger(db,{actorId:f.admin.id,idempotencyKey:randomUUID(),reason:'No bypass of visit refund',moneyTransactionId:refunds[0].moneyTransactionId}),/DOMAIN_APPROVAL_REQUIRED/);
   }
+  if(booked&&fee===12000n){
+   const app=buildApp(db),token=await createSession(db,f.admin.id,new Date(Date.now()+3600000));
+   try{
+    let cursor:string|null=null,found=false;
+    do{
+     const response: {statusCode:number;json:()=>{items:{id:string;debtPiasters:string;netAvailablePiasters:string}[];nextCursor:string|null}}=await app.inject({method:'GET',url:`/reports/platform-balances?kind=GYMS&limit=25${cursor?'&cursor='+cursor:''}`,headers:{authorization:`Bearer ${token}`}});
+     assert.equal(response.statusCode,200);
+     const page=response.json(),row=page.items.find((g:{id:string})=>g.id===f.gym.id);
+     if(row){assert.equal(row.debtPiasters,'12000');assert.equal(row.netAvailablePiasters,'0');found=true;break;}
+     cursor=page.nextCursor;
+    }while(cursor);
+    assert.equal(found,true);
+   }finally{await app.close();}
+  }
   if(fee===12000n){await f.attend(false);const next=await settleGymCharges(db,f.gym.id,f.owner.id);assert.equal(next.debtPiasters,'9600');assert.equal(next.grossAvailablePiasters,'0');}
  });
 }
@@ -126,6 +141,12 @@ test('database rejects a service collection reversal without an atomic cancellat
  }));
  assert.equal(await db.gymChargeCollectionReversal.count({where:{visitId:v.id}}),0);
  assert.equal((await settleGymCharges(db,f.gym.id,f.owner.id)).debtPiasters,'9600');
+});
+test('database rejects changing an attended booking to cancelled without its visit and wallet refund',async()=>{
+ const f=await fixture(),v=await f.attend(true),b=await db.booking.findUniqueOrThrow({where:{visitId:v.id}});
+ await assert.rejects(db.booking.update({where:{id:b.id},data:{status:'CANCELLED',traineePoints:30,gymPoints:0,platformPoints:0,decisionReason:reason.reason,decidedById:f.owner.id,decidedAt:new Date()}}));
+ assert.equal((await db.booking.findUniqueOrThrow({where:{id:b.id}})).status,'ATTENDED');
+ assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.wallet.id}})).balance,170);
 });
 for(const mode of ['MANUAL','AUTOMATIC'] as const)test(`${mode} no-show gym share belongs to the branch and can be withdrawn by its delegate`,async t=>{
  const f=await fixture();
