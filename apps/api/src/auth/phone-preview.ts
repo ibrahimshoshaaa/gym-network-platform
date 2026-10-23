@@ -9,10 +9,11 @@ import {hashToken} from './sessions.js';
 import {sessionResult} from './trainees.js';
 import {newPasswordSchema,phoneSchema} from './validation.js';
 
-// Simulated OTP accepts any syntactically valid phone on the isolated preview.
+// Simulated OTP accepts valid phone numbers only when explicitly enabled.
 // Recovery still requires an identity created by this preview, never a legacy account.
 export function phonePreviewEnabled(env:NodeJS.ProcessEnv=process.env){
- return env.GYMBANK_OTP_MODE==='test' && (env.VERCEL_ENV==='preview'||(env.NODE_ENV!=='production'&&!env.VERCEL_ENV));
+ const production=env.VERCEL_ENV==='production'||(env.NODE_ENV==='production'&&env.VERCEL_ENV!=='preview');
+ return env.GYMBANK_OTP_MODE==='test' && (!production||env.GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION==='true');
 }
 export function phonePreviewStatus(){const enabled=phonePreviewEnabled();return {enabled,testMode:enabled};}
 function requirePreview(){
@@ -60,7 +61,7 @@ export async function registerPhonePreview(db:PrismaClient,input:unknown){
   const user=await tx.user.create({data:{phoneE164:data.phone,displayName:data.displayName,role:data.accountType==='owner'?'GYM_OWNER':'TRAINEE',password:{create:{passwordHash}},...(data.accountType==='trainee'?{pointAccounts:{create:{type:'TRAINEE_WALLET' as const}}}:{})}});
   await tx.phoneTestIdentity.create({data:{userId:user.id,phone:data.phone}});
   if(data.accountType==='owner')await tx.gymApplication.create({data:{ownerId:user.id,...data.gym!}});
-  await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:'PHONE_OTP_TEST_REGISTERED',reason:'Simulated OTP in the isolated preview; no SMS delivered and phone ownership is not verified'}});
+  await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:'PHONE_OTP_TEST_REGISTERED',reason:'Explicitly enabled simulated OTP; no SMS delivered and phone ownership is not verified'}});
   // phoneVerifiedAt intentionally remains null: a test code proves no ownership.
   return {...await sessionResult(tx,user),testMode:true};
  });}catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002')throw new DomainError('ACCOUNT_UNAVAILABLE');throw e;}
