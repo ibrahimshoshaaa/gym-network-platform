@@ -15,6 +15,11 @@ void main(){
   });addTearDown(api.dispose);
   await t.pumpWidget(page(MoneyScreen(api:api,gym:{'id':'test-gym','name':'جيم اختبار','status':'ACTIVE'})));
   await t.pumpAndSettle();
+  expect(find.text('المستحقات ومديونيات الخدمات'),findsOneWidget);
+  expect(find.byType(Scaffold),findsOneWidget);
+  final intro=t.element(find.text('مستحقاتك واضحة'));
+  expect(Scaffold.maybeOf(intro),isNotNull);
+  expect(DefaultTextStyle.of(intro).style.decoration, isNot(TextDecoration.underline));
   expect(find.text('700 ج.م'),findsWidgets);
   final title=find.text('مديونيات الخدمات');
   await t.scrollUntilVisible(title,180,scrollable:find.byType(Scrollable).first);
