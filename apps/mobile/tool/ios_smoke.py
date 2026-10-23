@@ -35,7 +35,6 @@ def main():
     try:
         sim('boot', device)
         sim('bootstatus', device, '-b')
-        sim('status_bar', device, 'override', '--time', '9:41', '--dataNetwork', 'wifi', '--wifiMode', 'active', '--wifiBars', '3', '--batteryState', 'charged', '--batteryLevel', '100')
         sim('install', device, 'build/ios/iphonesimulator/Runner.app')
         launch = sim('launch', device, 'net.shotech.gymbank')
         (output / 'launch.txt').write_text(launch.stdout + launch.stderr)
