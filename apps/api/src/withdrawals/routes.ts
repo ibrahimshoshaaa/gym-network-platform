@@ -1,4 +1,4 @@
-import {chargeSummary} from '../charges/service.js';
+import {chargeSummary,settleGymCharges} from '../charges/service.js';
 import {authority,requirePermission} from "../auth/delegation.js";
 import {branchEntitlements} from "./allocation.js";
 import { withdrawalBalances } from "./balances.js";
@@ -34,7 +34,8 @@ export function registerWithdrawalRoutes(
   app.get('/operations/branches/:branchId/entitlements',async r=>{const actor=await actorId(db,r),branchId=parse(uuid,(r.params as {branchId:string}).branchId);return db.$transaction(async tx=>{const branch=await tx.branch.findUnique({where:{id:branchId}});if(!branch)throw new DomainError('NOT_FOUND');await requirePermission(tx,actor,branch.gymId,'REQUEST_WITHDRAWAL',branchId);const row=(await branchEntitlements(tx,branch.gymId)).find(b=>b.id===branchId)!;const net=BigInt((await chargeSummary(tx,branch.gymId)).netAvailablePiasters);const available=row.available<net?row.available:net;return {...row,earned:row.earned.toString(),committed:row.committed.toString(),disputed:row.disputed.toString(),available:available.toString()};},{isolationLevel:'RepeatableRead'});});
   for(const admin of [false,true])app.get(admin?'/admin/gyms/:gymId/service-charges':'/gyms/:gymId/service-charges',async r=>{
    const actor=await actorId(db,r),gymId=parse(uuid,(r.params as {gymId:string}).gymId);
-   return db.$transaction(async tx=>{if(admin)await requireAdmin(tx,actor);else await requireGymOwner(tx,actor,gymId,false);return chargeSummary(tx,gymId);},{isolationLevel:'RepeatableRead'});
+   if(admin)await requireAdmin(db,actor);else await requireGymOwner(db,actor,gymId,false);
+   return settleGymCharges(db,gymId,actor);
   });
   app.get("/admin/withdrawal-calendar", async (r) => {
     await requireAdmin(db, await actorId(db, r));

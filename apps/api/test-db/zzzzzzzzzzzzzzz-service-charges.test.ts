@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {PrismaClient} from '@prisma/client';
 import {serializable,postLedger,reverseLedger} from '../src/ledger/service.js';
-import {recordCharge,chargeSummary,collectDueCharges} from '../src/charges/service.js';
+import {recordCharge,chargeSummary,collectDueCharges,settleGymCharges} from '../src/charges/service.js';
 import {requestWithdrawal,cancelWithdrawal} from '../src/withdrawals/service.js';
 import {createPromotion,changePromotion,nearbyPromotions} from '../src/promotions/service.js';
 const url=new URL(process.env.DATABASE_URL??'');
@@ -27,7 +27,7 @@ test('payout deducts service debts exactly once, protects reserved funds, and re
  assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).netAvailablePiasters,'70000');
  const body={paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic owner',amountPiasters:'70000'};
  await assert.rejects(requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{...body,amountPiasters:'100000'}),/INSUFFICIENT_FUNDS/);
- assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),0);
+ assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),1);
  const key=randomUUID();const results=await Promise.all([requestWithdrawal(db,f.owner.id,f.gym.id,key,body),requestWithdrawal(db,f.owner.id,f.gym.id,key,body)]);
  assert.equal(results[0].id,results[1].id);
  assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),1);
@@ -63,4 +63,43 @@ test('service-only branch advertises approved service; future ad debt is voided 
  assert.equal(await db.gymServiceCharge.count({where:{sourceId:live.id}}),1);
  assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).debtPiasters,'2000');
 
+});
+
+test('partial fees collect without a withdrawal, repeated reconciliation is safe and new credits pay the remainder',async()=>{
+ const f=await fixture();await f.fund(2400n);
+ const input={gymId:f.gym.id,branchId:f.branch.id,kind:'MAINTENANCE' as const,sourceId:randomUUID(),amountPiasters:12000n,description:'صيانة مشاية'};
+ const charge=await serializable(db,tx=>recordCharge(tx,input));
+ let summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));
+ assert.equal(summary.grossAvailablePiasters,'0');assert.equal(summary.debtPiasters,'9600');
+ assert.equal(summary.items[0]!.collectedPiasters,'2400');
+ await Promise.all([settleGymCharges(db,f.gym.id,f.owner.id),settleGymCharges(db,f.gym.id,f.owner.id)]);
+ assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),1);
+ await f.fund(5000n);
+ summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));assert.equal(summary.debtPiasters,'4600');assert.equal(summary.grossAvailablePiasters,'0');
+ await f.fund(6000n);
+ summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));assert.equal(summary.debtPiasters,'0');assert.equal(summary.netAvailablePiasters,'1400');
+ assert.equal((await db.gymChargeCollection.aggregate({where:{chargeId:charge.id},_sum:{amountPiasters:true}}))._sum.amountPiasters,12000n);
+ assert.equal(await db.withdrawalRequest.count({where:{gymId:f.gym.id}}),0);
+});
+test('future fees remain untouched and existing due balances reconcile independently of payout failure',async()=>{
+ const f=await fixture();await f.fund(2400n);
+ const charge=await serializable(db,tx=>recordCharge(tx,{gymId:f.gym.id,branchId:f.branch.id,kind:'PROMOTION',sourceId:randomUUID(),amountPiasters:12000n,description:'إعلان مجدول',dueAt:new Date(Date.now()+3600000)}));
+ let summary=await settleGymCharges(db,f.gym.id,f.owner.id);
+ assert.equal(summary.scheduledPiasters,'12000');assert.equal(summary.grossAvailablePiasters,'2400');
+ assert.equal(await db.gymChargeCollection.count({where:{chargeId:charge.id}}),0);
+ await db.gymServiceCharge.update({where:{id:charge.id},data:{dueAt:new Date(Date.now()-1000)}});
+ summary=await settleGymCharges(db,f.gym.id,f.owner.id);
+ assert.equal(summary.debtPiasters,'9600');assert.equal(summary.items[0]!.collectedPiasters,'2400');
+ await assert.rejects(requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic owner',amountPiasters:'100'}),/INSUFFICIENT_FUNDS/);
+ assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).debtPiasters,'9600');
+});
+test('automatic collection protects reserved payouts and collects newly released funds',async()=>{
+ const f=await fixture();await f.fund(10000n);
+ const w=await requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic owner',amountPiasters:'8000'});
+ await serializable(db,tx=>recordCharge(tx,{gymId:f.gym.id,branchId:f.branch.id,kind:'MAINTENANCE',sourceId:randomUUID(),amountPiasters:5000n,description:'صيانة بعد الحجز'}));
+ assert.equal((await db.moneyAccount.findFirstOrThrow({where:{gymId:f.gym.id,type:'GYM_RESERVED',branchId:null}})).balancePiasters,8000n);
+ assert.equal((await db.$transaction(tx=>chargeSummary(tx,f.gym.id))).debtPiasters,'3000');
+ await cancelWithdrawal(db,f.owner.id,w.id,randomUUID(),{reason:'إلغاء طلب السحب التجريبي'});
+ const summary=await db.$transaction(tx=>chargeSummary(tx,f.gym.id));
+ assert.equal(summary.debtPiasters,'0');assert.equal(summary.netAvailablePiasters,'5000');
 });

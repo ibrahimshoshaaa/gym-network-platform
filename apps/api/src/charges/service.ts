@@ -1,9 +1,16 @@
 import {randomUUID} from 'node:crypto';
-import type {Prisma} from '@prisma/client';
+import type {Prisma,PrismaClient} from '@prisma/client';
 import {DomainError} from '../domain/errors.js';
-import {postInTransaction} from '../ledger/service.js';
+import {postInTransaction,queueChargeCollection,serializable} from '../ledger/service.js';
 import {branchEntitlements} from '../withdrawals/allocation.js';
 type Tx=Prisma.TransactionClient;
+/** Independent committed reconciliation for existing and newly-due charges. */
+export async function settleGymCharges(db:PrismaClient,gymId:string,actorId:string){
+ return serializable(db,async tx=>{
+  await collectDueCharges(tx,gymId,actorId,randomUUID());
+  return chargeSummary(tx,gymId);
+ });
+}
 export async function lockGymCharges(tx:Tx,gymId:string){
  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`withdrawal-allocation:${gymId}`},0))`;
 }
@@ -11,7 +18,8 @@ export async function recordCharge(tx:Tx,input:{gymId:string;branchId:string;kin
  await lockGymCharges(tx,input.gymId);
  if(input.amountPiasters<0n)throw new DomainError('INVALID_INPUT');
  const old=await tx.gymServiceCharge.findUnique({where:{kind_sourceId:{kind:input.kind,sourceId:input.sourceId}}});
- if(old){if(old.amountPiasters!==input.amountPiasters||old.gymId!==input.gymId)throw new DomainError('INVALID_STATE');return old;}
+ if(old){if(old.amountPiasters!==input.amountPiasters||old.gymId!==input.gymId)throw new DomainError('INVALID_STATE');queueChargeCollection(tx,input.gymId);return old;}
+ queueChargeCollection(tx,input.gymId);
  return tx.gymServiceCharge.create({data:{...input,dueAt:input.dueAt??new Date()}});
 }
 export function chargeOutstanding(amount:bigint,collected:bigint){
@@ -32,7 +40,7 @@ export async function chargeSummary(tx:Tx,gymId:string){
  const available=cash?.balancePiasters??0n;
  return {debtPiasters:debt.toString(),scheduledPiasters:scheduled.toString(),grossAvailablePiasters:available.toString(),netAvailablePiasters:(available>debt?available-debt:0n).toString(),items:items.map(c=>({...c,amountPiasters:c.amountPiasters.toString(),collectedPiasters:c.collected.toString(),outstandingPiasters:c.outstanding.toString(),collected:undefined,outstanding:undefined}))};
 }
-/** Set off due fees before reserving a NEW payout. Reserved/paid/disputed money is untouched. */
+/** Set off due fees independently of payouts. Reserved/paid/disputed money is untouched. */
 export async function collectDueCharges(tx:Tx,gymId:string,actorId:string,requestId:string){
  await lockGymCharges(tx,gymId);
  const summary=await chargeSummary(tx,gymId);

@@ -74,3 +74,35 @@ export async function internalRequest(path: string, init: {
     headers: output,
   });
 }
+
+/** Durable ad acceptance replays only the same actor/version, never a new approval. */
+export async function acceptDurablePromotion(actor:string,id:string,input:unknown){
+ const {ownerBody}=await import('./promotions/validation.js');
+ const {parse}=await import('./gyms/validation.js');
+ const {changePromotion,promotionDetail}=await import('./promotions/service.js');
+ try {
+  const d=parse(ownerBody,input);
+  if(d.action!=='ACCEPT')return {status:400,body:{code:'INVALID_INPUT'}};
+  const db=databaseClient();
+  const row=await db.promotionRequest.findUnique({where:{id}});
+  if(row?.acceptedById===actor&&row.version===d.expectedVersion+1&&row.status==='APPROVED')
+   return {status:200,body:await promotionDetail(db,actor,id)};
+  return {status:200,body:await changePromotion(db,actor,id,input)};
+ }catch(error){
+  if(!(error instanceof DomainError))throw error;
+  return {status:error.code==='INVALID_INPUT'?400:['ACCESS_DENIED','UNAUTHENTICATED'].includes(error.code)?403:409,body:{code:error.code}};
+ }
+}
+export async function settleDurablePromotion(id:string){
+ const {serializable}=await import('./ledger/service.js');
+ const {collectDueCharges}=await import('./charges/service.js');
+ const {randomUUID}=await import('node:crypto');
+ return serializable(databaseClient(),async tx=>{
+  const charge=await tx.gymServiceCharge.findUnique({where:{kind_sourceId:{kind:'PROMOTION',sourceId:id}}});
+  if(!charge||charge.voidedAt)return null;
+  if(charge.dueAt>new Date())return charge.dueAt.toISOString();
+  const gym=await tx.gym.findUniqueOrThrow({where:{id:charge.gymId}});
+  await collectDueCharges(tx,gym.id,gym.ownerId,randomUUID());
+  return null;
+ });
+}
