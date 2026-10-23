@@ -38,7 +38,8 @@ bool bookingWindow(Json b,DateTime now) => b['status']=='RESERVED' &&
 class CreateBookingScreen extends StatefulWidget {
  final ApiClient api;
  final Json branch;
- const CreateBookingScreen({super.key,required this.api,required this.branch});
+ final String? initialServiceId;
+ const CreateBookingScreen({super.key,required this.api,required this.branch,this.initialServiceId});
  @override State<CreateBookingScreen> createState()=>_CreateBookingScreenState();
 }
 class _CreateBookingScreenState extends State<CreateBookingScreen>{
@@ -60,7 +61,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
    final d=values[0],catalog=values[1];
    if(mounted)setState((){
     policy=d['policy']==null?null:Map<String,dynamic>.from(d['policy']);
-    services=rows(catalog);serviceBooking=catalog['serviceBooking']==true;
+    services=rows(catalog);if(selected.isEmpty&&widget.initialServiceId!=null&&services.any((s)=>s['id']==widget.initialServiceId))selected.add(widget.initialServiceId!);serviceBooking=catalog['serviceBooking']==true;
     hours=catalog['hours']==null?null:Map<String,dynamic>.from(catalog['hours']);
    });
   }

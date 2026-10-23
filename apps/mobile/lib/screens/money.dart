@@ -10,12 +10,16 @@ class MoneyScreen extends StatelessWidget {
   final Json gym;
   const MoneyScreen({super.key, required this.api, required this.gym});
   @override
-  Widget build(BuildContext context) => DataView(
+  Widget build(BuildContext context) => Screen(
+    title: 'المستحقات ومديونيات الخدمات',
+    child: DataView(
     load: () => Future.wait([
       api.request('reports/summary?gymId=${gym['id']}&${reportRange()}'),
       api.request('gyms/${gym['id']}/withdrawals?limit=100'),
     ]),
     builder: (data, reload) {
+      final charges=data[0]['serviceCharges'] as Map? ?? {};
+      final net='${charges['netAvailablePiasters'] ?? ((data[0]['currentBalances'] as List? ?? []).cast<Map>().where((b)=>b['type']=='GYM_AVAILABLE').firstOrNull?['balancePiasters'] ?? '0')}';
       final balances = data[0]['currentBalances'] as List? ?? [];
       String get(String t) =>
           '${balances.cast<Map>().where((b) => b['type'] == t).firstOrNull?['balancePiasters'] ?? '0'}';
@@ -41,7 +45,7 @@ class MoneyScreen extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: AlignmentDirectional.centerStart,
                   child: Text(
-                    '${money(get('GYM_AVAILABLE'))} ج.م',
+                    '${money(net)} ج.م',
                     style: const TextStyle(
                       fontSize: 37,
                       fontWeight: FontWeight.w900,
@@ -56,7 +60,7 @@ class MoneyScreen extends StatelessWidget {
                     foregroundColor: ink,
                   ),
                   onPressed:
-                      BigInt.parse(get('GYM_AVAILABLE')) <= BigInt.zero ||
+                      BigInt.parse(net) <= BigInt.zero ||
                           gym['status'] != 'ACTIVE'
                       ? null
                       : () async {
@@ -65,7 +69,7 @@ class MoneyScreen extends StatelessWidget {
                             WithdrawalForm(
                               api: api,
                               gymId: gym['id'],
-                              available: get('GYM_AVAILABLE'),
+                              available: net,
                             ),
                           );
                           await reload();
@@ -90,6 +94,10 @@ class MoneyScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SectionTitle('مديونيات الخدمات'),
+          const PortalNote('تكلفة الخدمات بتتخصم من المستحقات. لو المديونية أكبر، المتاح للسحب بيكون صفر والباقي بيترحّل للتحصيل القادم.'),
+          Panel(child:Column(children:[Fact('مستحقات قبل الخصم','${money(charges['grossAvailablePiasters']??'0')} ج.م'),Fact('مديونية مستحقة','${money(charges['debtPiasters']??'0')} ج.م'),Fact('إعلانات مجدولة لم تستحق بعد','${money(charges['scheduledPiasters']??'0')} ج.م'),Fact('صافي متاح للسحب','${money(net)} ج.م')])),
+          for(final c in (charges['items'] as List? ?? []))Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${c['description']}'),Fact('التكلفة','${money(c['amountPiasters'])} ج.م'),Fact('تم خصمه','${money(c['collectedPiasters'])} ج.م'),Fact('متبقي','${money(c['outstandingPiasters'])} ج.م')])),
           const SectionTitle('طلبات السحب'),
           if (rows(data[1]).isEmpty) const EmptyState('مفيش طلبات سحب لسه'),
           ...rows(data[1]).map(
@@ -138,6 +146,7 @@ class MoneyScreen extends StatelessWidget {
         ],
       );
     },
+    ),
   );
 }
 
@@ -415,3 +424,4 @@ class _WithdrawalDetailState extends State<WithdrawalDetail> {
     ),
   );
 }
+

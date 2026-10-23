@@ -5,6 +5,7 @@ import '../core/api.dart';
 import '../core/ui.dart';
 import 'directory.dart';
 import 'campaigns.dart';
+import 'bookings.dart';
 
 class TraineeBalanceHero extends StatelessWidget {
  final ApiClient api;
@@ -38,11 +39,15 @@ class HomeOffers extends StatefulWidget {
  const HomeOffers({super.key,required this.api,this.latitude,this.longitude});
  @override State<HomeOffers> createState()=>_HomeOffersState();
 }
-class _HomeOffersState extends State<HomeOffers>{
+class _HomeOffersState extends State<HomeOffers> with WidgetsBindingObserver {
+ final pager=PageController(viewportFraction:.90);Timer? rotation;int offerIndex=0;bool foreground=true;
+ @override void didChangeAppLifecycleState(AppLifecycleState state){foreground=state==AppLifecycleState.resumed;}
+ void rotate(){rotation?.cancel();rotation=Timer.periodic(const Duration(seconds:4),(_){final count=[...platform,...nearby].where((r)=>DateTime.tryParse('${r['endsAt']}')?.isAfter(DateTime.now())==true).length;if(mounted&&foreground&&count>1&&pager.hasClients)pager.animateToPage((offerIndex+1)%count,duration:const Duration(milliseconds:320),curve:Curves.easeInOut);});}
+ Future<void> openOffer(Json r)async{if(r['serviceId']==null){await open(context,BranchDetail(api:widget.api,id:'${r['branch']}'));return;}try{final d=await widget.api.request('directory/branches/${r['branch']}');if(mounted)await open(context,CreateBookingScreen(api:widget.api,branch:Map<String,dynamic>.from(d['branch']),initialServiceId:r['serviceId']));}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}}
  List<Json> platform=[],nearby=[];bool loading=true;Object? error;int generation=0;Timer? refresh;
- @override void initState(){super.initState();load();refresh=Timer.periodic(const Duration(minutes:1),(_)=>load());}
+ @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);rotate();load();refresh=Timer.periodic(const Duration(minutes:1),(_)=>load());}
  @override void didUpdateWidget(HomeOffers old){super.didUpdateWidget(old);if(old.latitude!=widget.latitude||old.longitude!=widget.longitude)load();}
- @override void dispose(){refresh?.cancel();generation++;super.dispose();}
+ @override void dispose(){WidgetsBinding.instance.removeObserver(this);rotation?.cancel();pager.dispose();refresh?.cancel();generation++;super.dispose();}
  Future<void> load()async{
   final current=++generation;setState((){loading=true;error=null;if(widget.latitude==null||widget.longitude==null)nearby=[];});
   Future<void> part(bool local)async{try{final path=local?'trainee/nearby-promotions?latitude=${widget.latitude}&longitude=${widget.longitude}':'campaigns?placement=HOME';final r=await widget.api.request(path);if(mounted&&current==generation)setState((){if(local){nearby=rows(r);}else{platform=rows(r);}});}catch(e){if(mounted&&current==generation)setState((){error=e;if(local){nearby=[];}else{platform=[];}});}}
@@ -53,9 +58,8 @@ class _HomeOffersState extends State<HomeOffers>{
   final now=DateTime.now();final items=[...platform.map((r)=>{...r,'platform':true}),...nearby.map((r)=>{...r,'platform':false})].where((r)=>DateTime.tryParse('${r['endsAt']}')?.isAfter(now)==true).toList();
   if(loading&&items.isEmpty)return const Padding(padding:EdgeInsets.symmetric(vertical:20),child:LinearProgressIndicator(minHeight:2));
   if(items.isEmpty)return Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:12),child:error!=null?ErrorNote(error,retry:load):const Text('مفيش عروض متاحة حاليًا. تابعنا علشان تشوف الجديد.',style:TextStyle(color:muted,fontSize:12)));
-  final width=(MediaQuery.sizeOf(context).width*.86).clamp(260.0,440.0).toDouble();
   final height=165.0+(MediaQuery.textScalerOf(context).scale(100)-100).clamp(0.0,180.0);
-  return SizedBox(height:height,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:20),itemCount:items.length,separatorBuilder:(_,_)=>const SizedBox(width:14),itemBuilder:(context,i){final r=items[i],isPlatform=r['platform']==true;final image=r['imageUrl'];return SizedBox(width:width,child:Material(color:ink,borderRadius:BorderRadius.circular(28),clipBehavior:Clip.antiAlias,child:InkWell(onTap:isPlatform?(r['hasAction']==true?()=>openCampaign(context,widget.api,'${r['destination']}'):null):()=>open(context,BranchDetail(api:widget.api,id:'${r['branch']}')),child:Stack(fit:StackFit.expand,children:[
+  return SizedBox(height:height,child:PageView.builder(controller:pager,onPageChanged:(i)=>offerIndex=i,itemCount:items.length,itemBuilder:(context,i){final r=items[i],isPlatform=r['platform']==true;final image=r['imageUrl'];return Padding(padding:const EdgeInsets.symmetric(horizontal:7),child:Material(color:ink,borderRadius:BorderRadius.circular(28),clipBehavior:Clip.antiAlias,child:InkWell(onTap:isPlatform?(r['hasAction']==true?()=>openCampaign(context,widget.api,'${r['destination']}'):null):()=>openOffer(r),child:Stack(fit:StackFit.expand,children:[
    if(image!=null)Image.network('$image',fit:isPlatform?BoxFit.contain:BoxFit.cover,errorBuilder:(_,_,_)=>const ColoredBox(color:ink)),
    if(!isPlatform||image==null)const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Color(0x10101719),Color(0xf0101719)]))),
    Positioned(top:10,right:10,child:Container(padding:const EdgeInsets.symmetric(horizontal:11,vertical:6),decoration:BoxDecoration(color:lime,borderRadius:BorderRadius.circular(18)),child:Text(isPlatform?'عرض المنصة':'عرض قريب منك',style:const TextStyle(color:ink,fontSize:10,fontWeight:FontWeight.w800)))),

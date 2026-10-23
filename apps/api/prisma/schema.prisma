@@ -1042,6 +1042,8 @@ model MaintenanceEvent {
 }
 
 model PromotionRequest {
+ serviceId String? @db.Uuid
+ serviceName String?
  id String @id @default(uuid()) @db.Uuid
  requestedById String @db.Uuid
  requestedBy User @relation(fields:[requestedById],references:[id],onDelete:Restrict)
@@ -1133,4 +1135,31 @@ model ServicePriceRequest {
   createdAt DateTime @default(now())
   @@index([status, id])
   @@index([serviceId, status])
+}
+
+model GymServiceCharge {
+ id String @id @default(uuid()) @db.Uuid
+ gymId String @db.Uuid
+ branchId String @db.Uuid
+ kind String
+ sourceId String @db.Uuid
+ amountPiasters BigInt
+ description String
+ dueAt DateTime @default(now())
+ voidedAt DateTime?
+ createdAt DateTime @default(now())
+ collections GymChargeCollection[]
+ @@unique([kind,sourceId])
+ @@index([gymId,dueAt,id])
+}
+model GymChargeCollection {
+ id String @id @default(uuid()) @db.Uuid
+ gymId String @db.Uuid
+ chargeId String @db.Uuid
+ charge GymServiceCharge @relation(fields:[chargeId],references:[id],onDelete:Restrict)
+ amountPiasters BigInt
+ moneyTransactionId String @unique @db.Uuid
+ allocations Json
+ createdAt DateTime @default(now())
+ @@index([gymId,createdAt])
 }

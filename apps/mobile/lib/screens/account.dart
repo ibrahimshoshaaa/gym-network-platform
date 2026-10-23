@@ -24,7 +24,7 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   bool canPromote = false;
-  @override void initState(){super.initState();if(widget.workplace)loadPromotions();}
+  @override void initState(){super.initState();if(widget.workplace&&!widget.ownerView)loadPromotions();}
   Future<void> loadPromotions()async{try{final r=await widget.api.request('promotions/branches');if(mounted)setState(()=>canPromote=rows(r).isNotEmpty);}catch(_) {}}
   bool busy = false;
   Object? error;
@@ -159,7 +159,7 @@ class _AccountScreenState extends State<AccountScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         child: Column(
           children: [
-            if(canPromote)_item('إعلانات الفروع', Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
+            if(widget.ownerView||canPromote)_item('إعلانات الفروع', Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
             _item('الصيانة', Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
             _item(
               'تعديل الاسم',

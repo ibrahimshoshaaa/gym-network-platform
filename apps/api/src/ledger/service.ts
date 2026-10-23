@@ -1,5 +1,6 @@
 import {authority,requirePermission} from '../auth/delegation.js';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import {collectDueCharges} from '../charges/service.js';
 import { Prisma, type PrismaClient, type PointTxKind, type MoneyTxKind } from '@prisma/client';
 import { requireAdmin, requireBranchAccess, requireGymOwner } from '../auth/authorization.js';
 import { centralStock } from '../inventory/central.js';
@@ -14,6 +15,15 @@ export type LedgerCommand = {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const maxInt = 2147483647n;
 const maxBigInt = 9223372036854775807n;
+
+// Flush after domain rows (visits, holds and allocations) have been saved, so
+// branch attribution sees the same completed operation as the money ledger.
+const chargeQueue = new WeakMap<Prisma.TransactionClient, Map<string,string|undefined>>();
+export function queueChargeCollection(tx:Prisma.TransactionClient,gymId:string,actorId?:string){
+  let gyms=chargeQueue.get(tx);
+  if(!gyms){gyms=new Map();chargeQueue.set(tx,gyms);}
+  gyms.set(gymId,actorId??gyms.get(gymId));
+}
 
 function normalize<K>(leg: Leg<K> | undefined, max: bigint): Leg<K> | undefined {
   if (!leg) return;
@@ -43,7 +53,17 @@ function prepare(command: LedgerCommand) {
 
 export async function serializable<T>(db: PrismaClient, run: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
-    try { return await db.$transaction(run, { isolationLevel: 'Serializable', timeout: 15000 }); }
+    try { return await db.$transaction(async tx=>{
+      try {
+        const result=await run(tx);
+        const gyms=chargeQueue.get(tx);
+        for(const gymId of [...(gyms?.keys()??[])].sort()){
+          const actor=gyms!.get(gymId)??(await tx.gym.findUniqueOrThrow({where:{id:gymId},select:{ownerId:true}})).ownerId;
+          await collectDueCharges(tx,gymId,actor,randomUUID());
+        }
+        return result;
+      } finally {chargeQueue.delete(tx);}
+    }, { isolationLevel: 'Serializable', timeout: 15000 }); }
     catch (error) {
       // A waiting serializable transaction can retain a snapshot from before
       // another request inserted its unique key. Retry that unique-key race
@@ -107,6 +127,10 @@ export async function postInTransaction(tx: Prisma.TransactionClient, input: Led
     moneyTransactionId = t.id;
   }
   await tx.auditLog.create({ data: { actorId: c.actorId, action: 'LEDGER_POSTED', entityId: pointTransactionId ?? moneyTransactionId!, reason: c.reason } });
+  if(c.money){
+    const credits=await tx.moneyAccount.findMany({where:{id:{in:c.money.entries.filter(e=>e.delta>0n).map(e=>e.accountId)},type:'GYM_AVAILABLE',branchId:null},select:{gymId:true}});
+    for(const account of credits)if(account.gymId)queueChargeCollection(tx,account.gymId,c.actorId);
+  }
   return { pointTransactionId, moneyTransactionId };
 }
 
@@ -146,6 +170,7 @@ export function reverseLedger(db: PrismaClient, input: {
     const p = input.pointTransactionId ? await tx.pointTransaction.findUnique({ where: { id: input.pointTransactionId }, include: { postings: true } }) : null;
     const m = input.moneyTransactionId ? await tx.moneyTransaction.findUnique({ where: { id: input.moneyTransactionId }, include: { postings: true } }) : null;
     if ((!p && !m) || (input.pointTransactionId && !p?.posted) || (input.moneyTransactionId && !m?.posted)) throw new DomainError('TRANSACTION_NOT_FOUND');
+    if(m&&await tx.gymChargeCollection.findUnique({where:{moneyTransactionId:m.id}}))throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     // A bundle must be reversed together; mixing unrelated money and points
     // transactions, or reversing only half a bundle, is rejected.
     const key = p?.idempotencyKey ?? m!.idempotencyKey;
@@ -165,4 +190,3 @@ export function reverseLedger(db: PrismaClient, input: {
     });
   });
 }
-

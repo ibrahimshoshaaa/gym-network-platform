@@ -1,3 +1,4 @@
+import {chargeSummary,settleGymCharges} from '../charges/service.js';
 import {authority,requirePermission} from "../auth/delegation.js";
 import {branchEntitlements} from "./allocation.js";
 import { withdrawalBalances } from "./balances.js";
@@ -30,7 +31,12 @@ export function registerWithdrawalRoutes(
   app: FastifyInstance,
   db: PrismaClient,
 ) {
-  app.get('/operations/branches/:branchId/entitlements',async r=>{const actor=await actorId(db,r),branchId=parse(uuid,(r.params as {branchId:string}).branchId);return db.$transaction(async tx=>{const branch=await tx.branch.findUnique({where:{id:branchId}});if(!branch)throw new DomainError('NOT_FOUND');await requirePermission(tx,actor,branch.gymId,'REQUEST_WITHDRAWAL',branchId);const row=(await branchEntitlements(tx,branch.gymId)).find(b=>b.id===branchId)!;const cash=await tx.moneyAccount.findFirst({where:{gymId:branch.gymId,branchId:null,type:'GYM_AVAILABLE'}});const available=row.available<(cash?.balancePiasters??0n)?row.available:(cash?.balancePiasters??0n);return {...row,earned:row.earned.toString(),committed:row.committed.toString(),disputed:row.disputed.toString(),available:available.toString()};},{isolationLevel:'RepeatableRead'});});
+  app.get('/operations/branches/:branchId/entitlements',async r=>{const actor=await actorId(db,r),branchId=parse(uuid,(r.params as {branchId:string}).branchId);return db.$transaction(async tx=>{const branch=await tx.branch.findUnique({where:{id:branchId}});if(!branch)throw new DomainError('NOT_FOUND');await requirePermission(tx,actor,branch.gymId,'REQUEST_WITHDRAWAL',branchId);const row=(await branchEntitlements(tx,branch.gymId)).find(b=>b.id===branchId)!;const net=BigInt((await chargeSummary(tx,branch.gymId)).netAvailablePiasters);const available=row.available<net?row.available:net;return {...row,earned:row.earned.toString(),committed:row.committed.toString(),disputed:row.disputed.toString(),available:available.toString()};},{isolationLevel:'RepeatableRead'});});
+  for(const admin of [false,true])app.get(admin?'/admin/gyms/:gymId/service-charges':'/gyms/:gymId/service-charges',async r=>{
+   const actor=await actorId(db,r),gymId=parse(uuid,(r.params as {gymId:string}).gymId);
+   if(admin)await requireAdmin(db,actor);else await requireGymOwner(db,actor,gymId,false);
+   return settleGymCharges(db,gymId,actor);
+  });
   app.get("/admin/withdrawal-calendar", async (r) => {
     await requireAdmin(db, await actorId(db, r));
     return {
@@ -94,6 +100,7 @@ export function registerWithdrawalRoutes(
       return {
         withdrawal: withdrawalView(row),
         gymName: gym.name,
+        serviceCharges: user.role==='PLATFORM_ADMIN'||(await authority(tx,actor,row.gymId)).full?await chargeSummary(tx,row.gymId):null,
         balances: user.role==='PLATFORM_ADMIN'||(await authority(tx,actor,row.gymId)).full?await withdrawalBalances(tx,row):null,
         feedback: await tx.withdrawalFeedback.findUnique({
           where: { withdrawalId: id },

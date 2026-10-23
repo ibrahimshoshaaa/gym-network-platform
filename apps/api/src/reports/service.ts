@@ -1,3 +1,4 @@
+import {chargeSummary,settleGymCharges} from '../charges/service.js';
 import {authority} from "../auth/delegation.js";
 import { platformFinance } from "./platform.js";
 import { Prisma, type PrismaClient } from "@prisma/client";
@@ -171,6 +172,10 @@ export async function reportSummary(
 ) {
   const f = parse(filterSchema, input),
     p = period(f);
+  // Authorize first, then commit reconciliation separately from the read-only
+  // report snapshot. A failed/abandoned payout cannot roll this collection back.
+  const access=await db.$transaction(tx=>scope(tx,actorId,f));
+  if(access.finance&&access.gymId&&!access.branchId)await settleGymCharges(db,access.gymId,actorId);
   return reportTransaction(db, async (tx) => {
     const s = await scope(tx, actorId, f),
       asOf = new Date();
@@ -239,6 +244,7 @@ export async function reportSummary(
       paidWithdrawals,
       currentStockPoints: stock!.points,
       currentBalances: balances,
+      serviceCharges:s.finance&&s.gymId&&!s.branchId?await chargeSummary(tx,s.gymId):null,
       alerts: backlog,
       reconciliation,
     };
@@ -320,4 +326,3 @@ export function reportCsv(rows: ReportRow[]) {
     "\r\n"
   );
 }
-

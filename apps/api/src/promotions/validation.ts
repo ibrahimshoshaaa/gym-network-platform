@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {directoryQuery} from '../directory/validation.js';
-export const createBody=z.object({branchId:z.string().uuid(),clientKey:z.string().uuid(),title:z.string().trim().min(3).max(120),body:z.string().trim().min(10).max(1000),imageId:z.string().uuid().nullable()}).strict();
+export const createBody=z.object({branchId:z.string().uuid(),clientKey:z.string().uuid(),serviceId:z.string().uuid().optional(),title:z.string().trim().min(3).max(120),body:z.string().trim().min(10).max(1000),imageId:z.string().uuid().nullable()}).strict();
 export const statuses=['PENDING','AWAITING_ACCEPTANCE','APPROVED','REJECTED','PAUSED','WITHDRAWN'] as const;
 export const filters=z.object({status:z.enum(statuses).optional(),cursor:z.string().uuid().optional(),limit:z.coerce.number().int().min(1).max(30).default(20)}).strict();
 const expectedVersion=z.number().int().positive();
