@@ -9,7 +9,7 @@ void main() {
     var challenges = 0, confirmations = 0;
     final api = client('TRAINEE', (r) async {
       challenges++;
-      return reply({'challengeId': 'test-challenge', 'retryAfterSeconds': 60});
+      return reply({'challengeId': 'test-challenge', 'retryAfterSeconds': 60, 'testMode': true});
     });
     Json? accepted;
     await t.pumpWidget(page(Builder(builder: (context) => TextButton(
@@ -22,6 +22,8 @@ void main() {
     ))));
     await t.tap(find.text('start'));
     await t.pumpAndSettle();
+    expect(t.widget<TextField>(find.byKey(const ValueKey('phone.otp.code'))).controller!.text, '123456');
+    expect(confirmations, 0);
     await t.enterText(find.byKey(const ValueKey('phone.otp.code')), '000000');
     await t.tap(find.text('متابعة'));
     await t.pumpAndSettle();

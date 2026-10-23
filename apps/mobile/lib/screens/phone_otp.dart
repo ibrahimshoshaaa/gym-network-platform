@@ -19,14 +19,15 @@ class _PhoneCodeDialog extends StatefulWidget{
 }
 class _PhoneCodeDialogState extends State<_PhoneCodeDialog>{
  final code=TextEditingController();late Json challenge;bool busy=false;Object? error;Timer? timer;int wait=60;
- @override void initState(){super.initState();challenge=widget.challenge;countdown();}
+ @override void initState(){super.initState();challenge=widget.challenge;fillTestCode();countdown();}
+ void fillTestCode(){code.text=challenge['testMode']==true?'123456':'';}
  void countdown(){timer?.cancel();wait=60;timer=Timer.periodic(const Duration(seconds:1),(t){if(!mounted){t.cancel();return;}setState(()=>wait--);if(wait<=0)t.cancel();});}
  @override void dispose(){timer?.cancel();code.dispose();super.dispose();}
  @override Widget build(BuildContext context)=>AlertDialog(title:const Text('تأكيد رقم الموبايل — تجربة'),content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
   Text(widget.phone,textDirection:TextDirection.ltr),const SizedBox(height:12),
-  const Text('وضع تجريبي: لا يتم إرسال SMS. كود التجربة 123456، وصلاحيته ٥ دقائق.'),
+  const Text('وضع تجريبي: لا يتم إرسال SMS. كود التجربة 123456 بيتملّى تلقائيًا، وصلاحيته ٥ دقائق.'),
   TextField(key:const ValueKey('phone.otp.code'),controller:code,enabled:!busy,keyboardType:TextInputType.number,textDirection:TextDirection.ltr,maxLength:6,autofillHints:const [AutofillHints.oneTimeCode],decoration:const InputDecoration(labelText:'كود التأكيد')),
-  ErrorNote(error),TextButton(onPressed:busy||wait>0?null:()async{setState(()=>busy=true);try{final r=await widget.api.request('auth/phone/challenge',method:'POST',body:{'phone':widget.phone,'purpose':widget.purpose});if(mounted)setState((){challenge=Map<String,dynamic>.from(r);code.clear();error=null;countdown();});}catch(e){if(mounted)setState(()=>error=e);}finally{if(mounted)setState(()=>busy=false);}},child:Text(wait>0?'إعادة الطلب بعد $wait ثانية':'طلب كود جديد')),
+  ErrorNote(error),TextButton(onPressed:busy||wait>0?null:()async{setState(()=>busy=true);try{final r=await widget.api.request('auth/phone/challenge',method:'POST',body:{'phone':widget.phone,'purpose':widget.purpose});if(mounted)setState((){challenge=Map<String,dynamic>.from(r);fillTestCode();error=null;countdown();});}catch(e){if(mounted)setState(()=>error=e);}finally{if(mounted)setState(()=>busy=false);}},child:Text(wait>0?'إعادة الطلب بعد $wait ثانية':'طلب كود جديد')),
  ])),actions:[TextButton(onPressed:busy?null:()=>Navigator.pop(context),child:const Text('رجوع')),TextButton(onPressed:busy?null:()async{final value=digits(code.text.trim());if(!RegExp(r'^\d{6}$').hasMatch(value)){setState(()=>error=const ApiFailure('INVALID_INPUT'));return;}final proof=<String,dynamic>{'challengeId':challenge['challengeId'],'code':value};setState((){busy=true;error=null;});try{await widget.onConfirm?.call(proof);if(context.mounted)Navigator.pop(context,proof);}catch(e){if(mounted)setState(()=>error=e);}finally{if(mounted)setState(()=>busy=false);}},child:const Text('متابعة'))]);
 }
 
