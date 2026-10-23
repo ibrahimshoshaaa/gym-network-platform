@@ -7,7 +7,15 @@ from pathlib import Path
 
 
 def sim(*args, check=True):
-    return subprocess.run(['xcrun', 'simctl', *args], check=check, capture_output=True, text=True)
+    print('Simulator step: ' + args[0], flush=True)
+    try:
+        result = subprocess.run(['xcrun', 'simctl', *args], timeout=300 if args[0] == 'bootstatus' else 90,
+                                capture_output=True, text=True)
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError('Simulator command timed out: ' + args[0]) from error
+    if check and result.returncode:
+        raise RuntimeError('Simulator command failed: ' + args[0] + '\n' + result.stdout[-2000:] + result.stderr[-2000:])
+    return result
 
 
 def main():
@@ -50,8 +58,11 @@ def main():
         }, indent=2))
         print('GymBank started and remained running; iPhone screenshot saved.')
     finally:
-        sim('shutdown', device, check=False)
-        sim('delete', device, check=False)
+        for command in ['shutdown', 'delete']:
+            try:
+                sim(command, device, check=False)
+            except RuntimeError as error:
+                print('Simulator cleanup: ' + str(error), flush=True)
 
 
 if __name__ == '__main__':

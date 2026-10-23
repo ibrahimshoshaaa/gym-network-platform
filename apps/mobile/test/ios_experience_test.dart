@@ -29,15 +29,18 @@ void main() {
     await t.enterText(find.byKey(const ValueKey('auth.password')), 'A memorable password');
     await t.pumpAndSettle();
     expect(t.takeException(), isNull);
+    FocusManager.instance.primaryFocus?.unfocus();
     t.view.viewInsets = const FakeViewPadding();
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.byKey(const ValueKey('auth.language')), -250,
         scrollable: find.byType(Scrollable).first);
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('auth.language')));
     await t.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Reset password by mobile code — test'), findsOneWidget);
     await t.ensureVisible(find.text('Reset password by mobile code — test'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Reset password by mobile code — test'));
     await t.pumpAndSettle();
     expect(find.text('Reset password by phone'), findsOneWidget);
