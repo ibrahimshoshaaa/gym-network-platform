@@ -579,9 +579,9 @@ workflows:
           set -euo pipefail
           cd apps/mobile
           flutter build ios --simulator --debug
-          python3 tool/ios_smoke.py
           flutter build ios --release --no-codesign
           python3 tool/verify_ios.py
+          python3 tool/ios_smoke.py
           ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/gymbank-simulator.zip
     artifacts:
       - apps/mobile/build/ios/gymbank-simulator.zip

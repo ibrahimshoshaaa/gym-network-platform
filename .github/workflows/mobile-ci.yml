@@ -102,14 +102,14 @@ jobs:
       - name: Build iOS simulator application
         working-directory: apps/mobile
         run: flutter build ios --simulator --debug
-      - name: Launch on iPhone simulator
-        working-directory: apps/mobile
-        run: python3 tool/ios_smoke.py
       - name: Compile unsigned device Release
         working-directory: apps/mobile
         run: |
           flutter build ios --release --no-codesign
           python3 tool/verify_ios.py
+      - name: Launch on iPhone simulator
+        working-directory: apps/mobile
+        run: python3 tool/ios_smoke.py
       - name: Package simulator application
         working-directory: apps/mobile
         run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app build/ios/gymbank-simulator.zip
