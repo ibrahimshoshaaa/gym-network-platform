@@ -88,3 +88,31 @@ DO $$ DECLARE r text; BEGIN FOREACH r IN ARRAY ARRAY['gym_api_service','gym_api_
  EXECUTE format('GRANT DELETE ON "GymApplication","PhoneTestIdentity","ReceiptEvidence" TO %I',r);
  END IF;
  END LOOP; END $$;
+CREATE TABLE "AccountUploadLease" (
+ id uuid PRIMARY KEY,"userId" uuid NOT NULL REFERENCES "User"(id),"objectKey" text NOT NULL UNIQUE,
+ "deliveryType" text NOT NULL CHECK("deliveryType" IN ('upload','authenticated')),"expiresAt" timestamp(3) NOT NULL
+);
+CREATE INDEX "AccountUploadLease_userId_expiresAt_idx" ON "AccountUploadLease"("userId","expiresAt");
+CREATE TRIGGER account_identity_insert BEFORE INSERT ON "AccountUploadLease" FOR EACH ROW EXECUTE FUNCTION reject_erased_identity_write('userId');
+DO $$ DECLARE r text; BEGIN FOREACH r IN ARRAY ARRAY['gym_api_service','gym_api_runtime'] LOOP
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=r) THEN EXECUTE format('GRANT SELECT,INSERT,UPDATE,DELETE ON "AccountUploadLease" TO %I',r); END IF;
+ END LOOP; END $$;
+CREATE FUNCTION reject_erased_identity_update() RETURNS trigger LANGUAGE plpgsql AS $$ DECLARE uid uuid; BEGIN
+ uid:=(to_jsonb(NEW)->>TG_ARGV[0])::uuid;
+ PERFORM id FROM "User" WHERE id=uid FOR SHARE;
+ IF EXISTS(SELECT 1 FROM "AccountDeletion" WHERE "userId"=uid AND "erasedAt" IS NOT NULL) THEN RAISE EXCEPTION 'Account has been erased'; END IF;
+ RETURN NEW; END $$;
+DO $$ DECLARE spec text[]; BEGIN
+ FOREACH spec SLICE 1 IN ARRAY ARRAY[
+ ['UserPassword','userId'],['AuthSession','userId'],['AccountRecovery','userId'],['PhoneTestIdentity','userId'],
+ ['SupportTicket','userId'],['NotificationRead','userId'],['BusinessImage','ownerId'],['MarketListing','sellerId'],['MarketImage','ownerId'],
+ ['MarketReport','reporterId'],['MaintenanceRequest','createdById'],['MaintenanceImage','ownerId'],['MaintenanceEvent','actorId'],
+ ['PromotionRequest','requestedById'],['PromotionImage','ownerId'],['VisitRating','traineeId'],['GymApplication','ownerId'],['Gym','ownerId'],
+ ['StaffAssignment','userId'],['StaffDelegation','userId'],['StaffInvitation','userId'],['QrTicket','userId']
+ ] LOOP
+ EXECUTE format('CREATE TRIGGER account_identity_update BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION reject_erased_identity_update(%L)',spec[1],spec[2]);
+ END LOOP;
+ FOREACH spec SLICE 1 IN ARRAY ARRAY[['StaffAssignment','userId'],['StaffDelegation','userId'],['StaffInvitation','userId'],['QrTicket','userId']] LOOP
+ EXECUTE format('CREATE TRIGGER account_identity_insert BEFORE INSERT ON %I FOR EACH ROW EXECUTE FUNCTION reject_erased_identity_write(%L)',spec[1],spec[2]);
+ END LOOP;
+END $$;

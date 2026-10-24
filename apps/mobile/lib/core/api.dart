@@ -299,7 +299,7 @@ class ApiClient extends ChangeNotifier {
     try {
       final result = await request('auth/account-deletion/status',method:'POST',auth:false,
         body:{'requestKey':saved['requestKey']});
-      return _acceptDeletionReceipt(Map<String,dynamic>.from(result),saved['actorId'] as String);
+      return await _acceptDeletionReceipt(Map<String,dynamic>.from(result),saved['actorId'] as String);
     } on ApiFailure catch(e) {
       if(e.status==404 && e.code=='NOT_FOUND')return false;
       rethrow;

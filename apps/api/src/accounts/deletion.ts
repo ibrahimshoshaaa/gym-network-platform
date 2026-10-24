@@ -1,3 +1,4 @@
+import {consumeAuthLimit} from '../auth/throttle.js';
 import { randomUUID } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { z } from 'zod';
@@ -19,6 +20,7 @@ export async function deletionBlockers(tx:Tx,userId:string,adminReview=false):Pr
  const add=(code:string,count:number)=>{if(count)out.push({code,count});};
  const gyms=(await tx.gym.findMany({where:{ownerId:userId},select:{id:true,status:true}}));
  const gids=gyms.map(g=>g.id),bids=(await tx.branch.findMany({where:{gymId:{in:gids}},select:{id:true}})).map(b=>b.id);
+ add('UPLOADS',await tx.accountUploadLease.count({where:{userId,expiresAt:{gt:new Date()}}}));
  add('ACCOUNT_REVIEW',!u.isActive&&!adminReview?1:0);
  add('GYM_CLOSURE',gyms.filter(g=>g.status!=='SUSPENDED'&&g.status!=='REJECTED').length);
  add('POINT_BALANCE',await tx.pointAccount.count({where:{OR:[{ownerUserId:userId},{gymId:{in:gids}},{branchId:{in:bids}}],balance:{not:0}}}));
@@ -54,9 +56,15 @@ async function credential(db:PrismaClient,userId:string,password:string){
  return user!.password!.passwordHash;
 }
 export async function publicDeletion(db:PrismaClient,input:unknown){
- const d=parse(publicDeletionInput,input),user=await db.user.findFirst({where:d.identifier.includes('@')?{email:d.identifier}:{phoneE164:d.identifier},select:{id:true}});
+ const d=parse(publicDeletionInput,input);await consumeAuthLimit(db,'deletion-identity',d.identifier,5,900);const user=await db.user.findFirst({where:d.identifier.includes('@')?{email:d.identifier}:{phoneE164:d.identifier},select:{id:true}});
  if(!user){await verifyPassword(d.password,null);throw new DomainError('INVALID_CREDENTIALS');}
  return requestDeletion(db,user.id,{currentPassword:d.password,confirmation:d.confirmation,requestKey:d.requestKey});
+}
+export async function publicCancelDeletion(db:PrismaClient,input:unknown){
+ const d=parse(loginSchema,input);await consumeAuthLimit(db,'deletion-identity',d.identifier,5,900);
+ const user=await db.user.findFirst({where:d.identifier.includes('@')?{email:d.identifier}:{phoneE164:d.identifier},select:{id:true}});
+ if(!user){await verifyPassword(d.password,null);throw new DomainError('INVALID_CREDENTIALS');}
+ return cancelDeletion(db,user.id,{currentPassword:d.password});
 }
 export async function requestDeletion(db:PrismaClient,userId:string,input:unknown){
  const d=parse(deletionInput,input),hash=await credential(db,userId,d.currentPassword);
@@ -116,20 +124,23 @@ async function eraseIdentity(tx:Tx,userId:string,deletionId:string){
  await tx.user.update({where:{id:userId},data:{displayName:'حساب محذوف',phoneE164:'deleted:'+userId,email:null,phoneVerifiedAt:null,emailVerifiedAt:null,isActive:false}});
  // Delete UGC from the database and enqueue every remote object in the same transaction.
  const queue=async(keys:{objectKey:string}[],deliveryType:string)=>{if(keys.length)await tx.accountDeletionAsset.createMany({data:keys.map(k=>({id:randomUUID(),deletionId,objectKey:k.objectKey,deliveryType})),skipDuplicates:true});};
+ const abandonedUploads=await tx.accountUploadLease.findMany({where:{userId}});
+ for(const lease of abandonedUploads)await queue([lease],lease.deliveryType);
+ await tx.accountUploadLease.deleteMany({where:{userId}});
  const marketWhere={OR:[{ownerId:userId},{listing:{sellerId:userId}}]};
  await queue(await tx.marketImage.findMany({where:marketWhere,select:{objectKey:true}}),'upload');
  await tx.marketImage.deleteMany({where:marketWhere});await tx.marketReport.deleteMany({where:{OR:[{reporterId:userId},{listing:{sellerId:userId}}]}});await tx.marketListing.deleteMany({where:{sellerId:userId}});
  const businessWhere={OR:[{ownerId:userId},{gymId:{in:gids}}]};await queue(await tx.businessImage.findMany({where:businessWhere,select:{objectKey:true}}),'upload');await tx.businessImage.deleteMany({where:businessWhere});
  const promotionWhere={OR:[{requestedById:userId},{branchId:{in:bids}}]};
  const promotionImages=await tx.promotionImage.findMany({where:{OR:[{ownerId:userId},{branchId:{in:bids}},{request:promotionWhere}]},select:{id:true,objectKey:true}});
- await tx.promotionRequest.updateMany({where:{OR:[promotionWhere,{imageId:{in:promotionImages.map(i=>i.id)}}]},data:{title:'محتوى محذوف',body:'محتوى محذوف',imageId:null}});
+ await tx.promotionRequest.updateMany({where:{AND:[{OR:[promotionWhere,{imageId:{in:promotionImages.map(i=>i.id)}}]},{NOT:{requestedBy:{phoneE164:{startsWith:'deleted:'}}}}]},data:{title:'محتوى محذوف',body:'محتوى محذوف',imageId:null}});
  await queue(promotionImages,'upload');await tx.promotionImage.deleteMany({where:{id:{in:promotionImages.map(i=>i.id)}}});
  const maintenanceWhere={OR:[{createdById:userId},{branchId:{in:bids}}]};
  const maintenanceImages=await tx.maintenanceImage.findMany({where:{OR:[{ownerId:userId},{branchId:{in:bids}},{request:maintenanceWhere}]},select:{id:true,objectKey:true}});
  await queue(maintenanceImages,'upload');await tx.maintenanceImage.deleteMany({where:{id:{in:maintenanceImages.map(i=>i.id)}}});
  // Monetary quotes/approvals and event data remain restricted financial records.
- await tx.maintenanceRequest.updateMany({where:maintenanceWhere,data:{equipment:'محتوى محذوف',description:'محتوى محذوف',contactPhone:'',workSummary:'محتوى محذوف'}});
- await tx.$executeRaw`UPDATE "MaintenanceEvent" SET note='محتوى محذوف',data=(SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb) FROM jsonb_each(data) WHERE key IN ('action','estimatedPiasters','approvedPiasters','finalPiasters')) WHERE "actorId"=${userId}::uuid OR "requestId" IN (SELECT id FROM "MaintenanceRequest" WHERE "createdById"=${userId}::uuid OR "branchId"=ANY(${bids}::uuid[]))`;
+ await tx.maintenanceRequest.updateMany({where:{AND:[maintenanceWhere,{NOT:{createdBy:{phoneE164:{startsWith:'deleted:'}}}}]},data:{equipment:'محتوى محذوف',description:'محتوى محذوف',contactPhone:'',workSummary:'محتوى محذوف'}});
+ await tx.$executeRaw`UPDATE "MaintenanceEvent" SET note='محتوى محذوف',data=(SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb) FROM jsonb_each(data) WHERE key IN ('action','estimatedPiasters','approvedPiasters','finalPiasters')) WHERE ("actorId"=${userId}::uuid OR "requestId" IN (SELECT id FROM "MaintenanceRequest" WHERE "createdById"=${userId}::uuid OR "branchId"=ANY(${bids}::uuid[]))) AND NOT EXISTS(SELECT 1 FROM "AccountDeletion" d WHERE d."userId"="MaintenanceEvent"."actorId" AND d."erasedAt" IS NOT NULL)`;
  await tx.visitRating.deleteMany({where:{traineeId:userId}});
  await tx.supportMessage.deleteMany({where:{ticket:{userId}}});await tx.supportTicket.deleteMany({where:{userId}});
  await tx.notificationRead.deleteMany({where:{userId}});

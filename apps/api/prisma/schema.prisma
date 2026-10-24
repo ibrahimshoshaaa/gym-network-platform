@@ -1220,3 +1220,12 @@ model AccountDeletionAsset {
  @@unique([deletionId,objectKey,deliveryType])
  @@index([deletionId,completedAt])
 }
+// Registered before remote uploads so erasure cannot overlook an in-flight object.
+model AccountUploadLease {
+ id String @id @default(uuid()) @db.Uuid
+ userId String @db.Uuid
+ objectKey String @unique
+ deliveryType String
+ expiresAt DateTime
+ @@index([userId,expiresAt])
+}

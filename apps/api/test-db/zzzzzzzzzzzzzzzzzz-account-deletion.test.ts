@@ -50,7 +50,7 @@ test('clear account really loses credentials, phone identity and UGC; receipt su
 test('balances are never burned; pending requests cancel and retry, financial ledger survives erasure',async()=>{
  const u=await user(),admin=await user('PLATFORM_ADMIN');
  const wallet=await db.pointAccount.create({data:{ownerUserId:u.id,type:'TRAINEE_WALLET'}});
- const issuance=await db.pointAccount.findFirstOrThrow({where:{type:'ISSUANCE'}});
+ const issuance=await db.pointAccount.findFirst({where:{type:'ISSUANCE'}})??await db.pointAccount.create({data:{type:'ISSUANCE'}});
  const command={actorId:admin.id,idempotencyKey:randomUUID(),reason:'Synthetic deletion funding',points:{kind:'ISSUE' as const,entries:[{accountId:issuance.id,delta:-5n},{accountId:wallet.id,delta:5n}]}};
  const funded=await postLedger(db,command);
  const d=body();const pending=await requestDeletion(db,u.id,d);assert.equal(pending.request?.status,'PENDING');assert.ok(pending.blockers.some(b=>b.code==='POINT_BALANCE'));
@@ -84,4 +84,20 @@ test('deletion API requires current password, bounded confirmation, private rece
  const receipt=await app.inject({method:'POST',url:'/auth/account-deletion/status',payload:{requestKey:d.requestKey}});assert.equal(receipt.statusCode,200);assert.equal(receipt.headers['cache-control'],'no-store');
  assert.equal((await app.inject({method:'GET',url:'/me',headers})).statusCode,401);
  }finally{await app.close();}
+});
+test('in-flight and failed media uploads cannot escape the deletion outbox',async()=>{
+ const {accountUpload}=await import('../src/accounts/uploads.js');
+ const u=await user();let started!:()=>void,release!:()=>void;
+ const waiting=new Promise<void>(resolve=>{started=resolve;}),hold=new Promise<void>(resolve=>{release=resolve;});
+ const key='synthetic/inflight/'+randomUUID();
+ const upload=accountUpload(db,{upload:async()=>{started();await hold;return {objectKey:key,assetId:randomUUID(),publicUrl:'https://res.cloudinary.com/test/image/upload/test.jpg'};},remove:async()=>{throw Error('synthetic storage failure');}},u.id,Buffer.from('synthetic'),key,'upload',async()=>{throw Error('synthetic persistence failure');});
+ await waiting;
+ const pending=await requestDeletion(db,u.id,body());assert.equal(pending.request?.status,'PENDING');assert.ok(pending.blockers.some(b=>b.code==='UPLOADS'));
+ release();await assert.rejects(upload,/synthetic persistence failure/);
+ const lease=await db.accountUploadLease.findUniqueOrThrow({where:{objectKey:key}});
+ await db.accountUploadLease.update({where:{id:lease.id},data:{expiresAt:new Date(Date.now()-1000)}});
+ const erased=await requestDeletion(db,u.id,body());assert.equal(erased.request?.status,'ERASING');
+ assert.equal(await db.accountDeletionAsset.count({where:{deletionId:erased.request!.id,objectKey:key}}),1);
+ await eraseMediaBatch(db,erased.request!.id,{remove:async(k)=>assert.equal(k,key)});
+ assert.equal((await db.accountDeletion.findUniqueOrThrow({where:{userId:u.id}})).status,'COMPLETED');
 });

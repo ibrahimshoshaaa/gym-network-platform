@@ -1,3 +1,4 @@
+import {accountUpload} from '../accounts/uploads.js';
 import {createHash,randomUUID} from 'node:crypto';
 import type {Prisma,PrismaClient} from '@prisma/client';
 import {requireActor,requireAdmin} from '../auth/authorization.js';
@@ -20,8 +21,8 @@ async function attach(tx:Tx,actor:string,id:string,images:string[]){
  await tx.marketImage.updateMany({where:{id:{in:images}},data:{listingId:id}});
 }
 export async function uploadMarketImage(db:PrismaClient,storage:BusinessStorage,actor:string,bytes:Buffer){
- await requireActor(db,actor);const data=await cleanReceipt(bytes),object=await storage.upload(data,`gym-market/${actor}/${randomUUID()}`);
- try{await requireActor(db,actor);return await db.marketImage.create({data:{ownerId:actor,...object},select:{id:true,publicUrl:true}});}catch(e){await storage.remove(object.objectKey).catch(()=>{});throw e;}
+ await requireActor(db,actor);const data=await cleanReceipt(bytes);
+ return accountUpload(db,storage,actor,data,`gym-market/${actor}/${randomUUID()}`,'upload',async object=>{await requireActor(db,actor);return db.marketImage.create({data:{ownerId:actor,...object},select:{id:true,publicUrl:true}});});
 }
 export async function removeMarketImage(db:PrismaClient,storage:BusinessStorage,actor:string,id:string){
  const row=await serializable(db,async tx=>{await requireActor(tx,actor);const row=await tx.marketImage.findUnique({where:{id}});if(!row||row.ownerId!==actor)throw new DomainError('NOT_FOUND');if(row.listingId)throw new DomainError('INVALID_STATE');await tx.marketImage.delete({where:{id}});return row;});
