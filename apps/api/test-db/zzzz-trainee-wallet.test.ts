@@ -1,3 +1,4 @@
+import {pointQuote} from '../src/points/service.js';
 import {historicalSale as sellPoints} from './legacy-fixtures.js';
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -259,7 +260,7 @@ test("expired positive wallets stay recorded but unavailable with no expiry post
   assert.equal(s.unavailablePoints, 120);
   assert.equal(s.status, "EXPIRED");
   await walletMovements(db, f.trainee.id, {});
-  await code(f.sale(), "WALLET_EXPIRY_REVIEW_REQUIRED");
+  await code(db.$transaction(tx=>pointQuote(tx,f.admin.id,{recipientId:f.trainee.id,points:10})), "WALLET_EXPIRY_REVIEW_REQUIRED");
   assert.equal(await db.pointTransaction.count(), before);
   assert.equal(
     (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))

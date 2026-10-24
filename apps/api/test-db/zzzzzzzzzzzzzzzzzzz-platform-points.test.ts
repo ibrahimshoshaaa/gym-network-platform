@@ -7,7 +7,7 @@ import {saveWelcomeSettings,grantWelcomePoints} from '../src/points/welcome.js';
 import {platformFixture} from './platform-fixture.js';
 const url=new URL(process.env.DATABASE_URL??'');if(!['localhost','127.0.0.1'].includes(url.hostname)||!['/gym_ci','/gym_test'].includes(url.pathname))throw Error('Disposable local database required');
 const db=new PrismaClient();after(()=>db.$disconnect());
-const registration=()=>({displayName:'Synthetic welcome trainee',phone:'+2010'+String(BigInt('0x'+randomUUID().replaceAll('-','').slice(0,12))%100000000n).padStart(8,'0'),password:'Synthetic welcome password 123!'});
+const registration=()=>({displayName:'Synthetic welcome trainee',email:`welcome-${randomUUID()}@example.test`,phone:'+2010'+String(BigInt('0x'+randomUUID().replaceAll('-','').slice(0,12))%100000000n).padStart(8,'0'),password:'Synthetic welcome password 123!'});
 test('welcome points apply once on signup, never login, and disabling affects only future registrations',async()=>{
  const f=await platformFixture(db),previous=await db.welcomePointsPolicy.findUnique({where:{id:'default'}});
  await saveWelcomeSettings(db,f.admin.id,{expectedVersion:previous?.version??0,enabled:true,points:15});

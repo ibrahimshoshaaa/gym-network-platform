@@ -127,7 +127,7 @@ test('approval requires exact confirmed amount and never revives an expired posi
   assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: wallet.id } })).balance, 20);
 });
 
-test('gym purchases are rejected for all principals',async()=>{const {trainee}=await fixture();await expectCode(getQuote(db,trainee.id,{kind:'BRANCH_STOCK',receivingBranchId:randomUUID(),points:10}),'INVALID_INPUT');});
+test('gym purchases are rejected for all principals',async()=>{const {trainee}=await fixture();assert.throws(()=>getQuote(db,trainee.id,{kind:'BRANCH_STOCK',receivingBranchId:randomUUID(),points:10}),/INVALID_INPUT/);});
 
 test('packages are version checked and pending snapshots cannot be edited', async () => {
   const { trainee } = await fixture();
@@ -178,4 +178,4 @@ test('receipt HTTP flow authenticates, normalizes, deduplicates and restricts sh
 });
 
 
-test('central gym stock purchase cannot be quoted',async()=>{const {trainee}=await fixture();await expectCode(getQuote(db,trainee.id,{kind:'BRANCH_STOCK',receivingGymId:randomUUID(),points:10}),'INVALID_INPUT');});
+test('central gym stock purchase cannot be quoted',async()=>{const {trainee}=await fixture();assert.throws(()=>getQuote(db,trainee.id,{kind:'BRANCH_STOCK',receivingGymId:randomUUID(),points:10}),/INVALID_INPUT/);});

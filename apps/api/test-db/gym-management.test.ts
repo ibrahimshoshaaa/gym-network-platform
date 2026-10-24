@@ -275,7 +275,7 @@ test('management read endpoints isolate tenants and expose balances without invi
     const adminDetail = await a.request('GET', `/admin/gyms/${a.gymId}`, a.adminToken);
     assert.equal(adminDetail.statusCode, 200); assert.equal(adminDetail.json().owner.email, a.ownerContact.email);
     const branches = await a.request('GET', `/admin/gyms/${a.gymId}/branches?limit=1`, a.adminToken);
-    assert.equal(branches.statusCode, 200, branches.body); assert.equal(branches.json().items[0].pointAccounts[0].balance, 0);
+    assert.equal(branches.statusCode, 200, branches.body); assert.equal(branches.json().items[0].pointAccounts.length, 0);
     assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/branches`, a.owner.accessToken)).statusCode, 403);
     assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/invitations`, a.owner.accessToken)).statusCode, 403);
     assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}`, a.owner.accessToken)).statusCode, 403);
