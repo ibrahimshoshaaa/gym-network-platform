@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_network/screens/trainee.dart';
 import 'package:gym_network/screens/home_cards.dart';
+import 'package:gym_network/core/ui.dart';
 import 'operations_test.dart' show client,page,reply;
 void main(){
  testWidgets('home orders balance, nearby gyms, offers and real visits with rating',(t)async{
@@ -28,6 +29,8 @@ void main(){
   expect(t.getTopLeft(find.text('عروض ليك')).dy,lessThan(t.getTopLeft(find.text('آخر الزيارات')).dy));
   expect(find.text('عرض المنصة التجريبي'),findsOneWidget);
   expect(t.getSize(find.byType(HomeOffers)).height,165);
+  expect(find.descendant(of: find.byType(VisitCard), matching: find.text('قيّم زيارتك')), findsOneWidget);
+  expect(find.ancestor(of: find.text('قيّم زيارتك'), matching: find.byType(Panel)), findsOneWidget);
   await t.ensureVisible(find.text('قيّم زيارتك'));await t.tap(find.text('قيّم زيارتك'));await t.pumpAndSettle();
   await t.tap(find.byTooltip('4 نجوم'));await t.pump();await t.tap(find.text('حفظ التقييم'));await t.pumpAndSettle();
   expect(rating,{'score':4,'expectedVersion':0});expect(find.text('تقييمك 4 / 5 · تعديل'),findsOneWidget);expect(t.takeException(),isNull);

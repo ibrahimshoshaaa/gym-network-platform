@@ -12,6 +12,7 @@ ThemeData appTheme() => ThemeData(
   useMaterial3: true,
   scaffoldBackgroundColor: canvas,
   colorScheme: ColorScheme.fromSeed(
+    brightness: Brightness.light,
     seedColor: green,
     primary: green,
     surface: Colors.white,

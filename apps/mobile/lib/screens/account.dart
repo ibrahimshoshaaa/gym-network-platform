@@ -69,7 +69,6 @@ class _AccountScreenState extends State<AccountScreen> {
           if(mounted)setState((){});
         }),
         const Divider(height:1),
-        _item('حذف الحساب',Icons.delete_forever_outlined,()=>open(context,AccountDeletionScreen(api:widget.api))),
         _item('كلمة السر والأمان',Icons.lock_outline_rounded,
           ()=>open(context,PasswordScreen(api:widget.api))),
       ])),
@@ -86,6 +85,8 @@ class _AccountScreenState extends State<AccountScreen> {
       ])),
       ErrorNote(error),
       const SizedBox(height:20),
+      _deleteAccountButton(context),
+      const SizedBox(height: 8),
       OutlinedButton.icon(onPressed:busy?null:logout,
         icon:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2))
           :const Icon(Icons.logout_rounded,size:19),
@@ -101,6 +102,15 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) => !widget.workplace
     ? traineeAccount(context) : workAccount(context);
+
+  Widget _deleteAccountButton(BuildContext context) => TextButton.icon(
+    key: const Key('account.delete'),
+    onPressed: busy ? null : () => open(context, AccountDeletionScreen(api: widget.api)),
+    icon: const Icon(Icons.delete_forever_outlined),
+    label: const Text('حذف حسابي'),
+    style: TextButton.styleFrom(foregroundColor: const Color(0xffba1a1a),
+      minimumSize: const Size(double.infinity, 48)),
+  );
 
   Widget workAccount(BuildContext context) => ListView(
     padding: const EdgeInsets.all(22),
@@ -163,8 +173,7 @@ class _AccountScreenState extends State<AccountScreen> {
           children: [
             if(widget.ownerView||canPromote)_item('إعلانات الفروع', Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
             _item('الصيانة', Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
-            _item('حذف الحساب',Icons.delete_forever_outlined,()=>open(context,AccountDeletionScreen(api:widget.api))),
-            _item(
+                _item(
               'تعديل الاسم',
               Icons.person_outline_rounded,
               () => open(context, ProfileEdit(api: widget.api)),
@@ -195,6 +204,8 @@ class _AccountScreenState extends State<AccountScreen> {
       ),
       ErrorNote(error),
       const SizedBox(height: 22),
+      _deleteAccountButton(context),
+      const SizedBox(height: 8),
       ActionButton(
         'تسجيل الخروج',
         icon: Icons.logout_rounded,

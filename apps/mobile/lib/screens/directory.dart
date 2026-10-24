@@ -415,6 +415,20 @@ class BranchDetail extends StatelessWidget {
           padding: const EdgeInsets.all(22),
           children: [
             BranchTile(branch: b, onTap: () {}),
+            const SizedBox(height: 18),
+            ActionButton(
+              'افتح الاتجاهات',
+              icon: Icons.directions_outlined,
+              onPressed: () => launchUrl(
+                Uri.https('www.google.com', '/maps/dir/', {
+                  'api': '1',
+                  'destination': '${p.latitude},${p.longitude}',
+                }),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ActionButton('احجز زيارتك',icon:Icons.calendar_month_outlined,onPressed:()=>open(context,CreateBookingScreen(api:api,branch:b))),
             const SectionTitle('عن المكان'),
             Panel(
               child: Column(
@@ -461,20 +475,6 @@ class BranchDetail extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 18),
-            ActionButton(
-              'افتح الاتجاهات',
-              icon: Icons.directions_outlined,
-              onPressed: () => launchUrl(
-                Uri.https('www.google.com', '/maps/dir/', {
-                  'api': '1',
-                  'destination': '${p.latitude},${p.longitude}',
-                }),
-                mode: LaunchMode.externalApplication,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ActionButton('احجز زيارتك',icon:Icons.calendar_month_outlined,onPressed:()=>open(context,CreateBookingScreen(api:api,branch:b))),
             ...((b['images'] as List? ?? [])
                 .skip(1)
                 .map(

@@ -124,3 +124,28 @@ test('financial evidence stays immutable while unrelated personal receipts are e
  await assert.rejects(db.receiptEvidence.delete({where:{id:financial.id}}));
  const removed:string[]=[];await eraseMediaBatch(db,erased.request!.id,{remove:async key=>{removed.push(key);}});assert.deepEqual(new Set(removed),new Set([personal.objectKey,adminAttachment.objectKey]));assert.equal(await db.receiptEvidence.findUnique({where:{id:adminAttachment.id}}),null);
 });
+
+test('authenticated phone confirmation matches only the session owner and public deletion still needs a password',async()=>{
+ const u=await user(),other=await user(),admin=await user('PLATFORM_ADMIN'),app=buildApp(db);
+ try{
+  const token=await createSession(db,u.id,new Date(Date.now()+60000)),headers={authorization:'Bearer '+token};
+  const phoneBody={phone:u.phoneE164,confirmation:'DELETE',requestKey:randomUUID()};
+  assert.equal((await app.inject({method:'POST',url:'/me/account-deletion',payload:phoneBody})).statusCode,401);
+  assert.equal((await app.inject({method:'POST',url:'/me/account-deletion',headers,payload:{...phoneBody,phone:other.phoneE164}})).statusCode,401);
+  assert.equal((await app.inject({method:'POST',url:'/me/account-deletion',headers,payload:{...phoneBody,confirmation:'yes'}})).statusCode,400);
+  assert.equal((await app.inject({method:'POST',url:'/auth/account-deletion',payload:{...phoneBody,identifier:u.phoneE164}})).statusCode,400);
+  await assert.rejects(requestDeletion(db,admin.id,{...phoneBody,phone:admin.phoneE164}),/ACCESS_DENIED/);
+  // An open request is cancellable using the same authenticated phone confirmation.
+  await db.pointAccount.create({data:{ownerUserId:u.id,type:'TRAINEE_WALLET'}});
+  await db.accountUploadLease.create({data:{userId:u.id,objectKey:'synthetic/phone-delete/'+randomUUID(),deliveryType:'upload',expiresAt:new Date(Date.now()+60000)}});
+  const pending=await app.inject({method:'POST',url:'/me/account-deletion',headers,payload:phoneBody});
+  assert.equal(pending.statusCode,200);assert.equal(pending.json().request.status,'PENDING');
+  await assert.rejects(cancelDeletion(db,u.id,{phone:other.phoneE164}),/INVALID_CREDENTIALS/);
+  assert.equal((await app.inject({method:'POST',url:'/me/account-deletion/cancel',headers,payload:{phone:u.phoneE164}})).json().request.status,'CANCELLED');
+  await db.accountUploadLease.deleteMany({where:{userId:u.id}});
+  const done=await app.inject({method:'POST',url:'/me/account-deletion',headers,payload:phoneBody});
+  assert.equal(done.statusCode,200);assert.equal(done.json().request.status,'COMPLETED');
+  assert.equal(await authenticate(db,'Bearer '+token),null);
+  assert.equal((await db.user.findUniqueOrThrow({where:{id:other.id}})).isActive,true);
+ }finally{await app.close();}
+});
