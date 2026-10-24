@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
@@ -32,7 +33,7 @@ class _FlowHeading extends StatelessWidget {
 }
 
 Widget _flowPage({required BuildContext context, required bool english, required String title, required List<Widget> children}) =>
-  Localizations.override(context: context, locale: Locale(english ? 'en' : 'ar'), child: Directionality(
+  Localizations.override(context: context, locale: Locale(english ? 'en' : 'ar'), delegates: const [GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate], child: Directionality(
     textDirection: english ? TextDirection.ltr : TextDirection.rtl,
     child: Screen(title: title, child: LayoutBuilder(builder: (context, constraints) => SingleChildScrollView(
       padding: const EdgeInsets.all(24), child: Align(alignment: Alignment.topCenter, child: ConstrainedBox(

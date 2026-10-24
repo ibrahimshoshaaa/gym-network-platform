@@ -39,8 +39,11 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen>{
   }
   Future<void> submit(bool cancel)async{
     if(busy)return;
-    if(phone.text.trim().isEmpty||(!cancel&&confirmation.text!='DELETE')){
-      setState(()=>error=const ApiFailure('INVALID_INPUT'));return;
+    if(phone.text.trim().isEmpty){
+      setState(()=>error='اكتب رقم الموبايل المسجّل في حسابك.');return;
+    }
+    if(!cancel&&confirmation.text!='DELETE'){
+      setState(()=>error='اكتب DELETE بالإنجليزي لتأكيد الحذف.');return;
     }
     FocusScope.of(context).unfocus();
     setState((){busy=true;error=null;});
@@ -49,7 +52,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen>{
         :await widget.api.deleteAccount(phone.text);
       phone.clear();confirmation.clear();
       if(mounted)setState(()=>data=Map<String,dynamic>.from(r));
-    }catch(e){if(mounted)setState(()=>error=e);}
+    }catch(e){if(mounted)setState(()=>error=e is ApiFailure&&e.code=='INVALID_CREDENTIALS'?'رقم الموبايل مش مطابق للرقم المسجّل في حسابك.':e);}
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context){
