@@ -69,6 +69,7 @@ const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const rules: Record<string, RegExp[]> = {
   GET: [
+    /^me\/account-deletion$/, /^admin\/account-deletions$/, new RegExp(`^admin/account-deletions/${uuid}$`),
     /^admin\/service-price-requests$/,
     new RegExp(`^directory/branches/${uuid}/services$`),
     new RegExp(`^gyms/${uuid}/branches/${uuid}/services$`),
@@ -127,6 +128,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^receipts/${uuid}/access$`),
   ],
   POST: [
+    /^me\/account-deletion(?:\/cancel)?$/, new RegExp(`^admin/account-deletions/${uuid}/process$`),
     new RegExp(`^admin/service-price-requests/${uuid}/review$`),
     new RegExp(`^gyms/${uuid}/branches/${uuid}/services$`),
     new RegExp(`^gyms/${uuid}/branches/${uuid}/services/${uuid}/price-requests$`),

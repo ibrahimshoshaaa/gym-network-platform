@@ -1,3 +1,4 @@
+import {accountUpload} from '../accounts/uploads.js';
 import { createHash, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { v2 as cloudinary } from 'cloudinary';
@@ -21,7 +22,7 @@ export class CloudinaryReceiptStorage implements ReceiptStorage {
   async upload(data: Buffer, publicId: string) {
     const credentials = this.credentials();
     return new Promise<{ objectKey: string; assetId: string }>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream({ ...credentials, resource_type: 'image', type: 'authenticated', public_id: publicId, overwrite: false }, (error, result) => {
+      const stream = cloudinary.uploader.upload_stream({ ...credentials, resource_type: 'image', type: 'authenticated', timeout:120000, public_id: publicId, overwrite: false }, (error, result) => {
         if (error || !result || result.public_id !== publicId || result.type !== 'authenticated') return reject(new DomainError('STORAGE_UNAVAILABLE'));
         resolve({ objectKey: result.public_id, assetId: result.asset_id });
       });
@@ -31,7 +32,7 @@ export class CloudinaryReceiptStorage implements ReceiptStorage {
   readUrl(objectKey: string) {
     return cloudinary.utils.private_download_url(objectKey, 'jpg', { ...this.credentials(), resource_type: 'image', type: 'authenticated', expires_at: Math.floor(Date.now() / 1000) + 60, attachment: false });
   }
-  async remove(objectKey: string) { await cloudinary.uploader.destroy(objectKey, { ...this.credentials(), resource_type: 'image', type: 'authenticated', invalidate: true }); }
+  async remove(objectKey: string) { const r=await cloudinary.uploader.destroy(objectKey, { ...this.credentials(), resource_type: 'image', type: 'authenticated', invalidate: true });if(!['ok','not found'].includes(r.result))throw new DomainError('STORAGE_UNAVAILABLE'); }
 }
 export const receiptLimit = 5 * 1024 * 1024;
 export async function cleanReceipt(data: Buffer) {
@@ -55,11 +56,9 @@ export async function uploadReceipt(db: PrismaClient, storage: ReceiptStorage, a
   };
   const existing = await db.receiptEvidence.findUnique({ where: { contentHash } });
   if (existing) return view(existing);
-  const object = await storage.upload(cleaned, `gym-receipts/${randomUUID()}`);
   try {
-    return view(await db.receiptEvidence.create({ data: { ownerUserId: actorId, ...object, contentHash, mimeType: 'image/jpeg', bytes: cleaned.length } }));
+    return await accountUpload(db,storage,actorId,cleaned,`gym-receipts/${randomUUID()}`,'authenticated',async object=>view(await db.receiptEvidence.create({ data: { ownerUserId: actorId, ...object, contentHash, mimeType: 'image/jpeg', bytes: cleaned.length } })));
   } catch (error) {
-    await storage.remove(object.objectKey).catch(() => undefined);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       const raced = await db.receiptEvidence.findUnique({ where: { contentHash } });
       if (raced) return view(raced);

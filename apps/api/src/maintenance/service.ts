@@ -1,3 +1,4 @@
+import {accountUpload} from '../accounts/uploads.js';
 import {recordCharge} from '../charges/service.js';
 import {createHash,randomUUID} from 'node:crypto';
 import type {Prisma,PrismaClient} from '@prisma/client';
@@ -19,8 +20,8 @@ async function event(tx:Tx,actor:string,id:string,status:string,note:string,data
 }
 export async function uploadImage(db:PrismaClient,storage:BusinessStorage,actor:string,branchId:string,bytes:Buffer){
  const access=await branchAccess(db,actor,branchId);if(access.admin)throw new DomainError('ACCESS_DENIED');
- const cleaned=await cleanReceipt(bytes),object=await storage.upload(cleaned,`gym-maintenance/${branchId}/${randomUUID()}`);
- try{const a=await branchAccess(db,actor,branchId);if(a.admin)throw new DomainError('ACCESS_DENIED');return await db.maintenanceImage.create({data:{...object,ownerId:actor,branchId},select:{id:true,publicUrl:true}});}catch(e){await storage.remove(object.objectKey).catch(()=>{});throw e;}
+ const cleaned=await cleanReceipt(bytes);
+ return accountUpload(db,storage,actor,cleaned,`gym-maintenance/${branchId}/${randomUUID()}`,'upload',async object=>{const a=await branchAccess(db,actor,branchId);if(a.admin)throw new DomainError('ACCESS_DENIED');return db.maintenanceImage.create({data:{...object,ownerId:actor,branchId},select:{id:true,publicUrl:true}});});
 }
 export function createRequest(db:PrismaClient,actor:string,input:unknown){
  const d=parse(createBody,input),hash=createHash('sha256').update(JSON.stringify(d)).digest('hex');

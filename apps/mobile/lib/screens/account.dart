@@ -1,3 +1,4 @@
+import 'account_deletion.dart';
 import 'campaigns.dart';
 import 'maintenance.dart';
 import 'promotions.dart';
@@ -68,6 +69,7 @@ class _AccountScreenState extends State<AccountScreen> {
           if(mounted)setState((){});
         }),
         const Divider(height:1),
+        _item('حذف الحساب',Icons.delete_forever_outlined,()=>open(context,AccountDeletionScreen(api:widget.api))),
         _item('كلمة السر والأمان',Icons.lock_outline_rounded,
           ()=>open(context,PasswordScreen(api:widget.api))),
       ])),
@@ -161,6 +163,7 @@ class _AccountScreenState extends State<AccountScreen> {
           children: [
             if(widget.ownerView||canPromote)_item('إعلانات الفروع', Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
             _item('الصيانة', Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
+            _item('حذف الحساب',Icons.delete_forever_outlined,()=>open(context,AccountDeletionScreen(api:widget.api))),
             _item(
               'تعديل الاسم',
               Icons.person_outline_rounded,

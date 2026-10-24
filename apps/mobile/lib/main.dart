@@ -1,3 +1,4 @@
+import 'screens/account_deletion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -101,7 +102,9 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
             ),
           )
         : widget.api.user == null
-        ? AuthScreen(api: widget.api)
+        ? widget.api.deletionReceipt != null
+          ? AccountDeletionReceipt(api:widget.api)
+          : AuthScreen(api: widget.api)
         : SessionGate(key: ValueKey(widget.api.user!['id']), api: widget.api),
   );
 }
@@ -207,6 +210,7 @@ class _SessionGateState extends State<SessionGate> {
               mode: LaunchMode.externalApplication,
             ),
           ),
+          if(role!='PLATFORM_ADMIN')TextButton(onPressed:()=>open(context,AccountDeletionScreen(api:widget.api)),child:const Text('حذف الحساب')),
           TextButton(
             onPressed: () => widget.api.logout(),
             child: const Text('تسجيل الخروج'),

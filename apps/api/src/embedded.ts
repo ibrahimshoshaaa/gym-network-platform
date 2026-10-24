@@ -106,3 +106,9 @@ export async function settleDurablePromotion(id:string){
   return null;
  });
 }
+
+/** Only an opaque deletion id enters durable execution; credentials never do. */
+export async function eraseAccountMedia(id:string){
+ const {eraseMediaBatch}=await import('./accounts/deletion-media.js');
+ return eraseMediaBatch(databaseClient(),id);
+}

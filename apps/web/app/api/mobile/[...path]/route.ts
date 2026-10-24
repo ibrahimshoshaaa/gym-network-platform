@@ -1,9 +1,10 @@
+import {dispatchAccountErasure} from '../../../../lib/account-deletion';
 import {bookingWorkflowRequest} from "../../../../lib/scheduled-reservation";
 import {trustedClientAddress} from '../../../../lib/client-address';
 import {allowedPath,boundedBody,checkOrigin,GatewayError} from '../../../../lib/security';
 import {failure,json,upstream} from '../../../../lib/gateway';
 export const runtime='nodejs';
-const publicRoutes=new Set(['auth/signin','auth/register','auth/owners/register','auth/invitations/accept','auth/phone/challenge','auth/phone/register','auth/phone/reset']);
+const publicRoutes=new Set(['auth/account-deletion','auth/account-deletion/status','auth/signin','auth/register','auth/owners/register','auth/invitations/accept','auth/phone/challenge','auth/phone/register','auth/phone/reset']);
 export async function GET(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function POST(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function PUT(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
@@ -29,6 +30,6 @@ async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  }
  const url=new URL(r.url);if(url.search.length>2048)throw new GatewayError('INVALID_INPUT',400);const scheduled=await bookingWorkflowRequest(path,method,match?.[1]??'',body,r.headers.get('idempotency-key')??'');if(scheduled)return scheduled;const response=await upstream(path+url.search,{method,headers,...(body?{body:body as BodyInit}:{})},match?.[1],trustedClientAddress(r));
  if(response.status===204)return new Response(null,{status:204,headers:{'Cache-Control':'no-store, private'}});
- return json(await response.json(),response.status);
+ const result=await response.json();if(response.ok)await dispatchAccountErasure(path,result);return json(result,response.status);
  }catch(e){return failure(e);}}
 

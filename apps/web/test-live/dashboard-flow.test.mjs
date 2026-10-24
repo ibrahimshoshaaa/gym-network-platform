@@ -1765,6 +1765,24 @@ test(
       if(process.env.GYM_BROWSER_TEST!=='1'){
         const reviewed=await request(`/api/backend/admin/gym-applications/${nativeOwner.application.id}/review`,{cookie,method:'POST',body:{decision:'APPROVED',expectedVersion:1,reason:'Synthetic mobile HTTP applicant approved'}});assert.equal(reviewed.status,200);
       }
+      // Permanent deletion traverses the external page and the Bearer-only native bridge.
+      const deletionUser=await db.user.create({data:{displayName:'Synthetic HTTP Deletion',phoneE164:'+20delete'+randomUUID(),email:`delete-http-${id}@example.test`,role:'TRAINEE',password:{create:{passwordHash}}}});
+      const deletionLogin=await request('/api/mobile/auth/signin',{method:'POST',body:{identifier:deletionUser.email,password}});
+      assert.equal(deletionLogin.status,200);const deletionToken=(await deletionLogin.json()).accessToken;
+      assert.equal((await request('/api/mobile/me/account-deletion',{headers:{authorization:'Bearer '+deletionToken}})).status,200);
+      assert.equal((await request('/api/mobile/admin/account-deletions',{headers:{authorization:'Bearer '+deletionToken}})).status,404);
+      const deletionKey=randomUUID(),deletionBody={identifier:deletionUser.email,password,confirmation:'DELETE',requestKey:deletionKey};
+      assert.equal((await request('/api/account-deletion/request',{method:'POST',crossOrigin:true,body:deletionBody})).status,403);
+      const deleted=await request('/api/account-deletion/request',{method:'POST',body:deletionBody});
+      assert.equal(deleted.status,200,await deleted.clone().text());assert.equal((await deleted.json()).request.status,'COMPLETED');
+      assert.equal((await request('/api/mobile/me',{headers:{authorization:'Bearer '+deletionToken}})).status,401);
+      const deletionStatus=await request('/api/mobile/auth/account-deletion/status',{method:'POST',body:{requestKey:deletionKey}});
+      assert.equal(deletionStatus.status,200);const deletionReceipt=await deletionStatus.json();assert.equal(deletionReceipt.request.status,'COMPLETED');assert.ok(!JSON.stringify(deletionReceipt).includes(deletionUser.id));
+      const nativeDeletionUser=await db.user.create({data:{displayName:'Synthetic Native Deletion',phoneE164:'+20delete'+randomUUID(),email:`delete-native-${id}@example.test`,role:'TRAINEE',password:{create:{passwordHash}}}});
+      const nativeDeletionLogin=await request('/api/mobile/auth/signin',{method:'POST',body:{identifier:nativeDeletionUser.email,password}});assert.equal(nativeDeletionLogin.status,200);
+      const nativeDeletionToken=(await nativeDeletionLogin.json()).accessToken;
+      const nativeDeleted=await request('/api/mobile/me/account-deletion',{method:'POST',headers:{authorization:'Bearer '+nativeDeletionToken},body:{currentPassword:password,confirmation:'DELETE',requestKey:randomUUID()}});
+      assert.equal(nativeDeleted.status,200,await nativeDeleted.clone().text());assert.equal((await nativeDeleted.json()).request.status,'COMPLETED');
       // Real mobile viewport check uses only synthetic local identities.
       if(process.env.GYM_BROWSER_TEST === '1') {
         const {chromium,expect}=await import('@playwright/test');
@@ -2055,6 +2073,16 @@ test(
           await traineePage.setViewportSize({width:1280,height:900});
           assert.equal(await records.first().evaluate(el=>el.tagName),'ARTICLE');
           assert.equal(await traineePage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'desktop ledger cards must fit without horizontal overflow');
+          const publicDeletionUser=await db.user.create({data:{displayName:'Synthetic Browser Deletion',phoneE164:'+20delete'+randomUUID(),email:`delete-browser-${id}@example.test`,role:'TRAINEE',password:{create:{passwordHash}}}});
+          const deletionContext=await browser.newContext({viewport:{width:375,height:812}});
+          const deletionPage=await deletionContext.newPage();await deletionPage.goto(origin+'/delete-account');
+          await deletionPage.getByLabel('الموبايل أو الإيميل المسجل').fill(publicDeletionUser.email);
+          await deletionPage.getByLabel('كلمة السر الحالية').fill(password);
+          await deletionPage.getByLabel('اكتب DELETE لتأكيد الحذف النهائي').fill('DELETE');
+          await deletionPage.getByRole('button',{name:'تأكيد طلب حذف الحساب',exact:true}).click();
+          await expect(deletionPage.getByRole('status')).toContainText('تم حذف الحساب والصور غير المالية');
+          assert.equal(await deletionPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'public deletion page fits iPhone viewport');
+          await deletionContext.close();
           await traineeContext.close();
         } finally {await browser.close();}
       }

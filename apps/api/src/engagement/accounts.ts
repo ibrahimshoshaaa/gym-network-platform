@@ -24,7 +24,7 @@ export async function changeUserAccess(db:PrismaClient,actorId:string,id:string,
  if((await tx.userPassword.findUnique({where:{userId:actorId}}))?.passwordHash!==hash)throw new DomainError('INVALID_CREDENTIALS');
  const target=await tx.user.findUnique({where:{id},include:{password:true}});
  if(!target)throw new DomainError('NOT_FOUND');
- if(target.role==='PLATFORM_ADMIN'||(!target.password && d.active))throw new DomainError('ACCESS_DENIED');
+ if(target.role==='PLATFORM_ADMIN'||target.phoneE164.startsWith('deleted:')||(!target.password && d.active))throw new DomainError('ACCESS_DENIED');
  await tx.user.update({where:{id},data:{isActive:d.active}});
  if(!d.active){await tx.authSession.updateMany({where:{userId:id,revokedAt:null},data:{revokedAt:new Date()}});await tx.accountRecovery.updateMany({where:{userId:id,usedAt:null,revokedAt:null},data:{revokedAt:new Date()}});}
  await audit(tx,actorId,d.active?'USER_ENABLED':'USER_DISABLED',id,d.reason);return {id,isActive:d.active};

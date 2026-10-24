@@ -1,3 +1,4 @@
+import 'account_deletion.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1012,6 +1013,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
             onPressed: widget.refresh,
             icon: Icons.refresh_rounded,
           ),
+          TextButton(onPressed:busy?null:()=>open(context,AccountDeletionScreen(api:widget.api)),child:const Text('حذف الحساب')),
           if (rejected)
             TextButton(
               onPressed: () async {
