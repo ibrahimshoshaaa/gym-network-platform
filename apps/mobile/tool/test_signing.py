@@ -170,3 +170,25 @@ class SplitAbiVersionTests(unittest.TestCase):
             verify(Path('app-arm64-v8a-release.apk'),'apksigner','aapt','a'*64,102042,'arm64-v8a')
         with patch('verify_apks.subprocess.run',side_effect=[SimpleNamespace(stdout=output),SimpleNamespace(stdout=metadata)]):
             with self.assertRaises(SystemExit): verify(Path('app-arm64-v8a-release.apk'),'apksigner','aapt','a'*64,102042,'armeabi-v7a')
+
+
+class SharedReleaseVersionTests(unittest.TestCase):
+    def test_new_clock_updates_legacy_github_and_codemagic_installs(self):
+        from release_version import build_number
+        timestamp = 1792803600  # 2026-10-24 UTC; independent of the CI run counter.
+        self.assertGreater(build_number(timestamp), 100000 + 165)
+        self.assertEqual(build_number(timestamp), 1000000 + timestamp - 1767225600)
+        self.assertGreater(build_number(timestamp + 1), build_number(timestamp))
+
+    def test_release_clock_rejects_invalid_android_range(self):
+        from release_version import build_number, EPOCH_2026, MAX_BASE, FLOOR
+        for timestamp in [EPOCH_2026 - 1, EPOCH_2026 + MAX_BASE - FLOOR + 1]:
+            with self.assertRaises(ValueError): build_number(timestamp)
+
+    def test_both_android_providers_call_the_shared_generator(self):
+        root = Path(__file__).resolve().parents[3]
+        github = (root/'.github/workflows/mobile-ci.yml').read_text()
+        codemagic = (root/'codemagic.yaml').read_text()
+        self.assertIn('build_number=$(python3 tool/release_version.py)', github)
+        self.assertNotIn('100000 + GITHUB_RUN_NUMBER', github)
+        self.assertEqual(codemagic.count('build_number=$(python3 tool/release_version.py)'), 6)

@@ -23,7 +23,7 @@ Keep an encrypted offline backup of that directory. Do not delete it, commit it,
 
 ## Release
 
-After secrets are installed, merge this PR. Main builds and manual workflow dispatch use `100000 + GITHUB_RUN_NUMBER` as the version code and version name 0.2.7. Retries of the same workflow run keep the same code. Android package remains `net.shotech.gym_network`. Signed per-ABI APKs and SHA256SUMS.txt publish under `mobile-v0.2.7`; older testing assets are preserved. Build APKs again through the Android workflow on main after setup, never generate a new key per build.
+After secrets are installed, merge this PR. Main builds and manual workflow dispatch use the shared `tool/release_version.py` clock, matching Android Codemagic workflows, as the base version code and version name 0.2.7. A rebuild gets the current clock-based code, above earlier builds made by either provider. Android package remains `net.shotech.gym_network`. Signed per-ABI APKs and SHA256SUMS.txt publish under `mobile-v0.2.7`; older testing assets are preserved. Build APKs again through the Android workflow on main after setup, never generate a new key per build.
 
 Existing debug-signed installations cannot be updated with a different release key. One-time uninstall/reinstall may be necessary; this removes local session/cache/pending-operation state, but does not remove server account balances, visits or records. Resolve any pending local financial operation before uninstalling. We have not directly inspected the installed device's certificate, so the screenshot alone is not conclusive proof of a signing mismatch.
 
