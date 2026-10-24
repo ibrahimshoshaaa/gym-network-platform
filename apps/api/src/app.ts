@@ -1,3 +1,4 @@
+import {registerDeletionRoutes} from './accounts/deletion-routes.js';
 import { registerServiceRoutes } from './services/routes.js';
 import { registerReservationRoutes } from './bookings/reservations.js';
 import { registerBookingPolicyRoutes } from './bookings/routes.js';
@@ -29,7 +30,7 @@ import { registerOperationRoutes } from './operations/routes.js';
 import { registerGymRoutes } from './gyms/routes.js';
 
 export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptStorage } = {}) {
-  const app = Fastify({ bodyLimit: 8192, logger: { redact: ['req.headers.authorization', 'req.body.password', 'req.body.currentPassword', 'req.body.newPassword', 'req.body.token'] }, trustProxy: false });
+  const app = Fastify({ bodyLimit: 8192, logger: { redact: ['req.headers.authorization', 'req.body.password', 'req.body.currentPassword', 'req.body.newPassword', 'req.body.token', 'req.body.requestKey'] }, trustProxy: false });
   app.addHook('onRequest', async (request, reply) => {
     if (request.headers.authorization || ['/auth/', '/admin/', '/gyms', '/invitations/', '/me', '/topup', '/receipts', '/trainee/', '/operations', '/operation-reviews', '/withdrawals', '/reports', '/inventory', '/directory'].some(prefix => request.url.startsWith(prefix))) reply.header('Cache-Control', 'no-store');
   });
@@ -69,6 +70,7 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
     registerMediaRoutes(app, db);
     registerDisputeRoutes(app, db);
     registerEngagementRoutes(app, db);
+    registerDeletionRoutes(app, db);
     registerTraineeRoutes(app, db);
     registerGymRoutes(app, db);
     registerOperationRoutes(app, db);

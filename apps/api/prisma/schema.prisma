@@ -1194,3 +1194,29 @@ model PhoneTestIdentity {
  createdAt DateTime @default(now())
 }
 
+// Identity tombstones retain immutable financial references; media removal is an outbox.
+model AccountDeletion {
+ id String @id @default(uuid()) @db.Uuid
+ userId String @unique @db.Uuid
+ requestKeyHash String @unique
+ status String @default("PENDING")
+ requestedAt DateTime @default(now())
+ reviewDueAt DateTime
+ erasedAt DateTime?
+ completedAt DateTime?
+ reviewedById String? @db.Uuid
+ updatedAt DateTime @updatedAt
+ assets AccountDeletionAsset[]
+ @@index([status,requestedAt,id])
+}
+model AccountDeletionAsset {
+ id String @id @default(uuid()) @db.Uuid
+ deletionId String @db.Uuid
+ deletion AccountDeletion @relation(fields:[deletionId],references:[id],onDelete:Restrict)
+ objectKey String
+ deliveryType String
+ completedAt DateTime?
+ attempts Int @default(0)
+ @@unique([deletionId,objectKey,deliveryType])
+ @@index([deletionId,completedAt])
+}

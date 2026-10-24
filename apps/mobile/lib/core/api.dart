@@ -128,6 +128,7 @@ class ApiClient extends ChangeNotifier {
   Json? user;
   Json? pending;
   bool restored = false;
+  Json? deletionReceipt;
   bool _persistSession = true;
   bool _mutationRunning = false;
   ApiClient({
@@ -226,6 +227,7 @@ class ApiClient extends ChangeNotifier {
   Future<void> restore() async {
     try {
       token = await storage.read('session');
+      if (await checkDeletionReceipt()) return;
       if (token != null) {
         try {
           user = Map<String, dynamic>.from(await request('me'));
@@ -266,9 +268,58 @@ class ApiClient extends ChangeNotifier {
       await storage.remove('session');
     }
     _persistSession = persist;
+    deletionReceipt = null;
+    final deletionSaved = await storage.read('deletion.pending');
+    if(deletionSaved != null && jsonDecode(deletionSaved)['actorId'] != r['user']['id']) await storage.remove('deletion.pending');
     token = r['accessToken'];
     user = Map<String, dynamic>.from(r['user']);
     await _readPending();
+    notifyListeners();
+  }
+
+  Future<dynamic> deleteAccount(String password) async {
+    final actorId = user!['id'] as String;
+    final saved = await storage.read('deletion.$actorId');
+    final key = saved ?? newKey();
+    await storage.write('deletion.$actorId', key);
+    await storage.write('deletion.pending', jsonEncode({'actorId':actorId,'requestKey':key}));
+    final result = await request('me/account-deletion',method:'POST',body:{
+      'currentPassword':password,'confirmation':'DELETE','requestKey':key,
+    });
+    await _acceptDeletionReceipt(Map<String,dynamic>.from(result),actorId);
+    return result;
+  }
+
+  Future<bool> checkDeletionReceipt() async {
+    final raw = await storage.read('deletion.pending');
+    if (raw == null) return false;
+    final saved = Map<String,dynamic>.from(jsonDecode(raw));
+    // A receipt belongs to one identity; never clear a different user's session.
+    if (user != null && user!['id'] != saved['actorId']) return false;
+    try {
+      final result = await request('auth/account-deletion/status',method:'POST',auth:false,
+        body:{'requestKey':saved['requestKey']});
+      return _acceptDeletionReceipt(Map<String,dynamic>.from(result),saved['actorId'] as String);
+    } on ApiFailure catch(e) {
+      if(e.status==404 && e.code=='NOT_FOUND')return false;
+      rethrow;
+    }
+  }
+
+  Future<bool> _acceptDeletionReceipt(Json result,String actorId) async {
+    if(result['request']?['erasedAt']==null)return false;
+    deletionReceipt=result;
+    token=null;user=null;pending=null;
+    try {
+      await storage.remove('session');
+      await storage.remove('pending.$actorId');
+    } finally {notifyListeners();}
+    return true;
+  }
+
+  Future<void> dismissDeletionReceipt() async {
+    await storage.remove('deletion.pending');
+    deletionReceipt=null;
     notifyListeners();
   }
 

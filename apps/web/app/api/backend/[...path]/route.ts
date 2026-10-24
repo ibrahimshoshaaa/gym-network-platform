@@ -1,3 +1,4 @@
+import {dispatchAccountErasure} from '../../../../lib/account-deletion';
 import { bookingWorkflowRequest } from "../../../../lib/scheduled-reservation";
 import { cookies } from "next/headers";
 import {
@@ -83,6 +84,7 @@ async function handle(request: Request, context: Context) {
       });
     }
     const result = await response.json();
+    if(response.ok)await dispatchAccountErasure(path,result);
     if (path === "auth/password/change" && response.ok) {
       await setWebSession(result.accessToken, result.expiresAt, (await cookies()).get(rememberCookieName())?.value !== "0");
       return json({ user: result.user });
