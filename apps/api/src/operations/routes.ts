@@ -90,12 +90,12 @@ export function registerOperationRoutes(
           name: string;
           gymName: string;
           gymId: string;
-          canSell: boolean;
+          canOperate: boolean;
           canCancel: boolean;
         }
       >();
       for (const branch of owned) {
-        map.set(branch.id, { id: branch.id, name: branch.name, gymId: branch.gymId, gymName: branch.gym.name, canSell: true, canCancel: true });
+        map.set(branch.id, { id: branch.id, name: branch.name, gymId: branch.gymId, gymName: branch.gym.name, canOperate: true, canCancel: true });
       }
       for (const row of rows) {
         const old = map.get(row.branch.id);
@@ -104,7 +104,7 @@ export function registerOperationRoutes(
           name: row.branch.name,
           gymName: row.branch.gym.name,
           gymId: row.branch.gymId,
-          canSell: ["CASHIER", "BRANCH_MANAGER"].includes(row.role) || Boolean(old?.canSell),
+          canOperate: ["CASHIER", "BRANCH_MANAGER"].includes(row.role) || Boolean(old?.canOperate),
           canCancel: row.role === "BRANCH_MANAGER" || Boolean(old?.canCancel),
         });
       }
@@ -121,14 +121,6 @@ export function registerOperationRoutes(
         name: b.name,
         visitPricePoints: b.visitPricePoints,
         sessionMinutes: b.sessionMinutes,
-        stock:
-          (
-            await tx.pointAccount.findUnique({
-              where: {
-                type_branchId: { type: "BRANCH_INVENTORY", branchId: branch },
-              },
-            })
-          )?.balance ?? 0,
       };
     });
   });

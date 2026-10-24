@@ -91,7 +91,7 @@ export function createBranch(db: PrismaClient, actorId: string, gymId: string, i
   const data = parse(branchCreateSchema, input);
   return serializable(db, async tx => {
     await requireGymOwner(tx, actorId, gymId);
-    const branch = await tx.branch.create({ data: { ...data, gymId, status: 'PENDING', pointAccounts: { create: { type: 'BRANCH_INVENTORY' } } } });
+    const branch = await tx.branch.create({ data: { ...data, gymId, status: 'PENDING' } });
     const pricingRequest = await tx.branchPricingRequest.create({ data: {
       branchId: branch.id, requestedById: actorId, visitPricePoints: data.visitPricePoints, sessionMinutes: data.sessionMinutes,
       previousPricePoints: data.visitPricePoints, previousSessionMinutes: data.sessionMinutes, baseVersion: 0, reason: 'Initial branch pricing proposal',

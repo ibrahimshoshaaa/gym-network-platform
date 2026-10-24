@@ -1,17 +1,16 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { Prisma, type PrismaClient, type TopupRequest } from '@prisma/client';
-import { requireActor, requireAdmin, requireGymOwner } from '../auth/authorization.js';
+import { requireActor, requireAdmin } from '../auth/authorization.js';
 import { serializable, postInTransaction } from '../ledger/service.js';
 import { audit } from '../gyms/service.js';
 import { parse } from '../gyms/validation.js';
 import { DomainError } from '../domain/errors.js';
 import { maxMoney, methodTypeSchema, moneySchema } from './settings.js';
 
-import { centralStock } from '../inventory/central.js';
 
 const selection = { kind: z.enum(['TRAINEE', 'BRANCH_STOCK']), receivingBranchId: z.string().uuid().optional(), receivingGymId: z.string().uuid().optional(), points: z.number().int().positive().max(2147483647).optional(), amountPiasters: moneySchema.optional(), packageId: z.string().uuid().optional(), packageVersion: z.number().int().positive().optional() };
-const validSelection = (v: z.infer<z.ZodObject<typeof selection>>) => [v.points, v.amountPiasters, v.packageId].filter(x => x !== undefined).length === 1 && (v.kind === 'BRANCH_STOCK' ? Number(Boolean(v.receivingBranchId)) + Number(Boolean(v.receivingGymId)) === 1 : !v.receivingBranchId && !v.receivingGymId) && Boolean(v.packageId) === Boolean(v.packageVersion);
+const validSelection = (v: z.infer<z.ZodObject<typeof selection>>) => v.kind === 'TRAINEE' && [v.points,v.amountPiasters,v.packageId].filter(x=>x!==undefined).length===1 && !v.receivingBranchId && !v.receivingGymId && Boolean(v.packageId)===Boolean(v.packageVersion);
 export const quoteSchema = z.object(selection).strict().refine(validSelection);
 export const submitSchema = z.object({ ...selection, pricingVersion: z.number().int().positive(), receiptId: z.string().uuid(), paymentMethod: methodTypeSchema, paymentMethodVersion: z.number().int().positive() }).strict().refine(validSelection);
 export const reviewSchema = z.discriminatedUnion('decision', [
@@ -30,19 +29,9 @@ export function calculateQuote(unitPrice: bigint, discountBps: number, selection
   return { points: Number(points), chargePiasters: charge, requestedAmountPiasters: requested, unallocatedPiasters: requested === undefined ? 0n : requested - charge };
 }
 
-async function eligibility(tx: Tx, actorId: string, data: Selection) {
-  const user = await requireActor(tx, actorId);
-  if (data.kind === 'TRAINEE') {
-    if (user.role !== 'TRAINEE' || data.receivingBranchId) throw new DomainError('ACCESS_DENIED');
-  } else if (data.receivingGymId) {
-    const gym = await requireGymOwner(tx, actorId, data.receivingGymId, false);
-    if (gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
-  } else {
-    const branch = await tx.branch.findUnique({ where: { id: data.receivingBranchId! } });
-    if (!branch || branch.status !== 'ACTIVE') throw new DomainError('BRANCH_ACCESS_DENIED');
-    const gym = await requireGymOwner(tx, actorId, branch.gymId);
-    if (gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
-  }
+async function eligibility(tx:Tx,actorId:string,data:Selection){
+ if(data.kind!=='TRAINEE'||data.receivingGymId||data.receivingBranchId)throw new DomainError('ACCESS_DENIED');
+ const user=await requireActor(tx,actorId);if(user.role!=='TRAINEE')throw new DomainError('ACCESS_DENIED');
 }
 async function quote(tx: Tx, actorId: string, data: Selection) {
   await eligibility(tx, actorId, data);
@@ -54,7 +43,7 @@ async function quote(tx: Tx, actorId: string, data: Selection) {
     if (!pack?.enabled || pack.kind !== data.kind || pack.version !== data.packageVersion) throw new DomainError('PACKAGE_UNAVAILABLE');
     points = pack.points;
   }
-  const discountBps = data.kind === 'BRANCH_STOCK' ? policy.gymDiscountBps : 0;
+  const discountBps = 0;
   const calculation = calculateQuote(policy.pointPricePiasters, discountBps, { points, amountPiasters: data.amountPiasters });
   return { ...calculation, policy, discountBps };
 }
@@ -69,7 +58,7 @@ export function getQuote(db: PrismaClient, actorId: string, input: unknown) {
 }
 
 export async function submitTopup(db: PrismaClient, actorId: string, key: string, input: unknown) {
-  const data = parse(submitSchema, input); parse(z.string().uuid(), key);
+  const data = parse(submitSchema, input);if(data.kind!=='TRAINEE')throw new DomainError('ACCESS_DENIED'); parse(z.string().uuid(), key);
   const idempotencyKey = `topup:${actorId}:${key}`;
   const requestHash = createHash('sha256').update(JSON.stringify({ kind: data.kind, receivingBranchId: data.receivingBranchId, ...(data.receivingGymId ? { receivingGymId: data.receivingGymId } : {}), points: data.points, amountPiasters: data.amountPiasters, packageId: data.packageId, packageVersion: data.packageVersion, pricingVersion: data.pricingVersion, receiptId: data.receiptId, paymentMethod: data.paymentMethod, paymentMethodVersion: data.paymentMethodVersion })).digest('hex');
   try {
@@ -127,7 +116,7 @@ export async function reviewTopup(db: PrismaClient, actorId: string, requestId: 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'payment-reference:'+paymentReference},0))`;
       if (await tx.topupRequest.findUnique({ where: { paymentReference } }) || await tx.pointDispatch.findUnique({where:{paymentReference}})) throw new DomainError('PAYMENT_REFERENCE_USED');
       const issuance = await tx.pointAccount.findFirst({ where: { type: 'ISSUANCE' } });
-      const destination = request.kind === 'TRAINEE' ? await tx.pointAccount.findUnique({ where: { type_ownerUserId: { type: 'TRAINEE_WALLET', ownerUserId: request.requestorUserId } } }) : request.receivingGymId ? await centralStock(tx, request.receivingGymId) : await tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: request.receivingBranchId! } } });
+      const destination=await tx.pointAccount.findUnique({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:request.requestorUserId}}});
       if (!issuance || !destination) throw new DomainError('ACCOUNT_NOT_FOUND');
       if (request.kind === 'TRAINEE' && destination.balance > 0 && destination.expiresAt && destination.expiresAt <= new Date()) throw new DomainError('WALLET_EXPIRY_REVIEW_REQUIRED');
       const posting = await postInTransaction(tx, { actorId, idempotencyKey: `approved-topup:${requestId}`, reason: data.reason, referenceId: requestId,

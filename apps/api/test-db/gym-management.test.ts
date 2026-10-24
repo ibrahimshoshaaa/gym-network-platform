@@ -70,8 +70,8 @@ test('owner invitation, pending gym, price review and activation form one comple
     assert.equal(createdBranch.statusCode, 201, createdBranch.body);
     const { branch, pricingRequest } = createdBranch.json();
     assert.equal(branch.status, 'PENDING'); assert.equal(branch.pricingVersion, 0);
-    const inventory = await db.pointAccount.findUniqueOrThrow({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: branch.id } } });
-    assert.equal(inventory.balance, 0); assert.equal(inventory.expiresAt, null);
+    const inventory = await db.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: branch.id } } });
+    assert.equal(inventory, null);
     assert.equal(await db.moneyAccount.count({ where: { gymId: f.created.gym.id } }), 0);
     assert.equal((await f.request('PATCH', `/admin/branches/${branch.id}/status`, f.adminToken, { status: 'ACTIVE', reason: 'Too early' })).statusCode, 409);
     await f.request('PATCH', `/admin/gyms/${f.created.gym.id}/status`, f.adminToken, { status: 'ACTIVE', reason: 'Reviewed contract placeholder' });
@@ -152,7 +152,7 @@ test('staff consent, role and branch scope are enforced and assignment disable t
     assert.equal((await f.request('PATCH', `/gyms/${f.gymId}/staff/${assignment.id}`, f.owner.accessToken, { active: false })).statusCode, 200);
     assert.equal((await f.request('GET', `/branches/${f.branch.id}/manage`, cashier.accessToken)).statusCode, 403);
     assert.equal((await f.request('POST', '/auth/staff/login', undefined, { identifier: cashier.contact.email, password })).statusCode, 401);
-    await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, cashier.user.id, f.branch.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
+    await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, cashier.user.id, f.branch.id, 'OPERATE_BRANCH')), /BRANCH_ACCESS_DENIED/);
     // Personal identity access survives removal of one tenant assignment.
     assert.equal((await f.request('GET', '/me', cashier.accessToken)).statusCode, 200);
   } finally { await f.app.close(); await other.app.close(); }
@@ -233,7 +233,7 @@ test('suspending one gym hides only its branches and blocks its operations witho
     const rows = (await f.request('GET', '/branches?limit=100')).json().items;
     assert.ok(!rows.some((r: { id: string }) => r.id === f.branch.id));
     assert.ok(rows.some((r: { id: string }) => r.id === other.branch.id));
-    await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.user.id, f.branch.id, 'TRANSFER_STOCK')), /BRANCH_ACCESS_DENIED/);
+    await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.user.id, f.branch.id, 'TRANSFER_STOCK')), /ACCESS_DENIED/);
     assert.equal((await f.request('GET', `/gyms/${f.gymId}/branches`, f.owner.accessToken)).statusCode, 200);
     assert.equal((await f.request('PATCH', `/admin/gyms/${f.gymId}/status`, f.adminToken, { status: 'ACTIVE', reason: 'Review resolved' })).statusCode, 200);
     assert.equal((await f.request('GET', `/branches/${f.branch.id}/manage`, cashier.accessToken)).statusCode, 200);

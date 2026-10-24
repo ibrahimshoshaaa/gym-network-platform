@@ -188,7 +188,7 @@ class _AccountScreenState extends State<AccountScreen> {
               Icons.lock_outline_rounded,
               () => open(context, PasswordScreen(api: widget.api)),
             ),
-            if (!widget.workplace || widget.ownerView)
+            if (!widget.workplace)
               _item(
                 'طلبات الشحن',
                 Icons.receipt_long_rounded,

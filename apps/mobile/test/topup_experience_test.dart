@@ -9,7 +9,7 @@ import 'package:gym_network/screens/topup.dart';
 import 'api_test.dart' show MemoryStore;
 
 void main() {
-  for (final owner in [false, true]) {
+  for (final owner in [false]) {
     testWidgets('versioned package and payment review for owner=$owner', (t) async {
       Json? selection;
       var submitted = false;

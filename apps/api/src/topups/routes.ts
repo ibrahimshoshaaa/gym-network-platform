@@ -1,3 +1,4 @@
+import {welcomeSettings,saveWelcomeSettings} from '../points/welcome.js';
 import { z } from 'zod';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
@@ -17,8 +18,9 @@ export function registerTopupRoutes(app: FastifyInstance, db: PrismaClient, stor
   app.get('/admin/topup-settings', async r => db.$transaction(async tx => {
     await requireAdmin(tx, await actorId(db, r));
     const policy = await tx.pricingPolicy.findFirst({ orderBy: { version: 'desc' } });
-    return { policy: policy ? policyView(policy) : null, paymentMethods: await tx.paymentMethod.findMany({ orderBy: { type: 'asc' } }), packages: await tx.topupPackage.findMany({ take: 100, orderBy: { id: 'asc' } }) };
+    return { welcomePoints:await welcomeSettings(tx), policy: policy ? policyView(policy) : null, paymentMethods: await tx.paymentMethod.findMany({ orderBy: { type: 'asc' } }), packages: await tx.topupPackage.findMany({ where:{kind:'TRAINEE'}, take: 100, orderBy: { id: 'asc' } }) };
   }));
+  app.put('/admin/welcome-points',async r=>saveWelcomeSettings(db,await actorId(db,r),r.body));
   app.post('/admin/pricing-policies', async r => publishPolicy(db, await actorId(db, r), r.body));
   app.put('/admin/payment-methods/:type', async r => savePaymentMethod(db, await actorId(db, r), (r.params as { type: string }).type, r.body));
   app.post('/admin/topup-packages', async r => savePackage(db, await actorId(db, r), undefined, r.body));
@@ -27,7 +29,7 @@ export function registerTopupRoutes(app: FastifyInstance, db: PrismaClient, stor
     const userId = await actorId(db, r);
     const query = parse(z.object({ kind: z.enum(['TRAINEE', 'BRANCH_STOCK']) }).strict(), r.query);
     return db.$transaction(async tx => {
-      await requireActor(tx, userId);
+      const user=await requireActor(tx, userId);if(query.kind!=='TRAINEE'||user.role!=='TRAINEE')throw new DomainError('ACCESS_DENIED');
       const policy = await tx.pricingPolicy.findFirst({ orderBy: { version: 'desc' } });
       return { policy: policy ? policyView(policy) : null, paymentMethods: await tx.paymentMethod.findMany({ where: { enabled: true }, select: { type: true, version: true, account: true, accountName: true } }), packages: await tx.topupPackage.findMany({ where: { enabled: true, kind: query.kind }, take: 100, orderBy: { id: 'asc' } }) };
     });

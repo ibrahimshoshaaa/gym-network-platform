@@ -24,7 +24,7 @@ class _TopupScreenState extends State<TopupScreen> {
   @override
   void initState() {
     super.initState();
-    load();
+    if(widget.api.user?['role']=='TRAINEE'&&widget.gymId==null&&widget.branchId==null)load();
   }
 
   @override
@@ -166,6 +166,7 @@ class _TopupScreenState extends State<TopupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if(widget.api.user?['role']!='TRAINEE'||widget.gymId!=null||widget.branchId!=null)return const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط للمتدرب من صاحب المنصة فقط')));
     final methods = (options?['paymentMethods'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final packages = (options?['packages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final locked = busy || widget.api.pending != null;

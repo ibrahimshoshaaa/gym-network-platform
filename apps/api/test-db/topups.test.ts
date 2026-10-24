@@ -18,7 +18,7 @@ const user = (role: 'TRAINEE' | 'PLATFORM_ADMIN' | 'GYM_OWNER' = 'TRAINEE') => d
 let admin: Awaited<ReturnType<typeof user>>;
 before(async () => {
   admin = await user('PLATFORM_ADMIN');
-  await publishPolicy(db, admin.id, { expectedVersion: 0, pointPricePiasters: '100', gymDiscountBps: 1000, redemptionBps: 8000 });
+  await publishPolicy(db, admin.id, { expectedVersion: 0, pointPricePiasters: '100', gymDiscountBps: 0, redemptionBps: 8000 });
   await savePaymentMethod(db, admin.id, 'INSTAPAY', { expectedVersion: 0, account: 'synthetic@instapay', accountName: 'Synthetic Receiver', enabled: true });
 });
 async function fixture() {
@@ -43,7 +43,7 @@ const expectCode = async (p: Promise<unknown>, code: string) => assert.rejects(p
 test('only admin configures prices; concurrent expected version saves have one winner', async () => {
   const trainee = await user();
   const current = await db.pricingPolicy.findFirstOrThrow({ orderBy: { version: 'desc' } });
-  const data = { expectedVersion: current.version, pointPricePiasters: '100', gymDiscountBps: 1000, redemptionBps: 8000 };
+  const data = { expectedVersion: current.version, pointPricePiasters: '100', gymDiscountBps: 0, redemptionBps: 8000 };
   await expectCode(publishPolicy(db, trainee.id, data), 'ACCESS_DENIED');
   const outcomes = await Promise.allSettled([publishPolicy(db, admin.id, data), publishPolicy(db, admin.id, data)]);
   assert.equal(outcomes.filter(r => r.status === 'fulfilled').length, 1);
@@ -91,7 +91,7 @@ test('snapshots preserve old rates and payment destination; stale new requests a
   const { trainee } = await fixture();
   const data = await input(trainee.id), request = await submitTopup(db, trainee.id, randomUUID(), data);
   const p = await db.pricingPolicy.findFirstOrThrow({ orderBy: { version: 'desc' } });
-  await publishPolicy(db, admin.id, { expectedVersion: p.version, pointPricePiasters: '200', gymDiscountBps: 2000, redemptionBps: 7000 });
+  await publishPolicy(db, admin.id, { expectedVersion: p.version, pointPricePiasters: '200', gymDiscountBps: 0, redemptionBps: 7000 });
   const method = await db.paymentMethod.findUniqueOrThrow({ where: { type: 'INSTAPAY' } });
   await savePaymentMethod(db, admin.id, 'INSTAPAY', { expectedVersion: method.version, account: 'new-synthetic@instapay', accountName: 'New Synthetic Receiver', enabled: true });
   await expectCode(submitTopup(db, trainee.id, randomUUID(), { ...data, receiptId: (await evidence(trainee.id)).id }), 'STALE_SETTINGS');
@@ -99,7 +99,7 @@ test('snapshots preserve old rates and payment destination; stale new requests a
   await expectCode(submitTopup(db, trainee.id, randomUUID(), { ...fresh, paymentMethodVersion: method.version }), 'STALE_SETTINGS');
   const approved = await reviewTopup(db, admin.id, request.id, approval());
   assert.equal(approved.chargePiasters, '2000'); assert.equal(approved.redemptionBps, 8000); assert.equal(approved.paymentAccount, 'synthetic@instapay');
-  await publishPolicy(db, admin.id, { expectedVersion: p.version + 1, pointPricePiasters: '100', gymDiscountBps: 1000, redemptionBps: 8000 });
+  await publishPolicy(db, admin.id, { expectedVersion: p.version + 1, pointPricePiasters: '100', gymDiscountBps: 0, redemptionBps: 8000 });
 });
 
 test('receipt ownership and one-use rule; duplicate payment reference cannot issue points twice', async () => {
@@ -127,21 +127,7 @@ test('approval requires exact confirmed amount and never revives an expired posi
   assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: wallet.id } })).balance, 20);
 });
 
-test('gym owner buys discounted branch stock; foreign owners and trainees cannot buy for branch', async () => {
-  const owner = await user('GYM_OWNER'), outsider = await user('GYM_OWNER');
-  const gym = await db.gym.create({ data: { name: 'Synthetic Topup Gym', ownerId: owner.id, ownerAcceptedAt: new Date(), status: 'ACTIVE' } });
-  const branch = await db.branch.create({ data: { gymId: gym.id, name: 'Synthetic Topup Branch', status: 'ACTIVE', visitPricePoints: 20, sessionMinutes: 120 } });
-  const stock = await db.pointAccount.create({ data: { type: 'BRANCH_INVENTORY', branchId: branch.id } });
-  const selection = { kind: 'BRANCH_STOCK', receivingBranchId: branch.id, points: 100 };
-  const quote = await getQuote(db, owner.id, selection);
-  assert.equal(quote.chargePiasters, '9000');
-  await expectCode(getQuote(db, outsider.id, selection), 'GYM_ACCESS_DENIED');
-  const request = await submitTopup(db, owner.id, randomUUID(), await input(owner.id, selection));
-  await reviewTopup(db, admin.id, request.id, approval('9000'));
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: stock.id } })).balance, 100);
-  await db.gym.update({ where: { id: gym.id }, data: { status: 'SUSPENDED' } });
-  await expectCode(getQuote(db, owner.id, selection), 'GYM_INACTIVE');
-});
+test('gym purchases are rejected for all principals',async()=>{const {trainee}=await fixture();await expectCode(getQuote(db,trainee.id,{kind:'BRANCH_STOCK',receivingBranchId:randomUUID(),points:10}),'INVALID_INPUT');});
 
 test('packages are version checked and pending snapshots cannot be edited', async () => {
   const { trainee } = await fixture();
@@ -192,22 +178,4 @@ test('receipt HTTP flow authenticates, normalizes, deduplicates and restricts sh
 });
 
 
-test('owner can purchase central stock before adding branches; approval issues once into reserve', async () => {
-  const owner=await user('GYM_OWNER'), outsider=await user('GYM_OWNER');
-  const gym=await db.gym.create({data:{ownerId:owner.id,ownerAcceptedAt:new Date(),name:'Central Purchase Gym',status:'ACTIVE'}});
-  const selection={kind:'BRANCH_STOCK',receivingGymId:gym.id,points:20};
-  const quote=await getQuote(db,owner.id,selection);
-  const data=await input(owner.id,selection), key=randomUUID();
-  await expectCode(getQuote(db,outsider.id,selection),'GYM_ACCESS_DENIED');
-  assert.throws(()=>getQuote(db,owner.id,{...selection,receivingBranchId:randomUUID()}),/INVALID_INPUT/);
-  const request=await submitTopup(db,owner.id,key,data);
-  assert.equal(request.receivingGymId,gym.id);assert.equal(request.receivingBranchId,null);
-  assert.equal((await submitTopup(db,owner.id,key,data)).id,request.id);
-  const review=approval(quote.chargePiasters);
-  const responses=await Promise.all([reviewTopup(db,admin.id,request.id,review),reviewTopup(db,admin.id,request.id,review)]);
-  assert.equal(responses[0]!.pointTransactionId,responses[1]!.pointTransactionId);
-  const reserve=await db.pointAccount.findUniqueOrThrow({where:{type_gymId:{type:'GYM_INVENTORY',gymId:gym.id}}});
-  assert.equal(reserve.balance,20);assert.equal(reserve.expiresAt,null);
-  assert.equal(await db.pointAccount.count({where:{branch:{gymId:gym.id}}}),0);
-  await assert.rejects(db.topupRequest.update({where:{id:request.id},data:{receivingGymId:null}}));
-});
+test('central gym stock purchase cannot be quoted',async()=>{const {trainee}=await fixture();await expectCode(getQuote(db,trainee.id,{kind:'BRANCH_STOCK',receivingGymId:randomUUID(),points:10}),'INVALID_INPUT');});

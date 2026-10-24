@@ -1,3 +1,4 @@
+import {grantWelcomePoints} from '../points/welcome.js';
 import { Prisma, type PrismaClient, type User } from '@prisma/client';
 import { DomainError } from '../domain/errors.js';
 import { hashPassword, verifyPassword } from './passwords.js';
@@ -29,6 +30,7 @@ export async function registerTrainee(db: PrismaClient, input: unknown) {
         password: { create: { passwordHash } },
         pointAccounts: { create: { type: 'TRAINEE_WALLET' } },
       } });
+      await grantWelcomePoints(tx,user.id);
       const result = await sessionResult(tx, user);
       await tx.auditLog.create({ data: { actorId: user.id, action: 'TRAINEE_REGISTERED', entityId: user.id, reason: 'Password registration; email and phone verification deferred by approved decision' } });
       return result;

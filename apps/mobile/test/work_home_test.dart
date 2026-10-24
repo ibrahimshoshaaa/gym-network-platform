@@ -10,7 +10,7 @@ void main(){
    await t.binding.setSurfaceSize(const Size(320,850));addTearDown(()=>t.binding.setSurfaceSize(null));
    final paths=<String>[];
    final api=client(role,(r)async{paths.add(r.url.path);if(r.url.path.endsWith('/point-wallet'))return reply({'available':'450','branchesTotal':'50','total':'500'});if(r.url.path.endsWith('/summary')&&r.url.path.contains('/operations/'))return reply({'stock':100,'visitPricePoints':20,'sessionMinutes':120});if(r.url.path.contains('/reports/'))return reply({'visits':{'count':'1'},'sales':{'points':'10'},'currentBalances':[]});return reply({'items':[]});});
-   final child=role=='GYM_OWNER'?OwnerHome(api:api,gym:const {'id':'g1','name':'جيم اختبار','status':'ACTIVE'},showBranches:(){},showMoney:(){},showOperations:(){}):BranchDashboard(api:api,branch:{'id':'b1','gymId':'g1','name':'فرع اختبار','gymName':'جيم اختبار','canSell':true,'canCancel':role=='BRANCH_MANAGER'});
+   final child=role=='GYM_OWNER'?OwnerHome(api:api,gym:const {'id':'g1','name':'جيم اختبار','status':'ACTIVE'},showBranches:(){},showMoney:(){},showOperations:(){}):BranchDashboard(api:api,branch:{'id':'b1','gymId':'g1','name':'فرع اختبار','gymName':'جيم اختبار','canOperate':true,'canCancel':role=='BRANCH_MANAGER'});
    await t.pumpWidget(page(Scaffold(body:child)));await t.pumpAndSettle();
    expect(find.byType(WorkBalanceHero),findsOneWidget);expect(find.text('أهلًا، موظف تجريبي'),findsOneWidget);
    expect(find.text(role=='GYM_OWNER'?'450 نقطة':'100 نقطة'),findsOneWidget);

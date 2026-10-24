@@ -18,18 +18,18 @@ export async function requireAdmin(tx: Prisma.TransactionClient, userId: string)
 // access to another gym or branch.
 export async function requireBranchAccess(
   tx: Prisma.TransactionClient, userId: string, branchId: string,
-  permission: 'TRANSFER_STOCK' | 'SELL_POINTS' | 'CANCEL_VISIT',
+  permission: 'TRANSFER_STOCK' | 'SELL_POINTS' | 'OPERATE_BRANCH' | 'CANCEL_VISIT',
 ) {
+  if(permission==='TRANSFER_STOCK'||permission==='SELL_POINTS')throw new DomainError('ACCESS_DENIED');
   await requireActor(tx, userId);
   const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: { include: { owner: { select: { isActive: true } } } } } });
   if (!branch || branch.status !== 'ACTIVE' || branch.gym.status !== 'ACTIVE' || !branch.gym.ownerAcceptedAt || !branch.gym.owner.isActive) throw new DomainError('BRANCH_ACCESS_DENIED');
   if (branch.gym.ownerId === userId) return branch;
   const delegated=await authority(tx,userId,branch.gymId,branchId);
   if(delegated.full)return branch;
-  if (permission === 'TRANSFER_STOCK'){await requirePermission(tx,userId,branch.gymId,'TRANSFER_STOCK',branchId);return branch;}
   const membership = await tx.staffAssignment.findFirst({
     where: { userId, branchId, active: true,
-      role: { in: permission === 'SELL_POINTS' ? ['CASHIER', 'BRANCH_MANAGER'] : ['BRANCH_MANAGER'] } },
+      role: { in: permission === 'OPERATE_BRANCH' ? ['CASHIER', 'BRANCH_MANAGER'] : ['BRANCH_MANAGER'] } },
   });
   if (!membership) throw new DomainError('BRANCH_ACCESS_DENIED');
   return branch;

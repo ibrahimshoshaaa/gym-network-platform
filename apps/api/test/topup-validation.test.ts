@@ -35,9 +35,9 @@ test('Cloudinary storage fails closed until credentials are configured', () => {
 });
 
 
-test('central purchases require one gym target and cannot mix trainee or branch destinations',()=>{
+test('gym purchases are retired even with a valid single destination',()=>{
  const gym='abcdef02-2345-4123-8123-123456789abc',branch='abcdef03-2345-4123-8123-123456789abc';
- assert.equal(quoteSchema.safeParse({kind:'BRANCH_STOCK',receivingGymId:gym,points:10}).success,true);
+ assert.equal(quoteSchema.safeParse({kind:'BRANCH_STOCK',receivingGymId:gym,points:10}).success,false);
  assert.equal(quoteSchema.safeParse({kind:'BRANCH_STOCK',receivingGymId:gym,receivingBranchId:branch,points:10}).success,false);
  assert.equal(quoteSchema.safeParse({kind:'TRAINEE',receivingGymId:gym,points:10}).success,false);
 });

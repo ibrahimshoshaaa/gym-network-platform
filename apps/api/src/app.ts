@@ -14,7 +14,6 @@ import { registerEngagementRoutes } from './engagement/routes.js';
 import Fastify from 'fastify';
 import { registerWalletRoutes } from './wallet/routes.js';
 import { registerDirectoryRoutes } from './directory/routes.js';
-import { registerInventoryRoutes } from './inventory/routes.js';
 import { registerReportRoutes } from './reports/routes.js';
 import { registerWithdrawalRoutes } from './withdrawals/routes.js';
 import { registerReviewRoutes } from './reviews/routes.js';
@@ -77,7 +76,7 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
     registerReviewRoutes(app, db);
     registerWithdrawalRoutes(app, db);
     registerReportRoutes(app, db);
-    registerInventoryRoutes(app, db);
+    /* Gym point inventory and stock-transfer endpoints retired. */
     registerDirectoryRoutes(app, db);
     registerWalletRoutes(app, db);
     registerTopupRoutes(app, db, options.receiptStorage ?? new CloudinaryReceiptStorage());

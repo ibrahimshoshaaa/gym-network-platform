@@ -1,3 +1,4 @@
+import {grantWelcomePoints} from '../points/welcome.js';
 import {randomUUID,timingSafeEqual} from 'node:crypto';
 import {Prisma,type PrismaClient} from '@prisma/client';
 import {z} from 'zod';
@@ -59,6 +60,7 @@ export async function registerPhonePreview(db:PrismaClient,input:unknown){
  const passwordHash=await hashPassword(data.password);
  try{return await withChallenge(db,data,'REGISTER',async tx=>{
   const user=await tx.user.create({data:{phoneE164:data.phone,displayName:data.displayName,role:data.accountType==='owner'?'GYM_OWNER':'TRAINEE',password:{create:{passwordHash}},...(data.accountType==='trainee'?{pointAccounts:{create:{type:'TRAINEE_WALLET' as const}}}:{})}});
+  await grantWelcomePoints(tx,user.id);
   await tx.phoneTestIdentity.create({data:{userId:user.id,phone:data.phone}});
   if(data.accountType==='owner')await tx.gymApplication.create({data:{ownerId:user.id,...data.gym!}});
   await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:'PHONE_OTP_TEST_REGISTERED',reason:'Explicitly enabled simulated OTP; no SMS delivered and phone ownership is not verified'}});

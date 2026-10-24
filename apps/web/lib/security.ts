@@ -193,6 +193,7 @@ const rules: Record<string, RegExp[]> = {
     new RegExp(`^gyms/${uuid}/staff/${uuid}$`),
   ],
   PUT: [
+    /^admin\/welcome-points$/,
     new RegExp(`^admin/campaigns/${uuid}$`),
     new RegExp(`^gyms/${uuid}/delegations$`),
     /^admin\/support-contact$/,

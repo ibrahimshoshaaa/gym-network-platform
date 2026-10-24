@@ -11,9 +11,7 @@ import '../core/ui.dart';
 import '../core/portal_ui.dart';
 import 'delegation.dart';
 import 'directory.dart';
-import 'topup.dart';
 import 'operations.dart';
-import 'inventory.dart';
 
 String reportRange() {
   final now = DateTime.now(), from = now.subtract(const Duration(days: 29));
@@ -32,105 +30,24 @@ class OwnerHome extends StatefulWidget {
  @override State<OwnerHome> createState()=>_OwnerHomeState();
 }
 class _OwnerHomeState extends State<OwnerHome> {
- Json? wallet,report;
- Object? walletError,reportError;
- bool walletLoading=true,reportLoading=true;
- int generation=0;
+ Json? report;Object? error;bool loading=true;int generation=0;
  @override void initState(){super.initState();load();}
- Future<void> load()async{
-  final current=++generation;
-  setState((){walletLoading=reportLoading=true;walletError=reportError=null;});
-  Future<void> part(String path,bool stock)async{
-   try{
-    final result=Map<String,dynamic>.from(await widget.api.request(path));
-    if(mounted&&current==generation)setState((){if(stock){wallet=result;}else{report=result;}});
-   }catch(e){
-    if(mounted&&current==generation)setState((){
-      if(stock){wallet=null;walletError=e;}else{report=null;reportError=e;}
-    });
-   }finally{
-    if(mounted&&current==generation)setState((){if(stock){walletLoading=false;}else{reportLoading=false;}});
-   }
-  }
-  await Future.wait([
-   part('gyms/${widget.gym['id']}/point-wallet',true),
-   part('reports/summary?gymId=${widget.gym['id']}&${reportRange()}',false),
-  ]);
- }
- String? balance(String type){
-  if(report==null)return null;
-  final balances=report!['currentBalances'] as List? ?? [];
-  return '${balances.cast<Map>().where((b)=>b['type']==type).firstOrNull?['balancePiasters']??'0'}';
- }
- @override Widget build(BuildContext context){
-  final gym=widget.gym,active=gym['status']=='ACTIVE';
-  final available=wallet?['available'];
-  return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:load,child:ListView(
-   padding:const EdgeInsets.only(bottom:28),
-   physics:const AlwaysScrollableScrollPhysics(),
-   children:[
-    WorkBalanceHero(api:widget.api,scope:'صاحب الجيم · ${gym['name']}',label:'رصيد صاحب الجيم',points:wallet==null?null:'$available',loading:walletLoading,
-     primary:BalanceHeroAction('شراء نقاط لرصيد الجيم',Icons.add_rounded,!active?null:()async{await open(context,TopupScreen(api:widget.api,gymId:gym['id']));if(mounted)await load();}),
-     secondary:BalanceHeroAction('بيع نقاط لمتدرب',Icons.arrow_outward_rounded,!active||wallet==null||walletLoading||widget.api.pending!=null?null:()async{await open(context,SendPoints(api:widget.api,gym:gym));if(mounted)await load();}),
-     footer:BalanceHeroAction('إدارة الفروع',Icons.storefront_outlined,widget.showBranches)),
-    if(widget.homeTools!=null)widget.homeTools!,
-    if(wallet!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text('موزّع على الفروع ${wallet!['branchesTotal']??wallet!['total']} نقطة',style:const TextStyle(color:muted,fontSize:11))),
-    const SizedBox(height:12),
-    CampaignBanner(api:widget.api),
-    if(!active)...[
-     const PortalNote('الجيم غير نشط حاليًا. تقدر تراجع بياناته، والتشغيل متاح بعد التفعيل.'),
-     const SizedBox(height:12),
-    ],
-    if(walletError!=null)ErrorNote(walletError,retry:load),
-    if(wallet!=null&&'${wallet!['central']}'=='0'&&BigInt.tryParse('${wallet!['branchesTotal']}')!=null&&BigInt.parse('${wallet!['branchesTotal']}')>BigInt.zero)...[
-      const SizedBox(height:12),
-      const PortalNote('نقاطك موجودة في الفروع. من «إدارة النقاط» تقدر ترجع جزء منها لرصيدك أو تنقلها لفرع تاني.'),
-    ],
-    const SectionTitle('شغل الجيم'),
-    Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
-      _ownerTask('إدارة النقاط','رصيدك، توزيع الفروع والتحويل بينها',Icons.swap_horiz_rounded,
-        ()async{await open(context,InventoryScreen(api:widget.api,gym:gym));if(mounted)await load();}),
-      const Divider(height:1),
-      _ownerTask('تسجيل زيارة','امسح رمز المتدرب وأكّد حضوره',Icons.qr_code_scanner_rounded,
-        active?widget.showOperations:null),
-      const Divider(height:1),
-      _ownerTask('الفروع والموظفين','بيانات الفروع والتعيينات',
-        Icons.storefront_outlined,widget.showBranches),
-      const Divider(height:1),
-      _ownerTask('تقارير الجيم','راجع الزيارات وحركة النقاط',
-        Icons.insights_rounded,()=>open(context,OwnerReport(api:widget.api,gymId:gym['id']))),
-    ])),
-    const SectionTitle('فلوس زيارات الجيم'),
-    Panel(padding:const EdgeInsets.all(16),child:Column(
-      crossAxisAlignment:CrossAxisAlignment.start,children:[
-       if(reportLoading&&report==null)const LinearProgressIndicator(minHeight:2)
-       else if(report!=null)Fact('متاح للسحب','${money(balance('GYM_AVAILABLE'))} ج.م',strong:true),
-       if(reportError!=null)ErrorNote(reportError,retry:load),
-       const Text('المستحقات بالجنيه منفصلة عن مخزون النقاط.',
-        style:TextStyle(color:muted,fontSize:11)),
-       TextButton.icon(onPressed:widget.showMoney,
-        icon:const Icon(Icons.payments_outlined,size:18),
-        label:const Text('مستحقاتي والسحب')),
-      ])),
-    if(report!=null)...[
-     const SizedBox(height:12),
-     Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),
-      child:ExpansionTile(tilePadding:EdgeInsets.zero,title:const Text('ملخص آخر ٣٠ يوم',
-        style:TextStyle(fontSize:14,fontWeight:FontWeight.w700)),
-       children:[
-        Fact('زيارة','${report!['visits']?['count']??'—'}'),
-        Fact('نقطة مباعة','${report!['sales']?['points']??'—'}'),
-        Fact('محجوز لطلبات السحب','${money(balance('GYM_RESERVED'))} ج.م'),
-        Fact('محجوز للمراجعة','${money(balance('GYM_DISPUTED'))} ج.م'),
-       ])),
-    ],
-    const SizedBox(height:12),
-    TextButton.icon(onPressed:()=>open(context,DispatchHistory(api:widget.api,gymId:gym['id'])),
-      icon:const Icon(Icons.history_rounded,size:18),label:const Text('سجل إرسال وشحن محفظة الجيم')),
-   ].asMap().entries.map((e)=>e.key==0?e.value:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:e.value)).toList(),
-  )));
- }
+ Future<void> load()async{final current=++generation;setState((){loading=true;error=null;});try{final r=Map<String,dynamic>.from(await widget.api.request('reports/summary?gymId=${widget.gym['id']}&${reportRange()}'));if(mounted&&current==generation)setState(()=>report=r);}catch(e){if(mounted&&current==generation)setState(()=>error=e);}finally{if(mounted&&current==generation)setState(()=>loading=false);}}
+ String? balance(String type){if(report==null)return null;return '${(report!['currentBalances'] as List? ?? []).cast<Map>().where((b)=>b['type']==type).firstOrNull?['balancePiasters']??'0'}';}
+ @override Widget build(BuildContext context)=>ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:28),physics:const AlwaysScrollableScrollPhysics(),children:[
+ WorkBalanceHero(api:widget.api,scope:'صاحب الجيم · ${widget.gym['name']}',label:'مستحقات الزيارات المتاحة',points:report==null?null:money(balance('GYM_AVAILABLE')),unit:'ج.م',loading:loading,
+ primary:BalanceHeroAction('مستحقاتي والسحب',Icons.payments_outlined,widget.showMoney),secondary:BalanceHeroAction('تسجيل زيارة',Icons.qr_code_scanner_rounded,widget.gym['status']=='ACTIVE'?widget.showOperations:null),footer:BalanceHeroAction('إدارة الفروع',Icons.storefront_outlined,widget.showBranches)),
+ if(widget.homeTools!=null)widget.homeTools!,
+ if(error!=null)ErrorNote(error,retry:load),
+ const Padding(padding:EdgeInsets.all(20),child:PortalNote('بيع وشحن نقاط المتدرب من صاحب المنصة فقط. مستحقات الجيم ناتجة عن الزيارات وتسوياتها.')),
+ Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Panel(child:Column(children:[
+ _ownerTask('الفروع والموظفين','بيانات الفروع والتعيينات',Icons.storefront_outlined,widget.showBranches),
+ _ownerTask('تقارير الزيارات والتسويات','راجع الزيارات والمستحقات',Icons.insights_rounded,()=>open(context,OwnerReport(api:widget.api,gymId:widget.gym['id']))),
+ Fact('محجوز لطلبات السحب','${money(balance('GYM_RESERVED'))} ج.م'),Fact('محجوز للمراجعة','${money(balance('GYM_DISPUTED'))} ج.م'),
+ ]))),
+ ])));
 }
+
 Widget _ownerTask(String title,String detail,IconData icon,VoidCallback? tap)=>ListTile(
  contentPadding:EdgeInsets.zero,enabled:tap!=null,
  leading:Icon(icon,color:tap==null?muted:green,size:23),
@@ -139,253 +56,10 @@ Widget _ownerTask(String title,String detail,IconData icon,VoidCallback? tap)=>L
  trailing:const Icon(Icons.chevron_left_rounded,size:20,color:muted),onTap:tap,
 );
 
-class SendPoints extends StatefulWidget {
-  final ApiClient api;
-  final Json gym;
-  const SendPoints({super.key, required this.api, required this.gym});
-  @override
-  State<SendPoints> createState() => _SendPointsState();
-}
-
-class _SendPointsState extends State<SendPoints> {
-  final phone = TextEditingController(), points = TextEditingController();
-  Json? person, quote, result;
-  bool busy = false, checked = false;
-  Object? error;
-  String get path => 'gyms/${widget.gym['id']}/point-transfers';
-  @override
-  void dispose() {
-    phone.dispose();
-    points.dispose();
-    super.dispose();
-  }
-
-  Future<void> advance() async {
-    if (busy || widget.api.pending != null) return;
-    FocusScope.of(context).unfocus();
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      if (person == null) {
-        final r = await widget.api.request(
-          '$path/lookup',
-          method: 'POST',
-          body: {'phone': phone.text},
-        );
-        if (mounted) setState(() => person = Map<String, dynamic>.from(r));
-      } else if (quote == null) {
-        final r = await widget.api.request(
-          '$path/quotes',
-          method: 'POST',
-          body: {
-            'recipientId': person!['id'],
-            'gymId': widget.gym['id'],
-            'points': int.tryParse(digits(points.text)),
-          },
-        );
-        if (mounted) setState(() => quote = Map<String, dynamic>.from(r));
-      } else if (checked) {
-        final r = await widget.api.transact(path, {
-          'recipientId': quote!['recipientId'],
-          'recipientLabel': quote!['recipientLabel'],
-          'gymId': widget.gym['id'],
-          'points': quote!['points'],
-          'pricingVersion': quote!['pricingVersion'],
-          'receivedAmountPiasters': quote!['chargePiasters'],
-          'fundsReceived': true,
-          'recipientConfirmed': true,
-          'paymentMethod': 'CASH',
-        });
-        if (mounted) setState(() => result = r);
-      }
-    } catch (e) {
-      if (mounted) setState(() => error = e);
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => Screen(
-    title: 'بيع نقاط لمتدرب',
-    child: ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        OperationContext(title:'${widget.gym['name']}',detail:'من رصيد الجيم، بعد تأكيد التحصيل'),
-        if (result != null) ...[
-          const EmptyState(
-            'تم إرسال النقاط',
-            detail: 'اتخصمت من رصيد الجيم واتضافت لمحفظة المتدرب.',
-            icon: Icons.check_circle_rounded,
-          ),
-          const SizedBox(height: 16),
-          Panel(
-            child: Column(
-              children: [
-                Fact('المستلم', '${result!['recipientLabel']}'),
-                Fact('النقاط', '${result!['points']} نقطة', strong: true),
-                Fact(
-                  'المبلغ المحصّل',
-                  '${money(result!['chargePiasters'])} ج.م',
-                ),
-                Reference('${result!['id']}'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          ActionButton('تم', onPressed: () => Navigator.pop(context, true)),
-        ] else ...[
-          FlowSteps(
-            labels: const ['المتدرب', 'النقاط', 'التأكيد'],
-            current: person == null
-                ? 0
-                : quote == null
-                ? 1
-                : 2,
-          ),
-          Text(
-            person == null
-                ? 'هتبعت لمين؟'
-                : quote == null
-                ? 'اتأكد من الاسم وحدد النقاط'
-                : 'راجع وأكّد الإرسال',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'البيع بالسعر المحدد من المنصة، بعد استلام المبلغ من المتدرب.',
-            style: TextStyle(color: muted),
-          ),
-          const SizedBox(height: 24),
-          if (person == null)
-            TextField(
-              controller: phone,
-              enabled: !busy && widget.api.pending == null,
-              keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'رقم موبايل المتدرب',
-                hintText: '01xxxxxxxxx',
-              ),
-            )
-          else ...[
-            Panel(
-              color: const Color(0xffe6f2e9),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.person_outline_rounded,
-                    color: green,
-                    size: 30,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'المستلم',
-                          style: TextStyle(color: muted, fontSize: 12),
-                        ),
-                        Text(
-                          '${person!['label']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 20,
-                          ),
-                        ),
-                        Text(phone.text, textDirection: TextDirection.ltr),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (quote == null)
-              TextField(
-                controller: points,
-                enabled: !busy && widget.api.pending == null,
-                keyboardType: TextInputType.number,
-                textDirection: TextDirection.ltr,
-                decoration: const InputDecoration(labelText: 'عدد النقاط'),
-              )
-            else ...[
-              Panel(
-                child: Column(
-                  children: [
-                    Fact('النقاط', '${quote!['points']} نقطة', strong: true),
-                    Fact(
-                      'المطلوب تحصيله',
-                      '${money(quote!['chargePiasters'])} ج.م',
-                      strong: true,
-                    ),
-                    Fact(
-                      'رصيد المستلم بعد الإرسال',
-                      '${quote!['recipientAfter']} نقطة',
-                    ),
-                    Fact(
-                      'المتبقي من رصيد جيمك',
-                      '${BigInt.parse(quote!['stock']) - BigInt.from(quote!['points'])} نقطة',
-                    ),
-                  ],
-                ),
-              ),
-              CheckboxListTile(
-                value: checked,
-                onChanged: busy || widget.api.pending != null
-                    ? null
-                    : (v) => setState(() => checked = v ?? false),
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'اتأكدت من اسم المتدرب واستلمت المبلغ كاملًا.',
-                ),
-              ),
-            ],
-          ],
-          ErrorNote(error),
-          const SizedBox(height: 12),
-          ActionButton(
-            quote != null
-                ? 'تأكيد الإرسال'
-                : person == null
-                ? 'متابعة'
-                : 'مراجعة الإرسال',
-            onPressed: (quote == null || checked) && widget.api.pending == null
-                ? advance
-                : null,
-            busy: busy,
-            icon: Icons.arrow_back_rounded,
-          ),
-          if (widget.api.pending != null)
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Text(
-                'العملية محفوظة. ارجع للرئيسية واضغط «إعادة نفس العملية» للتحقق من النتيجة بأمان.',
-                style: TextStyle(color: muted),
-              ),
-            ),
-          if (person != null && widget.api.pending == null)
-            TextButton(
-              onPressed: busy
-                  ? null
-                  : () => setState(() {
-                      if (quote != null) {
-                        quote = null;
-                      } else {
-                        person = null;
-                      }
-                      checked = false;
-                      error = null;
-                    }),
-              child: const Text('تعديل البيانات'),
-            ),
-        ],
-      ],
-    ),
-  );
+class SendPoints extends StatelessWidget {
+ final ApiClient api;final Json gym;
+ const SendPoints({super.key,required this.api,required this.gym});
+ @override Widget build(BuildContext context)=>const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط من صاحب المنصة فقط')));
 }
 
 class DispatchHistory extends StatelessWidget {
@@ -450,8 +124,6 @@ class BranchesScreen extends StatelessWidget {
             ),
           ],
         ),
-        TextButton.icon(icon:const Icon(Icons.swap_horiz_rounded),label:const Text('إدارة النقاط وتوزيعها'),
-          onPressed:()async{await open(context,InventoryScreen(api:api,gym:gym));await reload();}),
         const SizedBox(height: 10),
         const Text(
           'حدد مكان الفرع على الخريطة واقترح نقاط الزيارة ومدتها. الإدارة هتراجعهم قبل التفعيل.',
@@ -476,7 +148,7 @@ class BranchesScreen extends StatelessWidget {
                       Expanded(
                         child: TextButton(
                           onPressed: b['status'] != 'ACTIVE' || gym['status'] != 'ACTIVE' ? null : () async {
-                            await open(context, BranchWorkspace(api: api, branch: {...b, 'gymName': gym['name'], 'canSell': true, 'canCancel': true, 'fullAccess': true}));
+                            await open(context, BranchWorkspace(api: api, branch: {...b, 'gymName': gym['name'], 'canOperate': true, 'canCancel': true, 'fullAccess': true}));
                             await reload();
                           },
                           child: Text('${b['name']}', style: Theme.of(context).textTheme.titleLarge),
@@ -492,10 +164,6 @@ class BranchesScreen extends StatelessWidget {
                   Fact(
                     'الزيارة',
                     '${b['visitPricePoints']} نقطة · ${b['sessionMinutes']} دقيقة',
-                  ),
-                  Fact(
-                    'رصيد الفرع',
-                    '${(b['pointAccounts'] as List? ?? []).firstOrNull?['balance'] ?? 0} نقطة',
                   ),
                   if (b['priceApprovedAt'] == null)
                     const Text(
@@ -518,7 +186,7 @@ class BranchesScreen extends StatelessWidget {
                                     branch: {
                                       ...b,
                                       'gymName': gym['name'],
-                                      'canSell': true,
+                                      'canOperate': true,
                                       'canCancel': true,
                                       'fullAccess': true,
                                     },
@@ -531,19 +199,6 @@ class BranchesScreen extends StatelessWidget {
                           size: 18,
                         ),
                         label: const Text('تشغيل الفرع'),
-                      ),
-                      TextButton.icon(
-                        onPressed: b['status'] != 'ACTIVE' || gym['status'] != 'ACTIVE'
-                            ? null
-                            : () async {
-                                await open(
-                                  context,
-                                  StockTransfer(api: api, gym: gym, fromBranchId: b['id']),
-                                );
-                                await reload();
-                              },
-                        icon: const Icon(Icons.add_card_rounded, size: 18),
-                        label: const Text('تحويل نقاط'),
                       ),
                       SizedBox(width:double.infinity,child:ExpansionTile(
                         tilePadding:EdgeInsets.zero,
@@ -1084,7 +739,7 @@ class OwnerReport extends StatelessWidget {
         bottom: const TabBar(
           tabs: [
             Tab(text: 'الزيارات'),
-            Tab(text: 'المبيعات'),
+            Tab(text: 'المبيعات السابقة'),
           ],
         ),
       ),

@@ -280,3 +280,9 @@ test("branch metadata is readable only through the explicit UUID GET route", () 
   for (const path of ["branches/not-a-uuid/manage", `branches/${id}/manage/extra`, `branches/${id}`, `branches/${id}/secret`])
     assert.equal(allowedPath("GET", path), false);
 });
+
+test('welcome policy mutation uses only its explicit admin PUT route',()=>{
+ assert.equal(allowedPath('PUT','admin/welcome-points'),true);
+ for(const method of ['GET','POST','DELETE'])assert.equal(allowedPath(method,'admin/welcome-points'),false);
+ assert.equal(allowedPath('PUT','welcome-points'),false);
+});

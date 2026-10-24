@@ -1,3 +1,4 @@
+import {historicalSale as sellPoints} from './legacy-fixtures.js';
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after } from "node:test";
@@ -11,7 +12,6 @@ import { postLedger } from "../src/ledger/service.js";
 import {
   confirmVisit,
   issueQr,
-  sellPoints,
 } from "../src/operations/service.js";
 import { cancelVisit } from "../src/reviews/service.js";
 import { submitTopup, reviewTopup } from "../src/topups/service.js";
@@ -97,7 +97,7 @@ async function fixture() {
     idempotencyKey: randomUUID(),
     reason: "Private synthetic funding reason",
     points: {
-      kind: "ISSUE",
+      kind: "ADJUSTMENT",
       entries: [
         { accountId: issuance.id, delta: -220n },
         { accountId: wallet.id, delta: 120n },

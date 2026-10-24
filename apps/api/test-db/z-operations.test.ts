@@ -1,3 +1,4 @@
+import {historicalSale} from './legacy-fixtures.js';
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after } from "node:test";
@@ -97,7 +98,7 @@ async function fixture(stock = 100, balance = 80) {
       idempotencyKey: randomUUID(),
       reason: "Synthetic stock",
       points: {
-        kind: "ISSUE",
+        kind: "ADJUSTMENT",
         entries: [
           { accountId: issuance.id, delta: -BigInt(stock) },
           { accountId: inventory.id, delta: BigInt(stock) },
@@ -110,7 +111,7 @@ async function fixture(stock = 100, balance = 80) {
       idempotencyKey: randomUUID(),
       reason: "Synthetic wallet",
       points: {
-        kind: "ISSUE",
+        kind: "ADJUSTMENT",
         entries: [
           { accountId: issuance.id, delta: -BigInt(balance) },
           { accountId: wallet.id, delta: BigInt(balance) },
@@ -122,7 +123,7 @@ async function fixture(stock = 100, balance = 80) {
       data: {
         version: 1,
         pointPricePiasters: 100n,
-        gymDiscountBps: 1000,
+        gymDiscountBps: 0,
         redemptionBps: 8000,
         createdById: admin.id,
       },
@@ -170,12 +171,10 @@ const code = (promise: Promise<unknown>, code: string) =>
       typeof e === "object" && e !== null && "code" in e && e.code === code,
   );
 for (const role of ['owner', 'manager'] as const) {
-  test(`${role} sells points and records attendance in scope without a cashier assignment`, async () => {
+  test(`${role} cannot sell points but records attendance in scope without a cashier assignment`, async () => {
     const f = await fixture(), actor = f[role];
-    const quote = await quoteSale(db, actor.id, f.branch.id, { traineeId: f.person.id, points: 10 });
-    assert.equal(quote.points, 10);
-    const sale = await sellPoints(db, actor.id, f.branch.id, randomUUID(), f.sale(10));
-    assert.equal(sale.cashierId, actor.id);
+    await code(quoteSale(db, actor.id, f.branch.id, {traineeId:f.person.id,points:10}),'ACCESS_DENIED');
+    await code(sellPoints(db,actor.id,f.branch.id,randomUUID(),f.sale(10)),'ACCESS_DENIED');
     const qr = await f.qr();
     await previewVisit(db, actor.id, f.branch.id, { token: qr.token });
     const entry = await confirmVisit(db, actor.id, f.branch.id, randomUUID(), f.entry(qr.token));
@@ -188,11 +187,11 @@ for (const role of ['owner', 'manager'] as const) {
       assert.equal(response.statusCode, 200);
       const branch = response.json().items.find((b: { id: string }) => b.id === f.branch.id);
       assert.equal(branch.gymId, f.gym.id);
-      assert.equal(branch.canSell, true);
+      assert.equal(branch.canOperate, true);
       assert.equal(branch.canCancel, true);
     } finally { await app.close(); }
     const other = await fixture();
-    await code(quoteSale(db, actor.id, other.branch.id, { traineeId: other.person.id, points: 1 }), 'BRANCH_ACCESS_DENIED');
+    await code(quoteSale(db, actor.id, other.branch.id, { traineeId: other.person.id, points: 1 }), 'ACCESS_DENIED');
   });
 }
 test('owner cancellation returns original points and records the real actor', async () => {
@@ -226,114 +225,12 @@ test('owner staff list filters the selected branch before pagination and does no
     assert.equal((await get(`branchId=${f.branch.id}`, cashierToken)).statusCode, 403);
   } finally { await app.close(); }
 });
-test("cashier sale conserves points, renews expiry and replays once without posting money", async () => {
-  const f = await fixture(),
-    key = randomUUID(),
-    body = f.sale();
-  const results = await Promise.all(
-    Array.from({ length: 6 }, () =>
-      sellPoints(db, f.cashier.id, f.branch.id, key, body),
-    ),
-  );
-  assert.equal(new Set(results.map((s) => s.id)).size, 1);
-  assert.equal(
-    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.inventory.id } }))
-      .balance,
-    80,
-  );
-  assert.equal(
-    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
-      .balance,
-    100,
-  );
-  assert.equal(
-    await db.moneyTransaction.count({ where: { referenceId: results[0]!.id } }),
-    0,
-  );
-  await code(
-    sellPoints(db, f.cashier.id, f.branch.id, key, f.sale(21)),
-    "IDEMPOTENCY_CONFLICT",
-  );
-  await code(
-    reverseLedger(db, {
-      actorId: f.admin.id,
-      idempotencyKey: randomUUID(),
-      reason: "Needs sale approval",
-      pointTransactionId: results[0]!.pointTransactionId,
-    }),
-    "DOMAIN_APPROVAL_REQUIRED",
-  );
-  await assert.rejects(
-    db.pointSale.update({
-      where: { id: results[0]!.id },
-      data: { points: 50 },
-    }),
-  );
+test('retired branch sales deny every previously eligible role and never change balances',async()=>{
+ const f=await fixture(),before=await db.pointTransaction.count();
+ for(const actor of [f.cashier,f.owner,f.manager])await code(sellPoints(db,actor.id,f.branch.id,randomUUID(),f.sale()),'ACCESS_DENIED');
+ assert.equal(await db.pointTransaction.count(),before);
 });
-test("two cashiers cannot oversell stock; stale pricing and unconfirmed money issue nothing", async () => {
-  const f = await fixture(50, 0);
-  const results = await Promise.allSettled([
-    sellPoints(db, f.cashier.id, f.branch.id, randomUUID(), f.sale(40)),
-    sellPoints(db, f.cashier2.id, f.branch.id, randomUUID(), f.sale(40)),
-  ]);
-  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-  assert.equal(
-    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.inventory.id } }))
-      .balance,
-    10,
-  );
-  await code(
-    sellPoints(db, f.cashier.id, f.branch.id, randomUUID(), {
-      ...f.sale(1),
-      receivedAmountPiasters: "1",
-    }),
-    "PAYMENT_AMOUNT_MISMATCH",
-  );
-  await code(
-    sellPoints(db, f.cashier.id, f.branch.id, randomUUID(), {
-      ...f.sale(1),
-      pricingVersion: f.p.version + 1,
-    }),
-    "STALE_SETTINGS",
-  );
-  await code(
-    sellPoints(db, f.cashier.id, f.branch.id, randomUUID(), {
-      ...f.sale(1),
-      fundsReceived: false,
-    }),
-    "INVALID_INPUT",
-  );
-});
-test("cashier assignment, trainee activity and expired positive wallets are rechecked", async () => {
-  const f = await fixture();
-  for (const user of [f.admin])
-    await code(
-      quoteSale(db, user.id, f.branch.id, {
-        traineeId: f.person.id,
-        points: 1,
-      }),
-      "BRANCH_ACCESS_DENIED",
-    );
-  await db.pointAccount.update({
-    where: { id: f.wallet.id },
-    data: { expiresAt: new Date(Date.now() - 1000) },
-  });
-  await code(
-    sellPoints(db, f.cashier.id, f.branch.id, randomUUID(), f.sale()),
-    "WALLET_EXPIRY_REVIEW_REQUIRED",
-  );
-  await db.user.update({
-    where: { id: f.person.id },
-    data: { isActive: false },
-  });
-  await code(
-    quoteSale(db, f.cashier.id, f.branch.id, {
-      traineeId: f.person.id,
-      points: 1,
-    }),
-    "TRAINEE_UNAVAILABLE",
-  );
-});
+
 test("QRs rotate, bind to login sessions and never disclose identity in token payload", async () => {
   const f = await fixture(),
     first = await f.qr(),
@@ -550,7 +447,7 @@ test("expired sessions transition inside entry transaction and a fresh QR create
 test("distribution gym earns no visit receivable; hosting gym keeps its original rate snapshot", async () => {
   const distributor = await fixture(100, 0),
     host = await fixture(0, 0);
-  await sellPoints(
+  await historicalSale(
     db,
     distributor.cashier.id,
     distributor.branch.id,
@@ -576,7 +473,7 @@ test("distribution gym earns no visit receivable; hosting gym keeps its original
     data: {
       version: host.p.version + 1,
       pointPricePiasters: 150n,
-      gymDiscountBps: 1000,
+      gymDiscountBps: 0,
       redemptionBps: 7000,
       createdById: host.admin.id,
     },
@@ -1089,7 +986,7 @@ test("prior reservation or payment blocks cancellation even after available cash
 
 test("sale correction is review-only pending refund policy; no point or cash movement is invented", async () => {
   const f = await fixture(),
-    s = await sellPoints(
+    s = await historicalSale(
       db,
       f.cashier.id,
       f.branch.id,
@@ -1191,7 +1088,7 @@ test("cancellation uses the original financial snapshot after platform pricing c
     data: {
       version: f.p.version + 1,
       pointPricePiasters: 190n,
-      gymDiscountBps: 2000,
+      gymDiscountBps: 0,
       redemptionBps: 5000,
       createdById: f.admin.id,
     },

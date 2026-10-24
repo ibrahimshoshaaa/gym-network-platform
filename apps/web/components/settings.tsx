@@ -103,125 +103,15 @@ export function SettingsPanel({
           {section === "pricing"
             ? "حدد قيم النقاط والنسب التي تستخدمها العمليات الجديدة."
             : section === "payments"
-              ? "بيانات الحسابات التي يحوّل عليها المتدربون وأصحاب الجيمات."
+              ? "بيانات الحسابات التي يحوّل عليها المتدربون."
               : "باقات بكميات نقاط محددة، وأسعارها تُحسب من إعداداتك الحالية."}
         </p>
         {refresh}
       </div>
       <Notice text={error} />
       <Notice text={success} success />
-      {section === "pricing" && (
-        <div className="settings-grid">
-          <section className="card">
-            <div className="card-heading">
-              <div className="card-icon">
-                <Coins size={21} />
-              </div>
-              <div>
-                <h2>تسعير النقاط</h2>
-                <p>نسخة الإعدادات {policy?.version ?? "لم تُحدّد بعد"}</p>
-              </div>
-            </div>
-            <form
-              key={policy?.version ?? 0}
-              onSubmit={(e) =>
-                void save(e, "admin/pricing-policies", (form) => {
-                  const discount = Number(
-                      minorUnits(String(form.get("discount")), true),
-                    ),
-                    redemption = Number(
-                      minorUnits(String(form.get("redemption"))),
-                    );
-                  if (discount > 9999 || redemption > 10000)
-                    throw new Error(
-                      "الخصم أقل من 100%، ونسبة بيع الجيم أكبر من 0% وحتى 100%.",
-                    );
-                  return {
-                    expectedVersion: policy?.version ?? 0,
-                    pointPricePiasters: minorUnits(String(form.get("price"))),
-                    gymDiscountBps: discount,
-                    redemptionBps: redemption,
-                  };
-                })
-              }
-            >
-              <fieldset disabled={busy}>
-                <Field
-                  label="سعر النقطة بالجنيه"
-                  name="price"
-                  inputMode="decimal"
-                  required
-                  dir="ltr"
-                  defaultValue={
-                    policy ? decimal(policy.pointPricePiasters) : ""
-                  }
-                  hint="القيمة الأساسية للنقطة قبل خصم شراء الجيم."
-                />
-                <div className="form-grid">
-                  <Field
-                    label="خصم شراء الجيم (%)"
-                    name="discount"
-                    inputMode="decimal"
-                    required
-                    dir="ltr"
-                    defaultValue={policy ? decimal(policy.gymDiscountBps) : ""}
-                  />
-                  <Field
-                    label="نسبة بيع الجيم لصاحب المنصة (%)"
-                    name="redemption"
-                    inputMode="decimal"
-                    required
-                    dir="ltr"
-                    defaultValue={policy ? decimal(policy.redemptionBps) : ""}
-                  />
-                </div>
-                <button className="primary">
-                  {busy ? (
-                    <Busy>جاري الحفظ</Busy>
-                  ) : (
-                    <>
-                      <Save size={17} />
-                      حفظ الأسعار والنسب
-                    </>
-                  )}
-                </button>
-              </fieldset>
-            </form>
-          </section>
-          <aside className="card explanation">
-            <span className="eyebrow">كيف تُحسب القيم؟</span>
-            <h2>كل نسبة لها دور واضح</h2>
-            <div>
-              <span className="mini-icon">
-                <Coins size={18} />
-              </span>
-              <h3>سعر النقطة</h3>
-              <p>القيمة التي يبدأ منها حساب شحن المحفظة وشراء مخزون الفروع.</p>
-            </div>
-            <div>
-              <span className="mini-icon">
-                <Percent size={18} />
-              </span>
-              <h3>خصم الشراء</h3>
-              <p>يُخصم من قيمة النقاط عندما يشتري الجيم مخزونًا لأحد فروعه.</p>
-            </div>
-            <div>
-              <span className="mini-icon">
-                <Wallet size={18} />
-              </span>
-              <h3>بيع الجيم لصاحب المنصة</h3>
-              <p>
-                النسبة المستحقة للجيم من قيمة النقاط المستهلكة في الزيارات.
-                اعتماد الزيارة يسجل مستحقات الجيم، وتُتابع من السحب والتسويات.
-              </p>
-            </div>
-            <p className="subtle-box">
-              التعديل يخص العمليات الجديدة. الطلبات السابقة تحتفظ بالقيم
-              المحفوظة فيها.
-            </p>
-          </aside>
-        </div>
-      )}
+      {section === "pricing" && <div className="settings-grid"><section className="card"><h2>تسعير النقاط وتسوية الزيارات</h2><form key={policy?.version??0} onSubmit={e=>void save(e,'admin/pricing-policies',form=>({expectedVersion:policy?.version??0,pointPricePiasters:minorUnits(String(form.get('price'))),gymDiscountBps:0,redemptionBps:Number(minorUnits(String(form.get('redemption'))))}))}><fieldset disabled={busy}><Field label="سعر النقطة للمتدرب بالجنيه" name="price" inputMode="decimal" required defaultValue={policy?decimal(policy.pointPricePiasters):''}/><Field label="نسبة مستحقات الجيم من الزيارة (%)" name="redemption" inputMode="decimal" required defaultValue={policy?decimal(policy.redemptionBps):''}/><p>الجيم يستحق قيمة الزيارات وتسوياتها فقط. بيع وشحن النقاط من صاحب المنصة.</p><button className="primary">{busy?<Busy/>:'حفظ التسعير'}</button></fieldset></form></section>
+      <section className="card"><h2>النقاط الترحيبية</h2><p>هدية للمتدرب الجديد عند التسجيل مرة واحدة. التفعيل لا يضيف نقاطًا للحسابات القديمة.</p><form key={`welcome:${settings.welcomePoints?.version??0}`} onSubmit={e=>void save(e,'admin/welcome-points',form=>({expectedVersion:settings.welcomePoints?.version??0,enabled:form.get('enabled')==='on',points:Number(form.get('points'))}),'PUT')}><fieldset disabled={busy}><label className="check"><input type="checkbox" name="enabled" defaultChecked={settings.welcomePoints?.enabled??false}/>تفعيل النقاط الترحيبية للمستخدمين الجدد</label><Field label="عدد النقاط الترحيبية" name="points" type="number" min={0} max={100000} step={1} required defaultValue={settings.welcomePoints?.points??0}/><button className="primary">{busy?<Busy/>:'حفظ النقاط الترحيبية'}</button></fieldset></form></section></div>}
       {section === "payments" && (
         <div className="two-columns">
           {(["INSTAPAY", "WALLET"] as const).map((type) => {
@@ -296,7 +186,7 @@ export function SettingsPanel({
                         name="enabled"
                         defaultChecked={method?.enabled ?? false}
                       />
-                      إتاحة الطريقة للعملاء وأصحاب الجيمات
+                      إتاحة الطريقة للمتدربين
                     </label>
                     <button className="primary">
                       {busy ? (
@@ -354,17 +244,7 @@ export function SettingsPanel({
                   maxLength={100}
                   defaultValue={editing?.label ?? ""}
                 />
-                <div className="field">
-                  <label htmlFor="package-kind">مخصصة لـ</label>
-                  <select
-                    name="kind"
-                    id="package-kind"
-                    defaultValue={editing?.kind ?? "TRAINEE"}
-                  >
-                    <option value="TRAINEE">المتدربين</option>
-                    <option value="BRANCH_STOCK">مخزون فروع الجيمات</option>
-                  </select>
-                </div>
+<input type="hidden" name="kind" value="TRAINEE"/>
                 <Field
                   label="عدد النقاط"
                   name="points"

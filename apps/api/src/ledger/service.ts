@@ -98,6 +98,7 @@ export async function postInTransaction(tx: Prisma.TransactionClient, input: Led
     const rows = await tx.$queryRaw<{ balance: number; type: string }[]>`SELECT balance, type FROM "PointAccount" WHERE id = ${e.accountId}::uuid FOR UPDATE`;
     const row = rows[0];
     if (!row) throw new DomainError('ACCOUNT_NOT_FOUND');
+    if (['ISSUE','TRANSFER'].includes(c.points!.kind) && ['GYM_INVENTORY','BRANCH_INVENTORY'].includes(row.type)) throw new DomainError('ACCESS_DENIED');
     if (row.type !== 'ISSUANCE' && BigInt(row.balance) + e.delta < 0n) throw new DomainError('INSUFFICIENT_POINTS');
   }
   for (const e of c.money?.entries ?? []) {
@@ -139,26 +140,8 @@ export function postLedger(db: PrismaClient, command: LedgerCommand) {
   return serializable(db, async tx => { await requireAdmin(tx, command.actorId); return postInTransaction(tx, command); });
 }
 
-export function transferStock(db: PrismaClient, input: {
-  actorId: string; gymId?: string; fromBranchId: string | null; toBranchId: string | null; points: number; idempotencyKey: string;
-}) {
-  if (!Number.isSafeInteger(input.points) || input.points <= 0 || input.points > Number(maxInt) || input.fromBranchId === input.toBranchId) throw new DomainError('INVALID_TRANSFER');
-  return serializable(db, async tx => {
-    const branchIds = [input.fromBranchId, input.toBranchId].filter((id): id is string => id !== null);
-    const branches = await Promise.all(branchIds.map(id => requireBranchAccess(tx, input.actorId, id, 'TRANSFER_STOCK')));
-    const gymId = input.gymId ?? branches[0]?.gymId;
-    if (!gymId || branches.some(b => b.gymId !== gymId)) throw new DomainError('BRANCH_ACCESS_DENIED');
-    const grant=await authority(tx,input.actorId,gymId);
-    if(!grant.owner&&!grant.full&&[input.fromBranchId,input.toBranchId].includes(null))await requirePermission(tx,input.actorId,gymId,'TRANSFER_STOCK');
-    const gym=grant.gym;
-    if (gym.status !== 'ACTIVE') throw new DomainError('GYM_INACTIVE');
-    const account = async (branchId: string | null) => branchId === null ? centralStock(tx, gymId) : tx.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId } } });
-    const from = await account(input.fromBranchId), to = await account(input.toBranchId);
-    if (!from || !to) throw new DomainError('ACCOUNT_NOT_FOUND');
-    return postInTransaction(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: 'Owner branch stock transfer',
-      points: { kind: 'TRANSFER', entries: [{ accountId: from.id, delta: -BigInt(input.points) }, { accountId: to.id, delta: BigInt(input.points) }] } });
-  });
-}
+// Retained denial for older internal callers. Historical postings remain immutable.
+export function transferStock(db:PrismaClient,input:{actorId:string;gymId?:string;fromBranchId:string|null;toBranchId:string|null;points:number;idempotencyKey:string}):Promise<{pointTransactionId:string|undefined;moneyTransactionId?:string}>{throw new DomainError('ACCESS_DENIED');}
 
 // Exact financial reversal is an admin-only primitive, not the cancellation
 // policy for visits/sales. Domain approval and paid-out settlement come later.
