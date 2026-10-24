@@ -61,6 +61,10 @@ ApiClient portalApi(
             return reply({
               'items': [branch],
             });
+          if (p.endsWith('trainee/qr'))
+            return reply({'token': List.filled(43, 'a').join(),
+              'serverTime': DateTime.now().toUtc().toIso8601String(),
+              'expiresAt': DateTime.now().add(const Duration(minutes: 1)).toUtc().toIso8601String()});
           if (p.endsWith('trainee/wallet'))
             return reply({
               'spendablePoints': 120,
@@ -203,6 +207,19 @@ void main() {
           await t.pumpAndSettle();
           expect(t.takeException(), isNull);
         }
+        if (role == 'TRAINEE' || role == 'GYM_OWNER') {
+          final floating = find.byKey(const Key('navigation.qr'));
+          final badge = t.getRect(floating);
+          final whiteBar = t.getRect(find.byType(NavigationBar));
+          expect(badge.top, lessThan(whiteBar.top));
+          // Tap the part above the white bar, rather than the ordinary tab area.
+          await t.tapAt(Offset(badge.center.dx, badge.top + 4));
+          await t.pumpAndSettle();
+          expect(t.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 2);
+          expect(t.takeException(), isNull);
+          await t.pumpWidget(const SizedBox()); await t.pump();
+        }
+
       });
     }
   }

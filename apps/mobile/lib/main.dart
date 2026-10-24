@@ -495,44 +495,62 @@ class _NativeShellState extends State<NativeShell> {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        height: workMode ? 80 : 72,
-        selectedIndex: index,
-        indicatorColor: !staff && index == 2 ? Colors.transparent : null,
-        onDestinationSelected: (v) => setState(() => index = v),
-        destinations: [
-          for (final (i, tab) in tabs.indexed)
-            NavigationDestination(
-              icon: !staff && i == 2 ? _QrNavigationIcon(icon: tab.$1) : Icon(tab.$1),
-              label: tab.$2,
+      bottomNavigationBar: ColoredBox(color: canvas, child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: staff ? 0 : 16),
+            child: NavigationBar(
+              height: 60,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              selectedIndex: index,
+              indicatorColor: !staff && index == 2 ? Colors.transparent : null,
+              onDestinationSelected: (v) => setState(() => index = v),
+              destinations: [
+                for (final (i, tab) in tabs.indexed)
+                  NavigationDestination(
+                    icon: !staff && i == 2 ? const SizedBox(width: 24, height: 24) : Icon(tab.$1),
+                    label: tab.$2,
+                  ),
+              ],
             ),
+          ),
+          if (!staff) Positioned(top: 0, left: 0, right: 0,
+            child: Center(child: _FloatingQrButton(
+              key: const Key('navigation.qr'),
+              icon: tabs[2].$1,
+              onPressed: () => setState(() => index = 2),
+            )),
+          ),
         ],
-      ),
+      )),
     ));
   }
 }
 
-// Keep the normal destination hit area and label; lift only the QR badge.
-class _QrNavigationIcon extends StatelessWidget {
+// The transparent headroom belongs to the bar's layout, so the raised
+// portion is tappable too. The native destination retains keyboard/reader access.
+class _FloatingQrButton extends StatelessWidget {
   final IconData icon;
-  const _QrNavigationIcon({required this.icon});
+  final VoidCallback onPressed;
+  const _FloatingQrButton({super.key, required this.icon, required this.onPressed});
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 24, height: 24,
-    child: Stack(clipBehavior: Clip.none, children: [
-      Positioned(left: -10, top: -18, width: 44, height: 44,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: lime,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: const [BoxShadow(color: Color(0x18006b52), blurRadius: 6, offset: Offset(0, 3))],
-          ),
-          child: Icon(icon, color: ink, size: 25),
-        ),
+  Widget build(BuildContext context) => ExcludeSemantics(child: SizedBox(
+    width: 48, height: 48,
+    child: Material(
+      color: lime,
+      elevation: 3,
+      shadowColor: const Color(0x33006b52),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.white, width: 2)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        canRequestFocus: false,
+        onTap: onPressed,
+        child: Icon(icon, color: ink, size: 26),
       ),
-    ]),
-  );
+    ),
+  ));
 }
 
 class GymEntryScreen extends StatefulWidget {

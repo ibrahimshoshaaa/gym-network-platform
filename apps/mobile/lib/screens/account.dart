@@ -87,12 +87,7 @@ class _AccountScreenState extends State<AccountScreen> {
       const SizedBox(height:20),
       _deleteAccountButton(context),
       const SizedBox(height: 8),
-      OutlinedButton.icon(onPressed:busy?null:logout,
-        icon:busy?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2))
-          :const Icon(Icons.logout_rounded,size:19),
-        label:Text(busy?'جاري تسجيل الخروج…':'تسجيل الخروج'),
-        style:OutlinedButton.styleFrom(foregroundColor:const Color(0xffa33740),
-          minimumSize:const Size(double.infinity,48))),
+      _logoutButton(),
       const SizedBox(height:18),
       const Text('GYMBANK · 0.2.7\nShoTech Solutions',
         textAlign:TextAlign.center,style:TextStyle(color:muted,fontSize:10)),
@@ -103,12 +98,22 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget build(BuildContext context) => !widget.workplace
     ? traineeAccount(context) : workAccount(context);
 
-  Widget _deleteAccountButton(BuildContext context) => TextButton.icon(
+  Widget _deleteAccountButton(BuildContext context) => OutlinedButton.icon(
     key: const Key('account.delete'),
     onPressed: busy ? null : () => open(context, AccountDeletionScreen(api: widget.api)),
     icon: const Icon(Icons.delete_forever_outlined),
     label: const Text('حذف حسابي'),
-    style: TextButton.styleFrom(foregroundColor: const Color(0xffba1a1a),
+    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffba1a1a),
+      side: const BorderSide(color: Color(0xffba1a1a)),
+      minimumSize: const Size(double.infinity, 48)),
+  );
+
+  Widget _logoutButton() => OutlinedButton.icon(
+    onPressed: busy ? null : logout,
+    icon: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+      : const Icon(Icons.logout_rounded, size: 19),
+    label: Text(busy ? 'جاري تسجيل الخروج…' : 'تسجيل الخروج'),
+    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffa33740),
       minimumSize: const Size(double.infinity, 48)),
   );
 
@@ -206,22 +211,7 @@ class _AccountScreenState extends State<AccountScreen> {
       const SizedBox(height: 22),
       _deleteAccountButton(context),
       const SizedBox(height: 8),
-      ActionButton(
-        'تسجيل الخروج',
-        icon: Icons.logout_rounded,
-        busy: busy,
-        onPressed: () async {
-          if (busy) return;
-          setState(() => busy = true);
-          try {
-            await widget.api.logout();
-          } catch (e) {
-            if (mounted) setState(() => error = e);
-          } finally {
-            if (mounted) setState(() => busy = false);
-          }
-        },
-      ),
+      _logoutButton(),
       const SizedBox(height: 26),
       const Text(
         'GYMBANK\nنسخة 0.2.7 · ShoTech Solutions',

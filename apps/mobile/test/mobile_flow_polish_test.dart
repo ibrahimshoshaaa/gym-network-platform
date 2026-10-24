@@ -17,8 +17,10 @@ void main() {
       await t.pumpAndSettle();
       await t.ensureVisible(find.text('حذف حسابي'));
       final deletion = find.byKey(const Key('account.delete'));
-      final button = t.widget<TextButton>(deletion);
+      final button = t.widget<OutlinedButton>(deletion);
       expect(button.style!.foregroundColor!.resolve({}), const Color(0xffba1a1a));
+      expect(button.style!.side!.resolve({})!.color, const Color(0xffba1a1a));
+      expect(t.getSize(deletion), t.getSize(find.widgetWithText(OutlinedButton, 'تسجيل الخروج')));
       expect(t.getBottomLeft(deletion).dy, lessThan(t.getTopLeft(find.text('تسجيل الخروج')).dy));
       expect(find.text('حذف الحساب'), findsNothing);
       expect(t.takeException(), isNull);
