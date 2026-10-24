@@ -85,7 +85,7 @@ END $$;
 DO $$ DECLARE r text; BEGIN FOREACH r IN ARRAY ARRAY['gym_api_service','gym_api_runtime'] LOOP
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname=r) THEN
  EXECUTE format('GRANT SELECT,INSERT,UPDATE ON "AccountDeletion","AccountDeletionAsset" TO %I',r);
- EXECUTE format('GRANT DELETE ON "GymApplication","PhoneTestIdentity","ReceiptEvidence" TO %I',r);
+ EXECUTE format('GRANT DELETE ON "GymApplication","PhoneTestIdentity","ReceiptEvidence","UserPassword","PhoneOtpChallenge","QrTicket","AccountRecovery" TO %I',r);
  END IF;
  END LOOP; END $$;
 CREATE TABLE "AccountUploadLease" (
