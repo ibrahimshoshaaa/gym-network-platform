@@ -36,7 +36,7 @@ CREATE FUNCTION protect_phone_identity_erasure() RETURNS trigger LANGUAGE plpgsq
 DROP TRIGGER phone_test_identity_immutable ON "PhoneTestIdentity";
 CREATE TRIGGER phone_test_identity_immutable BEFORE UPDATE OR DELETE ON "PhoneTestIdentity" FOR EACH ROW EXECUTE FUNCTION protect_phone_identity_erasure();
 CREATE FUNCTION protect_receipt_erasure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
- IF TG_OP='DELETE' AND account_erasure_active(OLD."ownerUserId")
+ IF TG_OP='DELETE' AND (account_erasure_active(OLD."ownerUserId") OR EXISTS(SELECT 1 FROM "AccountDeletionAsset" a JOIN "AccountDeletion" d ON d.id=a."deletionId" WHERE a."objectKey"=OLD."objectKey" AND a."deliveryType"='authenticated' AND account_erasure_active(d."userId")))
  AND NOT EXISTS(SELECT 1 FROM "TopupRequest" WHERE "receiptId"=OLD.id OR "receiptObjectKey"=OLD."objectKey")
  AND NOT EXISTS(SELECT 1 FROM "FinancialEvidenceUse" WHERE "receiptId"=OLD.id)
  AND NOT EXISTS(SELECT 1 FROM "WithdrawalRequest" WHERE "proofReceiptId"=OLD.id)

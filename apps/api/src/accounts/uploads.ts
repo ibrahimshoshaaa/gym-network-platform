@@ -15,7 +15,7 @@ export async function accountUpload<T extends {objectKey:string},R>(
  const object=await storage.upload(data,key);
  try{
   const result=await persist(object);
-  await db.accountUploadLease.deleteMany({where:{id:lease.id}});
+  await db.accountUploadLease.deleteMany({where:{id:lease.id}}).catch(()=>{});
   return result;
  }catch(error){
   try{await storage.remove(object.objectKey);await db.accountUploadLease.deleteMany({where:{id:lease.id}});}catch{/* Lease retains the uncertain remote object for erasure. */}

@@ -6,7 +6,7 @@ import {hashPassword} from '../src/auth/passwords.js';
 import {authenticate,createSession,hashToken} from '../src/auth/sessions.js';
 import {requestDeletion,cancelDeletion,processDeletion,publicDeletion,deletionReceipt} from '../src/accounts/deletion.js';
 import {eraseMediaBatch} from '../src/accounts/deletion-media.js';
-import {createTicket} from '../src/engagement/support.js';
+import {createTicket,replyTicket} from '../src/engagement/support.js';
 import {saveListing} from '../src/market/service.js';
 import {changeUserAccess,issueRecovery} from '../src/engagement/accounts.js';
 import {postLedger} from '../src/ledger/service.js';
@@ -100,4 +100,27 @@ test('in-flight and failed media uploads cannot escape the deletion outbox',asyn
  assert.equal(await db.accountDeletionAsset.count({where:{deletionId:erased.request!.id,objectKey:key}}),1);
  await eraseMediaBatch(db,erased.request!.id,{remove:async(k)=>assert.equal(k,key)});
  assert.equal((await db.accountDeletion.findUniqueOrThrow({where:{userId:u.id}})).status,'COMPLETED');
+});
+test('financial evidence stays immutable while unrelated personal receipts are erased',async()=>{
+ const {submitTopup,reviewTopup}=await import('../src/topups/service.js');
+ const {publishPolicy,savePaymentMethod}=await import('../src/topups/settings.js');
+ const u=await user(),admin=await user('PLATFORM_ADMIN');await db.pointAccount.create({data:{ownerUserId:u.id,type:'TRAINEE_WALLET'}});
+ let policy=await db.pricingPolicy.findFirst({orderBy:{version:'desc'}});
+ if(!policy){await publishPolicy(db,admin.id,{expectedVersion:0,pointPricePiasters:'100',gymDiscountBps:1000,redemptionBps:8000});policy=await db.pricingPolicy.findFirstOrThrow({orderBy:{version:'desc'}});}
+ const oldMethod=await db.paymentMethod.findUnique({where:{type:'INSTAPAY'}});
+ await savePaymentMethod(db,admin.id,'INSTAPAY',{expectedVersion:oldMethod?.version??0,account:'synthetic-deletion@instapay',accountName:'Synthetic Receiver',enabled:true});
+ const method=await db.paymentMethod.findUniqueOrThrow({where:{type:'INSTAPAY'}});
+ const evidence=()=>db.receiptEvidence.create({data:{ownerUserId:u.id,objectKey:'synthetic/'+randomUUID(),assetId:randomUUID(),contentHash:randomUUID(),mimeType:'image/jpeg',bytes:10}});
+ const financial=await evidence(),personal=await evidence();
+ const adminAttachment=await db.receiptEvidence.create({data:{ownerUserId:admin.id,objectKey:'synthetic/'+randomUUID(),assetId:randomUUID(),contentHash:randomUUID(),mimeType:'image/jpeg',bytes:10}});
+ const thread=await createTicket(db,u.id,{subject:'Synthetic personal help',category:'HELP',body:'Synthetic private support content',clientKey:randomUUID()});
+ await replyTicket(db,admin.id,thread.id,{body:'Synthetic nonfinancial attachment for this user only',receiptId:adminAttachment.id,clientKey:randomUUID()});
+ const topup=await submitTopup(db,u.id,randomUUID(),{kind:'TRAINEE',points:5,pricingVersion:policy.version,receiptId:financial.id,paymentMethod:'INSTAPAY',paymentMethodVersion:method.version});
+ const pending=await requestDeletion(db,u.id,body());assert.ok(pending.blockers.some(b=>b.code==='TOPUPS'));
+ await reviewTopup(db,admin.id,topup.id,{decision:'REJECTED',reason:'Synthetic settled payment dispute'});
+ const erased=await requestDeletion(db,u.id,body());assert.equal(erased.request?.status,'ERASING');
+ assert.ok(await db.receiptEvidence.findUnique({where:{id:financial.id}}));assert.equal(await db.receiptEvidence.findUnique({where:{id:personal.id}}),null);
+ assert.equal(await db.accountDeletionAsset.count({where:{deletionId:erased.request!.id,objectKey:financial.objectKey}}),0);
+ await assert.rejects(db.receiptEvidence.delete({where:{id:financial.id}}));
+ const removed:string[]=[];await eraseMediaBatch(db,erased.request!.id,{remove:async key=>{removed.push(key);}});assert.deepEqual(new Set(removed),new Set([personal.objectKey,adminAttachment.objectKey]));assert.equal(await db.receiptEvidence.findUnique({where:{id:adminAttachment.id}}),null);
 });

@@ -21,6 +21,6 @@ export async function eraseMediaBatch(db:PrismaClient,id:string,storage:ErasureS
   await db.accountDeletionAsset.update({where:{id:row.id},data:{completedAt:new Date()}});
  }
  const remaining=await db.accountDeletionAsset.count({where:{deletionId:id,completedAt:null}});
- if(!remaining)await db.accountDeletion.update({where:{id},data:{status:'COMPLETED',completedAt:new Date()}});
+ if(!remaining)await db.accountDeletion.updateMany({where:{id,status:'ERASING'},data:{status:'COMPLETED',completedAt:new Date()}});
  return remaining>0;
 }

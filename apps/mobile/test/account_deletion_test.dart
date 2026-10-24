@@ -44,17 +44,21 @@ void main(){
   api.user={'id':'other'};expect(await api.checkDeletionReceipt(),false);expect(api.token,'saved');
  });
  testWidgets('iPhone deletion requires explicit confirmation and presents settlement blockers',(t)async{
+  t.view.devicePixelRatio=1;
+  t.view.physicalSize=const Size(375,812);
+  addTearDown(t.view.resetDevicePixelRatio);addTearDown(t.view.resetPhysicalSize);
   final calls=<String>[];
   final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
    calls.add(r.method);if(r.method=='GET')return reply({...receipt('PENDING'),'blockers':[{'code':'POINT_BALANCE','count':1}]});
    return reply(receipt('PENDING'));
   }))..user={'id':'u1','role':'TRAINEE'}..token='saved';
   await t.pumpWidget(MaterialApp(theme:appTheme(),home:Directionality(textDirection:TextDirection.rtl,child:AccountDeletionScreen(api:api))));await t.pumpAndSettle();
+  await t.scrollUntilVisible(find.text('رصيد نقاط يحتاج تسوية'),180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();
   expect(find.text('رصيد نقاط يحتاج تسوية'),findsOneWidget);
-  await t.ensureVisible(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.tap(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.pumpAndSettle();expect(calls.where((c)=>c=='POST'),isEmpty);
-  await t.ensureVisible(find.byType(TextField).first);await t.enterText(find.byType(TextField).first,'Synthetic password');
-  await t.ensureVisible(find.byType(TextField).last);await t.enterText(find.byType(TextField).last,'DELETE');
+  await t.scrollUntilVisible(find.text('إعادة فحص التسوية وإتمام الحذف'),180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.tap(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.pumpAndSettle();expect(calls.where((c)=>c=='POST'),isEmpty);
+  await t.scrollUntilVisible(find.byKey(const Key('deletion-password')),-180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.enterText(find.byKey(const Key('deletion-password')),'Synthetic password');
+  await t.scrollUntilVisible(find.byKey(const Key('deletion-confirmation')),100,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.enterText(find.byKey(const Key('deletion-confirmation')),'DELETE');
   FocusManager.instance.primaryFocus?.unfocus();await t.pumpAndSettle();
-  await t.ensureVisible(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.tap(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.pumpAndSettle();expect(calls.where((c)=>c=='POST').length,1);
+  await t.scrollUntilVisible(find.text('إعادة فحص التسوية وإتمام الحذف'),180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.tap(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.pumpAndSettle();expect(calls.where((c)=>c=='POST').length,1);
  },variant:TargetPlatformVariant.only(TargetPlatform.iOS));
 }

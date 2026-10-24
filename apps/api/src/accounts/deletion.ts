@@ -142,9 +142,10 @@ async function eraseIdentity(tx:Tx,userId:string,deletionId:string){
  await tx.maintenanceRequest.updateMany({where:{AND:[maintenanceWhere,{NOT:{createdBy:{phoneE164:{startsWith:'deleted:'}}}}]},data:{equipment:'محتوى محذوف',description:'محتوى محذوف',contactPhone:'',workSummary:'محتوى محذوف'}});
  await tx.$executeRaw`UPDATE "MaintenanceEvent" SET note='محتوى محذوف',data=(SELECT COALESCE(jsonb_object_agg(key,value),'{}'::jsonb) FROM jsonb_each(data) WHERE key IN ('action','estimatedPiasters','approvedPiasters','finalPiasters')) WHERE ("actorId"=${userId}::uuid OR "requestId" IN (SELECT id FROM "MaintenanceRequest" WHERE "createdById"=${userId}::uuid OR "branchId"=ANY(${bids}::uuid[]))) AND NOT EXISTS(SELECT 1 FROM "AccountDeletion" d WHERE d."userId"="MaintenanceEvent"."actorId" AND d."erasedAt" IS NOT NULL)`;
  await tx.visitRating.deleteMany({where:{traineeId:userId}});
+ const threadReceipts=(await tx.supportMessage.findMany({where:{ticket:{userId},receiptId:{not:null}},select:{receiptId:true}})).map(m=>m.receiptId!);
  await tx.supportMessage.deleteMany({where:{ticket:{userId}}});await tx.supportTicket.deleteMany({where:{userId}});
  await tx.notificationRead.deleteMany({where:{userId}});
- const unused=await tx.$queryRaw<{id:string;objectKey:string}[]>`SELECT e.id,e."objectKey" FROM "ReceiptEvidence" e WHERE e."ownerUserId"=${userId}::uuid
+ const unused=await tx.$queryRaw<{id:string;objectKey:string}[]>`SELECT e.id,e."objectKey" FROM "ReceiptEvidence" e WHERE (e."ownerUserId"=${userId}::uuid OR e.id=ANY(${threadReceipts}::uuid[]))
  AND NOT EXISTS(SELECT 1 FROM "TopupRequest" t WHERE t."receiptId"=e.id OR t."receiptObjectKey"=e."objectKey")
  AND NOT EXISTS(SELECT 1 FROM "FinancialEvidenceUse" f WHERE f."receiptId"=e.id)
  AND NOT EXISTS(SELECT 1 FROM "WithdrawalRequest" w WHERE w."proofReceiptId"=e.id)
