@@ -62,7 +62,7 @@ jobs:
           export GYMBANK_KEYSTORE_PATH="$RUNNER_TEMP/gymbank-signing/gymbank-release.jks"
           trap 'rm -rf "$RUNNER_TEMP/gymbank-signing"' EXIT
           python3 tool/install_signing.py
-          build_number=$((100000 + GITHUB_RUN_NUMBER))
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number"
           python3 tool/verify_apks.py "$build_number"
           cd build/app/outputs/flutter-apk

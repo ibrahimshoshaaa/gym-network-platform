@@ -73,7 +73,7 @@ workflows:
           python3 tool/install_signing.py
           # Use a shared clock-based range: workflow counters restart independently.
           # Seconds since 2026-01-01 plus a floor above previous build codes.
-          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number"
           python3 tool/verify_apks.py "$build_number"
           python3 - <<'PY'
@@ -145,7 +145,7 @@ workflows:
           python3 tool/install_signing.py
           # Use a shared clock-based range: workflow counters restart independently.
           # Seconds since 2026-01-01 plus a floor above previous build codes.
-          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_API_ORIGIN=https://gym-network-platform-git-codex-branch-services-bookings-shosha4.vercel.app
           python3 tool/verify_apks.py "$build_number"
           python3 - <<'PY'
@@ -227,7 +227,7 @@ workflows:
           python3 tool/install_signing.py
           # Use a shared clock-based range: workflow counters restart independently.
           # Seconds since 2026-01-01 plus a floor above previous build codes.
-          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_API_ORIGIN=https://gym-network-platform-git-codex-service-selection-8a960a-shosha4.vercel.app
           python3 tool/verify_apks.py "$build_number"
           python3 - <<'PY'
@@ -320,7 +320,7 @@ workflows:
           python3 tool/install_signing.py
           # Use a shared clock-based range: workflow counters restart independently.
           # Seconds since 2026-01-01 plus a floor above previous build codes.
-          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_API_ORIGIN=https://gym-network-platform-git-codex-service-selection-8a960a-shosha4.vercel.app
           python3 tool/verify_apks.py "$build_number"
           python3 - <<'PY'
@@ -413,7 +413,7 @@ workflows:
           python3 tool/install_signing.py
           # Use a shared clock-based range: workflow counters restart independently.
           # Seconds since 2026-01-01 plus a floor above previous build codes.
-          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_API_ORIGIN=https://gym-network-platform-git-codex-service-selection-8a960a-shosha4.vercel.app
           python3 tool/verify_apks.py "$build_number"
           python3 - <<'PY'
@@ -492,7 +492,7 @@ workflows:
           python3 tool/install_signing.py
           # Use a shared clock-based range: workflow counters restart independently.
           # Seconds since 2026-01-01 plus a floor above previous build codes.
-          build_number=$(python3 -c 'import time; print(1000000 + int(time.time()) - 1767225600)')
+          build_number=$(python3 tool/release_version.py)
           flutter build apk --release --split-per-abi --build-name 0.2.7 --build-number "$build_number" --dart-define=GYM_PHONE_OTP_PREVIEW=true --dart-define=GYM_API_ORIGIN="$GYMBANK_PHONE_PREVIEW_ORIGIN"
           python3 tool/verify_apks.py "$build_number"
           python3 - <<'PY'
