@@ -21,12 +21,12 @@ class AccountDeletionScreen extends StatefulWidget {
   @override State<AccountDeletionScreen> createState()=>_AccountDeletionScreenState();
 }
 class _AccountDeletionScreenState extends State<AccountDeletionScreen>{
-  final password=TextEditingController(),confirmation=TextEditingController();
+  final phone=TextEditingController(),confirmation=TextEditingController();
   Json? data;
   bool loading=true,busy=false;
   Object? error;
   @override void initState(){super.initState();load();}
-  @override void dispose(){password.dispose();confirmation.dispose();super.dispose();}
+  @override void dispose(){phone.dispose();confirmation.dispose();super.dispose();}
   Future<void> load()async{
     setState((){loading=true;error=null;});
     try{
@@ -39,15 +39,15 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen>{
   }
   Future<void> submit(bool cancel)async{
     if(busy)return;
-    if(password.text.isEmpty||(!cancel&&confirmation.text!='DELETE')){
+    if(phone.text.trim().isEmpty||(!cancel&&confirmation.text!='DELETE')){
       setState(()=>error=const ApiFailure('INVALID_INPUT'));return;
     }
     FocusScope.of(context).unfocus();
     setState((){busy=true;error=null;});
     try{
-      final r=cancel?await widget.api.request('me/account-deletion/cancel',method:'POST',body:{'currentPassword':password.text})
-        :await widget.api.deleteAccount(password.text);
-      password.clear();confirmation.clear();
+      final r=cancel?await widget.api.request('me/account-deletion/cancel',method:'POST',body:{'phone':phone.text})
+        :await widget.api.deleteAccount(phone.text);
+      phone.clear();confirmation.clear();
       if(mounted)setState(()=>data=Map<String,dynamic>.from(r));
     }catch(e){if(mounted)setState(()=>error=e);}
     finally{if(mounted)setState(()=>busy=false);}
@@ -71,14 +71,14 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen>{
             ListTile(contentPadding:EdgeInsets.zero,leading:const Icon(Icons.info_outline),
               title:Text(deletionBlockerNames[b['code']]??'التزام يحتاج مراجعة'),trailing:Text('${b['count']}')),
           const SizedBox(height:20),
-          TextField(key:const Key('deletion-password'),controller:password,enabled:!busy,obscureText:true,autocorrect:false,enableSuggestions:false,
-            autofillHints:const [AutofillHints.password],decoration:const InputDecoration(labelText:'كلمة السر الحالية')),
+          TextField(key:const Key('deletion-phone'),controller:phone,enabled:!busy,keyboardType:TextInputType.phone,textDirection:TextDirection.ltr,
+            autofillHints:const [AutofillHints.telephoneNumber],decoration:const InputDecoration(labelText:'رقم الموبايل المسجّل',hintText:'اكتب رقم حسابك للتأكيد',prefixIcon:Icon(Icons.phone_iphone_rounded))),
           const SizedBox(height:16),
           TextField(key:const Key('deletion-confirmation'),controller:confirmation,enabled:!busy,autocorrect:false,enableSuggestions:false,textDirection:TextDirection.ltr,
             decoration:const InputDecoration(labelText:'اكتب DELETE لتأكيد الحذف')),
           const SizedBox(height:20),
-          ActionButton(pending?'إعادة فحص التسوية وإتمام الحذف':'تأكيد حذف الحساب',busy:busy,onPressed:()=>submit(false),icon:Icons.delete_forever_outlined),
-          if(pending)TextButton(onPressed:busy?null:()=>submit(true),child:const Text('إلغاء طلب الحذف بكلمة السر')),
+          Theme(data:Theme.of(context).copyWith(colorScheme:Theme.of(context).colorScheme.copyWith(primary:const Color(0xffba1a1a))),child:ActionButton(pending?'إعادة فحص التسوية وإتمام الحذف':'تأكيد حذف الحساب',busy:busy,onPressed:()=>submit(false),icon:Icons.delete_forever_outlined)),
+          if(pending)TextButton(onPressed:busy?null:()=>submit(true),child:const Text('إلغاء طلب الحذف')),
         ],
         ErrorNote(error),
         TextButton(onPressed:busy||loading?null:load,child:const Text('تحديث حالة الطلب')),

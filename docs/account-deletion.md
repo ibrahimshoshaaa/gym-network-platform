@@ -2,7 +2,7 @@
 
 The shared Flutter Account screen supports iOS and Android. Pending/rejected gym applicants also have a deletion entry. `/delete-account` is the external web entry, with credential verification and receipt tracking without reinstalling the app.
 
-Deletion requires the current password and literal `DELETE`. It cannot be undone after identity erasure starts. Account holders may cancel pending requests with their password, including from the external page. Platform administrators cannot self-delete through this flow.
+Signed-in mobile deletion requires entering the registered phone number and literal `DELETE`; the server matches the normalized number to the session owner. The phone is a deliberate confirmation, not an OTP or ownership proof. Older clients and the external web portal still use the current password and literal `DELETE`. It cannot be undone after identity erasure starts. Signed-in mobile users can cancel pending requests with their registered phone number; the external page continues to require a password. Platform administrators cannot self-delete through this flow.
 
 ## Behavior and retained records
 

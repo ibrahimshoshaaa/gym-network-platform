@@ -5,13 +5,17 @@ import { z } from 'zod';
 import { verifyPassword } from '../auth/passwords.js';
 import { hashToken } from '../auth/sessions.js';
 import { requireAdmin } from '../auth/authorization.js';
-import { loginSchema } from '../auth/validation.js';
+import { phoneSchema, loginSchema } from '../auth/validation.js';
 import { parse } from '../gyms/validation.js';
 import { serializable } from '../ledger/service.js';
 import { DomainError } from '../domain/errors.js';
 
 type Tx = Prisma.TransactionClient;
-export const deletionInput = z.object({currentPassword:z.string().min(1).max(256),confirmation:z.literal('DELETE'),requestKey:z.string().uuid()}).strict();
+const deletionCredentials = z.union([z.object({phone:phoneSchema}).strict(),z.object({currentPassword:z.string().min(1).max(256)}).strict()]);
+export const deletionInput = z.union([
+ z.object({phone:phoneSchema,confirmation:z.literal('DELETE'),requestKey:z.string().uuid()}).strict(),
+ z.object({currentPassword:z.string().min(1).max(256),confirmation:z.literal('DELETE'),requestKey:z.string().uuid()}).strict(),
+]);
 export const publicDeletionInput = loginSchema.extend({confirmation:z.literal('DELETE'),requestKey:z.string().uuid()}).strict();
 export const deletionNotice = 'يُحذف الاسم وبيانات الاتصال وكلمة السر وإنهاء الجلسات والمحتوى الشخصي والصور غير المالية. تُحتفظ بسجلات العمليات والأرصدة والإيصالات المالية وسجلات الأمان اللازمة للمحاسبة وحل النزاعات. لا يُسقط الحذف أي رصيد أو مستحقات. الطلبات التي تحتاج تسوية تُراجع خلال 7 أيام، وقد يستغرق إتمامها أكثر حتى تنتهي التسوية. الصور قد تحتاج وقتًا إضافيًا لإتمام الحذف من مزود التخزين.';
 export type Blocker = {code:string;count:number};
@@ -55,6 +59,19 @@ async function credential(db:PrismaClient,userId:string,password:string){
  if(user!.role==='PLATFORM_ADMIN')throw new DomainError('ACCESS_DENIED');
  return user!.password!.passwordHash;
 }
+// Phone confirmation is available only behind the authenticated /me routes.
+// Password credentials remain supported for older clients and the public portal.
+async function deletionCredential(db:PrismaClient,userId:string,d:z.infer<typeof deletionCredentials>){
+ if('currentPassword' in d)return {kind:'password' as const,value:await credential(db,userId,d.currentPassword)};
+ const user=await db.user.findUnique({where:{id:userId}});
+ if(!user||user.phoneE164!==d.phone)throw new DomainError('INVALID_CREDENTIALS');
+ if(user.role==='PLATFORM_ADMIN')throw new DomainError('ACCESS_DENIED');
+ return {kind:'phone' as const,value:d.phone};
+}
+async function recheckDeletionCredential(tx:Tx,userId:string,proof:{kind:'password'|'phone';value:string}){
+ const value=proof.kind==='phone'?(await tx.user.findUnique({where:{id:userId}}))?.phoneE164:(await tx.userPassword.findUnique({where:{userId}}))?.passwordHash;
+ if(value!==proof.value)throw new DomainError('INVALID_CREDENTIALS');
+}
 export async function publicDeletion(db:PrismaClient,input:unknown){
  const d=parse(publicDeletionInput,input);await consumeAuthLimit(db,'deletion-identity',d.identifier,5,900);const user=await db.user.findFirst({where:d.identifier.includes('@')?{email:d.identifier}:{phoneE164:d.identifier},select:{id:true}});
  if(!user){await verifyPassword(d.password,null);throw new DomainError('INVALID_CREDENTIALS');}
@@ -67,10 +84,10 @@ export async function publicCancelDeletion(db:PrismaClient,input:unknown){
  return cancelDeletion(db,user.id,{currentPassword:d.password});
 }
 export async function requestDeletion(db:PrismaClient,userId:string,input:unknown){
- const d=parse(deletionInput,input),hash=await credential(db,userId,d.currentPassword);
+ const d=parse(deletionInput,input),proof=await deletionCredential(db,userId,'phone' in d?{phone:d.phone}:{currentPassword:d.currentPassword});
  return serializable(db,async tx=>{
   await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId}::uuid FOR UPDATE`;
-  if((await tx.userPassword.findUnique({where:{userId}}))?.passwordHash!==hash)throw new DomainError('INVALID_CREDENTIALS');
+  await recheckDeletionCredential(tx,userId,proof);
   const old=await tx.accountDeletion.findUnique({where:{userId}});
   if(old&&old.status!=='CANCELLED'){
    if(old.status==='PENDING'){await tx.accountDeletion.update({where:{id:old.id},data:{requestKeyHash:hashToken(d.requestKey)}});if(!(await deletionBlockers(tx,userId)).length)await eraseIdentity(tx,userId,old.id);}
@@ -78,16 +95,16 @@ export async function requestDeletion(db:PrismaClient,userId:string,input:unknow
   }
   const data={requestKeyHash:hashToken(d.requestKey),status:'PENDING',requestedAt:new Date(),reviewDueAt:new Date(Date.now()+7*86400000)};
   const row=old?await tx.accountDeletion.update({where:{id:old.id},data}):await tx.accountDeletion.create({data:{userId,...data}});
-  await tx.auditLog.create({data:{actorId:userId,action:'ACCOUNT_DELETION_REQUESTED',entityId:row.id,reason:'Account holder confirmed deletion with current password'}});
+  await tx.auditLog.create({data:{actorId:userId,action:'ACCOUNT_DELETION_REQUESTED',entityId:row.id,reason:proof.kind==='phone'?'Authenticated account holder confirmed registered phone and DELETE':'Account holder confirmed deletion with current password'}});
   if(!(await deletionBlockers(tx,userId)).length)await eraseIdentity(tx,userId,row.id);
   return deletionStatus(tx,userId);
  });
 }
 export async function cancelDeletion(db:PrismaClient,userId:string,input:unknown){
- const d=parse(z.object({currentPassword:z.string().min(1).max(256)}).strict(),input),hash=await credential(db,userId,d.currentPassword);
+ const d=parse(deletionCredentials,input),proof=await deletionCredential(db,userId,d);
  return serializable(db,async tx=>{
   await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId}::uuid FOR UPDATE`;
-  if((await tx.userPassword.findUnique({where:{userId}}))?.passwordHash!==hash)throw new DomainError('INVALID_CREDENTIALS');
+  await recheckDeletionCredential(tx,userId,proof);
   const row=await tx.accountDeletion.findUnique({where:{userId}});if(!row||row.status!=='PENDING')throw new DomainError('INVALID_STATE');
   await tx.accountDeletion.update({where:{id:row.id},data:{status:'CANCELLED'}});
   await tx.auditLog.create({data:{actorId:userId,action:'ACCOUNT_DELETION_CANCELLED',entityId:row.id,reason:'Account holder cancelled pending deletion'}});

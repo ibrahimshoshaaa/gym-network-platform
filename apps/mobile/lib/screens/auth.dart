@@ -497,7 +497,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                 const SizedBox(height: 24),
                                 if(phoneOtpPreview)...[
                                   Text(tr('سجّل برقم موبايلك. تجربة بدون SMS — الكود 123456 بيتملّى تلقائيًا.','Register with your mobile number. No SMS is sent in test mode; code 123456 is autofilled.'),style:TextStyle(color:muted,fontSize:12)),
-                                  if(!register)TextButton(onPressed:busy?null:()=>open(context,PhonePasswordReset(api:widget.api,english:english)),child:Text(tr('استرجاع كلمة السر بكود الموبايل — تجربة','Reset password by mobile code — test'))),
                                   const SizedBox(height:12),
                                 ],
                                 if (register) ...[
@@ -578,6 +577,13 @@ class _AuthScreenState extends State<AuthScreen> {
                                           'كلمة السر',
                                           'Password',
                                         ),
+                                        if (!register && phoneOtpPreview)
+                                          Align(alignment: AlignmentDirectional.centerEnd,
+                                            child: TextButton(
+                                              key: const Key('auth.forgotPassword'),
+                                              onPressed: busy ? null : () => open(context, PhonePasswordReset(api: widget.api, english: english)),
+                                              child: Text(tr('نسيت كلمة السر؟', 'Forgot password?')),
+                                            )),
                                         if (register && owner) ...[
                                           Text(
                                             tr('بيانات الجيم', 'Gym details'),
@@ -1013,7 +1019,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
             onPressed: widget.refresh,
             icon: Icons.refresh_rounded,
           ),
-          TextButton(onPressed:busy?null:()=>open(context,AccountDeletionScreen(api:widget.api)),child:const Text('حذف الحساب')),
+          TextButton(onPressed:busy?null:()=>open(context,AccountDeletionScreen(api:widget.api)),style:TextButton.styleFrom(foregroundColor:const Color(0xffba1a1a)),child:const Text('حذف حسابي')),
           if (rejected)
             TextButton(
               onPressed: () async {

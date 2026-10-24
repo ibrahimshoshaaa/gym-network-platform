@@ -277,14 +277,14 @@ class ApiClient extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<dynamic> deleteAccount(String password) async {
+  Future<dynamic> deleteAccount(String phone) async {
     final actorId = user!['id'] as String;
     final saved = await storage.read('deletion.$actorId');
     final key = saved ?? newKey();
     await storage.write('deletion.$actorId', key);
     await storage.write('deletion.pending', jsonEncode({'actorId':actorId,'requestKey':key}));
     final result = await request('me/account-deletion',method:'POST',body:{
-      'currentPassword':password,'confirmation':'DELETE','requestKey':key,
+      'phone':phone,'confirmation':'DELETE','requestKey':key,
     });
     await _acceptDeletionReceipt(Map<String,dynamic>.from(result),actorId);
     return result;

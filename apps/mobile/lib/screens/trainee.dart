@@ -136,7 +136,8 @@ class WalletHistory extends StatelessWidget {
 
 class VisitCard extends StatelessWidget {
   final Json visit;
-  const VisitCard(this.visit, {super.key});
+  final Widget? rating;
+  const VisitCard(this.visit, {super.key, this.rating});
   @override
   Widget build(BuildContext context) => Panel(
     padding:const EdgeInsets.all(16),
@@ -166,6 +167,7 @@ class VisitCard extends StatelessWidget {
         Text('نهاية الجلسة: ${shortDate(visit['expiresAt'])}',
           style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w600)),
       ],
+      if (rating != null) ...[const SizedBox(height: 12), rating!],
       Reference('${visit['id']}'),
     ]),
   );

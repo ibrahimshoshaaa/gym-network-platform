@@ -38,7 +38,7 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
  });
 }
 
-async function withChallenge<T>(db:PrismaClient,data:{phone:string;challengeId:string;code:string},purpose:'REGISTER'|'RESET',run:(tx:Prisma.TransactionClient)=>Promise<T>):Promise<T>{
+async function withChallenge<T>(db:PrismaClient,data:{phone:string;challengeId:string;code:string},purpose:'REGISTER'|'RESET',run:(tx:Prisma.TransactionClient)=>Promise<T>,consume=true):Promise<T>{
  requirePreview();
  const result=await serializable(db,async tx=>{
   await tx.$queryRaw`SELECT id FROM "PhoneOtpChallenge" WHERE id=${data.challengeId}::uuid FOR UPDATE`;
@@ -47,7 +47,7 @@ async function withChallenge<T>(db:PrismaClient,data:{phone:string;challengeId:s
   const actual=hashToken(`${c.id}:${c.phone}:${purpose}:${data.code}`);
   if(!timingSafeEqual(Buffer.from(actual,'hex'),Buffer.from(c.codeHash,'hex'))){await tx.phoneOtpChallenge.update({where:{id:c.id},data:{attempts:{increment:1}}});return {ok:false as const};}
   const value=await run(tx);
-  await tx.phoneOtpChallenge.update({where:{id:c.id},data:{consumedAt:new Date()}});
+  if(consume)await tx.phoneOtpChallenge.update({where:{id:c.id},data:{consumedAt:new Date()}});
   return {ok:true as const,value};
  });
  if(!result.ok)throw new DomainError('PHONE_OTP_INVALID');
@@ -65,6 +65,16 @@ export async function registerPhonePreview(db:PrismaClient,input:unknown){
   // phoneVerifiedAt intentionally remains null: a test code proves no ownership.
   return {...await sessionResult(tx,user),testMode:true};
  });}catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002')throw new DomainError('ACCOUNT_UNAVAILABLE');throw e;}
+}
+
+export async function verifyPhoneResetCode(db:PrismaClient,input:unknown){
+ const data=parse(z.object(proof).strict(),input);
+ return withChallenge(db,data,'RESET',async tx=>{
+  const identity=await tx.phoneTestIdentity.findUnique({where:{phone:data.phone}});
+  const user=identity?await tx.user.findUnique({where:{id:identity.userId},include:{password:true}}):null;
+  if(!user?.isActive||user.phoneE164!==data.phone||!user.password||!['TRAINEE','GYM_OWNER'].includes(user.role))throw new DomainError('PHONE_OTP_INVALID');
+  return {ok:true,testMode:true};
+ },false);
 }
 
 export async function resetPhonePreviewPassword(db:PrismaClient,input:unknown){

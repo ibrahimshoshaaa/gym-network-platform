@@ -8,12 +8,12 @@ import { loginAdmin } from './admin.js';
 import { loginSchema } from './validation.js';
 import { changeTraineePassword, loginTrainee, registerTrainee } from './trainees.js';
 import { acceptInvitation, invitationAcceptSchema, loginStaff } from './staff.js';
-import {phonePreviewStatus,requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword} from './phone-preview.js';
+import {phonePreviewStatus,requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword,verifyPhoneResetCode} from './phone-preview.js';
 
 export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
   app.get('/auth/phone/status',async()=>phonePreviewStatus());
   for(const [path,run] of [
-    ['challenge',requestPhoneChallenge],['register',registerPhonePreview],['reset',resetPhonePreviewPassword],
+    ['challenge',requestPhoneChallenge],['register',registerPhonePreview],['reset',resetPhonePreviewPassword],['reset/verify',verifyPhoneResetCode],
   ] as const)app.post(`/auth/phone/${path}`,{
     bodyLimit:8192,
     onRequest:async r=>{await consumeAuthLimit(db,'phone-otp-ip',r.ip,20,900);},

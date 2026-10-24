@@ -16,12 +16,12 @@ void main(){
   var pending=true;
   final api=ApiClient(storage:store,transport:MockClient((r)async{
    expect(r.url.path,endsWith('/me/account-deletion'));
-   final b=jsonDecode(r.body);expect(b['confirmation'],'DELETE');expect(store.values['deletion.u1'],b['requestKey']);
+   final b=jsonDecode(r.body);expect(b['confirmation'],'DELETE');expect(b['phone'],'01055550123');expect(b.containsKey('currentPassword'),false);expect(store.values['deletion.u1'],b['requestKey']);
    expect(store.values['deletion.pending'],isNotNull);
    return reply(receipt(pending?'PENDING':'COMPLETED'));
   }))..user={'id':'u1','role':'TRAINEE'}..token='saved';
-  await api.deleteAccount('Synthetic password');expect(api.user,isNotNull);expect(api.token,'saved');expect(store.values['pending.u1'],isNotNull);
-  pending=false;await api.deleteAccount('Synthetic password');expect(api.user,isNull);expect(api.token,isNull);expect(store.values['session'],isNull);expect(store.values['pending.u1'],isNull);expect(store.values['pending.other'],'other envelope');expect(api.deletionReceipt?['request']['status'],'COMPLETED');
+  await api.deleteAccount('01055550123');expect(api.user,isNotNull);expect(api.token,'saved');expect(store.values['pending.u1'],isNotNull);
+  pending=false;await api.deleteAccount('01055550123');expect(api.user,isNull);expect(api.token,isNull);expect(store.values['session'],isNull);expect(store.values['pending.u1'],isNull);expect(store.values['pending.other'],'other envelope');expect(api.deletionReceipt?['request']['status'],'COMPLETED');
  });
  test('lost destructive response is recovered by private receipt before restoring a dead session',()async{
   final store=MemoryStore()..values['session']='saved';
@@ -33,7 +33,7 @@ void main(){
    return reply(receipt(lost?'ERASING':'COMPLETED'));
   });
   final api=ApiClient(storage:store,transport:transport)..user={'id':'u1','role':'TRAINEE'}..token='saved';
-  await expectLater(api.deleteAccount('Synthetic password'),throwsA(isA<ApiFailure>()));expect(api.token,'saved');
+  await expectLater(api.deleteAccount('01055550123'),throwsA(isA<ApiFailure>()));expect(api.token,'saved');
   final restored=ApiClient(storage:store,transport:transport);await restored.restore();expect(restored.user,isNull);expect(restored.token,isNull);expect(restored.deletionReceipt?['request']['status'],'ERASING');
   lost=false;await restored.checkDeletionReceipt();expect(restored.deletionReceipt?['request']['status'],'COMPLETED');
  });
@@ -56,7 +56,7 @@ void main(){
   await t.scrollUntilVisible(find.text('رصيد نقاط يحتاج تسوية'),180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();
   expect(find.text('رصيد نقاط يحتاج تسوية'),findsOneWidget);
   await t.scrollUntilVisible(find.text('إعادة فحص التسوية وإتمام الحذف'),180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.tap(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.pumpAndSettle();expect(calls.where((c)=>c=='POST'),isEmpty);
-  await t.scrollUntilVisible(find.byKey(const Key('deletion-password')),-180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.enterText(find.byKey(const Key('deletion-password')),'Synthetic password');
+  await t.scrollUntilVisible(find.byKey(const Key('deletion-phone')),-180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.enterText(find.byKey(const Key('deletion-phone')),'01055550123');
   await t.scrollUntilVisible(find.byKey(const Key('deletion-confirmation')),100,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.enterText(find.byKey(const Key('deletion-confirmation')),'DELETE');
   FocusManager.instance.primaryFocus?.unfocus();await t.pumpAndSettle();
   await t.scrollUntilVisible(find.text('إعادة فحص التسوية وإتمام الحذف'),180,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.tap(find.text('إعادة فحص التسوية وإتمام الحذف'));await t.pumpAndSettle();expect(calls.where((c)=>c=='POST').length,1);

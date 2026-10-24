@@ -2,7 +2,7 @@ import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {PrismaClient} from '@prisma/client';
 import {buildApp} from '../src/app.js';
-import {requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword} from '../src/auth/phone-preview.js';
+import {requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword,verifyPhoneResetCode} from '../src/auth/phone-preview.js';
 import {loginTrainee} from '../src/auth/trainees.js';
 import {authenticate} from '../src/auth/sessions.js';
 const url=new URL(process.env.DATABASE_URL??'');
@@ -33,7 +33,13 @@ test('phone OTP preview signs up, logs in and resets only dedicated test identit
   const login=await loginTrainee(db,{identifier:phone,password});assert.equal(login.user.id,result.user.id);
   const reset=await requestPhoneChallenge(db,{phone,purpose:'RESET'}),newPassword='Synthetic replacement phone password';
   await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:challenge.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
+  await assert.rejects(verifyPhoneResetCode(db,{phone,challengeId:reset.challengeId,code:'000000'}),/PHONE_OTP_INVALID/);
+  assert.equal((await db.phoneOtpChallenge.findUniqueOrThrow({where:{id:reset.challengeId}})).attempts,1);
+  assert.equal((await verifyPhoneResetCode(db,{phone,challengeId:reset.challengeId,code:'123456'})).ok,true);
+  assert.equal((await db.phoneOtpChallenge.findUniqueOrThrow({where:{id:reset.challengeId}})).consumedAt,null);
+  assert.equal((await authenticate(db,'Bearer '+login.accessToken))?.id,result.user.id);
   await resetPhonePreviewPassword(db,{phone,challengeId:reset.challengeId,code:'123456',newPassword});
+  await assert.rejects(verifyPhoneResetCode(db,{phone,challengeId:reset.challengeId,code:'123456'}),/PHONE_OTP_INVALID/);
   await assert.rejects(resetPhonePreviewPassword(db,{phone,challengeId:reset.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
   assert.equal(await authenticate(db,'Bearer '+result.accessToken),null);assert.equal(await authenticate(db,'Bearer '+login.accessToken),null);
   await assert.rejects(loginTrainee(db,{identifier:phone,password}),/INVALID_CREDENTIALS/);
@@ -43,6 +49,7 @@ test('phone OTP preview signs up, logs in and resets only dedicated test identit
   // An existing account on a normal phone has no test marker and cannot be recovered by a fixed code.
   const legacy=await db.user.create({data:{phoneE164:previewPhones[1],displayName:'Synthetic legacy',role:'TRAINEE'}});
   const legacyReset=await requestPhoneChallenge(db,{phone:previewPhones[1],purpose:'RESET'});
+  await assert.rejects(verifyPhoneResetCode(db,{phone:previewPhones[1],challengeId:legacyReset.challengeId,code:'123456'}),/PHONE_OTP_INVALID/);
   await assert.rejects(resetPhonePreviewPassword(db,{phone:previewPhones[1],challengeId:legacyReset.challengeId,code:'123456',newPassword}),/PHONE_OTP_INVALID/);
   await db.user.delete({where:{id:legacy.id}});
   const ownerChallenge=await requestPhoneChallenge(db,{phone:previewPhones[1],purpose:'REGISTER'});
