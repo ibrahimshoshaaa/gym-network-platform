@@ -17,7 +17,7 @@ Map<String, dynamic> repair({bool approve = false, String status = 'AWAITING_APP
 };
 void main() {
   for (final role in ['GYM_OWNER', 'BRANCH_MANAGER', 'CASHIER']) {
-    testWidgets('$role opens maintenance from the workplace on a narrow screen', (t) async {
+    testWidgets('$role opens maintenance only from account on a narrow screen', (t) async {
       await t.binding.setSurfaceSize(const Size(320, 800));
       addTearDown(() => t.binding.setSurfaceSize(null));
       final requested = <String>[];
@@ -28,9 +28,13 @@ void main() {
       await t.pumpWidget(page(NativeShell(api: api, gyms: role == 'GYM_OWNER'
         ? [{'id': 'g1', 'name': 'جيم اختبار', 'status': 'ACTIVE'}] : const [])));
       await t.pumpAndSettle();
-      await t.scrollUntilVisible(find.byTooltip('الصيانة'), 180,
-        scrollable: find.byType(Scrollable).first);
-      await t.tap(find.byTooltip('الصيانة'));
+      expect(find.text('الصيانة'), findsNothing);
+      expect(find.byTooltip('الصيانة'), findsNothing);
+      await t.tap(find.text('حسابي'));
+      await t.pumpAndSettle();
+      expect(find.byTooltip('الصيانة'), findsNothing);
+      await t.scrollUntilVisible(find.text('الصيانة'), 180, scrollable: find.byType(Scrollable).first);
+      await t.tap(find.text('الصيانة'));
       await t.pumpAndSettle();
       expect(find.byType(MaintenanceScreen), findsOneWidget);
       expect(find.text('مفيش فروع متاحة لحسابك'), findsOneWidget);

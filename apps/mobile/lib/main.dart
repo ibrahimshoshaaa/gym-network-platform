@@ -10,7 +10,6 @@ import 'screens/auth.dart';
 import 'screens/trainee.dart';
 import 'screens/bookings.dart';
 import 'screens/market.dart';
-import 'screens/maintenance.dart';
 import 'screens/booking_admin.dart';
 import 'screens/directory.dart';
 import 'screens/owner.dart';
@@ -319,7 +318,6 @@ class _NativeShellState extends State<NativeShell> {
                 ),
               ),
      Wrap(alignment:WrapAlignment.end,spacing:8,children:[
-      Tooltip(message:'الصيانة',child:TextButton.icon(onPressed:()=>open(context,MaintenanceScreen(api:widget.api)),icon:const Icon(Icons.build_outlined,size:18),label:const Text('الصيانة'))),
       if(widget.api.user?['role']=='TRAINEE'&&widget.assignedWork)TextButton(onPressed:widget.api.pending!=null?null:()=>setState((){workMode=false;index=0;version++;}),child:const Text('حساب المتدرب')),
      ]),
     ]);
@@ -366,7 +364,6 @@ class _NativeShellState extends State<NativeShell> {
         title: const Brand(),
         centerTitle: !workMode,
         actions: [
-          if (workMode) IconButton(tooltip: 'الصيانة', icon: const Icon(Icons.build_outlined), onPressed: () => open(context, MaintenanceScreen(api: widget.api))),
           if (widget.api.user?['role'] == 'TRAINEE' && widget.assignedWork)
             TextButton(
               onPressed: widget.api.pending != null
@@ -501,13 +498,41 @@ class _NativeShellState extends State<NativeShell> {
       bottomNavigationBar: NavigationBar(
         height: workMode ? 80 : 72,
         selectedIndex: index,
+        indicatorColor: !staff && index == 2 ? Colors.transparent : null,
         onDestinationSelected: (v) => setState(() => index = v),
-        destinations: tabs
-            .map((t) => NavigationDestination(icon: Icon(t.$1), label: t.$2))
-            .toList(),
+        destinations: [
+          for (final (i, tab) in tabs.indexed)
+            NavigationDestination(
+              icon: !staff && i == 2 ? _QrNavigationIcon(icon: tab.$1) : Icon(tab.$1),
+              label: tab.$2,
+            ),
+        ],
       ),
     ));
   }
+}
+
+// Keep the normal destination hit area and label; lift only the QR badge.
+class _QrNavigationIcon extends StatelessWidget {
+  final IconData icon;
+  const _QrNavigationIcon({required this.icon});
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 24, height: 24,
+    child: Stack(clipBehavior: Clip.none, children: [
+      Positioned(left: -10, top: -18, width: 44, height: 44,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: lime,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [BoxShadow(color: Color(0x18006b52), blurRadius: 6, offset: Offset(0, 3))],
+          ),
+          child: Icon(icon, color: ink, size: 25),
+        ),
+      ),
+    ]),
+  );
 }
 
 class GymEntryScreen extends StatefulWidget {
