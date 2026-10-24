@@ -577,13 +577,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                           'كلمة السر',
                                           'Password',
                                         ),
-                                        if (!register && phoneOtpPreview)
-                                          Align(alignment: AlignmentDirectional.centerEnd,
-                                            child: TextButton(
-                                              key: const Key('auth.forgotPassword'),
-                                              onPressed: busy ? null : () => open(context, PhonePasswordReset(api: widget.api, english: english)),
-                                              child: Text(tr('نسيت كلمة السر؟', 'Forgot password?')),
-                                            )),
                                         if (register && owner) ...[
                                           Text(
                                             tr('بيانات الجيم', 'Gym details'),
@@ -634,36 +627,31 @@ class _AuthScreenState extends State<AuthScreen> {
                                         if (!register) ...[
                                           Material(
                                             color: Colors.transparent,
-                                            child: CheckboxListTile(
-                                              key: const ValueKey(
-                                                'auth.remember',
-                                              ),
-                                              value: rememberMe,
-                                              onChanged: busy
-                                                  ? null
-                                                  : (value) => setState(
-                                                      () => rememberMe =
-                                                          value ?? false,
-                                                    ),
-                                              contentPadding: EdgeInsets.zero,
-                                              dense: true,
-                                              controlAffinity:
-                                                  ListTileControlAffinity
-                                                      .leading,
-                                              visualDensity:
-                                                  VisualDensity.compact,
-                                              activeColor: _authTeal,
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              title: Text(
-                                                tr('تذكّرني', 'Remember me'),
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
+                                            child: Row(
+                                              key: const Key('auth.options'),
+                                              children: [
+                                                Expanded(child: CheckboxListTile(
+                                                  key: const ValueKey('auth.remember'),
+                                                  value: rememberMe,
+                                                  onChanged: busy ? null : (value) => setState(() => rememberMe = value ?? false),
+                                                  contentPadding: EdgeInsets.zero,
+                                                  dense: true,
+                                                  controlAffinity: ListTileControlAffinity.leading,
+                                                  visualDensity: VisualDensity.compact,
+                                                  activeColor: _authTeal,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  title: Text(tr('تذكّرني', 'Remember me'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                                )),
+                                                if (phoneOtpPreview) Expanded(child: Align(
+                                                  alignment: AlignmentDirectional.centerEnd,
+                                                  child: TextButton(
+                                                    key: const Key('auth.forgotPassword'),
+                                                    onPressed: busy ? null : () => open(context, PhonePasswordReset(api: widget.api, english: english)),
+                                                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12), textStyle: const TextStyle(fontSize: 13)),
+                                                    child: Text(tr('نسيت كلمة السر؟', 'Forgot password?'), textAlign: TextAlign.center),
+                                                  ),
+                                                )),
+                                              ],
                                             ),
                                           ),
                                           const SizedBox(height: 12),

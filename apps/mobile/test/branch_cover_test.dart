@@ -24,6 +24,8 @@ void main(){
   await t.binding.setSurfaceSize(const Size(393,1200));addTearDown(()=>t.binding.setSurfaceSize(null));
   final api=client('TRAINEE',(_)async=>reply({}));await api.storage.write('auth.language','ar');
   await t.pumpWidget(MaterialApp(theme:appTheme(),supportedLocales:const [Locale('ar'),Locale('en')],localizationsDelegates:const [GlobalMaterialLocalizations.delegate,GlobalWidgetsLocalizations.delegate,GlobalCupertinoLocalizations.delegate],home:AuthScreen(api:api)));await t.pumpAndSettle();
-  expect(t.widget<Checkbox>(find.byType(Checkbox).first).value,true);expect(t.takeException(),isNull);
+  expect(t.widget<Checkbox>(find.byType(Checkbox).first).value,true);
+  expect(t.getCenter(find.byKey(const Key('auth.remember'))).dy, closeTo(t.getCenter(find.byKey(const Key('auth.forgotPassword'))).dy, 1));
+  expect(t.takeException(),isNull);
  });
 }
