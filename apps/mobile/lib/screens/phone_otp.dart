@@ -192,7 +192,7 @@ class _PhonePasswordResetState extends State<PhonePasswordReset> {
       ])),
       if (!done && proof == null) ...[
         const SizedBox(height: 20),
-        Text(tr('الاسترجاع حاليًا لحسابات تجربة الموبايل فقط، بدون إرسال SMS. للحسابات القديمة تواصل مع الدعم.', 'Recovery currently supports phone test accounts only. No SMS is sent. Contact support for older accounts.'), style: const TextStyle(color: muted, fontSize: 12)),
+        Text(tr('استخدم رقم الموبايل المسجّل في حسابك، وبعد تأكيد الكود اختار كلمة سر جديدة.', 'Use the mobile number registered to your account, then verify the code and choose a new password.'), style: const TextStyle(color: muted, fontSize: 12)),
       ],
     ],
   ));

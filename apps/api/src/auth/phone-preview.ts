@@ -92,7 +92,10 @@ export async function registerPhonePreview(db:PrismaClient,input:unknown){
 
 async function resetUser(tx:Prisma.TransactionClient,phone:string,mode:'test'|'textbee'){
  const user=await tx.user.findUnique({where:{phoneE164:phone},include:{password:true}});
- if(!user?.isActive||!user.password||!['TRAINEE','GYM_OWNER'].includes(user.role))throw new DomainError('PHONE_OTP_INVALID');
+ // Staff can recover an established password after real SMS verification.
+ // Fixed test codes never recover staff or platform administrator accounts.
+ const allowedRoles=mode==='textbee'?['TRAINEE','GYM_OWNER','BRANCH_MANAGER','CASHIER']:['TRAINEE','GYM_OWNER'];
+ if(!user?.isActive||!user.password||!allowedRoles.includes(user.role))throw new DomainError('PHONE_OTP_INVALID');
  if(mode==='test'){
   const identity=await tx.phoneTestIdentity.findUnique({where:{phone}});
   // A test-created account upgraded by a real SMS can never be reset with a fixed code.
