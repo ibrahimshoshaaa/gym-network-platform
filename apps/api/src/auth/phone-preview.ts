@@ -10,7 +10,7 @@ import {hashToken} from './sessions.js';
 import {consumeAuthLimit} from './throttle.js';
 import {textbeeConfig,newPhoneCode,smsCodeHash,sendTextbeeCode} from './textbee.js';
 import {sessionResult} from './trainees.js';
-import {newPasswordSchema,phoneSchema} from './validation.js';
+import {newPasswordSchema,phoneSchema,phoneCodeSchema} from './validation.js';
 
 // Simulated OTP accepts valid phone numbers only when explicitly enabled.
 // Fixed-code recovery is restricted to unverified test identities. SMS proofs use a separate mode.
@@ -26,13 +26,15 @@ export function phonePreviewStatus(){const mode=phoneOtpMode();return {enabled:m
 function requirePreview(){const mode=phoneOtpMode();if(!mode)throw new DomainError('PHONE_OTP_DISABLED');return mode;}
 
 const challengeInput=z.object({phone:phoneSchema,purpose:z.enum(['REGISTER','RESET'])}).strict();
-const proof={phone:phoneSchema,challengeId:z.string().uuid(),code:z.string().regex(/^\d{6}$/)};
+const proof={phone:phoneSchema,challengeId:z.string().uuid(),code:phoneCodeSchema};
 const registerInput=z.object({...proof,displayName:z.string().trim().min(2).max(100),password:newPasswordSchema,accountType:z.enum(['trainee','owner']).default('trainee'),gym:applicationFields.optional()}).strict().refine(v=>v.accountType!=='owner'||v.gym!==undefined);
 const resetInput=z.object({...proof,newPassword:newPasswordSchema}).strict();
 function parse<S extends z.ZodType>(schema:S,input:unknown):z.infer<S>{const r=schema.safeParse(input);if(!r.success)throw new DomainError('INVALID_INPUT');return r.data;}
 
 export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
  const data=parse(challengeInput,input),mode=requirePreview();
+ // Avoid billing an SMS for an already registered number, before consuming send limits.
+ if(data.purpose==='REGISTER'&&await db.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
  if(mode==='textbee'){
   await consumeAuthLimit(db,'sms-phone-hour',data.phone,5,3600);
   await consumeAuthLimit(db,'sms-phone-day',data.phone,10,86400);
@@ -41,6 +43,7 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
  const code=mode==='test'?'123456':newPhoneCode();
  const challenge=await serializable(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`phone-otp:${data.phone}`},0))`;
+  if(data.purpose==='REGISTER'&&await tx.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
   const previous=await tx.phoneOtpChallenge.findFirst({where:{phone:data.phone,...(mode==='test'?{purpose:data.purpose}:{})},orderBy:{createdAt:'desc'}});
   if(previous&&Date.now()-previous.createdAt.getTime()<60000)throw new DomainError('PHONE_OTP_WAIT');
   await tx.phoneOtpChallenge.updateMany({where:{phone:data.phone,purpose:data.purpose,consumedAt:null},data:{consumedAt:new Date()}});

@@ -7,6 +7,9 @@ function asciiDigits(value: string) {
   });
 }
 
+export const phoneCodeSchema=z.string().max(32).trim().transform(asciiDigits)
+ .pipe(z.string().regex(/^\d{6}$/));
+
 export function normalizePhone(value: string) {
   let phone = asciiDigits(value.trim()).replace(/[\s()-]/g, '');
   if (/^01[0125]\d{8}$/.test(phone)) phone = `+20${phone.slice(1)}`;

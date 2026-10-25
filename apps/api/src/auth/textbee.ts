@@ -9,19 +9,25 @@ export function textbeeConfig(env:NodeJS.ProcessEnv=process.env){
  return {apiKey,deviceId,secret,...(sim===undefined?{}:{simSubscriptionId:Number(sim)})};
 }
 export const newPhoneCode=()=>String(randomInt(0,1000000)).padStart(6,'0');
+export function phoneCodeMessage(code:string){
+ if(!/^\d{6}$/.test(code))throw new DomainError('INVALID_INPUT');
+ const words=['صفر','واحد','اتنين','تلاتة','أربعة','خمسة','ستة','سبعة','تمانية','تسعة'];
+ return `رمز جيم بانك: ${[...code].map(d=>words[Number(d)]).join(' ')}. لا تشاركه.`;
+}
 export function smsCodeHash(id:string,phone:string,purpose:string,code:string){
  const config=textbeeConfig();if(!config)throw new DomainError('PHONE_OTP_DISABLED');
  return createHmac('sha256',config.secret).update(`${id}:${phone}:${purpose}:${code}`).digest('hex');
 }
 // Server-only. No automatic retry: a timeout may follow a successfully queued SMS.
-export async function sendTextbeeCode(phone:string,code:string,purpose:'REGISTER'|'RESET',transport:typeof fetch=fetch){
+export async function sendTextbeeCode(phone:string,code:string,_purpose:'REGISTER'|'RESET',transport:typeof fetch=fetch){
  const config=textbeeConfig();if(!config)throw new DomainError('PHONE_OTP_DISABLED');
+ const message=phoneCodeMessage(code);
  try{
   const response=await transport('https://api.textbee.dev/api/v1/gateway/send-sms',{
    method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),
    headers:{'content-type':'application/json','x-api-key':config.apiKey},
    body:JSON.stringify({deviceId:config.deviceId,recipients:[phone],
-    message:`GymBank ${purpose==='RESET'?'password reset':'verification'} code: ${code}. Valid for 5 minutes. Do not share this code.`,
+    message,
     ...(config.simSubscriptionId===undefined?{}:{simSubscriptionId:config.simSubscriptionId})}),
   });
   if(!response.ok)throw new Error('provider rejected');

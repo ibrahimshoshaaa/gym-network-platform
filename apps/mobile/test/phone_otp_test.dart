@@ -6,6 +6,21 @@ import 'package:gym_network/screens/phone_otp.dart';
 import 'operations_test.dart' show client, page, reply;
 
 void main() {
+  for (final input in ['٠١٢٣٤٥', '۰۱۲۳۴۵']) {
+    testWidgets('live code input $input submits ASCII and preserves its leading zero', (t) async {
+      Json? proof;
+      final api = client('TRAINEE', (_) async => reply({'challengeId': 'live-localized', 'retryAfterSeconds': 60, 'testMode': false}));
+      await t.pumpWidget(page(Builder(builder: (context) => TextButton(
+        onPressed: () => requestPhoneCode(context, api, '+201055550123', 'REGISTER', onConfirm: (value) async { proof = value; }),
+        child: const Text('start localized'),
+      ))));
+      await t.tap(find.text('start localized')); await t.pumpAndSettle();
+      expect(find.textContaining('مكتوب بالكلمات'), findsOneWidget);
+      await t.enterText(find.byKey(const ValueKey('phone.otp.code')), input);
+      await t.ensureVisible(find.text('متابعة')); await t.tap(find.text('متابعة')); await t.pumpAndSettle();
+      expect(proof?['code'], '012345'); expect(t.takeException(), isNull);
+    });
+  }
   testWidgets('live SMS code is blank and does not show the fixed test code', (t) async {
     final api = client('TRAINEE', (_) async => reply({'challengeId': 'live-challenge', 'retryAfterSeconds': 60, 'testMode': false}));
     await t.pumpWidget(page(Builder(builder: (context) => TextButton(
