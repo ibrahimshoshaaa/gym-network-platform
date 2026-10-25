@@ -7,7 +7,7 @@ import {PortalAccount} from './portal-account';
 import {usePage,type Gym,More} from './gyms/shared';
 import {Busy,Empty,Notice} from './ui';
 import {OwnerBranches} from './owner-branches';
-import {NativeReport,reportRange} from './owner-inventory';
+import {NativeReport,reportRange} from './visit-reports';
 import {Fact,PortalNote,ScreenBack} from './portal-ui';
 import {Cashier} from './operations';
 import {Withdrawals} from './withdrawals';

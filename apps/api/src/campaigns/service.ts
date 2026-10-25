@@ -16,7 +16,7 @@ export function campaignMatches(c:{audience:string;userIds:string[];gymIds:strin
  return (!c.userIds.length||c.userIds.includes(v.id))&&(!c.gymIds.length||c.gymIds.some(g=>v.gymIds.includes(g)));
 }
 export function campaignDestination(destination:string,owner:boolean,trainee:boolean){
- const map:Record<string,string>={GYMS:trainee?'gyms':'gyms',TOPUP:trainee?'topup':'purchases',QR:trainee?'qr':'cashier',SUPPORT:'support',POINT_WALLET:owner?'point-wallet':trainee?'wallet':'cashier',WITHDRAWALS:owner?'withdrawals':trainee?'wallet':'home',NONE:trainee?'wallet':'home'};
+ const map:Record<string,string>={GYMS:trainee?'gyms':'gyms',TOPUP:trainee?'topup':owner?'withdrawals':'cashier',QR:trainee?'qr':'cashier',SUPPORT:'support',POINT_WALLET:trainee?'wallet':owner?'withdrawals':'cashier',WITHDRAWALS:owner?'withdrawals':trainee?'wallet':'home',NONE:trainee?'wallet':'home'};
  return map[destination]??(trainee?'wallet':'home');
 }
 async function viewer(tx:Prisma.TransactionClient,id:string):Promise<Audience>{

@@ -193,7 +193,6 @@ test(
         body: {
           expectedVersion: settings.policy.version,
           pointPricePiasters: "125",
-          gymDiscountBps: 0,
           redemptionBps: 8000,
         },
       });
@@ -382,7 +381,7 @@ test(
         (row) => row.id === pending.id,
       );
       assert.equal(listed.requestor.displayName, earlyIdentity.user.displayName);
-      assert.equal(listed.branch, null);
+      assert.equal('branch' in listed,false);
       const review = await request(
         `/api/backend/admin/topups/${pending.id}/review`,
         {
@@ -550,10 +549,7 @@ test(
         { cookie },
       );
       assert.equal(branchList.status, 200);
-      assert.equal(
-        (await branchList.json()).items[0].pointAccounts.length,
-        0,
-      );
+      assert.equal('pointAccounts' in (await branchList.json()).items[0],false);
       const profileEdit = await request(
         `/api/backend/gyms/${newGym.gym.id}/branches/${newBranch.branch.id}`,
         {
@@ -676,12 +672,12 @@ test(
       assert.equal(localAds.status,200,await localAds.clone().text());assert.ok((await localAds.json()).items.some(r=>r.id===ad.id));
       const noLocationAds=await request('/api/backend/trainee/nearby-promotions',{cookie:traineeCookie});assert.equal(noLocationAds.status,200);assert.equal((await noLocationAds.json()).items.length,0);
 
-      assert.equal((await request('/api/backend/topup-options?kind=BRANCH_STOCK',{cookie:invitedOwnerCookie})).status,403);
+      assert.equal((await request('/api/backend/topup-options?kind=BRANCH_STOCK',{cookie:invitedOwnerCookie})).status,400);
       const directQuoteResponse=await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:traineeIdentity.user.id,points:60}});
       assert.equal(directQuoteResponse.status,200);const directQuote=await directQuoteResponse.json();
       const directResponse=await request('/api/backend/admin/point-transfers',{cookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{recipientId:directQuote.recipientId,recipientLabel:directQuote.recipientLabel,points:60,pricingVersion:directQuote.pricingVersion,receivedAmountPiasters:directQuote.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH'}});
       assert.equal(directResponse.status,201);const sold=await directResponse.json();
-      for(const endpoint of ['trainee-lookup','sale-quotes','sales'])assert.equal((await request(`/api/backend/cashier/branches/${newBranch.branch.id}/${endpoint}`,{cookie:cashierCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{phone:traineeBody.phone,traineeId:traineeIdentity.user.id,points:60}})).status,403);
+      for(const endpoint of ['trainee-lookup','sale-quotes','sales'])assert.equal((await request(`/api/backend/cashier/branches/${newBranch.branch.id}/${endpoint}`,{cookie:cashierCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{phone:traineeBody.phone,traineeId:traineeIdentity.user.id,points:60}})).status,404);
       const ticketResponse = await request("/api/backend/trainee/qr", {
         cookie: traineeCookie,
         method: "POST",
@@ -914,7 +910,7 @@ test(
         ).balance,
         60,
       );
-      // New point sales belong to the platform; archived branch-sale correction is covered by historical DB fixtures.
+      // New point sales belong to the platform; gym sale and inventory endpoints have been removed.
       // Manual withdrawals reserve one consolidated gym wallet, snapshot the
       // destination/calendar, record proof and retain a paid-transfer dispute.
       const earnTicket = await (
@@ -1144,24 +1140,23 @@ test(
       );
       assert.equal(summaryResponse.status, 200);
       const report = await summaryResponse.json();
-      assert.equal(report.sales.points, "0");
-      assert.equal(report.sales.amountPiasters, "0");
+      assert.equal('sales' in report,false);
       assert.equal(report.visits.count, "3");
       assert.equal(report.visits.amountPiasters, "9000");
       assert.equal(report.cancellations.count, "2");
       assert.equal(report.netVisitReceivablesPiasters, "3000");
       assert.equal(report.paidWithdrawals.amountPiasters, "1000");
       assert.equal(report.alerts.withdrawals.disputed, "1");
-      assert.equal(report.currentStockPoints, "0");
+      assert.equal('currentStockPoints' in report,false);
       const reportCsv = await request(
-        `/api/backend/reports/export?${reportQuery}&kind=SALES`,
+        `/api/backend/reports/export?${reportQuery}&kind=VISITS`,
         { cookie: invitedOwnerCookie },
       );
       assert.equal(reportCsv.status, 200);
       assert.match(reportCsv.headers.get("content-type"), /text\/csv/);
       assert.match(
         reportCsv.headers.get("content-disposition"),
-        /attachment; filename="gym-report-sales-/,
+        /attachment; filename="gym-report-visits-/,
       );
       assert.match(reportCsv.headers.get("cache-control"), /no-store/);
       assert.equal(reportCsv.headers.get("x-content-type-options"), "nosniff");
@@ -1172,7 +1167,7 @@ test(
       assert.equal(
         (
           await request(
-            `/api/backend/reports/export?${reportQuery}&kind=SALES`,
+            `/api/backend/reports/export?${reportQuery}&kind=VISITS`,
             { cookie: ownerCookie },
           )
         ).status,
@@ -1277,7 +1272,7 @@ test(
           cookie: invitedOwnerCookie,
         })
       ).json();
-      assert.equal(conserved.currentStockPoints, "0");
+      assert.equal('currentStockPoints' in conserved,false);
       assert.equal(conserved.netVisitReceivablesPiasters, "3000");
       assert.equal(
         (await request("/api/backend/directory/branches")).status,
@@ -1675,8 +1670,8 @@ test(
 
           await expect(page.getByRole('heading',{name:'الصورة المالية للمنصة',exact:true})).toBeVisible();
           await expect(page.getByText('إجمالي المستحق للجيمات',{exact:true})).toBeVisible();
-          await page.getByRole('button',{name:'أرصدة الجيمات ومستحقاتها',exact:true}).click();
-          await expect(page.getByRole('heading',{name:'كشف أرصدة الجيمات ومستحقاتها'})).toBeVisible();
+          await page.getByRole('button',{name:'مستحقات الجيمات',exact:true}).click();
+          await expect(page.getByRole('heading',{name:'كشف مستحقات الجيمات'})).toBeVisible();
           await expect(page.locator('.platform-finance .mobile-records tbody tr').first()).toBeVisible();
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'platform finance and gym balances must fit mobile');
 
@@ -1723,7 +1718,8 @@ test(
           for(const width of [320,393]){await page.setViewportSize({width,height:851});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'direct topup receipt must fit mobile');}
           await page.setViewportSize({width:393,height:851});
           const ownerPointQuote=await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:newGym.owner.id,gymId:newGym.gym.id,points:30}});
-          assert.equal(ownerPointQuote.status,403);
+          assert.equal(ownerPointQuote.status,400,'retired gym destination is rejected by the strict schema');
+          assert.equal((await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:newGym.owner.id,points:30}})).status,404,'gym owner is unavailable as a trainee point recipient');
           const ownerContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const ownerSeparator=invitedOwnerCookie.indexOf('=');
           await ownerContext.addCookies([{name:invitedOwnerCookie.slice(0,ownerSeparator),value:invitedOwnerCookie.slice(ownerSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
@@ -1736,7 +1732,8 @@ test(
           await expect(ownerPage.getByRole('button',{name:'شراء نقاط لرصيد الجيم',exact:true})).toHaveCount(0);
           await expect(ownerPage.getByRole('button',{name:/مستحقاتي والسحب/})).toBeVisible();
           assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance,walletBeforeDispatch+10);
-          assert.equal(await db.pointAccount.count({where:{type:'GYM_INVENTORY',gymId:newGym.gym.id}}),0);
+          const registeredGymOwner=await db.gym.findUniqueOrThrow({where:{id:newGym.gym.id},select:{ownerId:true}});
+          assert.equal(await db.pointAccount.count({where:{ownerUserId:registeredGymOwner.ownerId}}),0);
           assert.equal(await ownerPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'gym entitlements must fit mobile');
           await ownerContext.close();
           const incomingSupport=await request('/api/backend/support/tickets',{cookie:traineeCookie,method:'POST',body:{subject:'Synthetic browser support',category:'HELP',body:'Synthetic support message from mobile viewport',clientKey:randomUUID()}});

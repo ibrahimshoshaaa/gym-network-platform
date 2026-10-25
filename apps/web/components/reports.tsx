@@ -14,12 +14,10 @@ type Summary = {
   asOf: string;
   scope: { finance: boolean };
   topups: Metric | null;
-  sales: Metric;
   visits: Metric;
   cancellations: Metric;
   netVisitPoints: string;
   netVisitReceivablesPiasters: string;
-  currentStockPoints: string;
   currentBalances: { type: string; balancePiasters: string }[] | null;
   paidWithdrawals: Metric | null;
   alerts: {
@@ -58,7 +56,6 @@ type Page = {
 };
 const kinds = {
   TOPUPS: "طلبات الشحن",
-  SALES: "مبيعات النقاط",
   VISITS: "الزيارات",
   CANCELLATIONS: "إلغاءات الزيارات",
   WITHDRAWALS: "طلبات السحب",
@@ -66,7 +63,6 @@ const kinds = {
 type Kind = keyof typeof kinds;
 const states: Record<Kind, string[]> = {
   TOPUPS: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
-  SALES: ["RECORDED"],
   VISITS: ["ACTIVE", "EXPIRED", "CANCELLED"],
   CANCELLATIONS: ["CANCELLED"],
   WITHDRAWALS: [
@@ -392,11 +388,6 @@ export function Reports({ admin }: { admin: boolean }) {
                   ]
                 : []),
               [
-                "مبيعات الفرع للمتدربين",
-                `${money(summary.sales.amountPiasters)} ج.م`,
-                `${summary.sales.points} نقطة · ${summary.sales.count} عملية`,
-              ],
-              [
                 "زيارات مسجلة",
                 summary.visits.count,
                 `${summary.visits.points} نقطة · مستحق ${money(summary.visits.amountPiasters)} ج.م`,
@@ -435,7 +426,6 @@ export function Reports({ admin }: { admin: boolean }) {
               أرقام مختلفة ولا تمثل ربحًا محسوبًا.
             </p>
             <p>
-              مخزون الفروع: <strong>{summary.currentStockPoints} نقطة</strong>
             </p>
             {summary.currentBalances ? (
               <div className="settings-grid">
@@ -525,7 +515,7 @@ export function Reports({ admin }: { admin: boolean }) {
                     {{
                       ISSUANCE: "حساب الإصدار (سالب)",
                       TRAINEE_WALLET: "محافظ المتدربين",
-                      BRANCH_INVENTORY: "مخزون الفروع",
+                      ARCHIVED: "أرصدة تاريخية مجمدة",
                       REDEEMED: "نقاط مستهلكة",
                       EXPIRED: "نقاط سُوّيت كمنتهية",
                     }[p.type] ?? p.type}

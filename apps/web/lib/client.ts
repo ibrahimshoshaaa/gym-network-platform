@@ -9,7 +9,6 @@ export type Policy = {
   id: string;
   version: number;
   pointPricePiasters: string;
-  gymDiscountBps: number;
   redemptionBps: number;
 };
 export type PaymentMethod = {
@@ -21,7 +20,7 @@ export type PaymentMethod = {
 };
 export type Package = {
   id: string;
-  kind: "TRAINEE" | "BRANCH_STOCK";
+  kind: "TRAINEE";
   label: string;
   points: number;
   version: number;
@@ -35,12 +34,10 @@ export type Settings = {
 };
 export type Topup = {
   id: string;
-  kind: string;
+  kind: "TRAINEE";
   requestorUserId: string;
   requestor?: { displayName: string; email: string; phoneE164: string };
   branch?: { name: string; gym: { name: string } } | null;
-  receivingBranchId: string | null;
-  receivingGymId?: string | null;
   gym?: { id: string; name: string } | null;
   points: number;
   chargePiasters: string;
@@ -74,8 +71,6 @@ const errors: Record<string, string> = {
     "يوجد طلب مراجعة سابق لهذه العملية. راجع سجل الطلبات.",
   SETTLEMENT_REVIEW_REQUIRED:
     "المستحقات مرتبطة بحجز أو تسوية سابقة وتحتاج مراجعة؛ لم تتغير النقاط أو الأموال.",
-  SALE_REFUND_POLICY_REQUIRED:
-    "اعتماد تصحيح البيع متوقف لحين تحديد مسؤولية رد الفلوس.",
   INSUFFICIENT_FUNDS: "المبلغ المتاح لا يكفي لتنفيذ العملية.",
   QR_INVALID:
     "الرمز انتهى أو تم تغييره أو انتهت جلسته. اطلب رمزًا جديدًا من المتدرب.",

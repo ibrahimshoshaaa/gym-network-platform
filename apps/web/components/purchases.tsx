@@ -17,46 +17,36 @@ type Quote = {
 };
 type Selection = {
     kind: string;
-    receivingGymId?: string;
-    receivingBranchId?: string;
     packageId?: string;
     packageVersion?: number;
     points?: number;
     amountPiasters?: string;
 };
-type Gym = {
-    id: string;
-    name: string;
-    status: string;
-};
-export function Purchases({ trainee = false, onWallet, gymId, branchId }: {
+export function Purchases({ trainee = false, onWallet }: {
     trainee?: boolean;
     onWallet?: () => void;
-    gymId?: string;
-    branchId?: string;
 }) {
     const [version,setVersion]=useState(0);
-    const [options, setOptions] = useState<Settings | null>(null), [gyms, setGyms] = useState<Gym[]>([]), [chosenGym, setChosenGym] = useState(gymId ?? ""), [quantity, setQuantity] = useState(""), [byAmount, setByAmount] = useState(false), [packId, setPackId] = useState(""), [method, setMethod] = useState(""), [quote, setQuote] = useState<Quote | null>(null), [receipt, setReceipt] = useState<{
+    const [options, setOptions] = useState<Settings | null>(null), [quantity, setQuantity] = useState(""), [byAmount, setByAmount] = useState(false), [packId, setPackId] = useState(""), [method, setMethod] = useState(""), [quote, setQuote] = useState<Quote | null>(null), [receipt, setReceipt] = useState<{
         id: string;
         name: string;
     } | null>(null), [reviewing, setReviewing] = useState(false), [confirmed, setConfirmed] = useState(false), [result, setResult] = useState<Topup | null>(null), [history, setHistory] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [copied, setCopied] = useState(false);
     const snapshot = useRef<Selection | null>(null), fileRef = useRef<HTMLInputElement>(null), running = useRef(false), { call, uncertain } = useCommand();
-    const locked = busy || uncertain, kind = trainee ? "TRAINEE" : "BRANCH_STOCK", destination = trainee ? "محفظتك" : branchId ? "مخزون الفرع" : "رصيد صاحب الجيم";
-    useEffect(() => { let live = true; setBusy(true); Promise.all([api<Settings>(`topup-options?kind=${kind}`), !trainee && !gymId && !branchId ? api<Page<Gym>>("gyms?limit=100") : Promise.resolve({ items: [] as Gym[] })]).then(([o, g]) => { if (!live)
-        return; setOptions(o); setMethod(o.paymentMethods[0]?.type ?? ""); setGyms(g.items.filter(x => x.status === "ACTIVE")); setChosenGym(gymId ?? g.items.find(x => x.status === "ACTIVE")?.id ?? ""); }).catch(e => { if (live)
+    const locked = busy || uncertain, kind = "TRAINEE", destination = "محفظتك";
+    useEffect(() => { if(!trainee)return; let live = true; setBusy(true); api<Settings>(`topup-options?kind=${kind}`).then(o=>{if(!live)return;setOptions(o);setMethod(o.paymentMethods[0]?.type??"");}).catch(e => { if (live)
         setError(message(e)); }).finally(() => { if (live)
-        setBusy(false); }); return () => { live = false; }; }, [kind, trainee, gymId, branchId,version]);
+        setBusy(false); }); return () => { live = false; }; }, [kind, trainee,version]);
     const estimate = topupEstimate(options?.policy, trainee, quantity, byAmount), channel = options?.paymentMethods.find(m => m.type === method), step = quote ? reviewing ? 2 : 1 : 0;
     async function calculate(e: FormEvent) {
         e.preventDefault();
-        if (running.current || locked || !estimate || (!trainee && !branchId && !chosenGym))
+        if (running.current || locked || !estimate)
             return;
         running.current = true;
         setBusy(true);
         setError("");
         try {
             const pack = options?.packages.find(p => p.id === packId);
-            const selected: Selection = { kind, ...(!trainee ? (branchId ? { receivingBranchId: branchId } : { receivingGymId: chosenGym }) : {}), ...(pack ? { packageId: pack.id, packageVersion: pack.version } : byAmount ? { amountPiasters: minorUnits(normalizeDigits(quantity).trim()) } : { points: estimate.points }) };
+            const selected: Selection = { kind, ...(pack ? { packageId: pack.id, packageVersion: pack.version } : byAmount ? { amountPiasters: minorUnits(normalizeDigits(quantity).trim()) } : { points: estimate.points }) };
             const q = await api<Quote>("topup-quotes", send(selected));
             snapshot.current = selected;
             setQuote(q);
@@ -108,7 +98,7 @@ export function Purchases({ trainee = false, onWallet, gymId, branchId }: {
     if (history)
         return <><ScreenBack title="طلبات الشحن" onBack={() => setHistory(false)}/><TopupHistory /></>;
     return <div className="native-topup">
- <ScreenBack title={trainee ? "اشحن رصيدك" : "شراء نقاط"} onBack={() => { if (reviewing && !locked) {
+ <ScreenBack title={"اشحن رصيدك"} onBack={() => { if (reviewing && !locked) {
         setReviewing(false);
         setConfirmed(false);
     }
@@ -121,12 +111,11 @@ export function Purchases({ trainee = false, onWallet, gymId, branchId }: {
  <FlowSteps pills labels={["اختيار الرصيد", "التحويل", "المراجعة"]} current={step}/>
  <PortalIntro title={!quote ? "اختار رصيدك" : reviewing ? "راجع طلب الشحن" : "حوّل وارفع الإيصال"} detail={`النقاط هتضاف إلى ${destination} بعد اعتماد الطلب.`}/>
  {!quote ? <form onSubmit={calculate}><fieldset disabled={locked}>
- {!trainee && !gymId && !branchId && <label className="field">الجيم<select required value={chosenGym} onChange={e => setChosenGym(e.target.value)}>{gyms.map(g => <option value={g.id} key={g.id}>{g.name}</option>)}</select></label>}
  {!byAmount && options.packages.length > 0 && <><h3 className="native-label">باقات جاهزة</h3><div className="native-packages">{options.packages.map(p => <button type="button" key={p.id} aria-pressed={packId === p.id} onClick={() => { setPackId(p.id); setQuantity(String(p.points)); setError(""); }}><strong>{p.points} نقطة</strong><span>{decimal(topupEstimate(options.policy, trainee, String(p.points), false)?.chargePiasters ?? "0")} ج.م</span>{!normalizeDigits(p.label).includes(String(p.points)) && <small>{p.label}</small>}</button>)}</div><h3 className="native-label">أو اختار قيمة تانية</h3></>}
  <div className="native-segments" role="group" aria-label="طريقة تحديد الرصيد">{[false, true].map(v => <button type="button" key={String(v)} aria-pressed={byAmount === v} onClick={() => { setByAmount(v); setQuantity(""); setPackId(""); setError(""); }}>{byAmount === v && <Check size={18}/>} {v ? "جنيه" : "نقاط"}</button>)}</div>
  <Field label={byAmount ? "المبلغ بالجنيه" : "عدد النقاط"} value={quantity} inputMode={byAmount ? "decimal" : "numeric"} dir="ltr" onChange={e => { setQuantity(normalizeDigits(e.target.value)); setPackId(""); setError(""); }}/>
  {estimate && <section className="card native-estimate"><Fact label="النقاط المختارة">{estimate.points} نقطة</Fact><Fact label="السعر المتوقع" strong>{decimal(estimate.chargePiasters)} ج.م</Fact></section>}
- <button className="primary full" disabled={!estimate || (!trainee && !branchId && !chosenGym)}>{busy ? <Busy /> : "متابعة لبيانات التحويل"}</button>
+ <button className="primary full" disabled={!estimate}>{busy ? <Busy /> : "متابعة لبيانات التحويل"}</button>
  </fieldset></form> : <>
  <section className="card wallet-signature native-transfer-total"><p>{reviewing ? `طلب شحن إلى ${destination}` : "المبلغ المطلوب تحويله"}</p><h2 className="wallet-balance">{decimal(quote.chargePiasters)} ج.م</h2><p>{quote.points} نقطة</p></section>
  {quote.unallocatedPiasters && quote.unallocatedPiasters !== "0" && <p className="muted">حوّل القيمة الموضحة فقط؛ المتبقي {decimal(quote.unallocatedPiasters)} ج.م لا يقابل نقاطًا كاملة.</p>}

@@ -49,7 +49,7 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
     return db.$transaction(async tx => {
       await requireAdmin(tx, userId);
       if (!await tx.gym.findUnique({ where: { id: gymId }, select: { id: true } })) throw new DomainError('NOT_FOUND');
-      return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pointAccounts: { where: { type: 'BRANCH_INVENTORY' }, select: { balance: true } },pricingRequests:{where:{status:'PENDING'},orderBy:{createdAt:'desc'},take:1} } }), args.take);
+      return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pricingRequests:{where:{status:'PENDING'},orderBy:{createdAt:'desc'},take:1} } }), args.take);
     });
   });
   app.get('/admin/gyms/:gymId/invitations', async r => {
@@ -81,7 +81,7 @@ export function registerGymRoutes(app: FastifyInstance, db: PrismaClient) {
   app.patch('/gyms/:gymId', async r => updateGym(db, await actorId(db, r), id(r, 'gymId'), r.body));
   app.get('/gyms/:gymId/branches', async r => {
     const userId = await actorId(db, r), gymId = id(r, 'gymId'), args = pagination(r);
-    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.branch.findMany({ ...args, where: { gymId }, include: { pointAccounts: { where: { type: 'BRANCH_INVENTORY' }, select: { balance: true } } } }), args.take); });
+    return db.$transaction(async tx => { await requireGymOwner(tx, userId, gymId, false); return page(await tx.branch.findMany({ ...args, where: { gymId },  }), args.take); });
   });
   app.post('/gyms/:gymId/branches', { bodyLimit: 8192 }, async (r, reply) => reply.code(201).send(await createBranch(db, await actorId(db, r), id(r, 'gymId'), r.body)));
   app.patch('/gyms/:gymId/branches/:branchId', async r => updateBranch(db, await actorId(db, r), id(r, 'gymId'), id(r, 'branchId'), r.body));

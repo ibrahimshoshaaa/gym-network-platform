@@ -1,4 +1,4 @@
-import {historicalSale} from './legacy-fixtures.js';
+import {creditFromPlatform} from './platform-credit-fixture.js';
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after } from "node:test";
@@ -6,10 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import {
   confirmVisit,
   issueQr,
-  lookupTrainee,
   previewVisit,
-  quoteSale,
-  sellPoints,
 } from "../src/operations/service.js";
 import {
   cancelVisit,
@@ -31,7 +28,7 @@ if (
   throw new Error("Disposable local test database required");
 const db = new PrismaClient();
 after(async () => db.$disconnect());
-async function fixture(stock = 100, balance = 80) {
+async function fixture(balance = 80) {
   const user = (
     role:
       | "PLATFORM_ADMIN"
@@ -82,30 +79,13 @@ async function fixture(stock = 100, balance = 80) {
   const issuance =
     (await db.pointAccount.findFirst({ where: { type: "ISSUANCE" } })) ??
     (await db.pointAccount.create({ data: { type: "ISSUANCE" } }));
-  const inventory = await db.pointAccount.create({
-      data: { type: "BRANCH_INVENTORY", branchId: branch.id },
-    }),
-    wallet = await db.pointAccount.create({
+  const wallet = await db.pointAccount.create({
       data: {
         type: "TRAINEE_WALLET",
         ownerUserId: person.id,
         expiresAt: new Date(Date.now() + 86400000),
       },
-    });
-  if (stock)
-    await postLedger(db, {
-      actorId: admin.id,
-      idempotencyKey: randomUUID(),
-      reason: "Synthetic stock",
-      points: {
-        kind: "ADJUSTMENT",
-        entries: [
-          { accountId: issuance.id, delta: -BigInt(stock) },
-          { accountId: inventory.id, delta: BigInt(stock) },
-        ],
-      },
-    });
-  if (balance)
+    });  if (balance)
     await postLedger(db, {
       actorId: admin.id,
       idempotencyKey: randomUUID(),
@@ -123,7 +103,6 @@ async function fixture(stock = 100, balance = 80) {
       data: {
         version: 1,
         pointPricePiasters: 100n,
-        gymDiscountBps: 0,
         redemptionBps: 8000,
         createdById: admin.id,
       },
@@ -132,13 +111,6 @@ async function fixture(stock = 100, balance = 80) {
       orderBy: { version: "desc" },
     }),
     bearer = await createSession(db, person.id, new Date(Date.now() + 3600000));
-  const sale = (points = 20) => ({
-    traineeId: person.id,
-    points,
-    pricingVersion: p.version,
-    receivedAmountPiasters: (BigInt(points) * p.pointPricePiasters).toString(),
-    fundsReceived: true,
-  });
   const qr = () => issueQr(db, person.id, bearer);
   const entry = (token: string) => ({
     token,
@@ -155,11 +127,9 @@ async function fixture(stock = 100, balance = 80) {
     person,
     gym,
     branch,
-    inventory,
     wallet,
     p,
     bearer,
-    sale,
     qr,
     entry,
   };
@@ -173,8 +143,6 @@ const code = (promise: Promise<unknown>, code: string) =>
 for (const role of ['owner', 'manager'] as const) {
   test(`${role} cannot sell points but records attendance in scope without a cashier assignment`, async () => {
     const f = await fixture(), actor = f[role];
-    await code(quoteSale(db, actor.id, f.branch.id, {traineeId:f.person.id,points:10}),'ACCESS_DENIED');
-    await code(sellPoints(db,actor.id,f.branch.id,randomUUID(),f.sale(10)),'ACCESS_DENIED');
     const qr = await f.qr();
     await previewVisit(db, actor.id, f.branch.id, { token: qr.token });
     const entry = await confirmVisit(db, actor.id, f.branch.id, randomUUID(), f.entry(qr.token));
@@ -191,7 +159,6 @@ for (const role of ['owner', 'manager'] as const) {
       assert.equal(branch.canCancel, true);
     } finally { await app.close(); }
     const other = await fixture();
-    await code(quoteSale(db, actor.id, other.branch.id, { traineeId: other.person.id, points: 1 }), 'ACCESS_DENIED');
   });
 }
 test('owner cancellation returns original points and records the real actor', async () => {
@@ -225,12 +192,6 @@ test('owner staff list filters the selected branch before pagination and does no
     assert.equal((await get(`branchId=${f.branch.id}`, cashierToken)).statusCode, 403);
   } finally { await app.close(); }
 });
-test('retired branch sales deny every previously eligible role and never change balances',async()=>{
- const f=await fixture(),before=await db.pointTransaction.count();
- for(const actor of [f.cashier,f.owner,f.manager])await code(sellPoints(db,actor.id,f.branch.id,randomUUID(),f.sale()),'ACCESS_DENIED');
- assert.equal(await db.pointTransaction.count(),before);
-});
-
 test("QRs rotate, bind to login sessions and never disclose identity in token payload", async () => {
   const f = await fixture(),
     first = await f.qr(),
@@ -251,7 +212,7 @@ test("QRs rotate, bind to login sessions and never disclose identity in token pa
   );
 });
 test("parallel scans consume one visit and credit the hosting gym once, independent of stock", async () => {
-  const f = await fixture(0, 80),
+  const f = await fixture(80),
     qr = await f.qr();
   const results = await Promise.all([
     confirmVisit(
@@ -305,7 +266,7 @@ test("parallel scans consume one visit and credit the hosting gym once, independ
   );
 });
 test("insufficient funds and revoked cashier assignment roll back visit, token and money together", async () => {
-  const f = await fixture(0, 20),
+  const f = await fixture(20),
     qr = await f.qr();
   await code(
     confirmVisit(
@@ -404,7 +365,7 @@ test("cross-gym QR replay, false physical presence and branch pricing changes ar
 });
 
 test("expired sessions transition inside entry transaction and a fresh QR creates a new paid visit", async (t) => {
-  const f = await fixture(0, 100);
+  const f = await fixture(100);
   await db.authSession.updateMany({
     where: { userId: f.person.id },
     data: { expiresAt: new Date(Date.now() + 4 * 3600000) },
@@ -445,15 +406,9 @@ test("expired sessions transition inside entry transaction and a fresh QR create
 });
 
 test("distribution gym earns no visit receivable; hosting gym keeps its original rate snapshot", async () => {
-  const distributor = await fixture(100, 0),
-    host = await fixture(0, 0);
-  await historicalSale(
-    db,
-    distributor.cashier.id,
-    distributor.branch.id,
-    randomUUID(),
-    { ...distributor.sale(60), traineeId: host.person.id },
-  );
+  const distributor = await fixture(0),
+    host = await fixture(0);
+  await creditFromPlatform(db,distributor.admin.id,host.person.id,60);
   const qr = await host.qr(),
     entry = await confirmVisit(
       db,
@@ -473,7 +428,6 @@ test("distribution gym earns no visit receivable; hosting gym keeps its original
     data: {
       version: host.p.version + 1,
       pointPricePiasters: 150n,
-      gymDiscountBps: 0,
       redemptionBps: 7000,
       createdById: host.admin.id,
     },
@@ -483,22 +437,7 @@ test("distribution gym earns no visit receivable; hosting gym keeps its original
       .settlementPiasters,
     original.settlementPiasters,
   );
-  assert.equal(
-    (
-      await db.pointAccount.findUniqueOrThrow({
-        where: { id: distributor.inventory.id },
-      })
-    ).balance,
-    40,
-  );
-  assert.equal(
-    (
-      await db.pointAccount.findUniqueOrThrow({
-        where: { id: host.inventory.id },
-      })
-    ).balance,
-    0,
-  );
+
 });
 
 async function visited() {
@@ -984,46 +923,10 @@ test("prior reservation or payment blocks cancellation even after available cash
   );
 });
 
-test("sale correction is review-only pending refund policy; no point or cash movement is invented", async () => {
-  const f = await fixture(),
-    s = await historicalSale(
-      db,
-      f.cashier.id,
-      f.branch.id,
-      randomUUID(),
-      f.sale(20),
-    );
-  const r = await requestReview(
-    db,
-    f.cashier.id,
-    randomUUID(),
-    reviewBody(s.id, "SALE_CORRECTION"),
-  );
-  const counts = [
-    await db.pointTransaction.count(),
-    await db.moneyTransaction.count(),
-  ];
-  await code(
-    decideReview(db, f.admin.id, r.id, {
-      decision: "APPROVE",
-      reason: "Synthetic unapproved refund policy",
-    }),
-    "SALE_REFUND_POLICY_REQUIRED",
-  );
-  const rejected = await decideReview(db, f.admin.id, r.id, {
-    decision: "REJECT",
-    reason: "Synthetic corrected receipt verified",
-  });
-  assert.equal(rejected.status, "REJECTED");
-  assert.deepEqual(
-    [await db.pointTransaction.count(), await db.moneyTransaction.count()],
-    counts,
-  );
-  assert.equal(
-    (await db.pointAccount.findUniqueOrThrow({ where: { id: f.wallet.id } }))
-      .balance,
-    100,
-  );
+test('removed sale correction cannot create a review or alter ledgers',async()=>{
+ const f=await fixture(),before=await db.pointTransaction.count();
+ await code(requestReview(db,f.cashier.id,randomUUID(),reviewBody(randomUUID(),'SALE_CORRECTION')),'INVALID_INPUT');
+ assert.equal(await db.pointTransaction.count(),before);
 });
 
 test("database rejects forged cancellation metadata, orphan approval and mutation of cancellation receipts", async () => {
@@ -1088,7 +991,6 @@ test("cancellation uses the original financial snapshot after platform pricing c
     data: {
       version: f.p.version + 1,
       pointPricePiasters: 190n,
-      gymDiscountBps: 0,
       redemptionBps: 5000,
       createdById: f.admin.id,
     },

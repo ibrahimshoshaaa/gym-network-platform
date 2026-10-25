@@ -1,5 +1,5 @@
 import {pointQuote} from '../src/points/service.js';
-import {historicalSale as sellPoints} from './legacy-fixtures.js';
+import {creditFromPlatform} from './platform-credit-fixture.js';
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { after } from "node:test";
@@ -84,9 +84,6 @@ async function fixture() {
         expiresAt: new Date(Date.now() + 90 * 86400000),
       },
     }),
-    stock = await db.pointAccount.create({
-      data: { type: "BRANCH_INVENTORY", branchId: branch.id },
-    }),
     issuance = await db.pointAccount.findFirstOrThrow({
       where: { type: "ISSUANCE" },
     });
@@ -100,10 +97,9 @@ async function fixture() {
     points: {
       kind: "ADJUSTMENT",
       entries: [
-        { accountId: issuance.id, delta: -220n },
+        { accountId: issuance.id, delta: -120n },
         { accountId: wallet.id, delta: 120n },
-        { accountId: stock.id, delta: 100n },
-      ],
+              ],
     },
   });
   const p = await db.pricingPolicy.findFirstOrThrow({
@@ -114,14 +110,7 @@ async function fixture() {
       trainee.id,
       new Date(Date.now() + 90 * 86400000),
     );
-  const sale = () =>
-    sellPoints(db, cashier.id, branch.id, randomUUID(), {
-      traineeId: trainee.id,
-      points: 10,
-      pricingVersion: p.version,
-      receivedAmountPiasters: (p.pointPricePiasters * 10n).toString(),
-      fundsReceived: true,
-    });
+  const credit = (points=10)=>creditFromPlatform(db,admin.id,trainee.id,points);
   const visit = async () => {
     const qr = await issueQr(db, trainee.id, token);
     return confirmVisit(db, cashier.id, branch.id, randomUUID(), {
@@ -143,7 +132,7 @@ async function fixture() {
     wallet,
     p,
     token,
-    sale,
+    credit,
     visit,
   };
 }
@@ -221,21 +210,21 @@ test("pending topups do not enter wallet history; approved topups appear once wi
 });
 test("sale, visit consumption and cancellation restore exact points and link the same original visit", async () => {
   const f = await fixture(),
-    sale = await f.sale(),
+    sale = await f.credit(),
     v = await f.visit();
   await cancelVisit(db, f.manager.id, f.branch.id, v.visit.id, randomUUID(), {
     reason: "Synthetic valid visit cancellation",
   });
   const rows = await walletMovements(db, f.trainee.id, {});
   for (const [operation, delta, reference] of [
-    ["SALE", 10, sale.id],
+    ["TOPUP", 10, sale.id],
     ["VISIT", -30, v.visit.id],
     ["VISIT_CANCELLATION", 30, v.visit.id],
   ] as const) {
     const row = rows.items.find((x) => x.operation === operation);
     assert.equal(row?.delta, delta);
     assert.equal(row?.referenceId, reference);
-    assert.equal(row?.branch?.id, f.branch.id);
+    assert.equal(row?.branch?.id, operation==='TOPUP'?undefined:f.branch.id);
   }
   assert.equal((await walletSummary(db, f.trainee.id)).balance, 130);
   assert.equal(
@@ -299,8 +288,8 @@ test("active sessions disappear exactly at expiry while history derives expired 
 test("chronological keyset pages are complete without duplicates and foreign cursors/scopes are rejected", async () => {
   const f = await fixture(),
     other = await fixture();
-  await f.sale();
-  await f.sale();
+  await f.credit();
+  await f.credit();
   const all = await walletMovements(db, f.trainee.id, {}),
     seen: string[] = [];
   let cursor: string | undefined;
@@ -318,7 +307,7 @@ test("chronological keyset pages are complete without duplicates and foreign cur
   );
   assert.equal(new Set(seen).size, 3);
   assert.equal(
-    (await walletMovements(db, f.trainee.id, { operation: "SALE" })).items
+    (await walletMovements(db, f.trainee.id, { operation: "TOPUP" })).items
       .length,
     2,
   );

@@ -18,9 +18,9 @@ export async function requireAdmin(tx: Prisma.TransactionClient, userId: string)
 // access to another gym or branch.
 export async function requireBranchAccess(
   tx: Prisma.TransactionClient, userId: string, branchId: string,
-  permission: 'TRANSFER_STOCK' | 'SELL_POINTS' | 'OPERATE_BRANCH' | 'CANCEL_VISIT',
+  permission: 'OPERATE_BRANCH' | 'CANCEL_VISIT',
 ) {
-  if(permission==='TRANSFER_STOCK'||permission==='SELL_POINTS')throw new DomainError('ACCESS_DENIED');
+  if(!['OPERATE_BRANCH','CANCEL_VISIT'].includes(permission))throw new DomainError('ACCESS_DENIED');
   await requireActor(tx, userId);
   const branch = await tx.branch.findUnique({ where: { id: branchId }, include: { gym: { include: { owner: { select: { isActive: true } } } } } });
   if (!branch || branch.status !== 'ACTIVE' || branch.gym.status !== 'ACTIVE' || !branch.gym.ownerAcceptedAt || !branch.gym.owner.isActive) throw new DomainError('BRANCH_ACCESS_DENIED');

@@ -70,8 +70,6 @@ test('owner invitation, pending gym, price review and activation form one comple
     assert.equal(createdBranch.statusCode, 201, createdBranch.body);
     const { branch, pricingRequest } = createdBranch.json();
     assert.equal(branch.status, 'PENDING'); assert.equal(branch.pricingVersion, 0);
-    const inventory = await db.pointAccount.findUnique({ where: { type_branchId: { type: 'BRANCH_INVENTORY', branchId: branch.id } } });
-    assert.equal(inventory, null);
     assert.equal(await db.moneyAccount.count({ where: { gymId: f.created.gym.id } }), 0);
     assert.equal((await f.request('PATCH', `/admin/branches/${branch.id}/status`, f.adminToken, { status: 'ACTIVE', reason: 'Too early' })).statusCode, 409);
     await f.request('PATCH', `/admin/gyms/${f.created.gym.id}/status`, f.adminToken, { status: 'ACTIVE', reason: 'Reviewed contract placeholder' });
@@ -233,7 +231,7 @@ test('suspending one gym hides only its branches and blocks its operations witho
     const rows = (await f.request('GET', '/branches?limit=100')).json().items;
     assert.ok(!rows.some((r: { id: string }) => r.id === f.branch.id));
     assert.ok(rows.some((r: { id: string }) => r.id === other.branch.id));
-    await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.user.id, f.branch.id, 'TRANSFER_STOCK')), /ACCESS_DENIED/);
+    await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.user.id, f.branch.id, 'TRANSFER_STOCK' as never)), /ACCESS_DENIED/);
     assert.equal((await f.request('GET', `/gyms/${f.gymId}/branches`, f.owner.accessToken)).statusCode, 200);
     assert.equal((await f.request('PATCH', `/admin/gyms/${f.gymId}/status`, f.adminToken, { status: 'ACTIVE', reason: 'Review resolved' })).statusCode, 200);
     assert.equal((await f.request('GET', `/branches/${f.branch.id}/manage`, cashier.accessToken)).statusCode, 200);
@@ -275,7 +273,7 @@ test('management read endpoints isolate tenants and expose balances without invi
     const adminDetail = await a.request('GET', `/admin/gyms/${a.gymId}`, a.adminToken);
     assert.equal(adminDetail.statusCode, 200); assert.equal(adminDetail.json().owner.email, a.ownerContact.email);
     const branches = await a.request('GET', `/admin/gyms/${a.gymId}/branches?limit=1`, a.adminToken);
-    assert.equal(branches.statusCode, 200, branches.body); assert.equal(branches.json().items[0].pointAccounts.length, 0);
+    assert.equal(branches.statusCode, 200, branches.body); assert.equal('pointAccounts' in branches.json().items[0], false);
     assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/branches`, a.owner.accessToken)).statusCode, 403);
     assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}/invitations`, a.owner.accessToken)).statusCode, 403);
     assert.equal((await a.request('GET', `/admin/gyms/${a.gymId}`, a.owner.accessToken)).statusCode, 403);

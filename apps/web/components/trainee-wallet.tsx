@@ -38,7 +38,6 @@ type Movement = {
 };
 const operations: Record<string, string> = {
   TOPUP: "شحن من المنصة",
-  SALE: "شراء نقاط من فرع",
   VISIT: "خصم زيارة",
   VISIT_CANCELLATION: "رد نقاط زيارة ملغاة",
   EXPIRY: "تسوية انتهاء مسجلة",

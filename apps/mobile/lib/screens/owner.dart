@@ -55,44 +55,6 @@ Widget _ownerTask(String title,String detail,IconData icon,VoidCallback? tap)=>L
  trailing:const Icon(Icons.chevron_left_rounded,size:20,color:muted),onTap:tap,
 );
 
-class SendPoints extends StatelessWidget {
- final ApiClient api;final Json gym;
- const SendPoints({super.key,required this.api,required this.gym});
- @override Widget build(BuildContext context)=>const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط من صاحب المنصة فقط')));
-}
-
-class DispatchHistory extends StatelessWidget {
-  final ApiClient api;
-  final String gymId;
-  const DispatchHistory({super.key, required this.api, required this.gymId});
-  @override
-  Widget build(BuildContext context) => Screen(
-    title: 'حركة محفظة الجيم',
-    child: PagedRecords(
-      api: api,
-      path: 'gyms/$gymId/point-transfers',
-      item: (r) => Panel(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              r['kind'] == 'GYM_SALE' ? 'بيع نقاط لمتدرب' : 'شحن من المنصة',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            Fact('النقاط', '${r['points']} نقطة'),
-            Fact('المستلم', '${r['recipientLabel']}'),
-            Fact('التحصيل', '${money(r['chargePiasters'])} ج.م'),
-            Text(
-              shortDate(r['createdAt']),
-              style: const TextStyle(color: muted, fontSize: 12),
-            ),
-            Reference('${r['id']}'),
-          ],
-        ),
-      ),
-    ),
-  );
-}
 
 class BranchesScreen extends StatelessWidget {
   final ApiClient api;
@@ -731,20 +693,19 @@ class OwnerReport extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => DefaultTabController(
-    length: 2,
+    length: 1,
     child: Scaffold(
       appBar: AppBar(
         title: Text(branch == null ? 'حركة الجيم' : 'حركة ${branch!['name']}'),
         bottom: const TabBar(
           tabs: [
             Tab(text: 'الزيارات'),
-            Tab(text: 'المبيعات السابقة'),
           ],
         ),
       ),
       body: TabBarView(
         children: [
-          for (final kind in ['VISITS', 'SALES'])
+          for (final kind in ['VISITS'])
             PagedRecords(
               api: api,
               path:
@@ -753,7 +714,7 @@ class OwnerReport extends StatelessWidget {
                 child: Column(
                   children: [
                     Fact(
-                      r['branchName'] ?? 'محفظة الجيم',
+                      r['branchName'] ?? 'زيارة الجيم',
                       '${r['points']} نقطة',
                       strong: true,
                     ),

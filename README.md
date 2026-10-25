@@ -12,7 +12,7 @@ The latest merged application changes are [#93](https://github.com/ibrahimshosha
 | --- | --- |
 | Authentication | Phone + password; real SMS verification through server-side TextBee; duplicate registration rejected before sending; password recovery for active trainees, owners, managers and cashiers with existing passwords. Platform admins retain separate recovery. |
 | Trainee points | Only the platform sells/credits trainee points after receipt approval. Optional welcome points are controlled by the platform and granted once at registration. |
-| Gym finances | Visit receivables, settlements and withdrawal requests. Gym point purchases, stock sales and branch inventory transfers are retired. Historical financial records remain preserved. |
+| Gym finances | Visit receivables, settlements and withdrawal requests. Gym point purchases, stock sales and branch inventory transfers are retired. Original financial records remain in a sealed archive; former inventory ledger accounts are frozen and excluded from spendable points. |
 | Visits and bookings | Branch/service selection, held booking points, QR attendance, walk-ins, arrival windows, cancellations and durable no-show review scheduling. |
 | Mobile experiences | Native role-specific screens, remembered sessions, wallet/recharge, nearby directory/map, visit history and ratings, account/password management. Raised QR button with transparent headroom. |
 | Shared services | Marketplace listings/reporting/moderation, maintenance tickets, campaign carousel, and service charges owed by gyms. |
@@ -25,6 +25,8 @@ The latest merged application changes are [#93](https://github.com/ibrahimshosha
 - [Android release downloads](https://github.com/ibrahimshoshaaa/gym-network-platform/releases/tag/mobile-v0.2.7): choose `app-arm64-v8a-release.apk` for most current Android phones. APKs use the permanent GymBank signer and increasing version codes. The release tag is reused; asset timestamps identify the latest upload.
 - The APK built from `18dd769` includes the QR transparency fix. Updating the server does not update an installed Flutter app; install the newer APK for mobile UI changes.
 - iOS: [build and signing instructions](docs/codemagic-ios.md). A simulator ZIP or unsigned Release cannot be installed on a physical iPhone.
+
+See [removal of the former gym point-commerce implementation](docs/2026-10-26-remove-gym-point-commerce.md) for schema cleanup and financial-record preservation.
 
 ### Verification and remaining release work
 

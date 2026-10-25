@@ -14,12 +14,8 @@ import { DomainError } from "../domain/errors.js";
 import {
   confirmVisit,
   issueQr,
-  lookupTrainee,
   previewVisit,
-  quoteSale,
   readBranch,
-  saleView,
-  sellPoints,
   uuid,
   visitView,
 } from "./service.js";
@@ -124,29 +120,6 @@ export function registerOperationRoutes(
       };
     });
   });
-  app.post("/cashier/branches/:branchId/trainee-lookup", async (r) => {
-    const id = await actorId(db, r);
-    await consumeAuthLimit(db, "trainee-lookup", id, 20, 900);
-    return lookupTrainee(db, id, branchId(r), r.body);
-  });
-  app.post("/cashier/branches/:branchId/sale-quotes", async (r) =>
-    quoteSale(db, await actorId(db, r), branchId(r), r.body),
-  );
-  app.post("/cashier/branches/:branchId/sales", async (r, reply) => {
-    const id = await actorId(db, r);
-    await consumeAuthLimit(db, "cashier-sale", id, 120, 3600);
-    return reply
-      .code(201)
-      .send(
-        await sellPoints(
-          db,
-          id,
-          branchId(r),
-          parse(uuid, r.headers["idempotency-key"]),
-          r.body,
-        ),
-      );
-  });
   app.post("/cashier/branches/:branchId/visit-previews", async (r) => {
     const id = await actorId(db, r);
     await consumeAuthLimit(db, "qr-preview", id, 120, 900);
@@ -172,29 +145,13 @@ export function registerOperationRoutes(
     await consumeAuthLimit(db, "qr-issue", id, 12, 60);
     return issueQr(db, id, r.headers.authorization!.slice(7));
   });
-  for (const kind of ["sales", "visits"] as const)
-    app.get(`/operations/branches/:branchId/${kind}`, async (r) => {
-      const id = await actorId(db, r),
-        branch = branchId(r),
-        p = args(r);
-      return db.$transaction(async (tx) => {
-        await readBranch(tx, id, branch);
-        return kind === "sales"
-          ? page(
-              await tx.pointSale.findMany({
-                ...p,
-                where: { branchId: branch },
-              }),
-              p.take,
-              saleView,
-            )
-          : page(
-              await tx.visit.findMany({ ...p, where: { branchId: branch } }),
-              p.take,
-              visitView,
-            );
-      });
+  app.get('/operations/branches/:branchId/visits', async r => {
+    const id=await actorId(db,r), branch=branchId(r), p=args(r);
+    return db.$transaction(async tx=>{
+      await readBranch(tx,id,branch);
+      return page(await tx.visit.findMany({...p,where:{branchId:branch}}),p.take,visitView);
     });
+  });
   for (const admin of [false, true])
     app.get(`${admin ? "/admin" : ""}/gyms/:gymId/receivables`, async (r) => {
       const id = await actorId(db, r),

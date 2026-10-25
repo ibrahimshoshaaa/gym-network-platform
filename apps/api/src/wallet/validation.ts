@@ -9,7 +9,6 @@ export const movementSchema = pageSchema.extend({
   operation: z
     .enum([
       "TOPUP",
-      "SALE",
       "VISIT",
       "VISIT_CANCELLATION",
       "EXPIRY",

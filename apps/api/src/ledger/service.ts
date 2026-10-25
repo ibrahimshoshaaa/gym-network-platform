@@ -3,7 +3,6 @@ import { createHash, randomUUID } from 'node:crypto';
 import {collectDueCharges} from '../charges/service.js';
 import { Prisma, type PrismaClient, type PointTxKind, type MoneyTxKind } from '@prisma/client';
 import { requireAdmin, requireBranchAccess, requireGymOwner } from '../auth/authorization.js';
-import { centralStock } from '../inventory/central.js';
 import { DomainError } from '../domain/errors.js';
 
 type Entry = { accountId: string; delta: bigint };
@@ -98,7 +97,7 @@ export async function postInTransaction(tx: Prisma.TransactionClient, input: Led
     const rows = await tx.$queryRaw<{ balance: number; type: string }[]>`SELECT balance, type FROM "PointAccount" WHERE id = ${e.accountId}::uuid FOR UPDATE`;
     const row = rows[0];
     if (!row) throw new DomainError('ACCOUNT_NOT_FOUND');
-    if (['ISSUE','TRANSFER'].includes(c.points!.kind) && ['GYM_INVENTORY','BRANCH_INVENTORY'].includes(row.type)) throw new DomainError('ACCESS_DENIED');
+    if (row.type === 'ARCHIVED') throw new DomainError('ACCESS_DENIED');
     if (row.type !== 'ISSUANCE' && BigInt(row.balance) + e.delta < 0n) throw new DomainError('INSUFFICIENT_POINTS');
   }
   for (const e of c.money?.entries ?? []) {
@@ -140,8 +139,6 @@ export function postLedger(db: PrismaClient, command: LedgerCommand) {
   return serializable(db, async tx => { await requireAdmin(tx, command.actorId); return postInTransaction(tx, command); });
 }
 
-// Retained denial for older internal callers. Historical postings remain immutable.
-export function transferStock(db:PrismaClient,input:{actorId:string;gymId?:string;fromBranchId:string|null;toBranchId:string|null;points:number;idempotencyKey:string}):Promise<{pointTransactionId:string|undefined;moneyTransactionId?:string}>{throw new DomainError('ACCESS_DENIED');}
 
 // Exact financial reversal is an admin-only primitive, not the cancellation
 // policy for visits/sales. Domain approval and paid-out settlement come later.
@@ -164,9 +161,8 @@ export function reverseLedger(db: PrismaClient, input: {
     // Visit/sale policy approvals have not been implemented; the low-level
     // reversal primitive cannot bypass those pending workflows.
     if (p && await tx.pointDispatch.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
-    if (p && await tx.pointSale.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     if (p && await tx.topupRequest.findUnique({ where: { pointTransactionId: p.id } })) throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
-    if (p && ['VISIT', 'VISIT_REVERSAL', 'SALE_REVERSAL', 'EXPIRY', 'BOOKING_RESERVE', 'BOOKING_SETTLE'].includes(p.kind) ||
+    if (p && ['VISIT', 'VISIT_REVERSAL', 'HISTORICAL_REVERSAL', 'EXPIRY', 'BOOKING_RESERVE', 'BOOKING_SETTLE'].includes(p.kind) ||
         m && m.kind !== 'ADJUSTMENT') throw new DomainError('DOMAIN_APPROVAL_REQUIRED');
     return postInTransaction(tx, { actorId: input.actorId, idempotencyKey: input.idempotencyKey, reason: input.reason,
       points: p ? { kind: 'ADJUSTMENT', reversalOfId: p.id, entries: p.postings.map(e => ({ accountId: e.accountId, delta: -BigInt(e.delta) })) } : undefined,

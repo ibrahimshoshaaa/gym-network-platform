@@ -17,7 +17,7 @@ void main() {
         Object data;
         if(r.url.path.endsWith('campaigns')){data={'items':[]};}
         else if (r.url.path.endsWith('topup-options')) {
-          data = {'policy': {'pointPricePiasters': '100', 'gymDiscountBps': 1000},
+          data = {'policy': {'pointPricePiasters': '100', },
             'paymentMethods': [{'type': 'INSTAPAY', 'account': 'gym@test', 'accountName': 'GymBank', 'version': 3}],
             'packages': [{'id': 'p1', 'version': 7, 'points': 100, 'label': 'باقة ١٠٠'}]};
         } else if (r.url.path.endsWith('topup-quotes')) {
@@ -27,7 +27,7 @@ void main() {
         return http.Response(jsonEncode(data), 200, headers: {'content-type': 'application/json; charset=utf-8'});
       }))..token = 'synthetic'..user = {'id': 'u1', 'role': owner ? 'GYM_OWNER' : 'TRAINEE'};
       await t.pumpWidget(MaterialApp(theme: appTheme(), home: Directionality(textDirection: TextDirection.rtl,
-        child: TopupScreen(api: api, gymId: owner ? 'g1' : null))));
+        child: TopupScreen(api: api))));
       await t.pumpAndSettle();
       expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'متابعة لبيانات التحويل')).onPressed, isNull);
       await t.tap(find.text('100 نقطة').first);
@@ -37,8 +37,8 @@ void main() {
       await t.pumpAndSettle();
       expect(selection?['packageId'], 'p1');
       expect(selection?['packageVersion'], 7);
-      expect(selection?['receivingGymId'], owner ? 'g1' : null);
-      expect(selection?['kind'], owner ? 'BRANCH_STOCK' : 'TRAINEE');
+      expect(selection?['receivingGymId'], null);
+      expect(selection?['kind'], 'TRAINEE');
       expect(find.text('gym@test'), findsOneWidget);
       expect(find.byType(CheckboxListTile), findsNothing);
       await t.scrollUntilVisible(find.text('مراجعة طلب الشحن'), 100, scrollable: find.byType(Scrollable).first);

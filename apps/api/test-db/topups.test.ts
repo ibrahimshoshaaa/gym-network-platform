@@ -18,7 +18,7 @@ const user = (role: 'TRAINEE' | 'PLATFORM_ADMIN' | 'GYM_OWNER' = 'TRAINEE') => d
 let admin: Awaited<ReturnType<typeof user>>;
 before(async () => {
   admin = await user('PLATFORM_ADMIN');
-  await publishPolicy(db, admin.id, { expectedVersion: 0, pointPricePiasters: '100', gymDiscountBps: 0, redemptionBps: 8000 });
+  await publishPolicy(db, admin.id, { expectedVersion: 0, pointPricePiasters: '100', redemptionBps: 8000 });
   await savePaymentMethod(db, admin.id, 'INSTAPAY', { expectedVersion: 0, account: 'synthetic@instapay', accountName: 'Synthetic Receiver', enabled: true });
 });
 async function fixture() {
@@ -43,7 +43,7 @@ const expectCode = async (p: Promise<unknown>, code: string) => assert.rejects(p
 test('only admin configures prices; concurrent expected version saves have one winner', async () => {
   const trainee = await user();
   const current = await db.pricingPolicy.findFirstOrThrow({ orderBy: { version: 'desc' } });
-  const data = { expectedVersion: current.version, pointPricePiasters: '100', gymDiscountBps: 0, redemptionBps: 8000 };
+  const data = { expectedVersion: current.version, pointPricePiasters: '100', redemptionBps: 8000 };
   await expectCode(publishPolicy(db, trainee.id, data), 'ACCESS_DENIED');
   const outcomes = await Promise.allSettled([publishPolicy(db, admin.id, data), publishPolicy(db, admin.id, data)]);
   assert.equal(outcomes.filter(r => r.status === 'fulfilled').length, 1);
@@ -91,7 +91,7 @@ test('snapshots preserve old rates and payment destination; stale new requests a
   const { trainee } = await fixture();
   const data = await input(trainee.id), request = await submitTopup(db, trainee.id, randomUUID(), data);
   const p = await db.pricingPolicy.findFirstOrThrow({ orderBy: { version: 'desc' } });
-  await publishPolicy(db, admin.id, { expectedVersion: p.version, pointPricePiasters: '200', gymDiscountBps: 0, redemptionBps: 7000 });
+  await publishPolicy(db, admin.id, { expectedVersion: p.version, pointPricePiasters: '200', redemptionBps: 7000 });
   const method = await db.paymentMethod.findUniqueOrThrow({ where: { type: 'INSTAPAY' } });
   await savePaymentMethod(db, admin.id, 'INSTAPAY', { expectedVersion: method.version, account: 'new-synthetic@instapay', accountName: 'New Synthetic Receiver', enabled: true });
   await expectCode(submitTopup(db, trainee.id, randomUUID(), { ...data, receiptId: (await evidence(trainee.id)).id }), 'STALE_SETTINGS');
@@ -99,7 +99,7 @@ test('snapshots preserve old rates and payment destination; stale new requests a
   await expectCode(submitTopup(db, trainee.id, randomUUID(), { ...fresh, paymentMethodVersion: method.version }), 'STALE_SETTINGS');
   const approved = await reviewTopup(db, admin.id, request.id, approval());
   assert.equal(approved.chargePiasters, '2000'); assert.equal(approved.redemptionBps, 8000); assert.equal(approved.paymentAccount, 'synthetic@instapay');
-  await publishPolicy(db, admin.id, { expectedVersion: p.version + 1, pointPricePiasters: '100', gymDiscountBps: 0, redemptionBps: 8000 });
+  await publishPolicy(db, admin.id, { expectedVersion: p.version + 1, pointPricePiasters: '100', redemptionBps: 8000 });
 });
 
 test('receipt ownership and one-use rule; duplicate payment reference cannot issue points twice', async () => {

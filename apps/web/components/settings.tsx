@@ -110,7 +110,7 @@ export function SettingsPanel({
       </div>
       <Notice text={error} />
       <Notice text={success} success />
-      {section === "pricing" && <div className="settings-grid"><section className="card"><h2>تسعير النقاط وتسوية الزيارات</h2><form key={policy?.version??0} onSubmit={e=>void save(e,'admin/pricing-policies',form=>({expectedVersion:policy?.version??0,pointPricePiasters:minorUnits(String(form.get('price'))),gymDiscountBps:0,redemptionBps:Number(minorUnits(String(form.get('redemption'))))}))}><fieldset disabled={busy}><Field label="سعر النقطة للمتدرب بالجنيه" name="price" inputMode="decimal" required defaultValue={policy?decimal(policy.pointPricePiasters):''}/><Field label="نسبة مستحقات الجيم من الزيارة (%)" name="redemption" inputMode="decimal" required defaultValue={policy?decimal(policy.redemptionBps):''}/><p>الجيم يستحق قيمة الزيارات وتسوياتها فقط. بيع وشحن النقاط من صاحب المنصة.</p><button className="primary">{busy?<Busy/>:'حفظ التسعير'}</button></fieldset></form></section>
+      {section === "pricing" && <div className="settings-grid"><section className="card"><h2>تسعير النقاط وتسوية الزيارات</h2><form key={policy?.version??0} onSubmit={e=>void save(e,'admin/pricing-policies',form=>({expectedVersion:policy?.version??0,pointPricePiasters:minorUnits(String(form.get('price'))),redemptionBps:Number(minorUnits(String(form.get('redemption'))))}))}><fieldset disabled={busy}><Field label="سعر النقطة للمتدرب بالجنيه" name="price" inputMode="decimal" required defaultValue={policy?decimal(policy.pointPricePiasters):''}/><Field label="نسبة مستحقات الجيم من الزيارة (%)" name="redemption" inputMode="decimal" required defaultValue={policy?decimal(policy.redemptionBps):''}/><p>الجيم يستحق قيمة الزيارات وتسوياتها فقط. بيع وشحن النقاط من صاحب المنصة.</p><button className="primary">{busy?<Busy/>:'حفظ التسعير'}</button></fieldset></form></section>
       <section className="card"><h2>النقاط الترحيبية</h2><p>هدية للمتدرب الجديد عند التسجيل مرة واحدة. التفعيل لا يضيف نقاطًا للحسابات القديمة.</p><form key={`welcome:${settings.welcomePoints?.version??0}`} onSubmit={e=>void save(e,'admin/welcome-points',form=>({expectedVersion:settings.welcomePoints?.version??0,enabled:form.get('enabled')==='on',points:Number(form.get('points'))}),'PUT')}><fieldset disabled={busy}><label className="check"><input type="checkbox" name="enabled" defaultChecked={settings.welcomePoints?.enabled??false}/>تفعيل النقاط الترحيبية للمستخدمين الجدد</label><Field label="عدد النقاط الترحيبية" name="points" type="number" min={0} max={100000} step={1} required defaultValue={settings.welcomePoints?.points??0}/><button className="primary">{busy?<Busy/>:'حفظ النقاط الترحيبية'}</button></fieldset></form></section></div>}
       {section === "payments" && (
         <div className="two-columns">
@@ -302,7 +302,7 @@ export function SettingsPanel({
                       <h3>{pack.label}</h3>
                       <p>
                         {pack.points} نقطة ·{" "}
-                        {pack.kind === "TRAINEE" ? "متدربون" : "مخزون فروع"}
+                        متدربون
                       </p>
                       <span
                         className={`badge ${pack.enabled ? "approved" : "neutral"}`}

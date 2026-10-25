@@ -27,7 +27,7 @@ export function registerTopupRoutes(app: FastifyInstance, db: PrismaClient, stor
   app.put('/admin/topup-packages/:packageId', async r => savePackage(db, await actorId(db, r), id(r, 'packageId'), r.body));
   app.get('/topup-options', async r => {
     const userId = await actorId(db, r);
-    const query = parse(z.object({ kind: z.enum(['TRAINEE', 'BRANCH_STOCK']) }).strict(), r.query);
+    const query = parse(z.object({ kind: z.literal('TRAINEE') }).strict(), r.query);
     return db.$transaction(async tx => {
       const user=await requireActor(tx, userId);if(query.kind!=='TRAINEE'||user.role!=='TRAINEE')throw new DomainError('ACCESS_DENIED');
       const policy = await tx.pricingPolicy.findFirst({ orderBy: { version: 'desc' } });
@@ -45,8 +45,8 @@ export function registerTopupRoutes(app: FastifyInstance, db: PrismaClient, stor
       const userId = await actorId(db, r), query = parse(pageSchema, r.query);
       return db.$transaction(async tx => {
         if (admin) await requireAdmin(tx, userId); else await requireActor(tx, userId);
-        const rows = await tx.topupRequest.findMany({ include: { requestorUser: { select: { displayName: true, email: true, phoneE164: true } }, receivingGym: { select: { id: true, name: true } }, receivingBranch: { select: { name: true, gym: { select: { name: true } } } } }, where: admin ? { status: 'PENDING' } : { requestorUserId: userId }, take: query.limit + 1, orderBy: { id: 'asc' }, ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}) });
-        return { items: rows.slice(0, query.limit).map(row => ({ ...topupView(row), ...(admin ? { requestor: row.requestorUser, branch: row.receivingBranch, gym: row.receivingGym } : {}) })), nextCursor: rows.length > query.limit ? rows[query.limit - 1]!.id : null };
+        const rows=await tx.topupRequest.findMany({include:{requestorUser:{select:{displayName:true,email:true,phoneE164:true}}},where:admin?{status:'PENDING'}:{requestorUserId:userId},take:query.limit+1,orderBy:{id:'asc'},...(query.cursor?{cursor:{id:query.cursor},skip:1}:{})});
+        return {items:rows.slice(0,query.limit).map(row=>({...topupView(row),...(admin?{requestor:row.requestorUser}:{})})),nextCursor:rows.length>query.limit?rows[query.limit-1]!.id:null};
       });
     });
   }

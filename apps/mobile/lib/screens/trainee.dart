@@ -95,7 +95,6 @@ class WalletHistory extends StatelessWidget {
                     child: Text(
                       {
                             'TOPUP': 'شحن رصيد',
-                            'SALE': 'شراء نقاط من الجيم',
                             'VISIT': 'خصم زيارة',
                             'VISIT_CANCELLATION': 'استرداد زيارة',
                             'EXPIRY': 'انتهاء صلاحية',

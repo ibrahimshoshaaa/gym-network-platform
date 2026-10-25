@@ -34,15 +34,13 @@ export async function notificationFeed(db:PrismaClient,id:string){return db.$tra
  for(const p of prices)add('price',p.id,p.status,`سعر ${p.branch.name} · ${names[p.status]}`,p.reviewedAt??p.createdAt,admin?'branch-prices':'gyms');
  const holds=(admin||gymIds.length)?await tx.financialHold.findMany({where:admin?{}:{gymId:{in:gymIds}},orderBy:{createdAt:'desc'},take:25}):[];
  for(const h of holds)add('hold',h.id,h.state,h.state==='OPEN'?'مبلغ زيارة محجوز للمراجعة':'تم فك حجز مبلغ زيارة',h.releasedAt??h.createdAt,'disputes',h.reason);
- const dispatches=await tx.pointDispatch.findMany({where:admin?{kind:'ADMIN_TOPUP'}:trainee?{recipientId:id}:{gymId:{in:gymIds}},orderBy:{createdAt:'desc'},take:25});
- for(const d of dispatches)add('dispatch',d.id,'RECORDED',`${d.kind==='ADMIN_TOPUP'?'شحن مباشر':'بيع من محفظة الجيم'} · ${d.points} نقطة`,d.createdAt,admin?'direct-topup':trainee?'visits':'point-wallet',trainee?'تمت إضافة النقاط لمحفظتك':d.recipientLabel);
+ const dispatches=(admin||trainee)?await tx.pointDispatch.findMany({where:{kind:'ADMIN_TOPUP',...(!admin?{recipientId:id}:{})},orderBy:{createdAt:'desc'},take:25}):[];
+ for(const d of dispatches)add('dispatch',d.id,'RECORDED',`شحن مباشر · ${d.points} نقطة`,d.createdAt,admin?'direct-topup':'visits',trainee?'تمت إضافة النقاط لمحفظتك':d.recipientLabel);
  const tickets=await tx.supportTicket.findMany({where:admin?{status:{not:'CLOSED'}}:{userId:id},orderBy:{updatedAt:'desc'},take:50});
  for(const t of tickets)add('support',t.id,t.status+':'+t.updatedAt.toISOString(),'الدعم · '+names[t.status],t.updatedAt,'support',t.subject);
  if(trainee){
   const visits=await tx.visit.findMany({where:{traineeId:id},orderBy:{startedAt:'desc'},take:25,include:{branch:{select:{name:true}}}});
   for(const v of visits)add('visit',v.id,v.status,`${v.status==='CANCELLED'?'إلغاء زيارة':'زيارة'} ${v.branch.name}`,v.cancelledAt??v.startedAt,'visits',`${v.pointsCharged} نقطة`);
-  const sales=await tx.pointSale.findMany({where:{traineeId:id},orderBy:{createdAt:'desc'},take:25});
-  for(const s of sales)add('sale',s.id,'RECORDED',`استلمت ${s.points} نقطة من فرع`,s.createdAt,'visits','عملية شراء نقاط مسجلة');
   const wallet=await tx.pointAccount.findUnique({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:id}}});
   if(wallet?.balance && wallet.expiresAt){const days=Math.ceil((wallet.expiresAt.getTime()-Date.now())/86400000);const threshold=days<=0?0:days<=1?1:days<=7?7:days<=15?15:null;
    if(threshold!==null)events.push({id:`expiry:${wallet.expiresAt.toISOString()}:${threshold}`,title:threshold===0?'رصيدك المنتهي يحتاج مراجعة':`صلاحية نقاطك خلال ${Math.max(1,days)} يوم`,description:'راجع المحفظة. التنبيه لا يحذف نقاطًا ولا يغيّر سياسة الرصيد.',at:new Date(),destination:'wallet'});

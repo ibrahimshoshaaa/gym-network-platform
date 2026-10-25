@@ -8,7 +8,7 @@ import { useListTools } from "./list-tools";
 
 export function Reviews() {
  const [rows,setRows]=useState<Topup[]>([]),[cursor,setCursor]=useState<string|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[success,setSuccess]=useState(""),[selected,setSelected]=useState<Topup|null>(null);
- const filtered=useListTools(rows,row=>[row.id,row.requestor?.displayName,row.requestor?.email,row.requestor?.phoneE164,row.branch?.gym.name,row.branch?.name,row.gym?.name,methodName(row.paymentMethod)].filter(Boolean).join(" "),row=>row.kind,{TRAINEE:"شحن متدرب",BRANCH_STOCK:"شحن جيم"});
+ const filtered=useListTools(rows,row=>[row.id,row.requestor?.displayName,row.requestor?.email,row.requestor?.phoneE164,row.branch?.gym.name,row.branch?.name,row.gym?.name,methodName(row.paymentMethod)].filter(Boolean).join(" "),row=>row.kind,{TRAINEE:"شحن متدرب"});
  const generation=useRef(0);
  async function load(next?:string) {
   const current=++generation.current; setLoading(true);setError("");
@@ -30,7 +30,7 @@ export function Reviews() {
 }
 export function TopupCard({row,onOpen}:{row:Topup;onOpen:()=>void}) {
  return <article className="card topup-card">
-  <div className="section-toolbar"><span className="badge pending">{row.kind==="TRAINEE"?"شحن متدرب":row.receivingGymId?"شحن رصيد صاحب الجيم":"شحن مخزون فرع"}</span><small className="muted">{date(row.createdAt)}</small></div>
+  <div className="section-toolbar"><span className="badge pending">{"شحن متدرب"}</span><small className="muted">{date(row.createdAt)}</small></div>
   <h3>{row.requestor?.displayName??"صاحب الطلب"}</h3>
   {row.branch&&<p className="muted">{row.branch.gym.name} · {row.branch.name}</p>}
   {row.gym&&<p className="muted">{row.gym.name} · رصيد صاحب الجيم</p>}
@@ -52,7 +52,6 @@ export function Review({request:row,onClose,onDone}:{request:Topup;onClose:()=>v
  useEffect(()=>{void read();return()=>{generation.current++;};},[row.receiptId]);
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;
-  if(decision==="APPROVED"&&row.kind!=="TRAINEE"){setError("شراء مخزون الجيم متوقف؛ راجع تسوية الطلب السابق.");return;}
   const form=new FormData(e.currentTarget);
   if(decision==="APPROVED"&&(!viewed||form.get("confirmed")!=="on")){setError("راجع الإيصال وأكد وصول المبلغ أولًا.");return;}
   setBusy(true);setError("");
@@ -62,12 +61,11 @@ export function Review({request:row,onClose,onDone}:{request:Topup;onClose:()=>v
   }catch(e){setError(message(e));}finally{setBusy(false);}
  }
  return <Modal title="مراجعة الشحن" onClose={onClose} locked={busy}>
-  <div className="request-summary"><div><span className="eyebrow">{row.kind==="TRAINEE"?"محفظة متدرب":row.receivingGymId?"رصيد صاحب الجيم":"مخزون فرع"}</span><h3>{row.requestor?.displayName??"صاحب الطلب"}</h3><p>{row.branch?`${row.branch.gym.name} · ${row.branch.name}`:row.gym?.name??row.requestor?.email}</p></div><div><strong>{decimal(row.chargePiasters)} <small>ج.م</small></strong><span>{row.points} نقطة</span></div></div>
+  <div className="request-summary"><div><span className="eyebrow">{"محفظة متدرب"}</span><h3>{row.requestor?.displayName??"صاحب الطلب"}</h3><p>{row.branch?`${row.branch.gym.name} · ${row.branch.name}`:row.gym?.name??row.requestor?.email}</p></div><div><strong>{decimal(row.chargePiasters)} <small>ج.م</small></strong><span>{row.points} نقطة</span></div></div>
   <div className="subtle-box"><strong>{methodName(row.paymentMethod)}</strong><p>حساب الاستلام: <span dir="ltr">{row.paymentAccount}</span> · {row.paymentAccountName}</p></div>
   <div className="receipt-section"><div className="section-toolbar"><h3>إيصال التحويل</h3><button className="secondary compact" disabled={reading||busy||!row.receiptId} onClick={()=>void read()}><RefreshCw size={15}/>إعادة العرض</button></div>
    <Notice text={receiptError}/>{reading?<Busy>جاري فتح الإيصال</Busy>:receipt?<a href={receipt} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" aria-label="تكبير إيصال التحويل"><img className="receipt-image" src={receipt} alt="إيصال التحويل المرفق" referrerPolicy="no-referrer" onLoad={()=>setViewed(true)} onError={()=>{setViewed(false);setReceipt("");setReceiptError("تعذر عرض الإيصال. اضغط إعادة العرض.");}}/></a>:null}
   </div>
-  {row.kind!=="TRAINEE"&&<Notice text="طلب مخزون سابق: الشحن للجيم متوقف. راجع التحويل وتسويته قبل رفض الطلب؛ لا يصدر هذا الطلب نقاطًا جديدة."/>}
   <div className="decision-switch" aria-label="قرار الشحن"><button type="button" aria-pressed={decision==="APPROVED"} className={decision==="APPROVED"?"active":""} disabled={busy||row.kind!=="TRAINEE"} onClick={()=>{setDecision("APPROVED");setError("");}}><CheckCircle2 size={18}/>قبول الشحن</button><button type="button" aria-pressed={decision==="REJECTED"} className={decision==="REJECTED"?"active reject":""} disabled={busy} onClick={()=>{setDecision("REJECTED");setError("");}}><XCircle size={18}/>رفض</button></div>
   <form onSubmit={submit} key={decision}><fieldset disabled={busy}>
    {decision==="APPROVED"?<>

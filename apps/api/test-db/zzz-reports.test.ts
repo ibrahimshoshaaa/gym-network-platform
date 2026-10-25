@@ -1,4 +1,4 @@
-import {historicalSale as sellPoints} from './legacy-fixtures.js';
+import {creditFromPlatform} from './platform-credit-fixture.js';
 import { getQuote,submitTopup,reviewTopup } from "../src/topups/service.js";
 import { savePaymentMethod } from "../src/topups/settings.js";
 import assert from "node:assert/strict";
@@ -16,7 +16,7 @@ import {
   confirmVisit,
   issueQr,
 } from "../src/operations/service.js";
-import { requestReview, decideReview } from "../src/reviews/service.js";
+import { cancelVisit,requestReview, decideReview } from "../src/reviews/service.js";
 import {
   requestWithdrawal,
   decideWithdrawal,
@@ -86,10 +86,7 @@ async function fixture() {
       { userId: manager.id, branchId: branch.id, role: "BRANCH_MANAGER" },
     ],
   });
-  const inventory = await db.pointAccount.create({
-      data: { branchId: branch.id, type: "BRANCH_INVENTORY" },
-    }),
-    wallet = await db.pointAccount.create({
+  const wallet = await db.pointAccount.create({
       data: {
         ownerUserId: trainee.id,
         type: "TRAINEE_WALLET",
@@ -106,9 +103,8 @@ async function fixture() {
     points: {
       kind: "ADJUSTMENT",
       entries: [
-        { accountId: issuance.id, delta: -220n },
-        { accountId: inventory.id, delta: 100n },
-        { accountId: wallet.id, delta: 120n },
+        { accountId: issuance.id, delta: -120n },
+                { accountId: wallet.id, delta: 120n },
       ],
     },
   });
@@ -120,16 +116,7 @@ async function fixture() {
       trainee.id,
       new Date(Date.now() + 90 * 86400000),
     );
-  const sale = (points = 10) =>
-    sellPoints(db, cashier.id, branch.id, randomUUID(), {
-      traineeId: trainee.id,
-      points,
-      pricingVersion: p.version,
-      receivedAmountPiasters: (
-        BigInt(points) * p.pointPricePiasters
-      ).toString(),
-      fundsReceived: true,
-    });
+  const credit = (points=10)=>creditFromPlatform(db,admin.id,trainee.id,points);
   const visit = async () => {
     const qr = await issueQr(db, trainee.id, bearer);
     return confirmVisit(db, cashier.id, branch.id, randomUUID(), {
@@ -148,28 +135,24 @@ async function fixture() {
     trainee,
     gym,
     branch,
-    inventory,
     wallet,
     p,
-    sale,
+    credit,
     visit,
   };
 }
 test("sales, visits and current balances are separate exact figures and reports never post money", async () => {
   const f = await fixture(),
-    sale = await f.sale(10),
+    sale = await f.credit(10),
     visit = await f.visit(),
     before = [
       await db.pointTransaction.count(),
       await db.moneyTransaction.count(),
     ];
   const s = await reportSummary(db, f.owner.id, { ...range, gymId: f.gym.id });
-  assert.equal(s.sales.points, "10");
-  assert.equal(s.sales.amountPiasters, sale.chargePiasters);
   assert.equal(s.visits.points, "30");
   assert.equal(s.netVisitReceivablesPiasters, visit.visit.settlementPiasters);
-  assert.equal(s.topups?.amountPiasters, "0");
-  assert.equal(s.currentStockPoints, "90");
+  assert.equal(s.topups, null);
   assert.equal(
     s.currentBalances?.find((b) => b.type === "GYM_AVAILABLE")?.balancePiasters,
     visit.visit.settlementPiasters,
@@ -229,7 +212,7 @@ test("cancelling an older visit books a reversal on the cancellation date, inclu
 test("owners cannot select another tenant and staff must supply an assigned branch with no gym wallet or withdrawals", async () => {
   const f = await fixture(),
     other = await fixture();
-  await f.sale();
+  await f.credit();
   await code(
     reportSummary(db, f.other.id, { ...range, gymId: f.gym.id }),
     "BRANCH_ACCESS_DENIED",
@@ -251,7 +234,6 @@ test("owners cannot select another tenant and staff must supply an assigned bran
     gymId: f.gym.id,
     branchId: f.branch.id,
   });
-  assert.equal(s.sales.count, "1");
   assert.equal(s.topups, null);
   assert.equal(s.alerts.topups, null);
   assert.equal(s.currentBalances, null);
@@ -282,15 +264,18 @@ test("owners cannot select another tenant and staff must supply an assigned bran
     reportRows(db, f.cashier.id, {
       ...range,
       branchId: f.branch.id,
-      kind: "SALES",
+      kind: "VISITS",
     }),
     "BRANCH_ACCESS_DENIED",
   );
 });
 test("keyset pages have no duplicates and CSV export covers every filtered row, not only one page", async () => {
   const f = await fixture();
-  for (let n = 0; n < 4; n++) await f.sale();
-  const q = { ...range, gymId: f.gym.id, kind: "SALES", limit: 1 };
+  for (let n = 0; n < 4; n++) {
+    if(n)await cancelVisit(db,f.manager.id,f.branch.id,(await db.visit.findFirstOrThrow({where:{traineeId:f.trainee.id},orderBy:{startedAt:'desc'}})).id,randomUUID(),{reason:'Synthetic report pagination reset'});
+    await f.visit();
+  }
+  const q = { ...range, gymId: f.gym.id, kind: "VISITS", limit: 1 };
   const first = await reportRows(db, f.owner.id, q),
     second = await reportRows(db, f.owner.id, {
       ...q,
@@ -339,11 +324,11 @@ test("reports preserve large piaster balances and reconcile the complete double-
 });
 test("alerts show live queues independently of historical date range and flag only accepted overdue withdrawals", async (t) => {
   const f = await fixture(),
-    sale = await f.sale(),
+    sale = await f.credit(),
     v = await f.visit();
   await requestReview(db, f.cashier.id, randomUUID(), {
-    kind: "SALE_CORRECTION",
-    targetId: sale.id,
+    kind: "VISIT_CANCEL",
+    targetId: v.visit.id,
     reason: "Synthetic sale correction awaiting review",
     evidenceText: "Synthetic cash receipt correction details",
   });
@@ -355,7 +340,7 @@ test("alerts show live queues independently of historical date range and flag on
   });
   const q = { from: "2020-01-01", to: "2020-01-02", gymId: f.gym.id },
     pending = await reportSummary(db, f.owner.id, q);
-  assert.equal(pending.sales.count, "0");
+  assert.equal(pending.visits.count, "0");
   assert.equal(pending.alerts.reviews.count, "1");
   assert.equal(pending.alerts.withdrawals?.requested, "1");
   assert.equal(pending.alerts.withdrawals?.overdue, "0");
@@ -436,7 +421,7 @@ test("paid transfers remain paid in movement reports when owner disputes receipt
 });
 test("options and export endpoints deny other owners and preserve private download headers", async () => {
   const f = await fixture();
-  await f.sale();
+  await f.credit();
   const app = buildApp(db),
     owner = await createSession(db, f.owner.id, new Date(Date.now() + 60000)),
     outsider = await createSession(
@@ -447,7 +432,7 @@ test("options and export endpoints deny other owners and preserve private downlo
     query = new URLSearchParams({
       ...range,
       gymId: f.gym.id,
-      kind: "SALES",
+      kind: "VISITS",
     }).toString();
   try {
     const own = await app.inject({
@@ -485,15 +470,15 @@ test('platform finance counts holdings and liabilities once and separates real p
  const f=await fixture();
  const snapshot=async()=> (await reportSummary(db,f.admin.id,range)).platformFinance!;
  const before=await snapshot();
- await f.sale(10);
+ await f.credit(10);
  const sale=await snapshot();
- assert.equal(BigInt(sale.points.gyms),BigInt(before.points.gyms)-10n);
+ assert.equal(sale.points.archived,before.points.archived);
  assert.equal(BigInt(sale.points.trainees),BigInt(before.points.trainees)+10n);
- assert.equal(sale.points.circulating,before.points.circulating);
- assert.equal(sale.collections.total,before.collections.total);
+ assert.equal(BigInt(sale.points.circulating),BigInt(before.points.circulating)+10n);
+ assert.equal(BigInt(sale.collections.total),BigInt(before.collections.total)+BigInt(f.p.pointPricePiasters)*10n);
  const visit=await f.visit(),earned=BigInt(visit.visit.settlementPiasters),afterVisit=await snapshot();
  assert.equal(BigInt(afterVisit.liabilities.total),BigInt(before.liabilities.total)+earned);
- assert.equal(BigInt(afterVisit.points.circulating),BigInt(before.points.circulating)-30n);
+ assert.equal(BigInt(afterVisit.points.circulating),BigInt(sale.points.circulating)-30n);
  await requestWithdrawal(db,f.owner.id,f.gym.id,randomUUID(),{amountPiasters:'1',paymentMethod:'INSTAPAY',destinationAccount:'synthetic@instapay',destinationName:'Synthetic Finance Recipient'});
  const reserved=await snapshot();
  assert.equal(reserved.liabilities.total,afterVisit.liabilities.total);
@@ -508,7 +493,7 @@ test('platform finance counts holdings and liabilities once and separates real p
   const b=await snapshot(),pending=await submitTopup(db,actor,randomUUID(),{...selection,pricingVersion:quote.pricingVersion,paymentMethod:'INSTAPAY',paymentMethodVersion:fresh.version,receiptId:receipt.id});
   assert.equal((await snapshot()).collections.total,b.collections.total);
   await reviewTopup(db,f.admin.id,pending.id,{decision:'APPROVED',reason:'Synthetic finance receipt checked',paymentReference:randomUUID(),receivedAmountPiasters:quote.chargePiasters,fundsReceived:true,receiptReviewed:true});
-  const a=await snapshot(),source=kind==='TRAINEE'?'trainees':'gyms';
+  const a=await snapshot(),source='trainees' as const;
   assert.equal(BigInt(a.collections[source]),BigInt(b.collections[source])+BigInt(quote.chargePiasters));
   assert.equal(BigInt(a.collections.total),BigInt(b.collections.total)+BigInt(quote.chargePiasters));
  }

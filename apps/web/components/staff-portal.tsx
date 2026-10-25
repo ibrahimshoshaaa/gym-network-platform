@@ -19,7 +19,7 @@ type Branch = {
     canOperate: boolean;
     canCancel: boolean;
 };
-type Section = 'home' | 'visits' | 'sales' | 'account' | 'visit' | 'sale' | 'reviews' | 'support';
+type Section = 'home' | 'visits' | 'account' | 'visit' | 'reviews' | 'support';
 const destinations = [{ id: 'home', label: 'الرئيسية', icon: Home }, { id: 'visits', label: 'الزيارات', icon: History }, { id: 'visit', label: 'التشغيل', icon: QrCode }, { id: 'account', label: 'حسابي', icon: UserRound }] as const;
 export function StaffPortal({ user, logout, loggingOut, onPassword, error }: {
     user: Identity;
@@ -37,9 +37,9 @@ export function StaffPortal({ user, logout, loggingOut, onPassword, error }: {
     function navigate(next: Section) { setSection(next); window.scrollTo({ top: 0, behavior: 'auto' }); }
     const branch = branches?.find(b => b.id === branchId) ?? branches?.[0], active = ['sale', 'reviews'].includes(section) ? 'home' : section === 'support' ? 'account' : section;
     return <div className="trainee-portal mobile-mirror staff-mirror"><PortalHeader intro={!["account", "support", "reviews"].includes(section)} user={user} onNavigate={next => navigate(next === 'support' ? 'support' : 'reviews')}/><main className="trainee-content"><Notice text={error || loadError}/>
- {section === 'account' ? <PortalAccount user={user} onPassword={onPassword} onPurchases={() => navigate('sales')} onSupport={() => navigate('support')} logout={logout} loggingOut={loggingOut}/> : section === 'support' ? <Support /> : section === 'reviews' ? <OperationReviews admin={false}/> : !branches && !loadError ? <Busy /> : !branch ? <Empty title="مفيش فرع متاح للتشغيل">راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.</Empty> : <>
+ {section === 'account' ? <PortalAccount user={user} onPassword={onPassword} onPurchases={() => navigate('visits')} onSupport={() => navigate('support')} logout={logout} loggingOut={loggingOut}/> : section === 'support' ? <Support /> : section === 'reviews' ? <OperationReviews admin={false}/> : !branches && !loadError ? <Busy /> : !branch ? <Empty title="مفيش فرع متاح للتشغيل">راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.</Empty> : <>
  <div className="portal-welcome staff-intro"><small>{user.role === 'BRANCH_MANAGER' ? 'مدير الفرع' : 'كاشير الفرع'}</small>{branches!.length > 1 ? <label className="field">الفرع الحالي<select value={branch.id} onChange={e => { setBranchId(e.target.value); navigate('home'); }}>{branches!.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : <h1>{branch.name}</h1>}<p className="muted">{branch.gymName}</p></div>
- {section === 'home' ? <BranchHome key={branch.id} branch={branch} navigate={navigate}/> : section === 'visits' || section === 'sales' ? <OperationHistory key={`${branch.id}:${section}`} branchId={branch.id} canCancel={branch.canCancel} kind={section}/> : <><ScreenBack title={section === 'sale' ? 'شحن متدرب' : 'تسجيل زيارة'} onBack={() => navigate('home')}/><BranchOperations taskOnly key={`${branch.id}:${section}`} branch={branch} initialTask={section === 'sale' ? 'sale' : 'visit'}/></>}
+ {section === 'home' ? <BranchHome key={branch.id} branch={branch} navigate={navigate}/> : section === 'visits' ? <OperationHistory key={`${branch.id}:${section}`} branchId={branch.id} canCancel={branch.canCancel} kind={section}/> : <><ScreenBack title={'تسجيل زيارة'} onBack={() => navigate('home')}/><BranchOperations taskOnly key={`${branch.id}:${section}`} branch={branch} initialTask={'visit'}/></>}
  </>}
  </main><nav className="trainee-navigation" aria-label="قائمة موظف الفرع">{destinations.map(item => <button key={item.id} className={active === item.id ? 'active' : ''} aria-current={active === item.id ? 'page' : undefined} onClick={() => navigate(item.id)}><item.icon size={22}/><span>{item.label}</span></button>)}</nav></div>;
 }

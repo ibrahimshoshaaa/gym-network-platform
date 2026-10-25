@@ -9,8 +9,8 @@ import { DomainError } from '../domain/errors.js';
 import { maxMoney, methodTypeSchema, moneySchema } from './settings.js';
 
 
-const selection = { kind: z.enum(['TRAINEE', 'BRANCH_STOCK']), receivingBranchId: z.string().uuid().optional(), receivingGymId: z.string().uuid().optional(), points: z.number().int().positive().max(2147483647).optional(), amountPiasters: moneySchema.optional(), packageId: z.string().uuid().optional(), packageVersion: z.number().int().positive().optional() };
-const validSelection = (v: z.infer<z.ZodObject<typeof selection>>) => v.kind === 'TRAINEE' && [v.points,v.amountPiasters,v.packageId].filter(x=>x!==undefined).length===1 && !v.receivingBranchId && !v.receivingGymId && Boolean(v.packageId)===Boolean(v.packageVersion);
+const selection = { kind: z.literal('TRAINEE'), points: z.number().int().positive().max(2147483647).optional(), amountPiasters: moneySchema.optional(), packageId: z.string().uuid().optional(), packageVersion: z.number().int().positive().optional() };
+const validSelection = (v: z.infer<z.ZodObject<typeof selection>>) => v.kind === 'TRAINEE' && [v.points,v.amountPiasters,v.packageId].filter(x=>x!==undefined).length===1 && Boolean(v.packageId)===Boolean(v.packageVersion);
 export const quoteSchema = z.object(selection).strict().refine(validSelection);
 export const submitSchema = z.object({ ...selection, pricingVersion: z.number().int().positive(), receiptId: z.string().uuid(), paymentMethod: methodTypeSchema, paymentMethodVersion: z.number().int().positive() }).strict().refine(validSelection);
 export const reviewSchema = z.discriminatedUnion('decision', [
@@ -30,7 +30,7 @@ export function calculateQuote(unitPrice: bigint, discountBps: number, selection
 }
 
 async function eligibility(tx:Tx,actorId:string,data:Selection){
- if(data.kind!=='TRAINEE'||data.receivingGymId||data.receivingBranchId)throw new DomainError('ACCESS_DENIED');
+
  const user=await requireActor(tx,actorId);if(user.role!=='TRAINEE')throw new DomainError('ACCESS_DENIED');
 }
 async function quote(tx: Tx, actorId: string, data: Selection) {
@@ -48,7 +48,7 @@ async function quote(tx: Tx, actorId: string, data: Selection) {
   return { ...calculation, policy, discountBps };
 }
 
-export const topupView = (r: TopupRequest) => ({ id: r.id, kind: r.kind, requestorUserId: r.requestorUserId, receivingBranchId: r.receivingBranchId, receivingGymId: r.receivingGymId, points: r.points, chargePiasters: r.chargePiasters.toString(), unitPricePiasters: r.unitPricePiasters?.toString() ?? null, discountBps: r.discountBps, redemptionBps: r.redemptionBps, policyId: r.policyId, status: r.status, receiptId: r.receiptId, paymentMethod: r.paymentMethodType, paymentAccount: r.paymentAccount, paymentAccountName: r.paymentAccountName, reviewedAt: r.reviewedAt, reviewReason: r.reviewReason, pointTransactionId: r.pointTransactionId, createdAt: r.createdAt });
+export const topupView = (r: TopupRequest) => ({ id: r.id, kind: r.kind, requestorUserId: r.requestorUserId, points: r.points, chargePiasters: r.chargePiasters.toString(), unitPricePiasters: r.unitPricePiasters?.toString() ?? null, discountBps: r.discountBps, redemptionBps: r.redemptionBps, policyId: r.policyId, status: r.status, receiptId: r.receiptId, paymentMethod: r.paymentMethodType, paymentAccount: r.paymentAccount, paymentAccountName: r.paymentAccountName, reviewedAt: r.reviewedAt, reviewReason: r.reviewReason, pointTransactionId: r.pointTransactionId, createdAt: r.createdAt });
 export function getQuote(db: PrismaClient, actorId: string, input: unknown) {
   const data = parse(quoteSchema, input);
   return db.$transaction(async tx => {
@@ -60,7 +60,7 @@ export function getQuote(db: PrismaClient, actorId: string, input: unknown) {
 export async function submitTopup(db: PrismaClient, actorId: string, key: string, input: unknown) {
   const data = parse(submitSchema, input);if(data.kind!=='TRAINEE')throw new DomainError('ACCESS_DENIED'); parse(z.string().uuid(), key);
   const idempotencyKey = `topup:${actorId}:${key}`;
-  const requestHash = createHash('sha256').update(JSON.stringify({ kind: data.kind, receivingBranchId: data.receivingBranchId, ...(data.receivingGymId ? { receivingGymId: data.receivingGymId } : {}), points: data.points, amountPiasters: data.amountPiasters, packageId: data.packageId, packageVersion: data.packageVersion, pricingVersion: data.pricingVersion, receiptId: data.receiptId, paymentMethod: data.paymentMethod, paymentMethodVersion: data.paymentMethodVersion })).digest('hex');
+  const requestHash = createHash('sha256').update(JSON.stringify({ kind: data.kind, points: data.points, amountPiasters: data.amountPiasters, packageId: data.packageId, packageVersion: data.packageVersion, pricingVersion: data.pricingVersion, receiptId: data.receiptId, paymentMethod: data.paymentMethod, paymentMethodVersion: data.paymentMethodVersion })).digest('hex');
   try {
     return await serializable(db, async tx => {
       await requireActor(tx, actorId);
@@ -75,9 +75,9 @@ export async function submitTopup(db: PrismaClient, actorId: string, key: string
       await tx.$queryRaw`SELECT id FROM "ReceiptEvidence" WHERE id=${data.receiptId}::uuid FOR UPDATE`;
       const receipt = await tx.receiptEvidence.findUnique({ where: { id: data.receiptId } });
       if (!receipt || receipt.ownerUserId !== actorId) throw new DomainError('RECEIPT_ACCESS_DENIED');
-      if (await tx.topupRequest.findUnique({ where: { receiptId: receipt.id } }) || await tx.withdrawalRequest.findUnique({ where: { proofReceiptId: receipt.id } })) throw new DomainError('RECEIPT_ALREADY_USED');
+      if (await tx.financialEvidenceUse.findUnique({where:{receiptId:receipt.id}}) || await tx.topupRequest.findUnique({ where: { receiptId: receipt.id } }) || await tx.withdrawalRequest.findUnique({ where: { proofReceiptId: receipt.id } })) throw new DomainError('RECEIPT_ALREADY_USED');
       const request = await tx.topupRequest.create({ data: {
-        requestorUserId: actorId, kind: data.kind, receivingBranchId: data.receivingBranchId, ...(data.receivingGymId ? { receivingGymId: data.receivingGymId } : {}), points: q.points, chargePiasters: q.chargePiasters,
+        requestorUserId: actorId, kind: data.kind, points: q.points, chargePiasters: q.chargePiasters,
         receiptObjectKey: receipt.objectKey, receiptId: receipt.id, policyId: q.policy.id, unitPricePiasters: q.policy.pointPricePiasters, discountBps: q.discountBps, redemptionBps: q.policy.redemptionBps,
         paymentMethodType: method.type, paymentAccount: method.account, paymentAccountName: method.accountName, idempotencyKey, requestHash,
       } });
@@ -111,7 +111,7 @@ export async function reviewTopup(db: PrismaClient, actorId: string, requestId: 
       }
       if (!request.kind || !request.policyId || !request.receiptId) throw new DomainError('LEGACY_REQUEST_REVIEW_REQUIRED');
       if (BigInt(data.receivedAmountPiasters) !== request.chargePiasters) throw new DomainError('PAYMENT_AMOUNT_MISMATCH');
-      await eligibility(tx, request.requestorUserId, { kind: request.kind, receivingBranchId: request.receivingBranchId ?? undefined, receivingGymId: request.receivingGymId ?? undefined });
+      await eligibility(tx, request.requestorUserId, { kind: request.kind });
       const paymentReference = data.paymentReference.toUpperCase();
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'payment-reference:'+paymentReference},0))`;
       if (await tx.topupRequest.findUnique({ where: { paymentReference } }) || await tx.pointDispatch.findUnique({where:{paymentReference}})) throw new DomainError('PAYMENT_REFERENCE_USED');

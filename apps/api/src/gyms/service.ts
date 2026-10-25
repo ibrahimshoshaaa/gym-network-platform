@@ -96,7 +96,7 @@ export function createBranch(db: PrismaClient, actorId: string, gymId: string, i
       branchId: branch.id, requestedById: actorId, visitPricePoints: data.visitPricePoints, sessionMinutes: data.sessionMinutes,
       previousPricePoints: data.visitPricePoints, previousSessionMinutes: data.sessionMinutes, baseVersion: 0, reason: 'Initial branch pricing proposal',
     } });
-    await audit(tx, actorId, 'BRANCH_CREATED', branch.id, 'Pending branch and empty independent inventory created; price awaits platform approval');
+    await audit(tx, actorId, 'BRANCH_CREATED', branch.id, 'Pending branch created; price awaits platform approval');
     return { branch, pricingRequest };
   });
 }

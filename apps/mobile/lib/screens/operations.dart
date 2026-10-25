@@ -103,14 +103,14 @@ class _BranchDashboardState extends State<BranchDashboard> {
     setState(() { summaryLoading = reportLoading = true; summaryError = reportError = null; });
     final now = DateTime.now();
     final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    Future<void> part(String path, bool stock) async {
+    Future<void> part(String path, bool summaryPart) async {
       try {
         final data = Map<String, dynamic>.from(await widget.api.request(path));
-        if (mounted && current == generation) setState(() { if (stock) { summary = data; } else { report = data; } });
+        if (mounted && current == generation) setState(() { if (summaryPart) { summary = data; } else { report = data; } });
       } catch(e) {
-        if (mounted && current == generation) setState(() { if (stock) { summary = null; summaryError = e; } else { report = null; reportError = e; } });
+        if (mounted && current == generation) setState(() { if (summaryPart) { summary = null; summaryError = e; } else { report = null; reportError = e; } });
       } finally {
-        if (mounted && current == generation) setState(() { if (stock) { summaryLoading = false; } else { reportLoading = false; } });
+        if (mounted && current == generation) setState(() { if (summaryPart) { summaryLoading = false; } else { reportLoading = false; } });
       }
     }
     await Future.wait([
@@ -570,7 +570,7 @@ class _BranchRecordsState extends State<BranchRecords> {
       item: (r) => _record(context, r),
     );
     return widget.embedded ? content : Screen(
-    title: kind == 'visits' ? 'زيارات الفرع' : 'شحن المتدربين',
+    title: 'زيارات الفرع',
     child: content,
   );
   }
@@ -578,18 +578,15 @@ class _BranchRecordsState extends State<BranchRecords> {
 
         child: Column(
           children: [
-            if (kind == 'sales') Fact('المتدرب', '${r['traineeLabel']}'),
             Fact(
               'النقاط',
-              '${r[kind == 'visits' ? 'pointsCharged' : 'points']}',
+              '${r['pointsCharged']}',
               strong: true,
             ),
-            if (kind == 'sales')
-              Fact('المبلغ المحصّل', '${money(r['chargePiasters'])} ج.م'),
             if (kind == 'visits') StatusPill('${r['status']}'),
             Fact(
               'التاريخ',
-              shortDate(r[kind == 'visits' ? 'startedAt' : 'createdAt']),
+              shortDate(r['startedAt']),
             ),
             if (kind == 'visits')
               Fact('نهاية الجلسة', shortDate(r['expiresAt'])),

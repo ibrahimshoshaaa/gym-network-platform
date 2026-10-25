@@ -6,7 +6,7 @@ import 'package:http/testing.dart';
 import 'package:gym_network/main.dart';
 import 'package:gym_network/core/api.dart';
 import 'package:gym_network/core/ui.dart';
-import 'package:gym_network/screens/owner.dart';
+import 'package:gym_network/screens/topup.dart';
 import 'api_test.dart' show MemoryStore;
 
 ApiClient fake(
@@ -200,7 +200,7 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
-  testWidgets('retired owner sending screen makes no sale requests', (t) async {
+  testWidgets('owner cannot use trainee topup or request an SMS/payment operation', (t) async {
     final requests = <String>[];
     final api = fake((r) async {
       requests.add(r.url.path);
@@ -208,10 +208,10 @@ void main() {
     }, user: {'id': 'o1', 'role': 'GYM_OWNER'});
     await t.pumpWidget(MaterialApp(theme: appTheme(), home: Directionality(
       textDirection: TextDirection.rtl,
-      child: SendPoints(api: api, gym: const {'id': 'g1'}),
+      child: TopupScreen(api: api),
     )));
     await t.pumpAndSettle();
-    expect(find.text('شحن النقاط من صاحب المنصة فقط'), findsOneWidget);
+    expect(find.text('شحن النقاط للمتدرب من صاحب المنصة فقط'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     expect(requests, isEmpty);
     expect(t.takeException(), isNull);
