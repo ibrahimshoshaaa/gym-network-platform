@@ -51,7 +51,7 @@ async function scope(tx: Tx, actorId: string, f: Filter): Promise<Scope> {
       branchId: f.branchId,
       admin: true,
       finance: !f.branchId,
-      purchases: true,
+      purchases: admin,
     };
   if (!gymId) throw new DomainError("GYM_ACCESS_DENIED");
   const gym = await tx.gym.findUnique({ where: { id: gymId } });
@@ -63,7 +63,7 @@ async function scope(tx: Tx, actorId: string, f: Filter): Promise<Scope> {
       branchId: f.branchId,
       admin: false,
       finance: !f.branchId,
-      purchases: true,
+      purchases: admin,
     };
   }
   if (!f.branchId) throw new DomainError("BRANCH_ACCESS_DENIED");
@@ -81,9 +81,7 @@ async function scope(tx: Tx, actorId: string, f: Filter): Promise<Scope> {
 function source(kind: Kind, now: Date): Prisma.Sql {
   switch (kind) {
     case "TOPUPS":
-      return Prisma.sql`SELECT t.id,t."createdAt" AS "eventAt",t."reviewedAt" AS "completedAt",g.id AS "gymId",g.name AS "gymName",b.id AS "branchId",b.name AS "branchName",t.status::text AS status,t.points::bigint AS points,t."chargePiasters" AS amount,t."requestorUserId" AS "actorId",(t.status='APPROVED' AND EXISTS(SELECT 1 FROM "PointTransaction" p WHERE p.id=t."pointTransactionId" AND p.posted)) AS sealed FROM "TopupRequest" t LEFT JOIN "Branch" b ON b.id=t."receivingBranchId" LEFT JOIN "Gym" g ON g.id=coalesce(t."receivingGymId",b."gymId") UNION ALL SELECT d.id,d."createdAt",d."createdAt",g.id,g.name,b.id,b.name,'APPROVED'::text,d.points::bigint,d."chargePiasters",d."actorId",p.posted FROM "PointDispatch" d JOIN "PointTransaction" p ON p.id=d."pointTransactionId" LEFT JOIN "Gym" g ON g.id=d."gymId" LEFT JOIN "Branch" b ON b.id=d."branchId" WHERE d.kind='ADMIN_TOPUP'`;
-    case "SALES":
-      return Prisma.sql`SELECT s.id,s."createdAt" AS "eventAt",s."createdAt" AS "completedAt",g.id AS "gymId",g.name AS "gymName",b.id AS "branchId",b.name AS "branchName",'RECORDED'::text AS status,s.points::bigint AS points,s."chargePiasters" AS amount,s."cashierId" AS "actorId",true AS sealed FROM "PointSale" s JOIN "Branch" b ON b.id=s."branchId" JOIN "Gym" g ON g.id=b."gymId" UNION ALL SELECT d.id,d."createdAt",d."createdAt",g.id,g.name,NULL::uuid,NULL::text,'RECORDED'::text,d.points::bigint,d."chargePiasters",d."actorId",p.posted FROM "PointDispatch" d JOIN "Gym" g ON g.id=d."gymId" JOIN "PointTransaction" p ON p.id=d."pointTransactionId" WHERE d.kind='GYM_SALE'`;
+      return Prisma.sql`SELECT t.id,t."createdAt" AS "eventAt",t."reviewedAt" AS "completedAt",NULL::uuid AS "gymId",NULL::text AS "gymName",NULL::uuid AS "branchId",NULL::text AS "branchName",t.status::text AS status,t.points::bigint AS points,t."chargePiasters" AS amount,t."requestorUserId" AS "actorId",(t.status='APPROVED' AND EXISTS(SELECT 1 FROM "PointTransaction" p WHERE p.id=t."pointTransactionId" AND p.posted)) AS sealed FROM "TopupRequest" t UNION ALL SELECT d.id,d."createdAt",d."createdAt",NULL::uuid,NULL::text,NULL::uuid,NULL::text,'APPROVED'::text,d.points::bigint,d."chargePiasters",d."actorId",p.posted FROM "PointDispatch" d JOIN "PointTransaction" p ON p.id=d."pointTransactionId" WHERE d.kind='ADMIN_TOPUP'`;
     case "VISITS":
       return Prisma.sql`SELECT v.id,v."startedAt" AS "eventAt",v."startedAt" AS "completedAt",g.id AS "gymId",g.name AS "gymName",b.id AS "branchId",b.name AS "branchName",CASE WHEN v.status='ACTIVE' AND v."expiresAt"<=${now} THEN 'EXPIRED' ELSE v.status::text END AS status,v."pointsCharged"::bigint AS points,v."settlementPiasters" AS amount,v."cashierId" AS "actorId",true AS sealed FROM "Visit" v JOIN "Branch" b ON b.id=v."branchId" JOIN "Gym" g ON g.id=b."gymId"`;
     case "CANCELLATIONS":
@@ -179,12 +177,11 @@ export async function reportSummary(
   return reportTransaction(db, async (tx) => {
     const s = await scope(tx, actorId, f),
       asOf = new Date();
-    const [topups, sales, visits, cancellations, paidWithdrawals, backlog] =
+    const [topups, visits, cancellations, paidWithdrawals, backlog] =
       await Promise.all([
         s.purchases
           ? aggregate(tx, s, "TOPUPS", p, asOf, true)
           : Promise.resolve(null),
-        aggregate(tx, s, "SALES", p, asOf),
         aggregate(tx, s, "VISITS", p, asOf),
         aggregate(tx, s, "CANCELLATIONS", p, asOf),
         s.finance
@@ -197,9 +194,6 @@ export async function reportSummary(
           Prisma.sql`SELECT type::text AS type,coalesce(sum("balancePiasters"),0)::text AS "balancePiasters" FROM "MoneyAccount" WHERE type<>'PLATFORM_OFFSET' ${s.gymId ? Prisma.sql`AND "gymId"=${s.gymId}::uuid` : Prisma.empty} GROUP BY type ORDER BY type`,
         )
       : null;
-    const [stock] = await tx.$queryRaw<{ points: string }[]>(
-      Prisma.sql`SELECT coalesce(sum(a.balance),0)::text AS points FROM "PointAccount" a LEFT JOIN "Branch" b ON b.id=a."branchId" WHERE a.type IN ('BRANCH_INVENTORY','GYM_INVENTORY') ${s.gymId ? Prisma.sql`AND coalesce(a."gymId",b."gymId")=${s.gymId}::uuid` : Prisma.empty} ${s.branchId ? Prisma.sql`AND b.id=${s.branchId}::uuid` : Prisma.empty}`,
-    );
     let reconciliation = null;
     if (s.admin && !s.gymId && !s.branchId) {
       const pointAccounts = await tx.$queryRaw<
@@ -232,7 +226,6 @@ export async function reportSummary(
         finance: s.finance,
       },
       topups,
-      sales,
       visits,
       cancellations,
       netVisitPoints: (
@@ -242,7 +235,6 @@ export async function reportSummary(
         BigInt(visits.amountPiasters) - BigInt(cancellations.amountPiasters)
       ).toString(),
       paidWithdrawals,
-      currentStockPoints: stock!.points,
       currentBalances: balances,
       serviceCharges:s.finance&&s.gymId&&!s.branchId?await chargeSummary(tx,s.gymId):null,
       alerts: backlog,

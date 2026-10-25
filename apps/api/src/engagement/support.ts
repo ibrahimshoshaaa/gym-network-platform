@@ -24,10 +24,9 @@ async function reference(tx:Prisma.TransactionClient,actorId:string,id?:string){
  const scoped=await tx.branch.findMany({where:{OR:[{gym:{ownerAcceptedAt:{not:null},OR:[{ownerId:actorId},{delegations:{some:{userId:actorId,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId:actorId,active:true,role:'BRANCH_MANAGER'}}}}}]}},{staff:{some:{userId:actorId,active:true}}}]},select:{id:true}});
  const branch={id:{in:scoped.map(b=>b.id)}};
  const admin=actor.role==='PLATFORM_ADMIN';
- if(await tx.pointDispatch.findFirst({where:{id,...(!admin?{OR:[{actorId},{recipientId:actorId},{gymId:{in:(await tx.gym.findMany({where:{ownerAcceptedAt:{not:null},OR:[{ownerId:actorId},{delegations:{some:{userId:actorId,active:true,fullAccess:true,branchId:null}},branches:{some:{staff:{some:{userId:actorId,active:true,role:'BRANCH_MANAGER'}}}}}]},select:{id:true}})).map(g=>g.id)}}]}:{})}}))return;
+ if(await tx.pointDispatch.findFirst({where:{id,...(!admin?{OR:[{actorId},{recipientId:actorId}]}:{})},select:{id:true}}))return;
  if(await tx.topupRequest.findFirst({where:{id,...(!admin?{requestorUserId:actorId}:{})},select:{id:true}}))return;
  if(await tx.visit.findFirst({where:{id,...(!admin?{OR:[{traineeId:actorId},{branch}]}:{})},select:{id:true}}))return;
- if(await tx.pointSale.findFirst({where:{id,...(!admin?{OR:[{traineeId:actorId},{branchId:{in:scoped.map(b=>b.id)}}]}:{})},select:{id:true}}))return;
  const withdrawal=await tx.withdrawalRequest.findUnique({where:{id}});if(withdrawal){if(admin||withdrawal.requestorId===actorId)return;try{if(withdrawal.branchId)await requirePermission(tx,actorId,withdrawal.gymId,'REQUEST_WITHDRAWAL',withdrawal.branchId);else await requireGymOwner(tx,actorId,withdrawal.gymId,false);return;}catch{}}
  throw new DomainError('NOT_FOUND');
 }

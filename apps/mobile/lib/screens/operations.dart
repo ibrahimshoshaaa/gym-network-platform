@@ -570,7 +570,7 @@ class _BranchRecordsState extends State<BranchRecords> {
       item: (r) => _record(context, r),
     );
     return widget.embedded ? content : Screen(
-    title: kind == 'visits' ? 'زيارات الفرع' : 'شحن المتدربين',
+    title: 'زيارات الفرع',
     child: content,
   );
   }
@@ -578,18 +578,15 @@ class _BranchRecordsState extends State<BranchRecords> {
 
         child: Column(
           children: [
-            if (kind == 'sales') Fact('المتدرب', '${r['traineeLabel']}'),
             Fact(
               'النقاط',
-              '${r[kind == 'visits' ? 'pointsCharged' : 'points']}',
+              '${r['pointsCharged']}',
               strong: true,
             ),
-            if (kind == 'sales')
-              Fact('المبلغ المحصّل', '${money(r['chargePiasters'])} ج.م'),
             if (kind == 'visits') StatusPill('${r['status']}'),
             Fact(
               'التاريخ',
-              shortDate(r[kind == 'visits' ? 'startedAt' : 'createdAt']),
+              shortDate(r['startedAt']),
             ),
             if (kind == 'visits')
               Fact('نهاية الجلسة', shortDate(r['expiresAt'])),

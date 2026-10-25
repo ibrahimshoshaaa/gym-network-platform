@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, Circle, Coins, CreditCard, RefreshCw } from "lucide-react";
 import { api, date, decimal, message, type Settings } from "../lib/client";
 import { Busy, Notice } from "./ui";
-export type AdminDestination = "requests" | "finance" | "more" | "gym-applications" | "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "inventory" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
+export type AdminDestination = "requests" | "finance" | "more" | "gym-applications" | "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
 export type AdminSummary = {asOf:string;cards:{label:string;value:string;destination:string;unit?:string}[]};
 const queues = [
  {label:"شحن ينتظر المراجعة",title:"طلبات الشحن",description:"طابق التحويل وأضف النقاط.",destination:"reviews"},

@@ -3,7 +3,6 @@ import { cairoInstant } from "../withdrawals/calendar.js";
 import { DomainError } from "../domain/errors.js";
 export const reportKind = z.enum([
   "TOPUPS",
-  "SALES",
   "VISITS",
   "CANCELLATIONS",
   "WITHDRAWALS",
@@ -30,7 +29,6 @@ export const filterSchema = z
   });
 export const statuses: Record<Kind, readonly string[]> = {
   TOPUPS: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
-  SALES: ["RECORDED"],
   VISITS: ["ACTIVE", "EXPIRED", "CANCELLED"],
   CANCELLATIONS: ["CANCELLED"],
   WITHDRAWALS: [

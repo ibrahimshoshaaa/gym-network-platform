@@ -22,7 +22,7 @@ const reason = z.string().trim().min(5).max(1000);
 export const cancellationSchema = z.object({ reason }).strict();
 export const requestSchema = z
   .object({
-    kind: z.enum(["VISIT_CANCEL", "SALE_CORRECTION"]),
+    kind: z.literal("VISIT_CANCEL"),
     targetId: uuid,
     reason,
     evidenceText: z.string().trim().min(10).max(2000),
@@ -38,7 +38,7 @@ export function reviewView(r: OperationReview) {
   return {
     id: r.id,
     kind: r.kind,
-    targetId: r.visitId ?? r.saleId!,
+    targetId: r.visitId,
     branchId: r.branchId,
     reason: r.reason,
     evidenceText: r.evidenceText,
@@ -264,7 +264,7 @@ async function reviewSerializable<T>(
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002" &&
-      ["visitId", "saleId"].some((column) =>
+      ["visitId"].some((column) =>
         String(error.meta?.target).includes(column),
       )
     )
@@ -288,10 +288,7 @@ export async function requestReview(
     // Serialize different keys for the same target, too. A second request never
     // replaces the first requestor's evidence or terminal decision.
     await lock(tx, `review-target:${data.kind}:${data.targetId}`);
-    const target =
-      data.kind === "VISIT_CANCEL"
-        ? await visit(tx, data.targetId)
-        : await tx.pointSale.findUnique({ where: { id: data.targetId } });
+    const target = await visit(tx,data.targetId);
     if (!target) throw new DomainError("NOT_FOUND");
     const branch = await tx.branch.findUniqueOrThrow({
       where: { id: target.branchId },
@@ -324,9 +321,7 @@ export async function requestReview(
     if (
       await tx.operationReview.findFirst({
         where:
-          data.kind === "VISIT_CANCEL"
-            ? { visitId: data.targetId }
-            : { saleId: data.targetId },
+          { visitId: data.targetId },
       })
     )
       throw new DomainError("OPERATION_REVIEW_EXISTS");
@@ -340,9 +335,7 @@ export async function requestReview(
     const r = await tx.operationReview.create({
       data: {
         kind: data.kind,
-        ...(data.kind === "VISIT_CANCEL"
-          ? { visitId: data.targetId }
-          : { saleId: data.targetId }),
+        ...({ visitId: data.targetId }),
         branchId: branch.id,
         requestorId: actorId,
         reason: data.reason,
@@ -379,8 +372,6 @@ export async function decideReview(
       throw new DomainError("INVALID_STATE");
     }
     if (data.decision === "APPROVE") {
-      if (r.kind === "SALE_CORRECTION")
-        throw new DomainError("SALE_REFUND_POLICY_REQUIRED");
       await reverseVisit(
         tx,
         actorId,

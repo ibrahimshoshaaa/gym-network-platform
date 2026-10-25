@@ -6,7 +6,7 @@ import { useCommand } from "../lib/use-financial-command";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
 import { useListTools } from "./list-tools";
 import { More, Status, usePage } from "./gyms/shared";
-type Kind = "VISIT_CANCEL" | "SALE_CORRECTION";
+type Kind = "VISIT_CANCEL";
 type Review = {
   id: string;
   kind: Kind;
@@ -143,11 +143,10 @@ function RequestForm({
                   نوع العملية
                   <select name="kind" disabled={uncertain}>
                     <option value="VISIT_CANCEL">إلغاء زيارة</option>
-                    <option value="SALE_CORRECTION">تصحيح بيع نقاط</option>
                   </select>
                 </label>
                 <Field
-                  label="مرجع الزيارة أو البيع"
+                  label="مرجع الزيارة"
                   name="target"
                   required
                   maxLength={36}
@@ -541,12 +540,6 @@ function ReviewDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   setError("تعذر عرض الصورة. أعد طلبها.");
                 }}
               />
-            )}
-            {detail.review.kind === "SALE_CORRECTION" && (
-              <p className="subtle-box">
-                اعتماد تصحيح البيع متوقف لحين تحديد مسؤولية رد الفلوس. الطلب لا
-                يرد فلوسًا أو نقاطًا تلقائيًا.
-              </p>
             )}
             {detail.review.status === "PENDING" ? (
               <form onSubmit={submit}>

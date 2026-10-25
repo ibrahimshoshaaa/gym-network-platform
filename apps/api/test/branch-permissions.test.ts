@@ -26,7 +26,7 @@ test('manager and cashier can register visits; only manager can cancel', async (
   await requireBranchAccess(cashier.tx, 'cashier', 'branch', 'OPERATE_BRANCH');
   for (const permission of ['CANCEL_VISIT'] as const)
     await assert.rejects(requireBranchAccess(cashier.tx, 'cashier', 'branch', permission), { code: 'BRANCH_ACCESS_DENIED' });
-  await assert.rejects(requireBranchAccess(manager.tx, 'manager', 'branch', 'TRANSFER_STOCK'), { code: 'ACCESS_DENIED' });
+  await assert.rejects(requireBranchAccess(manager.tx, 'manager', 'branch', 'TRANSFER_STOCK' as never), { code: 'ACCESS_DENIED' });
 });
 test('global labels never substitute for scoped assignments; inactive tenants fail closed', async () => {
   for (const actor of ['unassigned-manager', 'other-owner', 'admin', 'trainee']) {
@@ -45,4 +45,4 @@ test('global labels never substitute for scoped assignments; inactive tenants fa
   }
 });
 
-test('retired sale and stock permissions deny even the actual gym owner',async()=>{const {tx}=scope('owner');for(const p of ['SELL_POINTS','TRANSFER_STOCK'] as const)await assert.rejects(requireBranchAccess(tx,'owner','branch',p),{code:'ACCESS_DENIED'});});
+test('retired sale and stock permissions deny even the actual gym owner',async()=>{const {tx}=scope('owner');for(const p of ['SELL_POINTS','TRANSFER_STOCK'] as const)await assert.rejects(requireBranchAccess(tx,'owner','branch',p as never),{code:'ACCESS_DENIED'});});

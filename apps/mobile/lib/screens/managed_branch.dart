@@ -10,31 +10,28 @@ class ManagedBranch extends StatefulWidget{
 }
 class _ManagedBranchState extends State<ManagedBranch>{
  final name=TextEditingController(),address=TextEditingController(),city=TextEditingController(),governorate=TextEditingController(),points=TextEditingController(),minutes=TextEditingController(),reason=TextEditingController(),amount=TextEditingController(),account=TextEditingController();
- String method='INSTAPAY';bool busy=false,confirmed=false;Object? error;Json? entitlement;int version=0;String? target;List<Json> destinations=[];
+ String method='INSTAPAY';bool busy=false,confirmed=false;Object? error;Json? entitlement;int version=0;
  String get path=>'gyms/${widget.branch['gymId']}';
  @override void initState(){super.initState();load();}
  @override void dispose(){for(final c in [name,address,city,governorate,points,minutes,reason,amount,account]){c.dispose();}super.dispose();}
  Future<void> load()async{try{
   if(widget.task=='withdraw'){final r=await widget.api.request('operations/branches/${widget.branch['id']}/entitlements');if(mounted)setState(()=>entitlement=Map<String,dynamic>.from(r));}
   if(widget.task=='edit'){final r=await widget.api.request('branches/${widget.branch['id']}/manage');if(mounted)setState((){name.text=r['name']??'';address.text=r['address']??'';city.text=r['city']??'';governorate.text=r['governorate']??'';});}
-  if(widget.task=='transfer'){final r=await widget.api.request('operations/branches');if(mounted)setState(()=>destinations=rows(r).where((b)=>b['gymId']==widget.branch['gymId']&&b['id']!=widget.branch['id']&&(b['permissions'] as List? ??[]).contains('TRANSFER_STOCK')).toList());}
  }catch(e){if(mounted)setState(()=>error=e);}}
  Future<void> submit()async{if(busy||widget.api.pending!=null||!confirmed)return;setState((){busy=true;error=null;});try{
   if(widget.task=='edit')await widget.api.request('$path/branches/${widget.branch['id']}',method:'PATCH',body:{'name':name.text,'address':address.text,'city':city.text,'governorate':governorate.text});
   if(widget.task=='price')await widget.api.request('$path/branches/${widget.branch['id']}/price-change-requests',method:'POST',body:{'visitPricePoints':int.tryParse(digits(points.text)),'sessionMinutes':int.tryParse(digits(minutes.text)),'reason':reason.text});
   if(widget.task=='withdraw')await widget.api.transact('$path/withdrawals',{'branchId':widget.branch['id'],'amountPiasters':piasters(amount.text),'paymentMethod':method,'destinationName':name.text,'destinationAccount':account.text});
-  if(widget.task=='transfer')await widget.api.transact('$path/stock-transfers',{'fromBranchId':widget.branch['id'],'toBranchId':target,'points':int.tryParse(digits(points.text))});
   if(mounted){setState((){version++;confirmed=false;});ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم تسجيل الطلب بنجاح')));await load();}
  }catch(e){if(mounted)setState(()=>error=e);}finally{if(mounted)setState(()=>busy=false);}}
  Widget field(TextEditingController c,String label,{bool numeric=false})=>Padding(padding:const EdgeInsets.only(bottom:14),child:TextField(controller:c,enabled:!busy&&widget.api.pending==null,keyboardType:numeric?const TextInputType.numberWithOptions(decimal:true):TextInputType.text,onChanged:(_)=>setState(()=>confirmed=false),decoration:InputDecoration(labelText:label)));
  @override Widget build(BuildContext context){
  final locked=busy||widget.api.pending!=null;
  if(widget.task=='staff')return Screen(title:'كاشير ${widget.branch['name']}',child:PagedRecords(key:ValueKey(version),api:widget.api,path:'$path/staff?branchId=${widget.branch['id']}',header:ActionButton('دعوة كاشير',onPressed:()=>open(context,InviteStaff(api:widget.api,gymId:widget.branch['gymId'],branchId:widget.branch['id'],allowManager:false))),item:(s)=>s['role']!='CASHIER'?const SizedBox.shrink():Panel(child:Column(children:[Text('${s['user']['displayName']}'),StatusPill(s['active']==true?'ACTIVE':'SUSPENDED'),TextButton(onPressed:locked?null:()async{setState(()=>busy=true);try{await widget.api.request('$path/staff/${s['id']}',method:'PATCH',body:{'active':s['active']!=true});if(mounted)setState(()=>version++);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}finally{if(mounted)setState(()=>busy=false);}},child:Text(s['active']==true?'إيقاف التعيين':'تفعيل التعيين'))]))));
- return Screen(title:{'edit':'بيانات الفرع','price':'طلب تعديل السعر','withdraw':'مستحقات الفرع والسحب','transfer':'تحويل نقاط الفرع'}[widget.task]??'إدارة الفرع',child:ListView(padding:const EdgeInsets.all(20),children:[
+ return Screen(title:{'edit':'بيانات الفرع','price':'طلب تعديل السعر','withdraw':'مستحقات الفرع والسحب'}[widget.task]??'إدارة الفرع',child:ListView(padding:const EdgeInsets.all(20),children:[
  Panel(child:Text('${widget.branch['gymName']} · ${widget.branch['name']}')),const SizedBox(height:16),ErrorNote(error,retry:load),
  if(widget.task=='edit')...[field(name,'اسم الفرع'),field(address,'العنوان'),field(city,'المدينة'),field(governorate,'المحافظة')],
  if(widget.task=='price')...[field(points,'نقاط الزيارة المقترحة',numeric:true),field(minutes,'مدة الزيارة بالدقائق',numeric:true),field(reason,'سبب التعديل')],
- if(widget.task=='transfer')...[
  DropdownButtonFormField<String>(initialValue:target,decoration:const InputDecoration(labelText:'الفرع المستلم'),items:destinations.map((b)=>DropdownMenuItem<String>(value:b['id'],child:Text('${b['name']}'))).toList(),onChanged:locked?null:(v)=>setState((){target=v;confirmed=false;})),const SizedBox(height:16),field(points,'عدد النقاط',numeric:true),
  ],
  if(widget.task=='withdraw')...[

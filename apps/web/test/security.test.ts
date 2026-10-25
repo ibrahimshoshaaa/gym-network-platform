@@ -217,16 +217,16 @@ test("report proxy exposes only read-only explicit routes", () => {
     assert.equal(allowedPath("GET", path), false);
 });
 
-test("inventory proxy scopes read paths and exposes only the owner transfer action", () => {
+test("removed inventory and transfer paths are denied by the gateway", () => {
   const id = "86d076a7-7827-4013-a6f9-a32f94e0131b";
   for (const path of [
     `inventory/branches/${id}`,
     `inventory/branches/${id}/movements`,
   ]) {
-    assert.equal(allowedPath("GET", path), true);
+    assert.equal(allowedPath("GET", path), false);
     assert.equal(allowedPath("POST", path), false);
   }
-  assert.equal(allowedPath("POST", `gyms/${id}/stock-transfers`), true);
+  assert.equal(allowedPath("POST", `gyms/${id}/stock-transfers`), false);
   for (const path of [
     `inventory/branches/${id}/adjust`,
     `gyms/${id}/stock-transfers/reverse`,
@@ -262,11 +262,11 @@ test("trainee wallet proxy allows only own read endpoints without arbitrary acco
 });
 
 
-test('inventory overview and immutable transfer history use explicit gym UUID routes',()=>{
+test('retired inventory routes stay absent for valid UUIDs',()=>{
  const id='86d076a7-7827-4013-a6f9-a32f94e0131b';
- assert.equal(allowedPath('GET',`gyms/${id}/inventory`),true);
- assert.equal(allowedPath('GET',`gyms/${id}/stock-transfers`),true);
- assert.equal(allowedPath('POST',`gyms/${id}/stock-transfers`),true);
+ assert.equal(allowedPath('GET',`gyms/${id}/inventory`),false);
+ assert.equal(allowedPath('GET',`gyms/${id}/stock-transfers`),false);
+ assert.equal(allowedPath('POST',`gyms/${id}/stock-transfers`),false);
  assert.equal(allowedPath('POST',`gyms/${id}/inventory`),false);
  assert.equal(allowedPath('GET','gyms/not-a-uuid/inventory'),false);
 });

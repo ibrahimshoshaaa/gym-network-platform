@@ -6,7 +6,7 @@ import {DomainError} from '../domain/errors.js';
 import {parse} from './validation.js';
 import {audit} from './service.js';
 import {serializable} from '../ledger/service.js';
-export const delegationSchema=z.object({userId:z.string().uuid(),branchId:z.string().uuid().nullable(),permissions:z.array(z.enum(permissions)).max(permissions.length).refine(v=>!v.includes('TRANSFER_STOCK')),fullAccess:z.boolean(),active:z.boolean(),expectedVersion:z.number().int().min(0)}).strict();
+export const delegationSchema=z.object({userId:z.string().uuid(),branchId:z.string().uuid().nullable(),permissions:z.array(z.enum(permissions)).max(permissions.length),fullAccess:z.boolean(),active:z.boolean(),expectedVersion:z.number().int().min(0)}).strict();
 export async function saveDelegation(db:PrismaClient,actorId:string,gymId:string,input:unknown){
  const d=parse(delegationSchema,input);
  return serializable(db,async tx=>{

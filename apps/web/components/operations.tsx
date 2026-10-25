@@ -21,14 +21,6 @@ type Branch = {
   canOperate: boolean;
   canCancel: boolean;
 };
-type Sale = {
-  id: string;
-  traineeLabel: string;
-  phoneLast4: string;
-  points: number;
-  chargePiasters: string;
-  createdAt: string;
-};
 type Visit = {
   id: string;
   pointsCharged: number;
@@ -49,17 +41,9 @@ type Preview = {
   alreadyActive: boolean;
   visit: Visit | null;
 };
-type SaleQuote = {
-  points: number;
-  chargePiasters: string;
-  pricingVersion: number;
-  stock: number;
-  traineeLabel: string;
-  phoneLast4: string;
-};
-export function Cashier({initialTask = "visit",gymId,initialBranchId}: {initialTask?: "visit" | "sale" | "history";gymId?:string;initialBranchId?:string}) {
-  const [recordKind,setRecordKind]=useState<"visits"|"sales"|"reviews"|null>(null);
-  const [task,setTask]=useState<"visit"|"sale"|"history"|null>(initialBranchId?initialTask:null);
+export function Cashier({initialTask = "visit",gymId,initialBranchId}: {initialTask?: "visit" | "history";gymId?:string;initialBranchId?:string}) {
+  const [recordKind,setRecordKind]=useState<"visits"|"reviews"|null>(null);
+  const [task,setTask]=useState<"visit"|"history"|null>(initialBranchId?initialTask:null);
   const [branches, setBranches] = useState<Branch[]>([]),
     [branch, setBranch] = useState(initialBranchId??""),
     [loading, setLoading] = useState(true),
@@ -82,15 +66,15 @@ export function Cashier({initialTask = "visit",gymId,initialBranchId}: {initialT
     void load();
   }, [gymId]);
   const selected=branches.find(b=>b.id===branch);
-  if(gymId)return <>{task&&selected?<><ScreenBack title={task==="visit"?"تسجيل زيارة":task==="sale"?"شحن متدرب":selected.name} onBack={()=>{if(recordKind)setRecordKind(null);else setTask(null);void load();}}/><div className="native-operation-context"><strong>{selected.gymName} · {selected.name}</strong></div>{task==="history"?recordKind==="reviews"?<OperationReviews admin={false}/>:recordKind?<OperationHistory key={recordKind} branchId={selected.id} canCancel={selected.canCancel} kind={recordKind}/>:<BranchHome branch={selected} navigate={next=>{if(next==="visits"||next==="sales"||next==="reviews")setRecordKind(next);else if(next==="visit"||next==="sale")setTask(next);}}/>:<BranchOperations key={`${branch}:${task}`} branch={selected} initialTask={task} taskOnly/>}</>:<>
+  if(gymId)return <>{task&&selected?<><ScreenBack title={task==="visit"?"تسجيل زيارة":selected.name} onBack={()=>{if(recordKind)setRecordKind(null);else setTask(null);void load();}}/><div className="native-operation-context"><strong>{selected.gymName} · {selected.name}</strong></div>{task==="history"?recordKind==="reviews"?<OperationReviews admin={false}/>:recordKind?<OperationHistory key={recordKind} branchId={selected.id} canCancel={selected.canCancel} kind={recordKind}/>:<BranchHome branch={selected} navigate={next=>{if(next==="visits"||next==="reviews")setRecordKind(next);else if(next==="visit")setTask(next);}}/>:<BranchOperations key={`${branch}:${task}`} branch={selected} initialTask={task} taskOnly/>}</>:<>
     <PortalIntro title="تشغيل الجيم" eyebrow="صاحب الجيم" detail="اختار مهمتك من الفرع الصحيح. كل عملية بتتسجل باسم حسابك."/>
     <Notice text={error}/>{loading?<Busy/>:!branches.length?<Empty title="مفيش فرع متاح للتشغيل">لازم الفرع يكون نشط وحسابك متعيّن عليه. راجع صاحب الجيم أو الإدارة.</Empty>:<><p className="muted native-small">{branches.length} فرع متاح لحسابك</p>{branches.map(b=><article className="card native-operation-branch" key={b.id}><p className="muted">{b.gymName}</p><h2>{b.name}</h2>{b.canCancel&&<p className="native-green native-small">تقدر تلغي الزيارة خلال أول ١٠ دقائق.</p>}{b.canOperate&&<div className="native-task-grid"><PortalTask title="تسجيل زيارة" detail="مسح رمز المتدرب" icon={ScanLine} primary onClick={()=>{setBranch(b.id);setTask("visit");}}/></div>}<button className="primary full" onClick={()=>{setBranch(b.id);setTask("history");}}>فتح الفرع</button></article>)}</>}
   </>}</>;
   return <><Notice text={error}/>{loading?<Busy/>:<><label className="field">الفرع الحالي<select value={branch} onChange={e=>setBranch(e.target.value)}>{branches.map(b=><option key={b.id} value={b.id}>{b.gymName} · {b.name}</option>)}</select></label>{selected&&<BranchOperations key={branch} branch={selected} initialTask={initialTask}/>}</>}</>;
 }
 
-export function BranchOperations({branch,initialTask,taskOnly=false}:{branch:Branch;initialTask:"visit"|"sale"|"history";taskOnly?:boolean}){
- return initialTask==='sale'?<Empty title="شحن النقاط من صاحب المنصة فقط"/>:initialTask==='visit'&&branch.canOperate?<><BookingScanner branchId={branch.id}/><details className="card"><summary>زيارة بدون حجز مسبق</summary><VisitForm branchId={branch.id}/></details></>:<OperationHistory branchId={branch.id} canCancel={branch.canCancel} kind="visits"/>;
+export function BranchOperations({branch,initialTask,taskOnly=false}:{branch:Branch;initialTask:"visit"|"history";taskOnly?:boolean}){
+ return initialTask==='visit'&&branch.canOperate?<><BookingScanner branchId={branch.id}/><details className="card"><summary>زيارة بدون حجز مسبق</summary><VisitForm branchId={branch.id}/></details></>:<OperationHistory branchId={branch.id} canCancel={branch.canCancel} kind="visits"/>;
 }
 
 function VisitForm({ branchId }: { branchId: string }) {
@@ -325,33 +309,12 @@ export function OperationHistory({
 }: {
   branchId: string;
   canCancel: boolean;
-  kind?: "visits" | "sales";
+  kind?: "visits";
 }) {
-  const sales = usePage<Sale>(kind==="visits"?null:`operations/branches/${branchId}/sales`),
-    visits = usePage<Visit>(kind==="sales"?null:`operations/branches/${branchId}/visits`);
+  const visits=usePage<Visit>(`operations/branches/${branchId}/visits`);
   return (
     <div className="two-columns">
-      {kind!=='visits'&&<section className="card">
-        <h2>مبيعات النقاط</h2>
-        <Notice text={sales.error} />
-        {sales.loading && !sales.rows.length ? (
-          <Busy />
-        ) : !sales.rows.length ? (
-          <Empty title="لا توجد مبيعات" />
-        ) : (
-          <div className="timeline">
-            {sales.rows.map((s) => (
-              <article key={s.id}>
-                <Fact label="المتدرب">{s.traineeLabel}</Fact><Fact label="النقاط" strong>{s.points} نقطة</Fact><Fact label="المبلغ المحصّل">{decimal(s.chargePiasters)} ج.م</Fact><Fact label="التاريخ">{date(s.createdAt)}</Fact>
-                <RecordReference value={s.id} />
-                <RequestAction kind="SALE_CORRECTION" targetId={s.id} />
-              </article>
-            ))}
-          </div>
-        )}
-        <More list={sales} />
-      </section>}
-      {kind!=='sales'&&<section className="card">
+      <section className="card">
         <h2>الزيارات المسجلة</h2>
         <Notice text={visits.error} />
         {visits.loading && !visits.rows.length ? (
@@ -395,7 +358,7 @@ export function OperationHistory({
           </div>
         )}
         <More list={visits} />
-      </section>}
+      </section>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test, { after } from 'node:test';
 import { PrismaClient } from '@prisma/client';
-import { postLedger, reverseLedger, transferStock, type LedgerCommand } from '../src/ledger/service.js';
+import { postLedger, reverseLedger, type LedgerCommand } from '../src/ledger/service.js';
 import { requireBranchAccess } from '../src/auth/authorization.js';
 import { createSession, hashToken } from '../src/auth/sessions.js';
 import { buildApp } from '../src/app.js';
@@ -35,21 +35,21 @@ async function fixture() {
     { userId: manager.id, branchId: a.id, role: 'BRANCH_MANAGER' },
   ] });
   const issuance = await db.pointAccount.findFirst({ where: { type: 'ISSUANCE' } }) ?? await db.pointAccount.create({ data: { type: 'ISSUANCE' } });
-  const stockA = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: (await user('TRAINEE')).id } });
-  const stockB = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: (await user('TRAINEE')).id } });
+  const walletA = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: (await user('TRAINEE')).id } });
+  const walletB = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: (await user('TRAINEE')).id } });
   const wallet = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: trainee.id } });
   const offset = await db.moneyAccount.findFirst({ where: { type: 'PLATFORM_OFFSET' } }) ?? await db.moneyAccount.create({ data: { type: 'PLATFORM_OFFSET' } });
   const money = await db.moneyAccount.create({ data: { type: 'GYM_AVAILABLE', gymId: gym.id } });
   const command = (amount = 50): LedgerCommand => ({ actorId: admin.id, idempotencyKey: randomUUID(), reason: 'Synthetic funding',
-    points: { kind: 'ISSUE', entries: [{ accountId: issuance.id, delta: -BigInt(amount) }, { accountId: stockA.id, delta: BigInt(amount) }] },
+    points: { kind: 'ISSUE', entries: [{ accountId: issuance.id, delta: -BigInt(amount) }, { accountId: walletA.id, delta: BigInt(amount) }] },
   });
-  return { admin, owner, outsider, cashier, manager, trainee, gym, otherGym, a, b, foreign, issuance, stockA, stockB, wallet, offset, money, command };
+  return { admin, owner, outsider, cashier, manager, trainee, gym, otherGym, a, b, foreign, issuance, walletA, walletB, wallet, offset, money, command };
 }
 
 test('committed ledgers balance, cached balances reconcile, and issuance offset may be negative', async () => {
   const f = await fixture();
   await postLedger(db, f.command());
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 50);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.walletA.id } })).balance, 50);
   assert.ok((await db.pointAccount.findUniqueOrThrow({ where: { id: f.issuance.id } })).balance < 0);
   const drift = await db.$queryRaw<unknown[]>`SELECT a.id FROM "PointAccount" a LEFT JOIN "PointPosting" p ON p."accountId" = a.id GROUP BY a.id HAVING a.balance <> COALESCE(sum(p.delta),0)`;
   assert.equal(drift.length, 0);
@@ -60,7 +60,7 @@ test('ten simultaneous retries create one transaction and audit entry', async ()
   const results = await Promise.all(Array.from({ length: 10 }, () => postLedger(db, cmd)));
   assert.equal(new Set(results.map(r => r.pointTransactionId)).size, 1);
   assert.equal(await db.auditLog.count({ where: { entityId: results[0]!.pointTransactionId } }), 1);
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 50);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.walletA.id } })).balance, 50);
 });
 
 test('a retry with reordered postings returns original result; changed payload/actor conflicts', async () => {
@@ -74,11 +74,10 @@ test('a retry with reordered postings returns original result; changed payload/a
 
 test('concurrent admin wallet movements cannot overdraw a trainee wallet',async()=>{
  const f=await fixture();await postLedger(db,f.command());
- const results=await Promise.allSettled([1,2].map(()=>postLedger(db,{actorId:f.admin.id,idempotencyKey:randomUUID(),reason:'Synthetic wallet movement',points:{kind:'TRANSFER',entries:[{accountId:f.stockA.id,delta:-40n},{accountId:f.stockB.id,delta:40n}]}})));
- assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.stockA.id}})).balance,10);
+ const results=await Promise.allSettled([1,2].map(()=>postLedger(db,{actorId:f.admin.id,idempotencyKey:randomUUID(),reason:'Synthetic wallet movement',points:{kind:'TRANSFER',entries:[{accountId:f.walletA.id,delta:-40n},{accountId:f.walletB.id,delta:40n}]}})));
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.walletA.id}})).balance,10);
 });
 
-test('stock transfers are denied for admin, owner, manager, cashier and foreign owner',async()=>{const f=await fixture();for(const actor of [f.admin,f.owner,f.manager,f.cashier,f.outsider])assert.throws(()=>transferStock(db,{actorId:actor.id,fromBranchId:f.a.id,toBranchId:f.b.id,points:40,idempotencyKey:randomUUID()}),/ACCESS_DENIED/);});
 
 test('cashier/manager permission requires an active assignment in the exact branch', async () => {
   const f = await fixture();
@@ -89,7 +88,6 @@ test('cashier/manager permission requires an active assignment in the exact bran
   await db.staffAssignment.updateMany({ where: { userId: f.cashier.id }, data: { active: false } });
   await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'OPERATE_BRANCH')), /BRANCH_ACCESS_DENIED/);
   await db.user.update({ where: { id: f.owner.id }, data: { isActive: false } });
-  await assert.rejects(async()=>transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points: 1, idempotencyKey: randomUUID() }), /ACCESS_DENIED/);
 });
 
 test('non-admin cannot call the generic financial primitive', async () => {
@@ -101,7 +99,7 @@ test('a failing money leg rolls back the points, headers and audit atomically', 
   const f = await fixture(); const cmd = f.command();
   cmd.money = { kind: 'ADJUSTMENT', entries: [{ accountId: f.money.id, delta: -1n }, { accountId: f.offset.id, delta: 1n }] };
   await assert.rejects(postLedger(db, cmd), /INSUFFICIENT_FUNDS/);
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 0);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.walletA.id } })).balance, 0);
   assert.equal(await db.pointTransaction.count({ where: { idempotencyKey: cmd.idempotencyKey } }), 0);
   assert.equal(await db.moneyTransaction.count({ where: { idempotencyKey: cmd.idempotencyKey } }), 0);
 });
@@ -121,7 +119,7 @@ test('a late money FK failure rolls back already-written point postings and bala
     { accountId: f.offset.id, delta: -100n }, { accountId: f.money.id, delta: 100n },
   ] };
   await assert.rejects(postLedger(db, cmd));
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 0);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.walletA.id } })).balance, 0);
   assert.equal(await db.pointTransaction.count({ where: { idempotencyKey: cmd.idempotencyKey } }), 0);
   assert.equal(await db.moneyTransaction.count({ where: { idempotencyKey: cmd.idempotencyKey } }), 0);
 });
@@ -149,7 +147,7 @@ test('exact reversal preserves original records, is replayable and cannot be app
   const input = { actorId: f.admin.id, idempotencyKey: randomUUID(), reason: 'Synthetic funding reversal', pointTransactionId: result.pointTransactionId };
   const reversal = await reverseLedger(db, input);
   assert.deepEqual(await reverseLedger(db, input), reversal);
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 0);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.walletA.id } })).balance, 0);
   assert.equal(await db.pointPosting.count({ where: { transactionId: result.pointTransactionId } }), 2);
   await assert.rejects(reverseLedger(db, { ...input, idempotencyKey: randomUUID() }));
 });
@@ -165,12 +163,9 @@ test('cannot reverse half of a point/money bundle', async () => {
 
 test('invalid amounts, unbalanced, duplicate accounts, and missing accounts fail without postings', async () => {
   const f = await fixture();
-  for (const points of [0, -1, 0.1, Infinity, 2147483648]) {
-    assert.throws(() => transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points, idempotencyKey: randomUUID() }), /ACCESS_DENIED/);
-  }
   const cmd = f.command(); cmd.points!.entries[0]!.delta = -49n;
   await assert.rejects(postLedger(db, cmd), /INVALID_POSTINGS/);
-  await assert.rejects(postLedger(db, { ...f.command(), points: { kind: 'TRANSFER', entries: [{ accountId: f.stockA.id, delta: -1n }, { accountId: f.stockA.id, delta: 1n }] } }), /INVALID_POSTINGS/);
+  await assert.rejects(postLedger(db, { ...f.command(), points: { kind: 'TRANSFER', entries: [{ accountId: f.walletA.id, delta: -1n }, { accountId: f.walletA.id, delta: 1n }] } }), /INVALID_POSTINGS/);
   const missing = f.command(); missing.points!.entries[1]!.accountId = randomUUID();
   await assert.rejects(postLedger(db, missing), /ACCOUNT_NOT_FOUND/);
 });
@@ -179,21 +174,21 @@ test('database rejects invalid ownership, duplicate wallets and cross-gym money 
   const f = await fixture();
   await assert.rejects(db.pointAccount.create({ data: { type: 'TRAINEE_WALLET' } }));
   await assert.rejects(db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: f.trainee.id } }));
-  await assert.rejects(db.pointAccount.create({ data: { type: 'BRANCH_INVENTORY', branchId: f.a.id, ownerUserId: f.trainee.id } }));
-  await assert.rejects(db.pointAccount.create({ data: { type: 'BRANCH_INVENTORY', branchId: f.foreign.id, expiresAt: new Date() } }));
+  await assert.rejects(db.pointAccount.create({ data: { type: 'ARCHIVED', ownerUserId: f.trainee.id } }));
+  await assert.rejects(db.pointAccount.create({ data: { type: 'ARCHIVED', expiresAt: new Date() } }));
   await assert.rejects(db.moneyAccount.create({ data: { type: 'GYM_AVAILABLE', gymId: f.gym.id, branchId: f.foreign.id } }));
   await assert.rejects(db.staffAssignment.create({ data: { userId: f.cashier.id, branchId: f.b.id, role: 'PLATFORM_ADMIN' } }));
 });
 
 test('database blocks negative/unsupported balances, identity edits, ledger edits and late postings', async () => {
   const f = await fixture(); const r = await postLedger(db, f.command());
-  await assert.rejects(db.pointAccount.update({ where: { id: f.stockA.id }, data: { balance: -1 } }));
-  await assert.rejects(db.pointAccount.update({ where: { id: f.stockA.id }, data: { balance: 999 } }));
+  await assert.rejects(db.pointAccount.update({ where: { id: f.walletA.id }, data: { balance: -1 } }));
+  await assert.rejects(db.pointAccount.update({ where: { id: f.walletA.id }, data: { balance: 999 } }));
   await assert.rejects(db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: f.admin.id, balance: 100 } }));
   await assert.rejects(db.pointAccount.update({ where: { id: f.wallet.id }, data: { ownerUserId: f.admin.id } }));
   await assert.rejects(db.pointTransaction.update({ where: { id: r.pointTransactionId }, data: { reason: 'Tamper' } }));
   await assert.rejects(db.pointPosting.deleteMany({ where: { transactionId: r.pointTransactionId } }));
-  await assert.rejects(db.pointPosting.create({ data: { transactionId: r.pointTransactionId!, accountId: f.stockB.id, delta: 1 } }));
+  await assert.rejects(db.pointPosting.create({ data: { transactionId: r.pointTransactionId!, accountId: f.walletB.id, delta: 1 } }));
   await assert.rejects(db.auditLog.deleteMany({ where: { entityId: r.pointTransactionId } }));
 });
 
@@ -203,10 +198,10 @@ test('unsealed or unbalanced raw SQL transactions cannot commit; trigger changes
   await assert.rejects(db.$transaction(async tx => {
     const t = await tx.pointTransaction.create({ data: { actorId: f.admin.id, idempotencyKey: randomUUID(), requestHash: 'a'.repeat(64), reason: 'Unbalanced', kind: 'ISSUE' } });
     await tx.pointPosting.create({ data: { transactionId: t.id, accountId: f.issuance.id, delta: -100 } });
-    await tx.pointPosting.create({ data: { transactionId: t.id, accountId: f.stockA.id, delta: 50 } });
+    await tx.pointPosting.create({ data: { transactionId: t.id, accountId: f.walletA.id, delta: 50 } });
     await tx.pointTransaction.update({ where: { id: t.id }, data: { posted: true } });
   }));
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 0);
+  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.walletA.id } })).balance, 0);
 });
 
 test('sessions store only hashes; invalid, expired, logged-out and disabled sessions fail', async () => {

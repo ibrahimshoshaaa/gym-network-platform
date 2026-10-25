@@ -1,19 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type {Prisma,PrismaClient} from '@prisma/client';
-import {lookupTrainee,quoteSale,sellPoints} from '../src/operations/service.js';
 import {dispatchPoints,lookup,pointQuote} from '../src/points/service.js';
-import {transferStock} from '../src/ledger/service.js';
 import {quoteSchema} from '../src/topups/service.js';
 import {welcomeSchema,grantWelcomePoints,saveWelcomeSettings} from '../src/points/welcome.js';
 import {policySchema,packageSchema} from '../src/topups/settings.js';
 const id='10000000-0000-4000-8000-000000000001',gym='10000000-0000-4000-8000-000000000002';
 const never=new Proxy({},{get(){throw Error('Retired operation touched database');}}) as PrismaClient;
-test('all retired owner/cashier mutations reject before database access, including replay',async()=>{
- for(const call of [()=>lookupTrainee(never,id,gym,{}),()=>quoteSale(never,id,gym,{}),()=>sellPoints(never,id,gym,id,{}),()=>dispatchPoints(never,id,id,{},gym),()=>pointQuote(never,id,{recipientId:id,points:10},gym)])await assert.rejects(call(),{code:'ACCESS_DENIED'});
- assert.throws(()=>transferStock(never,{actorId:id,gymId:gym,fromBranchId:null,toBranchId:id,points:1,idempotencyKey:id}),{code:'ACCESS_DENIED'});
- await assert.rejects(lookup(never,id,{phone:'+201012345678'},gym),{code:'ACCESS_DENIED'});
-});
 test('no new gym purchase, stock package or gym purchase discount is accepted',()=>{
  assert.equal(quoteSchema.safeParse({kind:'BRANCH_STOCK',receivingGymId:gym,points:10}).success,false);
  assert.equal(quoteSchema.safeParse({kind:'TRAINEE',points:10}).success,true);

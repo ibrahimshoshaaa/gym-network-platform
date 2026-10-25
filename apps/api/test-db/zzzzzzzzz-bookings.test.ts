@@ -16,7 +16,7 @@ test('scheduled escrow, refunds, physical QR arrival, no-shows and review permis
  const gym=await db.gym.create({data:{name:'Booking test gym',ownerId:owner.id,ownerAcceptedAt:new Date(),status:'ACTIVE'}});
  const branch=await db.branch.create({data:{gymId:gym.id,name:'Booking test branch',status:'ACTIVE',visitPricePoints:25,sessionMinutes:120,pricingVersion:1,priceApprovedAt:new Date()}});
  let pricing=await db.pricingPolicy.findFirst({orderBy:{version:'desc'}});
- if(!pricing)pricing=await db.pricingPolicy.create({data:{version:1,pointPricePiasters:100n,gymDiscountBps:0,redemptionBps:8000,createdById:admin.id}});
+ if(!pricing)pricing=await db.pricingPolicy.create({data:{version:1,pointPricePiasters:100n,redemptionBps:8000,createdById:admin.id}});
  const issuance=await db.pointAccount.findFirst({where:{type:'ISSUANCE'}})??await db.pointAccount.create({data:{type:'ISSUANCE'}});
  const wallet=await db.pointAccount.create({data:{type:'TRAINEE_WALLET',ownerUserId:customer.id,expiresAt:new Date(Date.now()+86400000)}});
  await postLedger(db,{actorId:admin.id,idempotencyKey:randomUUID(),reason:'Synthetic booking funding',points:{kind:'ISSUE',entries:[{accountId:issuance.id,delta:-500n},{accountId:wallet.id,delta:500n}]}});

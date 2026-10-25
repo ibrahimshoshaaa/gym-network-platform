@@ -11,12 +11,12 @@ test('only the platform admin tops up a trainee; concurrent replay posts once wi
  const q=await db.$transaction(tx=>pointQuote(tx,f.admin.id,{recipientId:f.trainee.id,points:10}));
  const body={recipientId:f.trainee.id,recipientLabel:q.recipientLabel,points:10,pricingVersion:q.pricingVersion,receivedAmountPiasters:q.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH'},key=randomUUID();
  const rows=await Promise.all(Array.from({length:4},()=>dispatchPoints(db,f.admin.id,key,body)));assert.equal(new Set(rows.map(r=>r.id)).size,1);
- assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.wallet.id}})).balance,10);assert.equal(rows[0]!.gymId,null);assert.equal(await db.pointDispatch.count({where:{id:rows[0]!.id}}),1);
+ assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.wallet.id}})).balance,10);assert.equal('gymId' in rows[0]!,false);assert.equal(await db.pointDispatch.count({where:{id:rows[0]!.id}}),1);
  for(const actor of [f.owner,f.cashier,f.trainee])await assert.rejects(dispatchPoints(db,actor.id,randomUUID(),body),/ACCESS_DENIED/);
  await assert.rejects(dispatchPoints(db,f.admin.id,key,{...body,points:11}),/IDEMPOTENCY_CONFLICT/);
 });
 test('admin cannot sell to gym owner and owner cannot use an old gym dispatch endpoint',async()=>{
  const f=await platformFixture(db);await assert.rejects(db.$transaction(tx=>lookup(tx,f.admin.id,{phone:f.owner.phoneE164})),/TRAINEE_UNAVAILABLE/);
- await assert.rejects(db.$transaction(tx=>pointQuote(tx,f.admin.id,{recipientId:f.owner.id,gymId:f.gym.id,points:10})),/ACCESS_DENIED/);
- await assert.rejects(dispatchPoints(db,f.owner.id,randomUUID(),{},f.gym.id),/ACCESS_DENIED/);
+ await assert.rejects(db.$transaction(tx=>pointQuote(tx,f.admin.id,{recipientId:f.owner.id,gymId:f.gym.id,points:10})),/INVALID_INPUT/);
+ await assert.rejects(dispatchPoints(db,f.owner.id,randomUUID(),{recipientId:f.trainee.id,points:10,gymId:f.gym.id}),/INVALID_INPUT/);
 });

@@ -4,7 +4,6 @@ import { z } from "zod";
 import {
   Prisma,
   type PrismaClient,
-  type PointSale,
   type Visit,
 } from "@prisma/client";
 import {
@@ -14,24 +13,13 @@ import {
   requireGymOwner,
 } from "../auth/authorization.js";
 import { hashToken } from "../auth/sessions.js";
-import { phoneSchema } from "../auth/validation.js";
 import { parse } from "../gyms/validation.js";
 import { audit } from "../gyms/service.js";
 import { postInTransaction, serializable } from "../ledger/service.js";
 import { DomainError } from "../domain/errors.js";
-import { maxMoney, moneySchema } from "../topups/settings.js";
+import { maxMoney } from "../topups/settings.js";
 export const uuid = z.string().uuid();
 export const quantity = z.number().int().positive().max(2147483647);
-export const saleQuoteSchema = z
-  .object({ traineeId: uuid, points: quantity })
-  .strict();
-export const saleSchema = saleQuoteSchema
-  .extend({
-    pricingVersion: quantity,
-    receivedAmountPiasters: moneySchema,
-    fundsReceived: z.literal(true),
-  })
-  .strict();
 export const qrSchema = z
   .object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) })
   .strict();
@@ -94,22 +82,6 @@ async function wallet(tx: Tx, id: string, allowEmpty = false) {
     throw new DomainError("WALLET_EXPIRY_REVIEW_REQUIRED");
   return account;
 }
-export function saleView(s: PointSale) {
-  return {
-    id: s.id,
-    branchId: s.branchId,
-    traineeId: s.traineeId,
-    traineeLabel: s.traineeLabel,
-    phoneLast4: s.phoneLast4,
-    cashierId: s.cashierId,
-    points: s.points,
-    chargePiasters: s.chargePiasters.toString(),
-    unitPricePiasters: s.unitPricePiasters.toString(),
-    pricingVersion: s.pricingVersion,
-    pointTransactionId: s.pointTransactionId,
-    createdAt: s.createdAt,
-  };
-}
 export function visitView(v: Visit) {
   return {
     id: v.id,
@@ -126,10 +98,6 @@ export function visitView(v: Visit) {
     cancellationReason: v.cancellationReason,
   };
 }
-// Kept as explicit denials for older installed clients; no retired mutation can replay.
-export async function lookupTrainee(db:PrismaClient,actorId:string,branchId:string,input:unknown):Promise<{id:string;label:string;phoneLast4:string}>{throw new DomainError('ACCESS_DENIED');}
-export async function quoteSale(db:PrismaClient,actorId:string,branchId:string,input:unknown):Promise<{points:number;chargePiasters:string;pricingVersion:number;stock:number;traineeLabel:string;phoneLast4:string}>{throw new DomainError('ACCESS_DENIED');}
-export async function sellPoints(db:PrismaClient,actorId:string,branchId:string,key:string,input:unknown):Promise<ReturnType<typeof saleView>>{throw new DomainError('ACCESS_DENIED');}
 export async function issueQr(
   db: PrismaClient,
   actorId: string,

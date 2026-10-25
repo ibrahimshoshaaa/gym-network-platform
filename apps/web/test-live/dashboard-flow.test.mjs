@@ -193,7 +193,6 @@ test(
         body: {
           expectedVersion: settings.policy.version,
           pointPricePiasters: "125",
-          gymDiscountBps: 0,
           redemptionBps: 8000,
         },
       });

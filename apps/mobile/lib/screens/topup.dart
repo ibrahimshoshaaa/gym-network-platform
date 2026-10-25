@@ -9,8 +9,7 @@ import '../core/portal_ui.dart';
 
 class TopupScreen extends StatefulWidget {
   final ApiClient api;
-  final String? branchId, gymId;
-  const TopupScreen({super.key, required this.api, this.branchId, this.gymId}) : assert(branchId == null || gymId == null);
+  const TopupScreen({super.key, required this.api, });
   @override
   State<TopupScreen> createState() => _TopupScreenState();
 }
@@ -33,15 +32,13 @@ class _TopupScreenState extends State<TopupScreen> {
     super.dispose();
   }
 
-  String get kind => widget.branchId == null && widget.gymId == null ? 'TRAINEE' : 'BRANCH_STOCK';
+  String get kind => 'TRAINEE';
   int? get customPoints {
     final text = digits(amount.text.trim());
     return RegExp(r'^\d+$').hasMatch(text) ? int.tryParse(text) : null;
   }
   Json get selection => {
     'kind': kind,
-    if (widget.branchId != null) 'receivingBranchId': widget.branchId,
-    if (widget.gymId != null) 'receivingGymId': widget.gymId,
     if (selectedPackage != null) ...{
       'packageId': selectedPackage!['id'], 'packageVersion': selectedPackage!['version'],
     } else if (byAmount) 'amountPiasters': piasters(amount.text)
@@ -50,7 +47,7 @@ class _TopupScreenState extends State<TopupScreen> {
   Json? estimateFor(int? points) {
     final policy = options?['policy'];
     final unit = BigInt.tryParse('${policy?['pointPricePiasters']}');
-    final discount = kind == 'TRAINEE' ? 0 : (policy?['gymDiscountBps'] as int? ?? 0);
+    final discount = 0;
     if (unit == null || unit <= BigInt.zero || discount < 0 || discount >= 10000) return null;
     final numerator = unit * BigInt.from(10000 - discount);
     final entered = BigInt.tryParse(piasters(amount.text) ?? '');
@@ -166,15 +163,15 @@ class _TopupScreenState extends State<TopupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if(widget.api.user?['role']!='TRAINEE'||widget.gymId!=null||widget.branchId!=null)return const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط للمتدرب من صاحب المنصة فقط')));
+    if(widget.api.user?['role']!='TRAINEE')return const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط للمتدرب من صاحب المنصة فقط')));
     final methods = (options?['paymentMethods'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final packages = (options?['packages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final locked = busy || widget.api.pending != null;
     final estimate = estimateFor(selectedPackage != null ? selectedPackage!['points'] as int : byAmount ? null : customPoints);
     final step = quote == null ? 0 : reviewing ? 2 : 1;
-    final destination = widget.gymId != null ? 'رصيد صاحب الجيم' : widget.branchId != null ? 'مخزون الفرع' : 'محفظتك';
+    const destination = 'محفظتك';
     final chosenMethod = methods.where((m) => m['type'] == method).firstOrNull;
-    return Screen(title: kind == 'TRAINEE' ? 'اشحن رصيدك' : 'شراء نقاط', child: ListView(
+    return Screen(title: 'اشحن رصيدك', child: ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28), children: [
         CampaignBanner(api:widget.api,placement:'WALLET'),
         if (result != null) ...[

@@ -4,7 +4,8 @@ export function normalizeDigits(value:string) {return value.replace(/[٠-٩]/g,c
 export function topupEstimate(policy:Policy|null|undefined,trainee:boolean,value:string,byAmount:boolean) {
   const text=normalizeDigits(value).trim();
   if(!policy||!/^\d+(?:\.\d{1,2})?$/.test(text)||(!byAmount&&text.includes('.')))return null;
-  const discount=trainee?0:policy.gymDiscountBps;
+  if(!trainee)return null;
+  const discount=0;
   if(discount<0||discount>=10000||!/^\d+$/.test(policy.pointPricePiasters))return null;
   const unit=BigInt(policy.pointPricePiasters)*BigInt(10000-discount);
   if(unit<=0n)return null;

@@ -6,7 +6,7 @@ import { actorId } from "../gyms/routes.js";
 import { parse } from "../gyms/validation.js";
 import { requireActor, requireAdmin } from "../auth/authorization.js";
 import { consumeAuthLimit } from "../auth/throttle.js";
-import { uuid, saleView, visitView } from "../operations/service.js";
+import { uuid, visitView } from "../operations/service.js";
 import {
   cancelVisit,
   decideReview,
@@ -84,15 +84,7 @@ export function registerReviewRoutes(app: FastifyInstance, db: PrismaClient) {
         where: { id: row.branchId },
         include: { gym: true },
       });
-      const target = row.visitId
-        ? visitView(
-            await tx.visit.findUniqueOrThrow({ where: { id: row.visitId } }),
-          )
-        : saleView(
-            await tx.pointSale.findUniqueOrThrow({
-              where: { id: row.saleId! },
-            }),
-          );
+      const target=visitView(await tx.visit.findUniqueOrThrow({where:{id:row.visitId}}));
       return {
         review: reviewView(row),
         branchName: branch.name,

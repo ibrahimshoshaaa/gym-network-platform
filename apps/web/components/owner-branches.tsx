@@ -6,7 +6,7 @@ import { Busy, Empty, Field, Notice } from "./ui";
 import { BranchFields, ContactFields, Invitation, More, Mutation, PriceFields, Status, branchBody, contact, roleText, usePage, type Gym, type Branch, type Staff, type NewInvite } from "./gyms/shared";
 import { StaffDelegation } from "./staff-delegation";
 import { Fact, PortalIntro, ScreenBack } from "./portal-ui";
-import { NativeReport } from "./owner-inventory";
+import { NativeReport } from "./visit-reports";
 export function OwnerBranches({ gym, onOperate }: {
     gym: Gym;
     onOperate: (branch: Branch) => void;

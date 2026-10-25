@@ -35,7 +35,6 @@ enum BranchStatus {
 
 enum TopupKind {
   TRAINEE
-  BRANCH_STOCK
 }
 
 enum PaymentMethodType {
@@ -53,8 +52,7 @@ enum RequestStatus {
 enum PointAccountType {
   BOOKING_HOLD
   ISSUANCE
-  BRANCH_INVENTORY
-  GYM_INVENTORY
+  ARCHIVED
   TRAINEE_WALLET
   REDEEMED
   EXPIRED
@@ -67,7 +65,7 @@ enum PointTxKind {
   TRANSFER
   VISIT
   VISIT_REVERSAL
-  SALE_REVERSAL
+  HISTORICAL_REVERSAL
   EXPIRY
   ADJUSTMENT
 }
@@ -156,8 +154,6 @@ model Gym {
   contactPhone    String?
   invitations     StaffInvitation[]
   branches        Branch[]
-  pointAccounts   PointAccount[]
-  stockTopups      TopupRequest[]
   moneyAccounts   MoneyAccount[]
   withdrawals     WithdrawalRequest[]
   delegations StaffDelegation[]
@@ -204,9 +200,7 @@ model Branch {
   staff             StaffAssignment[]
   delegations StaffDelegation[]
   withdrawalAllocations WithdrawalAllocation[]
-  pointAccounts     PointAccount[]
   visits            Visit[]
-  topups            TopupRequest[]
   moneyAccounts     MoneyAccount[]
   withdrawals       WithdrawalRequest[]
 
@@ -232,18 +226,12 @@ model PointAccount {
   type        PointAccountType
   ownerUserId String?          @db.Uuid
   ownerUser   User?            @relation(fields: [ownerUserId], references: [id])
-  branchId    String?          @db.Uuid
-  branch      Branch?          @relation(fields: [branchId], references: [id])
-  gymId       String?          @db.Uuid
-  gym         Gym?             @relation(fields: [gymId], references: [id], onDelete: Restrict)
   balance     Int              @default(0)
   expiresAt   DateTime?
   postings    PointPosting[]
   createdAt   DateTime         @default(now())
 
   @@unique([type, ownerUserId])
-  @@unique([type, branchId])
-  @@unique([type, gymId])
 }
 
 model PointTransaction {
@@ -282,7 +270,7 @@ model TopupRequest {
   id                 String             @id @default(uuid()) @db.Uuid
   requestorUserId    String             @db.Uuid
   requestorUser      User               @relation("TopupRequestor", fields: [requestorUserId], references: [id])
-  kind               TopupKind?
+  kind               TopupKind
   idempotencyKey     String?            @unique
   requestHash        String?
   policyId           String?            @db.Uuid
@@ -299,10 +287,6 @@ model TopupRequest {
   discountBps        Int?
   redemptionBps      Int?
   reviewReason       String?
-  receivingGymId     String?            @db.Uuid
-  receivingGym       Gym?               @relation(fields: [receivingGymId], references: [id], onDelete: Restrict)
-  receivingBranchId  String?            @db.Uuid
-  receivingBranch    Branch?            @relation(fields: [receivingBranchId], references: [id])
   points             Int
   chargePiasters     BigInt
   receiptObjectKey   String
@@ -314,26 +298,6 @@ model TopupRequest {
   @@index([status, createdAt])
 }
 
-model PointSale {
-  id                 String   @id @default(uuid()) @db.Uuid
-  branchId           String   @db.Uuid
-  traineeId          String   @db.Uuid
-  cashierId          String   @db.Uuid
-  traineeLabel       String
-  phoneLast4         String
-  points             Int
-  chargePiasters     BigInt
-  unitPricePiasters  BigInt
-  policyId           String   @db.Uuid
-  pricingVersion     Int
-  idempotencyKey     String   @unique
-  requestHash        String
-  pointTransactionId String   @unique @db.Uuid
-  createdAt          DateTime @default(now())
-
-  @@index([branchId, createdAt])
-  @@index([traineeId, createdAt])
-}
 
 model QrTicket {
   userId     String    @id @db.Uuid
@@ -548,14 +512,13 @@ model BranchPricingRequest {
 }
 
 model PricingPolicy {
+  topups TopupRequest[]
   id                 String         @id @default(uuid()) @db.Uuid
   version            Int            @unique
   pointPricePiasters BigInt
-  gymDiscountBps     Int
   redemptionBps      Int
   createdById        String         @db.Uuid
   createdAt          DateTime       @default(now())
-  topups             TopupRequest[]
 }
 
 model PaymentMethod {
@@ -598,14 +561,12 @@ model ReceiptEvidence {
 // Corrections preserve the original sale/visit and its sealed postings.
 enum OperationReviewKind {
   VISIT_CANCEL
-  SALE_CORRECTION
 }
 
 model OperationReview {
   id               String              @id @default(uuid()) @db.Uuid
   kind             OperationReviewKind
-  visitId          String?             @unique @db.Uuid
-  saleId           String?             @unique @db.Uuid
+  visitId          String              @unique @db.Uuid
   branchId         String              @db.Uuid
   requestorId      String              @db.Uuid
   reason           String
@@ -671,6 +632,7 @@ model WithdrawalFeedback {
 }
 
 model FinancialEvidenceUse {
+  archiveRecordId String? @unique @db.Uuid
   receiptId    String   @id @db.Uuid
   topupId      String?  @unique @db.Uuid
   withdrawalId String?  @unique @db.Uuid
@@ -773,8 +735,6 @@ model PointDispatch {
   recipientId String @db.Uuid
   recipientLabel String
   phoneLast4 String
-  gymId String? @db.Uuid
-  branchId String? @db.Uuid
   points Int
   chargePiasters BigInt
   unitPricePiasters BigInt
@@ -788,7 +748,6 @@ model PointDispatch {
   requestHash String
   createdAt DateTime @default(now())
   @@index([kind,createdAt,id])
-  @@index([gymId,createdAt,id])
   @@index([recipientId,createdAt,id])
 }
 
@@ -1246,4 +1205,18 @@ model WelcomePointsGrant {
   policyVersion      Int
   pointTransactionId String   @unique @db.Uuid
   createdAt          DateTime @default(now())
+}
+
+// Restricted snapshots of retired financial structures; no operational inventory.
+model FinancialArchiveRecord {
+ id String @id @db.Uuid
+ recordType String
+ recordId String @db.Uuid
+ ownerUserIds String[] @db.Uuid
+ requiresReview Boolean @default(false)
+ amountPiasters BigInt @default(0)
+ points Int @default(0)
+ data Json
+ archivedAt DateTime @default(now())
+ @@unique([recordType,recordId])
 }

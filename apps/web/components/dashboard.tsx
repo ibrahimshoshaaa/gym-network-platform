@@ -49,7 +49,6 @@ import { Cashier, TraineeQr } from "./operations";
 import { OperationReviews } from "./operation-reviews";
 import { Withdrawals } from "./withdrawals";
 import { Reports } from "./reports";
-import { Inventory } from "./inventory";
 import { BranchDirectory } from "./branch-directory";
 import { Reviews } from "./reviews";
 import { GymManagement } from "./gyms/management";
@@ -71,11 +70,10 @@ type Tab =
   | "campaigns"
   | "requests" | "finance" | "more"
   | "gym-applications"
-  | "direct-topup" | "point-wallet"
+  | "direct-topup"
   | "support" | "users" | "audit" | "disputes"
   | "home"
   | "directory"
-  | "inventory"
   | "reports"
   | "withdrawals"
   | "operation-reviews"
@@ -99,7 +97,6 @@ const allTabs = [
   {id:"more" as const,label:"المزيد",icon:MoreHorizontal,description:"الدعم والمستخدمون وإعدادات المنصة"},
   {id:"gym-applications" as const,label:"طلبات الانضمام",icon:Building2,description:"مراجعة بيانات أصحاب الجيمات المسجلين من التطبيق وقبول أو رفض انضمامهم"},
   {id:"direct-topup" as const,label:"شحن مباشر بالرقم",icon:Send,description:"شحن المتدرب برقم الموبايل بعد تأكيد التحصيل"},
-  {id:"point-wallet" as const,label:"محفظة الجيم والإرسال",icon:Wallet,description:"رصيد جيمك وإرسال النقاط للمتدربين برقم الموبايل"},
   {id:"disputes" as const,label:"حجوزات النزاعات",icon:ShieldCheck,description:"حجز المبلغ محل المراجعة وفكّه مع الحفاظ على باقي المستحقات"},
   {id:"support" as const,label:"الدعم والشكاوى",icon:FileCheck2,description:"طلبات المساعدة والاعتراضات والردود ومرفقاتها"},
   {id:"users" as const,label:"المستخدمون والحسابات",icon:ShieldCheck,description:"البحث وتعطيل الوصول واستعادة الحسابات"},
@@ -110,12 +107,6 @@ const allTabs = [
     label: "دليل الجيمات",
     icon: MapPin,
     description: "الفروع المشاركة والأسعار والمواقع ومواعيد العمل",
-  },
-  {
-    id: "inventory" as const,
-    label: "مخزون الفروع",
-    icon: Package,
-    description: "الأرصدة وحركة النقاط والنقل بين الفروع",
   },
   {
     id: "reports" as const,
@@ -190,7 +181,7 @@ const allTabs = [
     description: "طلبات شراء النقاط ومتابعة مراجعتها",
   },
 ];
-const tabs=allTabs.filter(item=>!['inventory','point-wallet'].includes(item.id));
+const tabs=allTabs;
 export function Dashboard() {
   const [user, setUser] = useState<Identity | null>(null),
     [loading, setLoading] = useState(true),
@@ -314,7 +305,7 @@ export function Dashboard() {
         </div>
         <span className="nav-label">مساحة العمل</span>
         <nav aria-label="القائمة الرئيسية">
-          {admin ? <AdminSideNav items={available} current={contentTab} onNavigate={id=>navigate(id as Tab)}/> : [{label:"التشغيل",ids:["home","point-wallet","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","inventory","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
+          {admin ? <AdminSideNav items={available} current={contentTab} onNavigate={id=>navigate(id as Tab)}/> : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
           {group.items.map((item) => (
             <button
               key={item.id}
@@ -383,12 +374,10 @@ export function Dashboard() {
             {adminSection.items.map(id=>{const item=available.find(t=>t.id===id)!;return <button key={id} aria-current={contentTab===id?"page":undefined} className={contentTab===id?"active":""} onClick={()=>navigate(id)}>{item.label}</button>;})}
           </nav>:null}
           <Notice text={error} />
-          {contentTab === "promotion-requests" ? <PromotionAdmin/> : contentTab === "maintenance" ? <MaintenanceAdmin/> : contentTab === "market" ? <MarketAdmin/> : contentTab === "campaigns" ? <Campaigns/> : contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" || contentTab === "point-wallet" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
+          {contentTab === "promotion-requests" ? <PromotionAdmin/> : contentTab === "maintenance" ? <MaintenanceAdmin/> : contentTab === "market" ? <MarketAdmin/> : contentTab === "campaigns" ? <Campaigns/> : contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
             admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
           ) : contentTab === "directory" ? (
             <BranchDirectory />
-          ) : contentTab === "inventory" ? (
-            <Inventory admin={admin} />
           ) : contentTab === "reports" ? (
             <Reports admin={admin} />
           ) : contentTab === "withdrawals" ? (

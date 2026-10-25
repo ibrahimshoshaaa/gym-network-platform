@@ -4,8 +4,8 @@ import { PlatformHero } from "./platform-identity";
 import { Building2, QrCode, Coins, Package, FileText, ArrowLeft } from "lucide-react";
 import { RoleSummary } from "./updates";
 import { roleName } from "../lib/navigation";
-export type WorkDestination = "point-wallet" | "gyms" | "cashier" | "purchases" | "inventory" | "reports" | "withdrawals" | "operation-reviews";
-export type CashierTask = "visit" | "sale" | "history";
+export type WorkDestination = "gyms" | "cashier" | "purchases" | "reports" | "withdrawals" | "operation-reviews";
+export type CashierTask = "visit" | "history";
 export function WorkHome({role,name,onNavigate}:{role:string;name:string;onNavigate:(destination:WorkDestination,task?:CashierTask)=>void}){
  const owner=role==="GYM_OWNER",cashier=role==="CASHIER";
  const tasks: {title:string;description:string;destination:WorkDestination;task?:CashierTask;icon:typeof Building2}[]=owner?[
@@ -14,13 +14,13 @@ export function WorkHome({role,name,onNavigate}:{role:string;name:string;onNavig
   {title:"مستحقاتي والسحب",description:"تابع مستحقات زيارات الجيم وطلبات السحب.",destination:"withdrawals" as const,icon:Coins},
  ]:cashier?[
   {title:"دخّل متدرب",description:"افتح الكاميرا، امسح رمزه وأكد الزيارة.",destination:"cashier" as const,task:"visit" as const,icon:QrCode},
-  {title:"سجل الفرع",description:"راجع الزيارات والمبيعات المسجلة.",destination:"cashier" as const,task:"history" as const,icon:FileText},
+  {title:"سجل الفرع",description:"راجع الزيارات المسجلة.",destination:"cashier" as const,task:"history" as const,icon:FileText},
  ]:[
   {title:"تسجيل زيارة",description:"امسح رمز المتدرب وأكد حضوره في فرعك.",destination:"cashier",task:"visit",icon:QrCode},
-  {title:"متابعة الفرع",description:"راجع الزيارات والمبيعات المسجلة.",destination:"cashier" as const,task:"history" as const,icon:FileText},
+  {title:"متابعة الفرع",description:"راجع الزيارات المسجلة.",destination:"cashier" as const,task:"history" as const,icon:FileText},
   {title:"بيانات الفروع",description:"افتح الفروع والبيانات المتاحة لحسابك.",destination:"gyms" as const,icon:Building2},
  ];
- const primaryTasks=tasks.filter(task=>task.destination==="point-wallet"||task.task==="visit"||task.task==="sale");
+ const primaryTasks=tasks.filter(task=>task.task==="visit");
  const otherTasks=tasks.filter(task=>!primaryTasks.includes(task));
  function taskButton(task:typeof tasks[number],featured=false){
   return <button key={task.title} className={`work-task ${featured?"featured":""}`} onClick={()=>onNavigate(task.destination,task.task)}>

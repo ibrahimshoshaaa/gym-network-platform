@@ -48,7 +48,7 @@ async function handle(request: Request, context: Context) {
         path === "topups" ||
         path === "operation-reviews" ||
         /^operations\/branches\/[^/]+\/visits\/[^/]+\/cancel$/.test(path) ||
-        /^cashier\/branches\/[^/]+\/(sales|visits)$/.test(path)
+        /^cashier\/branches\/[^/]+\/visits$/.test(path)
       )
         headers["idempotency-key"] =
           request.headers.get("idempotency-key") ?? "";

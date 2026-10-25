@@ -6,7 +6,7 @@ import {Review,TopupCard} from "../components/reviews";
 import {BranchDirectory,DirectoryCard,type DirectoryBranch} from "../components/branch-directory";
 import {roleTabs,roleQuickTabs} from "../lib/navigation";
 import type {Topup} from "../lib/client";
-const row:Topup={id:"test",kind:"TRAINEE",requestorUserId:"trainee",requestor:{displayName:"متدرب",email:"test@example.test",phoneE164:"+201000000001"},receivingBranchId:null,points:50,chargePiasters:"12500",unitPricePiasters:"250",discountBps:0,status:"PENDING",paymentMethod:"INSTAPAY",paymentAccount:"synthetic",paymentAccountName:"اختبار",receiptId:"test-receipt",reviewReason:null,createdAt:"2026-10-18T10:00:00Z"};
+const row:Topup={id:"test",kind:"TRAINEE",requestorUserId:"trainee",requestor:{displayName:"متدرب",email:"test@example.test",phoneE164:"+201000000001"},points:50,chargePiasters:"12500",unitPricePiasters:"250",discountBps:0,status:"PENDING",paymentMethod:"INSTAPAY",paymentAccount:"synthetic",paymentAccountName:"اختبار",receiptId:"test-receipt",reviewReason:null,createdAt:"2026-10-18T10:00:00Z"};
 test("review opens on approval with the expected amount and explicit receipt-and-funds confirmation",()=>{
  const html=renderToStaticMarkup(createElement(Review,{request:row,onClose:()=>{},onDone:()=>{}}));
  assert.match(html,/125/);
