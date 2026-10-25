@@ -32,8 +32,6 @@ class _ManagedBranchState extends State<ManagedBranch>{
  Panel(child:Text('${widget.branch['gymName']} · ${widget.branch['name']}')),const SizedBox(height:16),ErrorNote(error,retry:load),
  if(widget.task=='edit')...[field(name,'اسم الفرع'),field(address,'العنوان'),field(city,'المدينة'),field(governorate,'المحافظة')],
  if(widget.task=='price')...[field(points,'نقاط الزيارة المقترحة',numeric:true),field(minutes,'مدة الزيارة بالدقائق',numeric:true),field(reason,'سبب التعديل')],
- DropdownButtonFormField<String>(initialValue:target,decoration:const InputDecoration(labelText:'الفرع المستلم'),items:destinations.map((b)=>DropdownMenuItem<String>(value:b['id'],child:Text('${b['name']}'))).toList(),onChanged:locked?null:(v)=>setState((){target=v;confirmed=false;})),const SizedBox(height:16),field(points,'عدد النقاط',numeric:true),
- ],
  if(widget.task=='withdraw')...[
  Panel(child:Column(children:[const Text('متاح من نصيب الفرع'),Text(entitlement==null?'—':'${money(entitlement!['available'])} ج.م',style:const TextStyle(fontSize:28,fontWeight:FontWeight.w800)),if(entitlement?['legacyReviewRequired']==true)const Text('فيه سحوبات قديمة غير موزعة؛ المتاح محسوب بتحفّظ لحين المراجعة.')])),const SizedBox(height:16),
  field(amount,'المبلغ بالجنيه',numeric:true),DropdownButtonFormField<String>(initialValue:method,items:const[DropdownMenuItem(value:'INSTAPAY',child:Text('إنستا باي')),DropdownMenuItem(value:'WALLET',child:Text('محفظة إلكترونية'))],onChanged:locked?null:(v)=>setState((){method=v!;confirmed=false;})),const SizedBox(height:16),field(name,'اسم صاحب حساب الاستلام'),field(account,'حساب الاستلام'),

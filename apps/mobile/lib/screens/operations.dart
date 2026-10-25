@@ -103,14 +103,14 @@ class _BranchDashboardState extends State<BranchDashboard> {
     setState(() { summaryLoading = reportLoading = true; summaryError = reportError = null; });
     final now = DateTime.now();
     final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    Future<void> part(String path, bool stock) async {
+    Future<void> part(String path, bool summaryPart) async {
       try {
         final data = Map<String, dynamic>.from(await widget.api.request(path));
-        if (mounted && current == generation) setState(() { if (stock) { summary = data; } else { report = data; } });
+        if (mounted && current == generation) setState(() { if (summaryPart) { summary = data; } else { report = data; } });
       } catch(e) {
-        if (mounted && current == generation) setState(() { if (stock) { summary = null; summaryError = e; } else { report = null; reportError = e; } });
+        if (mounted && current == generation) setState(() { if (summaryPart) { summary = null; summaryError = e; } else { report = null; reportError = e; } });
       } finally {
-        if (mounted && current == generation) setState(() { if (stock) { summaryLoading = false; } else { reportLoading = false; } });
+        if (mounted && current == generation) setState(() { if (summaryPart) { summaryLoading = false; } else { reportLoading = false; } });
       }
     }
     await Future.wait([

@@ -23,7 +23,7 @@ class _TopupScreenState extends State<TopupScreen> {
   @override
   void initState() {
     super.initState();
-    if(widget.api.user?['role']=='TRAINEE'&&widget.gymId==null&&widget.branchId==null)load();
+    if(widget.api.user?['role']=='TRAINEE')load();
   }
 
   @override

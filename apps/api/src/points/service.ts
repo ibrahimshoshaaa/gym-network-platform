@@ -14,7 +14,7 @@ const quoteSchema=z.object({recipientId:uuid,points:z.number().int().positive().
 const sendSchema=quoteSchema.extend({pricingVersion:z.number().int().positive(),recipientLabel:z.string().min(1).max(100),receivedAmountPiasters:z.string().regex(/^\d+$/),fundsReceived:z.literal(true),recipientConfirmed:z.literal(true),paymentMethod:z.enum(['CASH','INSTAPAY','WALLET']).default('CASH'),paymentReference:z.string().trim().min(3).max(100).optional()}).strict();
 export const dispatchView=(r:PointDispatch)=>({id:r.id,kind:r.kind,recipientLabel:r.recipientLabel,phoneLast4:r.phoneLast4,points:r.points,chargePiasters:r.chargePiasters.toString(),createdAt:r.createdAt});
 async function wallet(tx:Tx,id:string){const a=await tx.pointAccount.findUnique({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:id}}});if(!a)throw new DomainError('ACCOUNT_NOT_FOUND');if(a.balance>0&&(!a.expiresAt||a.expiresAt<=new Date()))throw new DomainError('WALLET_EXPIRY_REVIEW_REQUIRED');return a;}
-export async function lookup(tx:Tx,id:string,input:unknown,){
+export async function lookup(tx:Tx,id:string,input:unknown){
  await requireAdmin(tx,id);
  const d=parse(z.object({phone:phoneSchema}).strict(),input),u=await tx.user.findUnique({where:{phoneE164:d.phone}});
  if(!u?.isActive||u.role!=='TRAINEE')throw new DomainError('TRAINEE_UNAVAILABLE');
@@ -27,12 +27,13 @@ async function quote(tx:Tx,id:string,data:z.infer<typeof quoteSchema>,){
  if(!policy)throw new DomainError('PRICING_NOT_CONFIGURED');
  return {recipient,policy,destination,price:calculateQuote(policy.pointPricePiasters,0,{points:data.points})};
 }
-export async function pointQuote(tx:Tx,id:string,input:unknown,){
+export async function pointQuote(tx:Tx,id:string,input:unknown){
  const d=parse(quoteSchema,input),q=await quote(tx,id,d),recipientBalance=String(q.destination.balance);
  return {recipientBalance,recipientAfter:(BigInt(recipientBalance)+BigInt(d.points)).toString(),recipientId:q.recipient.id,recipientLabel:q.recipient.displayName,phoneLast4:q.recipient.phoneE164.slice(-4),points:d.points,chargePiasters:q.price.chargePiasters.toString(),pricingVersion:q.policy.version,discountBps:0};
 }
 export async function dispatchPoints(db:PrismaClient,id:string,key:string,input:unknown){const d=parse(sendSchema,input);parse(uuid,key);if(d.paymentMethod==='CASH'&&d.paymentReference)throw new DomainError('INVALID_INPUT');if(d.paymentMethod!=='CASH'&&!d.paymentReference)throw new DomainError('INVALID_INPUT');
- const idempotencyKey=`dispatch:${id}:${key}`,requestHash=createHash('sha256').update(JSON.stringify({...d})).digest('hex');
+ // Preserve the historical canonical hash prefix for retries of already posted platform credits.
+ const idempotencyKey=`dispatch:${id}:${key}`,requestHash=createHash('sha256').update(JSON.stringify({sourceGymId:null,...d})).digest('hex');
  try{return await serializable(db,async tx=>{
   await requireAdmin(tx,id);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey},0))`;

@@ -307,7 +307,7 @@ test("chronological keyset pages are complete without duplicates and foreign cur
   );
   assert.equal(new Set(seen).size, 3);
   assert.equal(
-    (await walletMovements(db, f.trainee.id, { operation: "SALE" })).items
+    (await walletMovements(db, f.trainee.id, { operation: "TOPUP" })).items
       .length,
     2,
   );
