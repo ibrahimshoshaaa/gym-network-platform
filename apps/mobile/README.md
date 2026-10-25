@@ -1,29 +1,44 @@
 # GymBank native mobile application
 
-Flutter 3.47.7 / Dart, Material 3, Arabic RTL. Native screens replace the previous WebView client. Uses the existing production API through `/api/mobile/*` with Bearer sessions; web cookies never authorize the mobile bridge. No database, Cloudinary, signing or backend credentials are embedded.
+**Status — 26 October 2026:** implemented Flutter 3.47.7/Dart application for Android and iOS, with native trainee, owner, branch-manager and cashier experiences. Signed Android release APKs are available. iOS simulator builds/startup and unsigned arm64 device compilation pass; signed physical-iPhone distribution requires Apple signing and TestFlight setup.
 
-## Experiences
-- Remember me controls encrypted session persistence; unchecked keeps the access token in memory only, including after password changes. Passwords are never stored.
-- Unified sign-in/sign-up sheet with a persistent Arabic/English switch for authentication forms (including validation and direction). Signed-in areas currently remain Arabic. Google and Apple buttons are clearly marked coming soon and do not call authentication endpoints.
-- Trainee sign-in/email registration; wallet and point history; recharge by points or amount with exact server quote and receipt upload; directory with manual search, nearby order and map; one-time QR with server-relative countdown that hides on background; visit history; notifications, support chat, account and password.
-- Gym owner self-registration and pending/rejected application tracking with resubmission. Admin decisions remain in web dashboard. Existing invited owners also use their existing credentials.
-- Owner dashboard, aggregate eligible stock wallet, phone → recipient → points → confirmed cash sale; branch create/edit with an explicit map/GPS point; stock purchase, staff invitation, activity reports, receivables and withdrawals.
-- Other work roles use the web dashboard for now. OTP, wallet PIN, background push and app-store distribution remain deferred. Contacts are not falsely marked verified.
+The app uses the shared production API through `/api/mobile/*` with Bearer sessions. Web cookies do not authorize the mobile bridge. No database, Cloudinary, TextBee or signing secrets are embedded.
 
-## Build
-```
+## Current experiences
+
+- Phone/password login and registration, real SMS ownership verification, and phone → code → new-password recovery. Google/Apple login buttons have been removed. Authentication forms support Arabic/English; signed-in areas currently remain Arabic.
+- TextBee sends a short Arabic message with each code digit written as a word. Users enter digits; Arabic, Persian and ASCII digits are normalized. A dedicated fixed-code test mode remains separate from real SMS and cannot recover staff accounts.
+- Remember me controls encrypted session persistence. Unchecked sessions remain in memory; passwords are never saved.
+- Trainee wallet/history, platform-approved receipt topups, nearby branch directory/map, services/bookings, branch/personal QR attendance, visit history and ratings.
+- Owner onboarding/application tracking, branch management, invitations, visit receivables, reports and withdrawals. Managers/cashiers have native workplace screens with server-scoped permissions.
+- Only the platform sells/credits trainee points. Gym purchases, inventory sales and branch point transfers are retired; historical records are preserved.
+- Shared marketplace, maintenance from Account, campaign carousel, notifications, support and account management.
+- Account deletion appears in red above logout. Signed-in confirmation uses the registered phone and literal `DELETE`; unresolved obligations block erasure. See [account deletion](../../docs/account-deletion.md).
+- Raised QR navigation has transparent headroom: page content remains visible behind the raised portion while the white bar and device safe area remain protected.
+
+## Android download and builds
+
+[Download release APKs](https://github.com/ibrahimshoshaaa/gym-network-platform/releases/tag/mobile-v0.2.7). Most current Android devices use `app-arm64-v8a-release.apk`. Main-branch GitHub builds upload signed per-ABI APKs and checksums to this reused release tag. Signing/version verification is mandatory; there is no debug-key fallback. See [signing](../../docs/2026-10-20-android-signing.md) and [Codemagic Android](../../docs/codemagic-android.md).
+
+The application revision `18dd769` includes the QR transparency fix and passed 120 Flutter tests. CI also analyzes the app and compiles/launches the iOS simulator build. Installing a new APK is required for UI changes; server-side OTP changes alone do not require reinstalling.
+
+```bash
 flutter create --platforms=android,ios --org net.shotech --project-name gym_network .
-# Preserve this repo's pubspec, lib and test when generating hosts.
+# Preserve the repository pubspec, lockfile, lib and test when generating hosts.
 python3 tool/prepare_platforms.py
 flutter pub get
 flutter analyze lib test --no-fatal-infos
 flutter test
+# Release APKs require the original signing identity; follow the signing guide.
 flutter build apk --release --split-per-abi
 ```
-The CI workflow generates the Android host while preserving the sources, then analyzes, tests and builds. Main builds attach APKs to the private `mobile-v0.2.6` GitHub release; Actions artifact upload is optional because artifact storage may be exhausted. These are testing APKs with generated template signing, not a Play Store signing identity.
 
-`GYM_API_ORIGIN` is an optional compile-time HTTPS origin for staging, e.g. `--dart-define=GYM_API_ORIGIN=https://...`. It contains no credential. Local HTTP is permitted only in debug builds on explicit loopback/emulator hosts.
+`GYM_API_ORIGIN` is an optional compile-time HTTPS staging origin, not a credential. Local HTTP is allowed only in debug builds on explicit loopback/emulator hosts.
 
-Sessions and financial retry envelopes use encrypted device storage. A pending mutation is bound to its user, path, body and UUID and survives restart. New financial actions remain blocked until that original request returns a definitive result. Never clear a pending mutation to bypass an uncertain response. Uploading an image or requesting a quote does not change financial balances.
+## iOS and release boundaries
 
-Google mark: unmodified Google Identity PNG from https://developers.google.com/static/identity/images/g-logo.png, bundled for offline display. No custom recreation of the mark.
+See [iOS build/signing](../../docs/codemagic-ios.md). Simulator ZIPs and unsigned device builds are not installable iPhone releases. Apple Developer/App Store Connect setup, signing, TestFlight, physical-device permission/Keychain/camera/GPS checks and store acceptance remain release work.
+
+Real TextBee verification and the account-deletion lifecycle are implemented; older rollout notes describing them as deferred are historical. Store privacy/support/retention details still need the owner's approved information. Background push and wallet PIN are not claimed as completed.
+
+Financial retry envelopes use encrypted storage and are bound to the user, request body/path and UUID. A pending mutation blocks new financial actions until its original outcome is definitive. Never clear pending state to bypass an uncertain result. Receipt upload and quotes do not change financial balances.
