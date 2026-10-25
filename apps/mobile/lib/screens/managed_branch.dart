@@ -37,7 +37,7 @@ class _ManagedBranchState extends State<ManagedBranch>{
  field(amount,'المبلغ بالجنيه',numeric:true),DropdownButtonFormField<String>(initialValue:method,items:const[DropdownMenuItem(value:'INSTAPAY',child:Text('إنستا باي')),DropdownMenuItem(value:'WALLET',child:Text('محفظة إلكترونية'))],onChanged:locked?null:(v)=>setState((){method=v!;confirmed=false;})),const SizedBox(height:16),field(name,'اسم صاحب حساب الاستلام'),field(account,'حساب الاستلام'),
  ],
  CheckboxListTile(value:confirmed,onChanged:locked?null:(v)=>setState(()=>confirmed=v==true),title:const Text('راجعت الفرع والقيم وبيانات الطلب')),
- ActionButton(widget.task=='withdraw'?'تقديم طلب السحب':widget.task=='transfer'?'تأكيد تحويل النقاط':'حفظ الطلب',busy:busy,onPressed:locked||!confirmed||(widget.task=='transfer'&&target==null)||(widget.task=='withdraw'&&(entitlement==null||entitlement!['available']=='0'))?null:submit),
+ ActionButton(widget.task=='withdraw'?'تقديم طلب السحب':'حفظ الطلب',busy:busy,onPressed:locked||!confirmed||(widget.task=='withdraw'&&(entitlement==null||entitlement!['available']=='0'))?null:submit),
  if(widget.api.pending!=null)const PortalNote('فيه عملية محفوظة غير مؤكدة. ارجع للرئيسية وأعد نفس العملية بأمان.'),
  if(widget.task=='withdraw')TextButton(onPressed:()=>open(context,Screen(title:'طلبات سحب الفرع',child:PagedRecords(api:widget.api,path:'$path/withdrawals?branchId=${widget.branch['id']}',item:(r)=>Panel(child:Column(children:[Text('${money(r['amountPiasters'])} ج.م'),StatusPill('${r['status']}'),Reference('${r['id']}')]))))),child:const Text('متابعة طلبات سحب الفرع')),
  ]));

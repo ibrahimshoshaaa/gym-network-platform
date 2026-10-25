@@ -675,12 +675,12 @@ test(
       assert.equal(localAds.status,200,await localAds.clone().text());assert.ok((await localAds.json()).items.some(r=>r.id===ad.id));
       const noLocationAds=await request('/api/backend/trainee/nearby-promotions',{cookie:traineeCookie});assert.equal(noLocationAds.status,200);assert.equal((await noLocationAds.json()).items.length,0);
 
-      assert.equal((await request('/api/backend/topup-options?kind=BRANCH_STOCK',{cookie:invitedOwnerCookie})).status,403);
+      assert.equal((await request('/api/backend/topup-options?kind=BRANCH_STOCK',{cookie:invitedOwnerCookie})).status,400);
       const directQuoteResponse=await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:traineeIdentity.user.id,points:60}});
       assert.equal(directQuoteResponse.status,200);const directQuote=await directQuoteResponse.json();
       const directResponse=await request('/api/backend/admin/point-transfers',{cookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{recipientId:directQuote.recipientId,recipientLabel:directQuote.recipientLabel,points:60,pricingVersion:directQuote.pricingVersion,receivedAmountPiasters:directQuote.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH'}});
       assert.equal(directResponse.status,201);const sold=await directResponse.json();
-      for(const endpoint of ['trainee-lookup','sale-quotes','sales'])assert.equal((await request(`/api/backend/cashier/branches/${newBranch.branch.id}/${endpoint}`,{cookie:cashierCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{phone:traineeBody.phone,traineeId:traineeIdentity.user.id,points:60}})).status,403);
+      for(const endpoint of ['trainee-lookup','sale-quotes','sales'])assert.equal((await request(`/api/backend/cashier/branches/${newBranch.branch.id}/${endpoint}`,{cookie:cashierCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{phone:traineeBody.phone,traineeId:traineeIdentity.user.id,points:60}})).status,404);
       const ticketResponse = await request("/api/backend/trainee/qr", {
         cookie: traineeCookie,
         method: "POST",
@@ -913,7 +913,7 @@ test(
         ).balance,
         60,
       );
-      // New point sales belong to the platform; archived branch-sale correction is covered by historical DB fixtures.
+      // New point sales belong to the platform; gym sale and inventory endpoints have been removed.
       // Manual withdrawals reserve one consolidated gym wallet, snapshot the
       // destination/calendar, record proof and retain a paid-transfer dispute.
       const earnTicket = await (
@@ -1143,24 +1143,23 @@ test(
       );
       assert.equal(summaryResponse.status, 200);
       const report = await summaryResponse.json();
-      assert.equal(report.sales.points, "0");
-      assert.equal(report.sales.amountPiasters, "0");
+      assert.equal('sales' in report,false);
       assert.equal(report.visits.count, "3");
       assert.equal(report.visits.amountPiasters, "9000");
       assert.equal(report.cancellations.count, "2");
       assert.equal(report.netVisitReceivablesPiasters, "3000");
       assert.equal(report.paidWithdrawals.amountPiasters, "1000");
       assert.equal(report.alerts.withdrawals.disputed, "1");
-      assert.equal(report.currentStockPoints, "0");
+      assert.equal('currentStockPoints' in report,false);
       const reportCsv = await request(
-        `/api/backend/reports/export?${reportQuery}&kind=SALES`,
+        `/api/backend/reports/export?${reportQuery}&kind=VISITS`,
         { cookie: invitedOwnerCookie },
       );
       assert.equal(reportCsv.status, 200);
       assert.match(reportCsv.headers.get("content-type"), /text\/csv/);
       assert.match(
         reportCsv.headers.get("content-disposition"),
-        /attachment; filename="gym-report-sales-/,
+        /attachment; filename="gym-report-visits-/,
       );
       assert.match(reportCsv.headers.get("cache-control"), /no-store/);
       assert.equal(reportCsv.headers.get("x-content-type-options"), "nosniff");
@@ -1171,7 +1170,7 @@ test(
       assert.equal(
         (
           await request(
-            `/api/backend/reports/export?${reportQuery}&kind=SALES`,
+            `/api/backend/reports/export?${reportQuery}&kind=VISITS`,
             { cookie: ownerCookie },
           )
         ).status,
