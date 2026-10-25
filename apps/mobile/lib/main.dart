@@ -378,14 +378,14 @@ class _NativeShellState extends State<NativeShell> {
             ),
         ],
       ),
-      body: SafeArea(
-        bottom: staff,
-        child: Padding(
+      body: MediaQuery.removePadding(
+        context: context,
+        removeBottom: !staff,
+        child: SafeArea(
+          bottom: staff,
           // Only the opaque bar reserves space; content fills the QR headroom.
-          padding: EdgeInsets.only(bottom: staff ? 0 : 60 + MediaQuery.viewPaddingOf(context).bottom),
-          child: MediaQuery.removePadding(
-            context: context,
-            removeBottom: !staff,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: staff ? 0 : 60 + MediaQuery.viewPaddingOf(context).bottom),
             child: Column(
           children: [
             if (owner && index != 0 && index != 3 && widget.gyms.length > 1)
