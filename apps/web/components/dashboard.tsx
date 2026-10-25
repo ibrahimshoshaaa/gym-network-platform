@@ -176,9 +176,9 @@ const allTabs = [
   },
   {
     id: "purchases" as const,
-    label: "شراء نقاط الفروع",
+    label: "شحن رصيد المتدرب",
     icon: Building2,
-    description: "طلبات شراء النقاط ومتابعة مراجعتها",
+    description: "طلبات شحن محفظة المتدرب ومتابعة مراجعتها",
   },
 ];
 const tabs=allTabs;
@@ -269,7 +269,7 @@ export function Dashboard() {
   if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<div className="mobile-mirror native-modal-host"><PasswordChange onClose={()=>setPassword(false)}/></div>}</OwnerJoinAccess>;
   if(user.role==="BRANCH_MANAGER"||user.role==="CASHIER")return <><StaffPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<div className="mobile-mirror native-modal-host"><PasswordChange onClose={()=>setPassword(false)}/></div>}</>;
   const admin = user.role === "PLATFORM_ADMIN",
-    available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)),
+    available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)&&(t.id!=='purchases'||user.role==='TRAINEE')),
     current = available.find((t) => t.id === tab) ?? available[0]!;
   function navigate(next: Tab, task?: CashierTask) { if(next!=="gyms")setReviewGym(null); if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
   const adminSection = adminSectionFor(current.id);

@@ -1670,8 +1670,8 @@ test(
 
           await expect(page.getByRole('heading',{name:'الصورة المالية للمنصة',exact:true})).toBeVisible();
           await expect(page.getByText('إجمالي المستحق للجيمات',{exact:true})).toBeVisible();
-          await page.getByRole('button',{name:'أرصدة الجيمات ومستحقاتها',exact:true}).click();
-          await expect(page.getByRole('heading',{name:'كشف أرصدة الجيمات ومستحقاتها'})).toBeVisible();
+          await page.getByRole('button',{name:'مستحقات الجيمات',exact:true}).click();
+          await expect(page.getByRole('heading',{name:'كشف مستحقات الجيمات'})).toBeVisible();
           await expect(page.locator('.platform-finance .mobile-records tbody tr').first()).toBeVisible();
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'platform finance and gym balances must fit mobile');
 

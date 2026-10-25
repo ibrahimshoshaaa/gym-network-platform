@@ -302,7 +302,7 @@ export function SettingsPanel({
                       <h3>{pack.label}</h3>
                       <p>
                         {pack.points} نقطة ·{" "}
-                        {pack.kind === "TRAINEE" ? "متدربون" : "مخزون فروع"}
+                        متدربون
                       </p>
                       <span
                         className={`badge ${pack.enabled ? "approved" : "neutral"}`}

@@ -52,7 +52,6 @@ export function Review({request:row,onClose,onDone}:{request:Topup;onClose:()=>v
  useEffect(()=>{void read();return()=>{generation.current++;};},[row.receiptId]);
  async function submit(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(busy)return;
-  if(decision==="APPROVED"&&row.kind!=="TRAINEE"){setError("شراء مخزون الجيم متوقف؛ راجع تسوية الطلب السابق.");return;}
   const form=new FormData(e.currentTarget);
   if(decision==="APPROVED"&&(!viewed||form.get("confirmed")!=="on")){setError("راجع الإيصال وأكد وصول المبلغ أولًا.");return;}
   setBusy(true);setError("");
@@ -67,7 +66,6 @@ export function Review({request:row,onClose,onDone}:{request:Topup;onClose:()=>v
   <div className="receipt-section"><div className="section-toolbar"><h3>إيصال التحويل</h3><button className="secondary compact" disabled={reading||busy||!row.receiptId} onClick={()=>void read()}><RefreshCw size={15}/>إعادة العرض</button></div>
    <Notice text={receiptError}/>{reading?<Busy>جاري فتح الإيصال</Busy>:receipt?<a href={receipt} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" aria-label="تكبير إيصال التحويل"><img className="receipt-image" src={receipt} alt="إيصال التحويل المرفق" referrerPolicy="no-referrer" onLoad={()=>setViewed(true)} onError={()=>{setViewed(false);setReceipt("");setReceiptError("تعذر عرض الإيصال. اضغط إعادة العرض.");}}/></a>:null}
   </div>
-  {row.kind!=="TRAINEE"&&<Notice text="طلب مخزون سابق: الشحن للجيم متوقف. راجع التحويل وتسويته قبل رفض الطلب؛ لا يصدر هذا الطلب نقاطًا جديدة."/>}
   <div className="decision-switch" aria-label="قرار الشحن"><button type="button" aria-pressed={decision==="APPROVED"} className={decision==="APPROVED"?"active":""} disabled={busy||row.kind!=="TRAINEE"} onClick={()=>{setDecision("APPROVED");setError("");}}><CheckCircle2 size={18}/>قبول الشحن</button><button type="button" aria-pressed={decision==="REJECTED"} className={decision==="REJECTED"?"active reject":""} disabled={busy} onClick={()=>{setDecision("REJECTED");setError("");}}><XCircle size={18}/>رفض</button></div>
   <form onSubmit={submit} key={decision}><fieldset disabled={busy}>
    {decision==="APPROVED"?<>

@@ -34,7 +34,7 @@ export type Settings = {
 };
 export type Topup = {
   id: string;
-  kind: string;
+  kind: "TRAINEE";
   requestorUserId: string;
   requestor?: { displayName: string; email: string; phoneE164: string };
   branch?: { name: string; gym: { name: string } } | null;

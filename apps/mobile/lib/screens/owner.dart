@@ -714,7 +714,7 @@ class OwnerReport extends StatelessWidget {
                 child: Column(
                   children: [
                     Fact(
-                      r['branchName'] ?? 'محفظة الجيم',
+                      r['branchName'] ?? 'زيارة الجيم',
                       '${r['points']} نقطة',
                       strong: true,
                     ),

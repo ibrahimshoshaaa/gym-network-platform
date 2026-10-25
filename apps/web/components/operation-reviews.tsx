@@ -21,7 +21,7 @@ type Review = {
   createdAt: string;
 };
 const kindName = (kind: Kind) =>
-  kind === "VISIT_CANCEL" ? "إلغاء زيارة" : "تصحيح بيع نقاط";
+  "إلغاء زيارة";
 export function RequestAction({
   kind,
   targetId,

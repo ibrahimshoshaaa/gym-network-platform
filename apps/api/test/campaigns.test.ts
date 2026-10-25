@@ -9,7 +9,7 @@ test('campaign audiences intersect account and gym targeting without exposing ad
  assert.ok(campaignMatches({...c,audience:'OWNERS'},{...person,owner:true}));assert.equal(campaignMatches({...c,audience:'STAFF'},person),false);
 });
 test('campaign navigation stays in the known role-aware sections',()=>{
- assert.equal(campaignDestination('TOPUP',false,true),'topup');assert.equal(campaignDestination('TOPUP',true,false),'purchases');
+ assert.equal(campaignDestination('TOPUP',false,true),'topup');assert.equal(campaignDestination('TOPUP',true,false),'withdrawals');
  assert.equal(campaignDestination('WITHDRAWALS',false,true),'wallet');assert.equal(campaignDestination('javascript:alert(1)',false,true),'wallet');
 });
 test('campaign scheduling and targeting reject malformed or arbitrary HTML destinations',()=>{
