@@ -185,6 +185,10 @@ void main() {
         t.view.devicePixelRatio = 1;
         addTearDown(t.view.resetPhysicalSize);
         addTearDown(t.view.resetDevicePixelRatio);
+        t.view.padding = const FakeViewPadding(bottom: 24);
+        t.view.viewPadding = const FakeViewPadding(bottom: 24);
+        addTearDown(t.view.resetPadding);
+        addTearDown(t.view.resetViewPadding);
         await t.pumpWidget(GymNetworkApp(api: portalApi(role)));
         await t.pumpAndSettle();
         expect(find.byType(NavigationBar), findsOneWidget);
@@ -212,6 +216,11 @@ void main() {
           final badge = t.getRect(floating);
           final whiteBar = t.getRect(find.byType(NavigationBar));
           expect(badge.top, lessThan(whiteBar.top));
+          final home = find.byType(role == 'TRAINEE' ? TraineeHome : OwnerHome);
+          // The page reaches the opaque bar, filling the raised button's headroom.
+          expect(t.getRect(home).bottom, closeTo(whiteBar.top, 0.1));
+          expect(t.getRect(home).bottom, greaterThan(badge.top));
+          expect(find.ancestor(of: find.byType(NavigationBar), matching: find.byType(ColoredBox)), findsNothing);
           // Tap the part above the white bar, rather than the ordinary tab area.
           await t.tapAt(Offset(badge.center.dx, badge.top + 4));
           await t.pumpAndSettle();
@@ -220,7 +229,7 @@ void main() {
           await t.pumpWidget(const SizedBox()); await t.pump();
         }
 
-      });
+      }, variant: TargetPlatformVariant({TargetPlatform.android, TargetPlatform.iOS}));
     }
   }
   testWidgets(

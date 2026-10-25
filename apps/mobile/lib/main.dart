@@ -360,6 +360,7 @@ class _NativeShellState extends State<NativeShell> {
     }
     return AnnotatedRegion<SystemUiOverlayStyle>(value: index == 0 ? SystemUiOverlayStyle.light.copyWith(statusBarColor: ink) : SystemUiOverlayStyle.dark, child: Scaffold(
       backgroundColor: index == 0 ? ink : canvas,
+      extendBody: !staff,
       appBar: index == 0 ? null : AppBar(
         title: const Brand(),
         centerTitle: !workMode,
@@ -378,7 +379,14 @@ class _NativeShellState extends State<NativeShell> {
         ],
       ),
       body: SafeArea(
-        child: Column(
+        bottom: staff,
+        child: Padding(
+          // Only the opaque bar reserves space; content fills the QR headroom.
+          padding: EdgeInsets.only(bottom: staff ? 0 : 60 + MediaQuery.viewPaddingOf(context).bottom),
+          child: MediaQuery.removePadding(
+            context: context,
+            removeBottom: !staff,
+            child: Column(
           children: [
             if (owner && index != 0 && index != 3 && widget.gyms.length > 1)
               Padding(
@@ -493,9 +501,11 @@ class _NativeShellState extends State<NativeShell> {
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
-      bottomNavigationBar: ColoredBox(color: canvas, child: Stack(
+      bottomNavigationBar: Stack(
         clipBehavior: Clip.none,
         children: [
           Padding(
@@ -524,7 +534,7 @@ class _NativeShellState extends State<NativeShell> {
             )),
           ),
         ],
-      )),
+      ),
     ));
   }
 }
