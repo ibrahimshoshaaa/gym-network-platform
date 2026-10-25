@@ -99,6 +99,7 @@ class _PhoneCodeScreenState extends State<_PhoneCodeScreen> {
         Text(widget.phone, textDirection: TextDirection.ltr, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
         TextButton(onPressed: busy ? null : () => Navigator.pop(context), child: Text(tr('تغيير الرقم', 'Change number'))),
         const SizedBox(height: 12),
+        if (challenge['testMode'] != true) Text(tr('الكود في الرسالة مكتوب بالكلمات؛ اكتبه هنا بالأرقام.', 'The SMS spells out each digit; enter the code here as numbers.'), style: const TextStyle(color: muted, fontSize: 12)),
         TextField(key: const ValueKey('phone.otp.code'), controller: code, enabled: !busy,
           keyboardType: TextInputType.number, textDirection: TextDirection.ltr, textAlign: TextAlign.center,
           maxLength: 6, inputFormatters: [TextInputFormatter.withFunction((old, value) => value.copyWith(text: digits(value.text))), FilteringTextInputFormatter.digitsOnly],

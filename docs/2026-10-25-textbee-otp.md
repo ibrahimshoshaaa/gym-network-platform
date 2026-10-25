@@ -28,11 +28,12 @@ Apply migration `202610250002_textbee_phone_otp` before the new server version. 
 ## Verification and limits
 
 - Random six-digit codes expire after five minutes, allow five wrong attempts, and are bound to phone, purpose and challenge ID with a server-keyed HMAC. A successful registration/reset consumes the challenge atomically.
+- Registration checks the normalized phone before requesting an SMS and before consuming send allowance. Existing numbers receive `ACCOUNT_UNAVAILABLE`; the final unique-account check remains to protect concurrent registration.
 - New SMS accounts get `phoneVerifiedAt`. Existing active trainee/owner accounts can recover with a real SMS proof; admin accounts retain their separate recovery path. A phone verified with real SMS cannot later be reset by the fixed-code test flow, even if it previously had a test identity marker.
 - New requests wait one minute per phone. Limits also apply across server workers: five requests per phone/hour, ten per phone/24 hours, and 100 per sending device/24 hours, plus the existing IP limits. These are fixed windows from the first request; failed or throttled requests may consume allowance.
 - Sending happens after the challenge transaction commits, so transaction retries cannot send duplicates. Provider errors/timeouts invalidate that challenge and show a neutral error. No automatic external-send retries.
 - The API only acknowledges provider acceptance, not handset delivery. TextBee queues messages if the sending phone is offline. Check TextBee's history and the receiving handset to confirm receipt. A delayed code may expire before arrival.
-- TextBee plan limits and SIM/carrier SMS charges still apply. The OTP text is a short English message to avoid unnecessary Unicode SMS segments.
+- TextBee plan limits and SIM/carrier SMS charges still apply. The OTP text is a short Arabic transactional message: each of the six digits is spelled out separately, including leading zeros, with the GymBank name and a do-not-share reminder. No offers or links are included. Web/mobile accept Arabic, Persian and ASCII digits; the server normalizes them to the original six-character code before verification. This format is a delivery experiment, not a guarantee against carrier filtering.
 
 ## Before merging/releasing
 

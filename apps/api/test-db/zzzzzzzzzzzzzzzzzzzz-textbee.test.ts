@@ -14,7 +14,10 @@ test('real SMS proofs verify ownership, reject replay and failed sends, and cann
  const phone='+201055559801',password='Synthetic SMS registration password',replacement='Synthetic SMS replacement password';
  const sends:{phone:string;code:string}[]=[];
  globalThis.fetch=async(_url,options)=>{
-  const body=JSON.parse(String(options?.body));sends.push({phone:body.recipients[0],code:body.message.match(/code: (\d{6})/)[1]});
+  const body=JSON.parse(String(options?.body));
+  const words=['صفر','واحد','اتنين','تلاتة','أربعة','خمسة','ستة','سبعة','تمانية','تسعة'];
+  const code=body.message.match(/^رمز جيم بانك: (.+)\. لا تشاركه\.$/)[1].split(' ').map((w:string)=>String(words.indexOf(w))).join('');
+  assert.match(code,/^\d{6}$/);sends.push({phone:body.recipients[0],code});
   return Response.json({data:{success:true,smsBatchId:'synthetic-batch'}});
  };
  const age=()=>db.phoneOtpChallenge.updateMany({where:{phone},data:{createdAt:new Date(Date.now()-61000)}});
@@ -26,11 +29,15 @@ test('real SMS proofs verify ownership, reject replay and failed sends, and cann
   const wrong=String((Number(code)+1)%1000000).padStart(6,'0');
   const body={phone,challengeId:c.challengeId,code,displayName:'Synthetic SMS trainee',password};
   await assert.rejects(registerPhonePreview(db,{...body,code:wrong}),/PHONE_OTP_INVALID/);
-  const user=await registerPhonePreview(db,body);assert.equal(user.testMode,false);assert.equal(user.user.phoneVerified,true);
+  const arabic=(code:string)=>code.replace(/\d/g,d=>String.fromCharCode(0x660+Number(d)));
+  const user=await registerPhonePreview(db,{...body,code:arabic(code)});assert.equal(user.testMode,false);assert.equal(user.user.phoneVerified,true);
   assert.equal(await db.phoneTestIdentity.findUnique({where:{userId:user.user.id}}),null);
   await assert.rejects(registerPhonePreview(db,body),/PHONE_OTP_INVALID/);
+  const challengeCount=await db.phoneOtpChallenge.count({where:{phone}}),sentCount=sends.length;
+  await assert.rejects(requestPhoneChallenge(db,{phone:'01055559801',purpose:'REGISTER'}),/ACCOUNT_UNAVAILABLE/);
+  assert.equal(sends.length,sentCount);assert.equal(await db.phoneOtpChallenge.count({where:{phone}}),challengeCount);
   await age();const reset=await requestPhoneChallenge(db,{phone,purpose:'RESET'}),resetCode=sends.at(-1)!.code;
-  assert.equal((await verifyPhoneResetCode(db,{phone,challengeId:reset.challengeId,code:resetCode})).ok,true);
+  assert.equal((await verifyPhoneResetCode(db,{phone,challengeId:reset.challengeId,code:resetCode.replace(/\d/g,d=>String.fromCharCode(0x6f0+Number(d)))})).ok,true);
   await resetPhonePreviewPassword(db,{phone,challengeId:reset.challengeId,code:resetCode,newPassword:replacement});
   assert.equal(await authenticate(db,'Bearer '+user.accessToken),null);
   assert.equal((await loginTrainee(db,{identifier:phone,password:replacement})).user.id,user.user.id);

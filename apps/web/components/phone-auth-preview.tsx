@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {request,send,type Identity,ApiError} from '../lib/client';
+import {normalizeDigits} from '../lib/topup-estimate';
 type Challenge={challengeId:string;expiresAt:string;retryAfterSeconds:number;testMode:boolean};
 const errorText=(e:unknown)=>e instanceof ApiError?({PHONE_OTP_DISABLED:'خدمة التحقق بالموبايل غير مفعلة حاليًا.',PHONE_OTP_SEND_FAILED:'تعذر طلب رسالة التحقق. راجع اتصال جهاز الإرسال وحاول لاحقًا.',PHONE_OTP_WAIT:'انتظر دقيقة قبل طلب كود جديد.',PHONE_OTP_INVALID:'الكود غير صحيح أو انتهى أو اتستخدم.',ACCOUNT_UNAVAILABLE:'الرقم مسجل بالفعل. ادخل بالباسورد أو استخدم الاسترجاع.',RATE_LIMITED:'محاولات كتير. انتظر قليلًا.',INVALID_INPUT:'راجع الحقول؛ كلمة السر ١٥ حرفًا على الأقل.'} as Record<string,string>)[e.code]??'تعذر إتمام الخطوة. حاول تاني.':'تعذر الاتصال بالخدمة.';
 export function PhoneAuthPreview({owner=false,reset=false,onLogin,onClose}:{owner?:boolean;reset?:boolean;onLogin?:(user:Identity)=>void;onClose?:()=>void}){
@@ -9,7 +10,7 @@ export function PhoneAuthPreview({owner=false,reset=false,onLogin,onClose}:{owne
  async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();if(running.current)return;running.current=true;setBusy(true);setError('');const f=new FormData(e.currentTarget);
   try{
    if(!challenge){const data=Object.fromEntries(f.entries());const c=await request<Challenge>('/api/phone-auth/challenge',send({phone:data.phone,purpose:reset?'RESET':'REGISTER'}));setDraft(data);setChallenge(c);setWait(c.retryAfterSeconds);}
-   else if(draft){const proof={phone:draft.phone,challengeId:challenge.challengeId,code:String(f.get('code')??'').trim()};
+   else if(draft){const proof={phone:draft.phone,challengeId:challenge.challengeId,code:normalizeDigits(String(f.get('code')??'').trim())};
     if(reset){await request('/api/phone-auth/reset',send({...proof,newPassword:draft.password}));setDone(true);setDraft(null);setChallenge(null);}
     else{const result=await request<{user:Identity}>('/api/phone-auth/register',send({...proof,displayName:draft.displayName,password:draft.password,accountType:owner?'owner':'trainee',...(owner?{gym:Object.fromEntries(['gymName','description','governorate','city','address'].map(k=>[k,draft[k]]))}:{})}));setDraft(null);onLogin?.(result.user);}
    }
@@ -24,7 +25,7 @@ export function PhoneAuthPreview({owner=false,reset=false,onLogin,onClose}:{owne
     <label className="web-auth-field">{reset?'نفس رقم الموبايل المسجّل':'رقم الموبايل'}<input name="phone" type="tel" required placeholder="اكتب رقم الموبايل" dir="ltr" autoComplete="tel"/></label>
     <label className="web-auth-field">{reset?'كلمة السر الجديدة':'كلمة السر'}<input name="password" type="password" required minLength={15} maxLength={128} autoComplete="new-password"/><small>١٥ حرفًا على الأقل.</small></label>
     {!reset&&owner&&<>{[['gymName','اسم الجيم'],['governorate','المحافظة'],['city','المدينة'],['address','العنوان'],['description','نبذة']].map(([k,label])=><label className="web-auth-field" key={k}>{label}<input name={k} required={k!=='description'} minLength={k!=='description'?2:undefined} maxLength={k==='description'?1000:150}/></label>)}</>}
-   </>:<><p>تأكيد الرقم <span dir="ltr">{String(draft?.phone)}</span></p><label className="web-auth-field">كود التأكيد<input key={challenge.challengeId} name="code" defaultValue={challenge.testMode?'123456':''} required pattern="[0-9]{6}" maxLength={6} inputMode="numeric" autoComplete="one-time-code" dir="ltr"/></label><button type="button" disabled={busy||wait>0} onClick={()=>void resend()}>{wait>0?`طلب كود جديد بعد ${wait} ثانية`:'طلب كود جديد'}</button><button type="button" onClick={()=>{setDraft(null);setChallenge(null);setError('');}}>تعديل البيانات</button></>}
+   </>:<><p>تأكيد الرقم <span dir="ltr">{String(draft?.phone)}</span></p>{!challenge.testMode&&<p>الكود في الرسالة مكتوب بالكلمات؛ اكتبه هنا بالأرقام.</p>}<label className="web-auth-field">كود التأكيد<input key={challenge.challengeId} name="code" defaultValue={challenge.testMode?'123456':''} required pattern="[0-9٠-٩۰-۹]{6}" maxLength={6} inputMode="numeric" autoComplete="one-time-code" dir="ltr"/></label><button type="button" disabled={busy||wait>0} onClick={()=>void resend()}>{wait>0?`طلب كود جديد بعد ${wait} ثانية`:'طلب كود جديد'}</button><button type="button" onClick={()=>{setDraft(null);setChallenge(null);setError('');}}>تعديل البيانات</button></>}
    {error&&<p className="web-auth-error" role="alert">{error}</p>}
    <button className="web-auth-submit" type="submit">{busy?'جارٍ التنفيذ…':challenge?(reset?'تأكيد وتغيير كلمة السر':'تأكيد وإنشاء الحساب'):'طلب كود التحقق'}</button>
   </fieldset></form>}
