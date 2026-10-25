@@ -1718,7 +1718,8 @@ test(
           for(const width of [320,393]){await page.setViewportSize({width,height:851});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'direct topup receipt must fit mobile');}
           await page.setViewportSize({width:393,height:851});
           const ownerPointQuote=await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:newGym.owner.id,gymId:newGym.gym.id,points:30}});
-          assert.equal(ownerPointQuote.status,403);
+          assert.equal(ownerPointQuote.status,400,'retired gym destination is rejected by the strict schema');
+          assert.equal((await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:newGym.owner.id,points:30}})).status,403,'gym owner cannot receive trainee points');
           const ownerContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const ownerSeparator=invitedOwnerCookie.indexOf('=');
           await ownerContext.addCookies([{name:invitedOwnerCookie.slice(0,ownerSeparator),value:invitedOwnerCookie.slice(ownerSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
