@@ -9,7 +9,10 @@ from pathlib import Path
 def sim(*args, check=True):
     print('Simulator step: ' + args[0], flush=True)
     try:
-        result = subprocess.run(['xcrun', 'simctl', *args], timeout=300 if args[0] == 'bootstatus' else 90,
+        # A fresh hosted simulator can finish booting before its installer is ready.
+        # Keep installation bounded, while allowing the same cold-start budget as boot.
+        timeout = 300 if args[0] in {'bootstatus', 'install'} else 90
+        result = subprocess.run(['xcrun', 'simctl', *args], timeout=timeout,
                                 capture_output=True, text=True)
     except subprocess.TimeoutExpired as error:
         raise RuntimeError('Simulator command timed out: ' + args[0]) from error
