@@ -1,3 +1,4 @@
+import {historicalSale as sellPoints} from './legacy-fixtures.js';
 import { getQuote,submitTopup,reviewTopup } from "../src/topups/service.js";
 import { savePaymentMethod } from "../src/topups/settings.js";
 import assert from "node:assert/strict";
@@ -14,7 +15,6 @@ import { createSession } from "../src/auth/sessions.js";
 import {
   confirmVisit,
   issueQr,
-  sellPoints,
 } from "../src/operations/service.js";
 import { requestReview, decideReview } from "../src/reviews/service.js";
 import {
@@ -104,7 +104,7 @@ async function fixture() {
     idempotencyKey: randomUUID(),
     reason: "Synthetic report points",
     points: {
-      kind: "ISSUE",
+      kind: "ADJUSTMENT",
       entries: [
         { accountId: issuance.id, delta: -220n },
         { accountId: inventory.id, delta: 100n },
@@ -502,8 +502,8 @@ test('platform finance counts holdings and liabilities once and separates real p
  const method=await db.paymentMethod.findUniqueOrThrow({where:{type:'INSTAPAY'}});
  await savePaymentMethod(db,f.admin.id,'INSTAPAY',{expectedVersion:method.version,account:'synthetic-finance@instapay',accountName:'Synthetic Receiver',enabled:true});
  const fresh=await db.paymentMethod.findUniqueOrThrow({where:{type:'INSTAPAY'}});
- for(const kind of ['TRAINEE','BRANCH_STOCK'] as const){
-  const actor=kind==='TRAINEE'?f.trainee.id:f.owner.id,selection={kind,points:7,...(kind==='BRANCH_STOCK'?{receivingBranchId:f.branch.id}:{})};
+ for(const kind of ['TRAINEE'] as const){
+  const actor=f.trainee.id,selection={kind,points:7};
   const quote=await getQuote(db,actor,selection),receipt=await db.receiptEvidence.create({data:{ownerUserId:actor,objectKey:'synthetic/'+randomUUID(),assetId:randomUUID(),contentHash:randomUUID(),mimeType:'image/jpeg',bytes:10}});
   const b=await snapshot(),pending=await submitTopup(db,actor,randomUUID(),{...selection,pricingVersion:quote.pricingVersion,paymentMethod:'INSTAPAY',paymentMethodVersion:fresh.version,receiptId:receipt.id});
   assert.equal((await snapshot()).collections.total,b.collections.total);

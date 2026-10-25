@@ -200,77 +200,20 @@ void main() {
       expect(t.takeException(), isNull);
     },
   );
-  testWidgets(
-    'owner send reveals full recipient before review and posts exact quoted cash sale',
-    (t) async {
-      Json? posted;
-      final api = fake((r) async {
-        if (r.url.path.endsWith('/lookup'))
-          return response(
-            jsonEncode({'id': 'trainee-1', 'label': 'متدرب تجريبي كامل'}),
-            200,
-          );
-        if (r.url.path.endsWith('/quotes'))
-          return response(
-            jsonEncode({
-              'recipientId': 'trainee-1',
-              'recipientLabel': 'متدرب تجريبي كامل',
-              'points': 10,
-              'chargePiasters': '1250',
-              'pricingVersion': 2,
-              'stock': '100',
-              'recipientAfter': '30',
-            }),
-            200,
-          );
-        posted = Map<String, dynamic>.from(jsonDecode(r.body));
-        return response(
-          jsonEncode({
-            'id': 'receipt-1',
-            'points': 10,
-            'recipientLabel': 'متدرب تجريبي كامل',
-            'chargePiasters': '1250',
-          }),
-          201,
-        );
-      }, user: {'id': 'o1', 'role': 'GYM_OWNER'});
-      await t.pumpWidget(
-        MaterialApp(
-          theme: appTheme(),
-          home: Directionality(
-            textDirection: TextDirection.rtl,
-            child: SendPoints(api: api, gym: const {'id': 'g1'}),
-          ),
-        ),
-      );
-      await t.enterText(find.byType(TextField).first, '01000000000');
-      await t.tap(find.text('متابعة'));
-      await t.pumpAndSettle();
-      expect(find.text('متدرب تجريبي كامل'), findsOneWidget);
-      await t.enterText(find.byType(TextField).first, '10');
-      await t.tap(find.text('مراجعة الإرسال'));
-      await t.pumpAndSettle();
-      expect(find.text('12.50 ج.م'), findsOneWidget);
-      await t.scrollUntilVisible(
-        find.byType(CheckboxListTile),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await t.tap(find.byType(CheckboxListTile));
-      await t.pumpAndSettle();
-      await t.scrollUntilVisible(
-        find.text('تأكيد الإرسال'),
-        150,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await t.tap(find.text('تأكيد الإرسال'));
-      await t.pumpAndSettle();
-      expect(posted?['fundsReceived'], true);
-      expect(posted?['receivedAmountPiasters'], '1250');
-      expect(posted?['gymId'], 'g1');
-      expect(find.text('تم إرسال النقاط'), findsOneWidget);
-      expect(t.takeException(), isNull);
-    },
-  );
+  testWidgets('retired owner sending screen makes no sale requests', (t) async {
+    final requests = <String>[];
+    final api = fake((r) async {
+      requests.add(r.url.path);
+      return response('{}', 200);
+    }, user: {'id': 'o1', 'role': 'GYM_OWNER'});
+    await t.pumpWidget(MaterialApp(theme: appTheme(), home: Directionality(
+      textDirection: TextDirection.rtl,
+      child: SendPoints(api: api, gym: const {'id': 'g1'}),
+    )));
+    await t.pumpAndSettle();
+    expect(find.text('شحن النقاط من صاحب المنصة فقط'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    expect(requests, isEmpty);
+    expect(t.takeException(), isNull);
+  });
 }
-

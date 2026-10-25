@@ -35,8 +35,8 @@ async function fixture() {
     { userId: manager.id, branchId: a.id, role: 'BRANCH_MANAGER' },
   ] });
   const issuance = await db.pointAccount.findFirst({ where: { type: 'ISSUANCE' } }) ?? await db.pointAccount.create({ data: { type: 'ISSUANCE' } });
-  const stockA = await db.pointAccount.create({ data: { type: 'BRANCH_INVENTORY', branchId: a.id } });
-  const stockB = await db.pointAccount.create({ data: { type: 'BRANCH_INVENTORY', branchId: b.id } });
+  const stockA = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: (await user('TRAINEE')).id } });
+  const stockB = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: (await user('TRAINEE')).id } });
   const wallet = await db.pointAccount.create({ data: { type: 'TRAINEE_WALLET', ownerUserId: trainee.id } });
   const offset = await db.moneyAccount.findFirst({ where: { type: 'PLATFORM_OFFSET' } }) ?? await db.moneyAccount.create({ data: { type: 'PLATFORM_OFFSET' } });
   const money = await db.moneyAccount.create({ data: { type: 'GYM_AVAILABLE', gymId: gym.id } });
@@ -72,40 +72,24 @@ test('a retry with reordered postings returns original result; changed payload/a
   await assert.rejects(postLedger(db, { ...cmd, actorId: admin2.id }), /IDEMPOTENCY_CONFLICT/);
 });
 
-test('two concurrent transfers of 40 from 50 succeed once and never overdraw', async () => {
-  const f = await fixture(); await postLedger(db, f.command());
-  const results = await Promise.allSettled(Array.from({ length: 2 }, () => transferStock(db, {
-    actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points: 40, idempotencyKey: randomUUID(),
-  })));
-  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockA.id } })).balance, 10);
-  assert.equal((await db.pointAccount.findUniqueOrThrow({ where: { id: f.stockB.id } })).balance, 40);
+test('concurrent admin wallet movements cannot overdraw a trainee wallet',async()=>{
+ const f=await fixture();await postLedger(db,f.command());
+ const results=await Promise.allSettled([1,2].map(()=>postLedger(db,{actorId:f.admin.id,idempotencyKey:randomUUID(),reason:'Synthetic wallet movement',points:{kind:'TRANSFER',entries:[{accountId:f.stockA.id,delta:-40n},{accountId:f.stockB.id,delta:40n}]}})));
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:f.stockA.id}})).balance,10);
 });
 
-test('owner transfer replay is stable; manager, cashier and foreign owner cannot transfer', async () => {
-  const f = await fixture(); await postLedger(db, f.command());
-  const cmd = { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points: 10, idempotencyKey: randomUUID() };
-  assert.deepEqual(await transferStock(db, cmd), await transferStock(db, cmd));
-  for (const actor of [f.cashier, f.manager, f.outsider]) await assert.rejects(transferStock(db, { ...cmd, actorId: actor.id, idempotencyKey: randomUUID() }), /BRANCH_ACCESS_DENIED/);
-  await assert.rejects(transferStock(db, { ...cmd, toBranchId: f.foreign.id, idempotencyKey: randomUUID() }), /BRANCH_ACCESS_DENIED/);
-});
-
-test('same owner cannot transfer between different gyms they own', async () => {
-  const f = await fixture(); await postLedger(db, f.command());
-  await db.gym.update({ where: { id: f.otherGym.id }, data: { ownerId: f.owner.id } });
-  await assert.rejects(transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.foreign.id, points: 1, idempotencyKey: randomUUID() }), /BRANCH_ACCESS_DENIED/);
-});
+test('stock transfers are denied for admin, owner, manager, cashier and foreign owner',async()=>{const f=await fixture();for(const actor of [f.admin,f.owner,f.manager,f.cashier,f.outsider])assert.throws(()=>transferStock(db,{actorId:actor.id,fromBranchId:f.a.id,toBranchId:f.b.id,points:40,idempotencyKey:randomUUID()}),/ACCESS_DENIED/);});
 
 test('cashier/manager permission requires an active assignment in the exact branch', async () => {
   const f = await fixture();
-  await db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'SELL_POINTS'));
-  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.b.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
-  await db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.a.id, 'SELL_POINTS'));
-  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.foreign.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
+  await db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'OPERATE_BRANCH'));
+  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.b.id, 'OPERATE_BRANCH')), /BRANCH_ACCESS_DENIED/);
+  await db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.a.id, 'OPERATE_BRANCH'));
+  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.owner.id, f.foreign.id, 'OPERATE_BRANCH')), /BRANCH_ACCESS_DENIED/);
   await db.staffAssignment.updateMany({ where: { userId: f.cashier.id }, data: { active: false } });
-  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'SELL_POINTS')), /BRANCH_ACCESS_DENIED/);
+  await assert.rejects(db.$transaction(tx => requireBranchAccess(tx, f.cashier.id, f.a.id, 'OPERATE_BRANCH')), /BRANCH_ACCESS_DENIED/);
   await db.user.update({ where: { id: f.owner.id }, data: { isActive: false } });
-  await assert.rejects(transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points: 1, idempotencyKey: randomUUID() }), /ACCESS_DENIED/);
+  await assert.rejects(async()=>transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points: 1, idempotencyKey: randomUUID() }), /ACCESS_DENIED/);
 });
 
 test('non-admin cannot call the generic financial primitive', async () => {
@@ -182,7 +166,7 @@ test('cannot reverse half of a point/money bundle', async () => {
 test('invalid amounts, unbalanced, duplicate accounts, and missing accounts fail without postings', async () => {
   const f = await fixture();
   for (const points of [0, -1, 0.1, Infinity, 2147483648]) {
-    assert.throws(() => transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points, idempotencyKey: randomUUID() }), /INVALID_TRANSFER/);
+    assert.throws(() => transferStock(db, { actorId: f.owner.id, fromBranchId: f.a.id, toBranchId: f.b.id, points, idempotencyKey: randomUUID() }), /ACCESS_DENIED/);
   }
   const cmd = f.command(); cmd.points!.entries[0]!.delta = -49n;
   await assert.rejects(postLedger(db, cmd), /INVALID_POSTINGS/);

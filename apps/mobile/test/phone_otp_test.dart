@@ -6,6 +6,18 @@ import 'package:gym_network/screens/phone_otp.dart';
 import 'operations_test.dart' show client, page, reply;
 
 void main() {
+  testWidgets('live SMS code is blank and does not show the fixed test code', (t) async {
+    final api = client('TRAINEE', (_) async => reply({'challengeId': 'live-challenge', 'retryAfterSeconds': 60, 'testMode': false}));
+    await t.pumpWidget(page(Builder(builder: (context) => TextButton(
+      onPressed: () => requestPhoneCode(context, api, '+201055550123', 'REGISTER'),
+      child: const Text('start live'),
+    ))));
+    await t.tap(find.text('start live')); await t.pumpAndSettle();
+    expect(t.widget<TextField>(find.byKey(const ValueKey('phone.otp.code'))).controller!.text, isEmpty);
+    expect(find.textContaining('123456'), findsNothing);
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(const SizedBox()); await t.pump();
+  });
   testWidgets('a rejected code stays open and can be corrected without another challenge', (t) async {
     var challenges = 0, confirmations = 0;
     final api = client('TRAINEE', (r) async {

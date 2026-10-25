@@ -88,7 +88,7 @@ type Tab =
   | "payments"
   | "packages"
   | "purchases";
-const tabs = [
+const allTabs = [
   {id:"promotion-requests" as const,label:"إعلانات الفروع",icon:FileCheck2,description:"مراجعة عروض الفروع وتحديد تكلفتها"},
   {id:"maintenance" as const,label:"الصيانة",icon:Wrench,description:"أعطال الفروع وعروض الصيانة والمتابعة"},
   {id:"market" as const,label:"الماركت",icon:Coins,description:"مراجعة المعروض والبلاغات وإعلانات المنصة"},
@@ -98,7 +98,7 @@ const tabs = [
   {id:"finance" as const,label:"المالية",icon:Wallet,description:"التحصيلات والمستحقات وحركة النقاط"},
   {id:"more" as const,label:"المزيد",icon:MoreHorizontal,description:"الدعم والمستخدمون وإعدادات المنصة"},
   {id:"gym-applications" as const,label:"طلبات الانضمام",icon:Building2,description:"مراجعة بيانات أصحاب الجيمات المسجلين من التطبيق وقبول أو رفض انضمامهم"},
-  {id:"direct-topup" as const,label:"شحن مباشر بالرقم",icon:Send,description:"شحن المتدرب أو الجيم برقم الموبايل بعد تأكيد التحصيل"},
+  {id:"direct-topup" as const,label:"شحن مباشر بالرقم",icon:Send,description:"شحن المتدرب برقم الموبايل بعد تأكيد التحصيل"},
   {id:"point-wallet" as const,label:"محفظة الجيم والإرسال",icon:Wallet,description:"رصيد جيمك وإرسال النقاط للمتدربين برقم الموبايل"},
   {id:"disputes" as const,label:"حجوزات النزاعات",icon:ShieldCheck,description:"حجز المبلغ محل المراجعة وفكّه مع الحفاظ على باقي المستحقات"},
   {id:"support" as const,label:"الدعم والشكاوى",icon:FileCheck2,description:"طلبات المساعدة والاعتراضات والردود ومرفقاتها"},
@@ -139,7 +139,7 @@ const tabs = [
     id: "cashier" as const,
     label: "الكاشير والزيارات",
     icon: Building2,
-    description: "بيع نقاط الفرع وتأكيد حضور المتدربين بالـQR",
+    description: "تأكيد حضور المتدربين بالـQR ومتابعة الزيارات",
   },
   {
     id: "trainee" as const,
@@ -169,7 +169,7 @@ const tabs = [
     id: "pricing" as const,
     label: "الأسعار والنسب",
     icon: Coins,
-    description: "إدارة سعر النقطة وخصم الجيم ونسبة إعادة البيع",
+    description: "إدارة سعر النقطة ونسبة تسوية الزيارة والنقاط الترحيبية",
   },
   {
     id: "payments" as const,
@@ -181,7 +181,7 @@ const tabs = [
     id: "packages" as const,
     label: "باقات النقاط",
     icon: Package,
-    description: "كميات نقاط مناسبة للمتدربين والجيمات",
+    description: "كميات نقاط مناسبة للمتدربين",
   },
   {
     id: "purchases" as const,
@@ -190,6 +190,7 @@ const tabs = [
     description: "طلبات شراء النقاط ومتابعة مراجعتها",
   },
 ];
+const tabs=allTabs.filter(item=>!['inventory','point-wallet'].includes(item.id));
 export function Dashboard() {
   const [user, setUser] = useState<Identity | null>(null),
     [loading, setLoading] = useState(true),

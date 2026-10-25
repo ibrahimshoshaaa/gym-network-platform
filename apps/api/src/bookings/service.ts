@@ -37,7 +37,7 @@ export function branchEntryQr(db:PrismaClient,actorId:string,branchId:string,inp
  if(!rotate)parse(z.object({}).strict(),input);
  return serializable(db,async tx=>{
   await tx.$queryRaw`SELECT id FROM "Branch" WHERE id=${branchId}::uuid FOR UPDATE`;
-  let branch=await requireBranchAccess(tx,actorId,branchId,rotate?'CANCEL_VISIT':'SELL_POINTS');
+  let branch=await requireBranchAccess(tx,actorId,branchId,rotate?'CANCEL_VISIT':'OPERATE_BRANCH');
   if(rotate&&branch.entryQrVersion!==expectedVersion)throw new DomainError('STALE_SETTINGS');
   if(!branch.entryQrToken||rotate){
    const updated=await tx.branch.update({where:{id:branchId},data:{entryQrToken:randomBytes(32).toString('base64url'),entryQrVersion:{increment:1}}});
@@ -215,7 +215,7 @@ export function issueBookingQr(db:PrismaClient,actorId:string,id:string,bearer:s
 export function scanBooking(db:PrismaClient,actorId:string,branchId:string,input:unknown){
  parse(uuid,branchId);const data=parse(scanSchema,input);
  return serializable(db,async tx=>{
-  await requireBranchAccess(tx,actorId,branchId,'SELL_POINTS');
+  await requireBranchAccess(tx,actorId,branchId,'OPERATE_BRANCH');
   const found=await tx.booking.findUnique({where:{qrHash:hashToken(data.token)}});
   if(!found)throw new DomainError('QR_INVALID');
   const b=await lockBooking(tx,found.id),now=new Date();

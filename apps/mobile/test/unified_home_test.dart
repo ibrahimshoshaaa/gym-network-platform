@@ -12,7 +12,7 @@ void main(){
     if(r.url.path.endsWith('/gyms'))return reply({'items':[{'id':'g1','name':'جيم اختبار','status':'ACTIVE'}]});
     if(r.url.path.endsWith('me/gym-application'))return reply({'application':null});
     if(r.url.path.endsWith('me/access'))return reply({'ownedGyms':role=='GYM_OWNER'?[{'id':'g1','name':'جيم اختبار','status':'ACTIVE'}]:[],'assignments':role=='BRANCH_MANAGER'||role=='CASHIER'?[{'role':role}]:[]});
-    if(r.url.path.endsWith('operations/branches'))return reply({'items':[{'id':'b1','gymId':'g1','name':'فرع اختبار','gymName':'جيم اختبار','canSell':true,'canCancel':role=='BRANCH_MANAGER'}]});
+    if(r.url.path.endsWith('operations/branches'))return reply({'items':[{'id':'b1','gymId':'g1','name':'فرع اختبار','gymName':'جيم اختبار','canOperate':true,'canCancel':role=='BRANCH_MANAGER'}]});
     if(r.url.path.endsWith('/point-wallet'))return reply({'available':265,'total':265,'branchesTotal':0});
     if(r.url.path.contains('/operations/')&&r.url.path.endsWith('/summary'))return reply({'stock':265,'visitPricePoints':20,'sessionMinutes':180});
     if(r.url.path.endsWith('trainee/wallet'))return reply({'spendablePoints':500,'unavailablePoints':0,'status':'VALID','expiresAt':'2027-01-19T00:00:00Z'});

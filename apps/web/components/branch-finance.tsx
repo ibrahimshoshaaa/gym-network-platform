@@ -41,7 +41,7 @@ export function BranchFinance({branch}: {branch: Branch}) {
       <Fact label="مسحوب أو مرتبط بطلبات سحب">{decimal(finance.committed)} ج.م</Fact>
       <Fact label="محجوز للمراجعة">{decimal(finance.disputed)} ج.م</Fact>
       {finance.legacyReviewRequired && <PortalNote>فيه سحوبات قديمة غير موزعة على الفروع؛ المتاح محسوب بتحفّظ لحين مراجعتها.</PortalNote>}
-    </> : !financeError ? <Busy/> : null}<p className="muted">مستحقات الفرع الحالية من كل الفترات. المتاح للسحب يخضع لرصيد الجيم، وهو منفصل عن مخزون النقاط.</p></section>
+    </> : !financeError ? <Busy/> : null}<p className="muted">مستحقات الفرع الحالية من كل الفترات. المتاح للسحب يخضع لرصيد الجيم.</p></section>
     <h2>ملخص الزيارات</h2><label className="field">الفترة<select value={days} onChange={e => setDays(Number(e.target.value))}><option value={1}>اليوم</option><option value={30}>آخر ٣٠ يوم</option></select></label>
     <section className="card portal-facts"><Notice text={reportError}/>{report ? <>
       <Fact label="زيارات مسجلة">{report.visits.count}</Fact><Fact label="زيارات ملغاة خلال الفترة">{report.cancellations.count}</Fact>

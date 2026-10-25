@@ -100,7 +100,7 @@ type ReportRow = {
 export function NativeReport({ gymId, branchId }: {
     gymId: string;
     branchId?: string;
-}) { const [kind, setKind] = useState("VISITS"); return <><div className="native-tabs">{[["VISITS", "الزيارات"], ["SALES", "المبيعات"]].map(([id, label]) => <button key={id} className={id === kind ? "active" : ""} onClick={() => setKind(id!)}>{label}</button>)}</div><ReportRows key={kind} gymId={gymId} branchId={branchId} kind={kind}/></>; }
+}) { const [kind, setKind] = useState("VISITS"); return <><div className="native-tabs">{[["VISITS", "الزيارات"], ["SALES", "سجل المبيعات السابق"]].map(([id, label]) => <button key={id} className={id === kind ? "active" : ""} onClick={() => setKind(id!)}>{label}</button>)}</div><ReportRows key={kind} gymId={gymId} branchId={branchId} kind={kind}/></>; }
 function ReportRows({ gymId, branchId, kind }: {
     gymId: string;
     branchId?: string;

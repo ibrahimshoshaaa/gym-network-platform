@@ -26,7 +26,7 @@ const branch = {
   'gymId': 'g1',
   'gymName': 'جيم التجربة',
   'name': 'فرع شبين',
-  'canSell': true,
+  'canOperate': true,
   'canCancel': true,
 };
 ApiClient portalApi(
@@ -38,7 +38,7 @@ ApiClient portalApi(
         storage: MemoryStore(),
         transport: MockClient((r) async {
           final p = r.url.path;
-          onRequest?.call(p);
+          onRequest?.call(r.url.hasQuery?'$p?${r.url.query}':p);
           if (p.endsWith('me/access'))
             return reply({'ownedGyms': ownedGyms, 'assignments': []});
           if (p.endsWith('me/gym-application'))
@@ -96,7 +96,7 @@ ApiClient portalApi(
 
 void main() {
   testWidgets(
-    'switching an owned gym reloads that gym wallet in a mixed trainee account',
+    'switching an owned gym reloads that gym visit entitlements in a mixed trainee account',
     (t) async {
       t.view.physicalSize = const Size(320, 740);
       t.view.devicePixelRatio = 1;
@@ -117,12 +117,12 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.text('عملي في الجيم'));
       await t.pumpAndSettle();
-      expect(paths, contains('/api/mobile/gyms/g1/point-wallet'));
+      expect(paths.any((p)=>p.startsWith('/api/mobile/reports/summary?gymId=g1&')),isTrue);
       await t.tap(find.byType(DropdownButton<int>));
       await t.pumpAndSettle();
       await t.tap(find.text(second['name']!).last);
       await t.pumpAndSettle();
-      expect(paths, contains('/api/mobile/gyms/g2/point-wallet'));
+      expect(paths.any((p)=>p.startsWith('/api/mobile/reports/summary?gymId=g2&')),isTrue);
       expect(t.takeException(), isNull);
     },
   );
@@ -200,7 +200,7 @@ void main() {
         }
         if (role == 'GYM_OWNER') {
           await t.scrollUntilVisible(
-            find.text('تقارير الجيم'),
+            find.text('تقارير الزيارات والتسويات'),
             160,
             scrollable: find.byType(Scrollable).first,
           );
@@ -466,7 +466,7 @@ void main() {
     }
   });
 
-  testWidgets('owner stock and sale remain usable while reports are delayed',(t)async{
+  testWidgets('owner attendance and entitlements stay reachable while reports are delayed',(t)async{
     t.view.physicalSize=const Size(320,740);
     t.view.devicePixelRatio=1;
     addTearDown(t.view.resetPhysicalSize);
@@ -483,13 +483,14 @@ void main() {
     )));
     await t.pump();
     await t.pump(const Duration(milliseconds:100));
-    expect(find.text('450 نقطة'),findsOneWidget);
-    expect(find.text('بيع نقاط لمتدرب').hitTestable(),findsOneWidget);
+    expect(find.text('450 نقطة'),findsNothing);
+    expect(find.text('بيع نقاط لمتدرب'),findsNothing);
+    expect(find.text('تسجيل زيارة').hitTestable(),findsOneWidget);
     delayed.complete(reply({'currentBalances':[],'visits':{'count':'12'},'sales':{'points':'100'}}));
     await t.pumpAndSettle();
     expect(t.takeException(),isNull);
   });
-  testWidgets('report errors preserve owner stock and do not invent money balances',(t)async{
+  testWidgets('report errors do not invent owner entitlements',(t)async{
     final api=ApiClient(storage:MemoryStore(),transport:MockClient((r)async{
       if(r.url.path.endsWith('/point-wallet'))return reply({'total':'500','available':'450'});
       return http.Response('{"code":"SERVICE_UNAVAILABLE"}',503);
@@ -500,7 +501,7 @@ void main() {
       )),
     )));
     await t.pumpAndSettle();
-    expect(find.text('450 نقطة'),findsOneWidget);
+    expect(find.text('450 نقطة'),findsNothing);
     expect(find.text('0 ج.م'),findsNothing);
     expect(find.text('ملخص آخر ٣٠ يوم'),findsNothing);
     expect(t.takeException(),isNull);

@@ -70,7 +70,7 @@ class _BranchFinanceState extends State<BranchFinance> {
           Fact('محجوز للمراجعة', '${money(finance!['disputed'])} ج.م'),
           if (finance!['legacyReviewRequired'] == true) const PortalNote('فيه سحوبات قديمة غير موزعة على الفروع؛ المتاح محسوب بتحفّظ لحين مراجعتها.'),
         ],
-        const Text('مستحقات الفرع الحالية من كل الفترات. المتاح للسحب يخضع لرصيد الجيم، وهو منفصل عن مخزون النقاط.', style: TextStyle(color: muted, fontSize: 11)),
+        const Text('مستحقات الفرع الحالية من كل الفترات. المتاح للسحب يخضع لرصيد الجيم.', style: TextStyle(color: muted, fontSize: 11)),
       ])),
       const SectionTitle('ملخص الزيارات'),
       DropdownButton<int>(value: days, isExpanded: true, items: const [DropdownMenuItem(value: 1, child: Text('اليوم')), DropdownMenuItem(value: 30, child: Text('آخر ٣٠ يوم'))], onChanged: (value) {if(value != null) {setState(() => days = value); loadReport();}}),

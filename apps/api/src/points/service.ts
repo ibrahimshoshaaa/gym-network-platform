@@ -2,58 +2,54 @@ import { createHash,randomUUID } from 'node:crypto';
 import { Prisma,type PrismaClient,type PointDispatch } from '@prisma/client';
 import { z } from 'zod';
 import { phoneSchema } from '../auth/validation.js';
-import { requireActor,requireAdmin,requireGymOwner } from '../auth/authorization.js';
+import { requireActor,requireAdmin } from '../auth/authorization.js';
 import { DomainError } from '../domain/errors.js';
 import { parse } from '../gyms/validation.js';
 import { audit } from '../gyms/service.js';
 import { postInTransaction,serializable } from '../ledger/service.js';
 import { calculateQuote } from '../topups/service.js';
-import { centralStock } from '../inventory/central.js';
 type Tx=Prisma.TransactionClient;
 export const uuid=z.string().uuid();
 const quoteSchema=z.object({recipientId:uuid,points:z.number().int().positive().max(2147483647),gymId:uuid.optional()}).strict();
 const sendSchema=quoteSchema.extend({pricingVersion:z.number().int().positive(),recipientLabel:z.string().min(1).max(100),receivedAmountPiasters:z.string().regex(/^\d+$/),fundsReceived:z.literal(true),recipientConfirmed:z.literal(true),paymentMethod:z.enum(['CASH','INSTAPAY','WALLET']).default('CASH'),paymentReference:z.string().trim().min(3).max(100).optional(),branchId:uuid.optional()}).strict();
 export const dispatchView=(r:PointDispatch)=>({id:r.id,kind:r.kind,gymId:r.gymId,branchId:r.branchId,recipientLabel:r.recipientLabel,phoneLast4:r.phoneLast4,points:r.points,chargePiasters:r.chargePiasters.toString(),createdAt:r.createdAt});
-async function owner(tx:Tx,id:string,gymId:string,active=true){const gym=await requireGymOwner(tx,id,gymId,false);if(active&&gym.status!=='ACTIVE')throw new DomainError('GYM_INACTIVE');return gym;}
-async function customer(tx:Tx,id:string){const u=await requireActor(tx,id);if(u.role!=='TRAINEE')throw new DomainError('TRAINEE_UNAVAILABLE');return u;}
 async function wallet(tx:Tx,id:string){const a=await tx.pointAccount.findUnique({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:id}}});if(!a)throw new DomainError('ACCOUNT_NOT_FOUND');if(a.balance>0&&(!a.expiresAt||a.expiresAt<=new Date()))throw new DomainError('WALLET_EXPIRY_REVIEW_REQUIRED');return a;}
-export async function gymWallet(tx:Tx,id:string,gymId:string){
- const g=await owner(tx,id,gymId,false);
- const central=await tx.pointAccount.findUnique({where:{type_gymId:{type:'GYM_INVENTORY',gymId}}});
- const branches=await tx.pointAccount.aggregate({where:{type:'BRANCH_INVENTORY',branch:{gymId}},_sum:{balance:true}});
- const reserve=BigInt(central?.balance??0),allocated=BigInt(branches._sum.balance??0);
- return {id:g.id,name:g.name,status:g.status,central:reserve.toString(),branchesTotal:allocated.toString(),total:(reserve+allocated).toString(),available:g.status==='ACTIVE'?reserve.toString():'0'};
+export async function lookup(tx:Tx,id:string,input:unknown,gymId?:string){
+ if(gymId)throw new DomainError('ACCESS_DENIED');await requireAdmin(tx,id);
+ const d=parse(z.object({phone:phoneSchema}).strict(),input),u=await tx.user.findUnique({where:{phoneE164:d.phone}});
+ if(!u?.isActive||u.role!=='TRAINEE')throw new DomainError('TRAINEE_UNAVAILABLE');
+ return {id:u.id,label:u.displayName,phoneLast4:u.phoneE164.slice(-4),role:u.role,gyms:[]};
 }
-export async function lookup(tx:Tx,id:string,input:unknown,gymId?:string){const d=parse(z.object({phone:phoneSchema}).strict(),input);if(gymId)await owner(tx,id,gymId);else await requireAdmin(tx,id);const u=await tx.user.findUnique({where:{phoneE164:d.phone}});if(!u?.isActive||(!gymId&&!['TRAINEE','GYM_OWNER'].includes(u.role))||(gymId&&u.role!=='TRAINEE'))throw new DomainError('TRAINEE_UNAVAILABLE');const gyms=u.role==='GYM_OWNER'?await tx.gym.findMany({where:{ownerId:u.id,ownerAcceptedAt:{not:null},status:'ACTIVE'},select:{id:true,name:true},orderBy:{id:'asc'}}):[];return {id:u.id,label:u.displayName,phoneLast4:u.phoneE164.slice(-4),role:u.role,gyms};}
 async function quote(tx:Tx,id:string,data:z.infer<typeof quoteSchema>,sourceGymId?:string){
- const recipient=await requireActor(tx,data.recipientId);let branchId:string|undefined,targetGymId:string|undefined,stock:string|null=null;
- if(sourceGymId){await owner(tx,id,sourceGymId);await customer(tx,recipient.id);await wallet(tx,recipient.id);stock=(await gymWallet(tx,id,sourceGymId)).available;}
- else{await requireAdmin(tx,id);if(recipient.role==='TRAINEE'){if(data.gymId)throw new DomainError('INVALID_INPUT');await wallet(tx,recipient.id);}else if(recipient.role==='GYM_OWNER'&&data.gymId){const g=await tx.gym.findFirst({where:{id:data.gymId,ownerId:recipient.id,ownerAcceptedAt:{not:null},status:'ACTIVE'}});if(!g)throw new DomainError('GYM_ACCESS_DENIED');targetGymId=g.id;}else throw new DomainError('INVALID_INPUT');}
- const policy=await tx.pricingPolicy.findFirst({orderBy:{version:'desc'}});if(!policy)throw new DomainError('PRICING_NOT_CONFIGURED');const discountBps=targetGymId?policy.gymDiscountBps:0,price=calculateQuote(policy.pointPricePiasters,discountBps,{points:data.points});
- if(stock!==null&&BigInt(stock)<BigInt(data.points))throw new DomainError('INSUFFICIENT_POINTS');
- return {recipient,policy,branchId,targetGymId,discountBps,price,stock};
+ if(sourceGymId||data.gymId)throw new DomainError('ACCESS_DENIED');await requireAdmin(tx,id);
+ const recipient=await requireActor(tx,data.recipientId);if(recipient.role!=='TRAINEE')throw new DomainError('TRAINEE_UNAVAILABLE');
+ const destination=await wallet(tx,recipient.id),policy=await tx.pricingPolicy.findFirst({orderBy:{version:'desc'}});
+ if(!policy)throw new DomainError('PRICING_NOT_CONFIGURED');
+ return {recipient,policy,destination,price:calculateQuote(policy.pointPricePiasters,0,{points:data.points})};
 }
-export async function pointQuote(tx:Tx,id:string,input:unknown,sourceGymId?:string){const d=parse(quoteSchema,input),q=await quote(tx,id,d,sourceGymId);const recipientBalance=q.targetGymId?String((await tx.pointAccount.findUnique({where:{type_gymId:{type:'GYM_INVENTORY',gymId:q.targetGymId}}}))?.balance??0):String((await wallet(tx,d.recipientId)).balance);return {recipientBalance,recipientAfter:(BigInt(recipientBalance)+BigInt(d.points)).toString(),recipientId:q.recipient.id,recipientLabel:q.recipient.displayName,phoneLast4:q.recipient.phoneE164.slice(-4),points:d.points,chargePiasters:q.price.chargePiasters.toString(),pricingVersion:q.policy.version,discountBps:q.discountBps,branchId:q.branchId,stock:q.stock};}
-export async function dispatchPoints(db:PrismaClient,id:string,key:string,input:unknown,sourceGymId?:string){const d=parse(sendSchema,input);parse(uuid,key);if(sourceGymId&&(d.gymId!==sourceGymId||d.paymentMethod!=='CASH'||d.paymentReference))throw new DomainError('INVALID_INPUT');if(!sourceGymId&&d.paymentMethod==='CASH'&&d.paymentReference)throw new DomainError('INVALID_INPUT');if(!sourceGymId&&d.paymentMethod!=='CASH'&&!d.paymentReference)throw new DomainError('INVALID_INPUT');
+export async function pointQuote(tx:Tx,id:string,input:unknown,sourceGymId?:string){
+ const d=parse(quoteSchema,input),q=await quote(tx,id,d,sourceGymId),recipientBalance=String(q.destination.balance);
+ return {recipientBalance,recipientAfter:(BigInt(recipientBalance)+BigInt(d.points)).toString(),recipientId:q.recipient.id,recipientLabel:q.recipient.displayName,phoneLast4:q.recipient.phoneE164.slice(-4),points:d.points,chargePiasters:q.price.chargePiasters.toString(),pricingVersion:q.policy.version,discountBps:0,branchId:undefined,stock:null};
+}
+export async function dispatchPoints(db:PrismaClient,id:string,key:string,input:unknown,sourceGymId?:string){if(sourceGymId)throw new DomainError('ACCESS_DENIED');const d=parse(sendSchema,input);if(d.gymId)throw new DomainError('ACCESS_DENIED');parse(uuid,key);if(!sourceGymId&&d.paymentMethod==='CASH'&&d.paymentReference)throw new DomainError('INVALID_INPUT');if(!sourceGymId&&d.paymentMethod!=='CASH'&&!d.paymentReference)throw new DomainError('INVALID_INPUT');
  const idempotencyKey=`dispatch:${id}:${key}`,requestHash=createHash('sha256').update(JSON.stringify({sourceGymId:sourceGymId??null,...d})).digest('hex');
  try{return await serializable(db,async tx=>{
-  if(sourceGymId)await owner(tx,id,sourceGymId,false);else await requireAdmin(tx,id);
+  await requireAdmin(tx,id);
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey},0))`;
   const old=await tx.pointDispatch.findUnique({where:{idempotencyKey}});if(old){if(old.requestHash!==requestHash)throw new DomainError('IDEMPOTENCY_CONFLICT');return dispatchView(old);}
   const q=await quote(tx,id,{recipientId:d.recipientId,points:d.points,...(d.gymId?{gymId:d.gymId}:{})},sourceGymId);
-  if(q.policy.version!==d.pricingVersion||q.recipient.displayName!==d.recipientLabel||(!sourceGymId&&q.branchId!==d.branchId))throw new DomainError('STALE_SETTINGS');
+  if(q.policy.version!==d.pricingVersion||q.recipient.displayName!==d.recipientLabel||d.branchId!==undefined)throw new DomainError('STALE_SETTINGS');
   if(q.price.chargePiasters!==BigInt(d.receivedAmountPiasters))throw new DomainError('PAYMENT_AMOUNT_MISMATCH');
-  const paymentReference=sourceGymId?null:(d.paymentMethod==='CASH'?`CASH-${idempotencyKey}`:d.paymentReference!.toUpperCase());
+  const paymentReference=d.paymentMethod==='CASH'?`CASH-${idempotencyKey}`:d.paymentReference!.toUpperCase();
   if(paymentReference)await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${'payment-reference:'+paymentReference},0))`;
   if(paymentReference&&(await tx.topupRequest.findUnique({where:{paymentReference}})||await tx.pointDispatch.findUnique({where:{paymentReference}})))throw new DomainError('PAYMENT_REFERENCE_USED');
-  const destination=q.targetGymId?await centralStock(tx,q.targetGymId):await wallet(tx,d.recipientId);
+  const destination=q.destination;
   if(!destination)throw new DomainError('ACCOUNT_NOT_FOUND');
   const entries:{accountId:string;delta:bigint}[]=[{accountId:destination.id,delta:BigInt(d.points)}];
-  if(sourceGymId){const source=await centralStock(tx,sourceGymId);entries.push({accountId:source.id,delta:-BigInt(d.points)});}
-  else{const issuance=await tx.pointAccount.findFirst({where:{type:'ISSUANCE'}});if(!issuance)throw new DomainError('ACCOUNT_NOT_FOUND');entries.push({accountId:issuance.id,delta:-BigInt(d.points)});}
-  const operationId=randomUUID(),posted=await postInTransaction(tx,{actorId:id,idempotencyKey,referenceId:operationId,reason:sourceGymId?'Gym owner confirmed cash collection and sent points from owned stock':'Admin confirmed received funds and directly topped up recipient',points:{kind:sourceGymId?'TRANSFER':'ISSUE',entries}});
-  if(!q.targetGymId)await tx.pointAccount.update({where:{id:destination.id},data:{expiresAt:new Date(Date.now()+90*86400000)}});
-  const row=await tx.pointDispatch.create({data:{id:operationId,kind:sourceGymId?'GYM_SALE':'ADMIN_TOPUP',actorId:id,recipientId:d.recipientId,recipientLabel:q.recipient.displayName,phoneLast4:q.recipient.phoneE164.slice(-4),gymId:sourceGymId??q.targetGymId,branchId:q.branchId,points:d.points,chargePiasters:q.price.chargePiasters,unitPricePiasters:q.policy.pointPricePiasters,discountBps:q.discountBps,pricingVersion:q.policy.version,policyId:q.policy.id,paymentMethod:d.paymentMethod,paymentReference,pointTransactionId:posted.pointTransactionId!,idempotencyKey,requestHash}});
-  await audit(tx,id,sourceGymId?'GYM_POINTS_SOLD':'ADMIN_DIRECT_TOPUP',row.id,'Recipient and received amount confirmed; immutable point dispatch posted');return dispatchView(row);
+  const issuance=await tx.pointAccount.findFirst({where:{type:'ISSUANCE'}});if(!issuance)throw new DomainError('ACCOUNT_NOT_FOUND');entries.push({accountId:issuance.id,delta:-BigInt(d.points)});
+  const operationId=randomUUID(),posted=await postInTransaction(tx,{actorId:id,idempotencyKey,referenceId:operationId,reason:'Admin confirmed received funds and directly topped up trainee',points:{kind:'ISSUE',entries}});
+  await tx.pointAccount.update({where:{id:destination.id},data:{expiresAt:new Date(Date.now()+90*86400000)}});
+  const row=await tx.pointDispatch.create({data:{id:operationId,kind:'ADMIN_TOPUP',actorId:id,recipientId:d.recipientId,recipientLabel:q.recipient.displayName,phoneLast4:q.recipient.phoneE164.slice(-4),gymId:null,branchId:null,points:d.points,chargePiasters:q.price.chargePiasters,unitPricePiasters:q.policy.pointPricePiasters,discountBps:0,pricingVersion:q.policy.version,policyId:q.policy.id,paymentMethod:d.paymentMethod,paymentReference,pointTransactionId:posted.pointTransactionId!,idempotencyKey,requestHash}});
+  await audit(tx,id,'ADMIN_DIRECT_TOPUP',row.id,'Recipient and received amount confirmed; immutable point dispatch posted');return dispatchView(row);
  });}catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002'&&String(e.meta?.target).includes('paymentReference'))throw new DomainError('PAYMENT_REFERENCE_USED');throw e;}}
 

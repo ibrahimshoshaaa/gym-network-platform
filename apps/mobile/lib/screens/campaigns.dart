@@ -22,14 +22,14 @@ Future<void> openCampaign(BuildContext context,ApiClient api,String destination)
  if(destination=='qr'){await open(context,Screen(title:'رمز الدخول',child:QrScreen(api:api)));return;}
  if(destination=='topup'){await open(context,TopupScreen(api:api));return;}
  if(destination=='cashier'){await open(context,Screen(title:'التشغيل',child:OperationsHome(api:api)));return;}
- if(!['gyms','purchases','point-wallet','withdrawals'].contains(destination))return;
+ if(!['gyms','withdrawals'].contains(destination))return;
  try{
   final access=await api.request('me/access');if(!context.mounted)return;final gyms=List<Json>.from((access['ownedGyms'] as List? ??[]).map((g)=>Map<String,dynamic>.from(g)));
   if(gyms.isEmpty){if(destination=='gyms')await open(context,DirectoryScreen(api:api));return;}
   Json? gym=gyms.first;
   if(gyms.length>1)gym=await showDialog<Json>(context:context,builder:(c)=>SimpleDialog(title:const Text('اختار الجيم'),children:[for(final g in gyms)SimpleDialogOption(onPressed:()=>Navigator.pop(c,g),child:Text('${g['name']}'))]));
   if(!context.mounted||gym==null)return;
-  await open(context,switch(destination){'gyms'=>BranchesScreen(api:api,gym:gym),'purchases'=>TopupScreen(api:api,gymId:gym['id']),'point-wallet'=>SendPoints(api:api,gym:gym),_=>MoneyScreen(api:api,gym:gym)});
+  await open(context,switch(destination){'gyms'=>BranchesScreen(api:api,gym:gym),_=>MoneyScreen(api:api,gym:gym)});
  }catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}
 }
 class CampaignBanner extends StatefulWidget{

@@ -25,7 +25,7 @@ async function fixture(){
  const branch=await db.branch.create({data:{gymId:gym.id,name:'Refund branch',status:'ACTIVE',visitPricePoints:30,sessionMinutes:30,pricingVersion:1,priceApprovedAt:new Date()}});
  await db.staffAssignment.createMany({data:[{branchId:branch.id,userId:manager.id,role:'BRANCH_MANAGER'},{branchId:branch.id,userId:cashier.id,role:'CASHIER'}]});
  const latest=await db.pricingPolicy.findFirst({orderBy:{version:'desc'}});
- const pricing=await db.pricingPolicy.create({data:{version:(latest?.version??0)+1,pointPricePiasters:100n,gymDiscountBps:1000,redemptionBps:8000,createdById:admin.id}});
+ const pricing=await db.pricingPolicy.create({data:{version:(latest?.version??0)+1,pointPricePiasters:100n,gymDiscountBps: 0,redemptionBps:8000,createdById:admin.id}});
  const issuance=await db.pointAccount.findFirst({where:{type:'ISSUANCE'}})??await db.pointAccount.create({data:{type:'ISSUANCE'}});
  const expiry=new Date(Date.now()+86400000);
  const wallet=await db.pointAccount.create({data:{type:'TRAINEE_WALLET',ownerUserId:person.id,expiresAt:expiry}});

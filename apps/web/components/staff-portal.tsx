@@ -16,11 +16,11 @@ type Branch = {
     gymId: string;
     name: string;
     gymName: string;
-    canSell: boolean;
+    canOperate: boolean;
     canCancel: boolean;
 };
 type Section = 'home' | 'visits' | 'sales' | 'account' | 'visit' | 'sale' | 'reviews' | 'support';
-const destinations = [{ id: 'home', label: 'الرئيسية', icon: Home }, { id: 'visits', label: 'الزيارات', icon: History }, { id: 'sales', label: 'المبيعات', icon: ReceiptText }, { id: 'account', label: 'حسابي', icon: UserRound }] as const;
+const destinations = [{ id: 'home', label: 'الرئيسية', icon: Home }, { id: 'visits', label: 'الزيارات', icon: History }, { id: 'visit', label: 'التشغيل', icon: QrCode }, { id: 'account', label: 'حسابي', icon: UserRound }] as const;
 export function StaffPortal({ user, logout, loggingOut, onPassword, error }: {
     user: Identity;
     logout: () => Promise<void>;
@@ -35,7 +35,7 @@ export function StaffPortal({ user, logout, loggingOut, onPassword, error }: {
         setBranches(r.items); }).catch(e => { if (live)
         setLoadError(message(e)); }); return () => { live = false; }; }, []);
     function navigate(next: Section) { setSection(next); window.scrollTo({ top: 0, behavior: 'auto' }); }
-    const branch = branches?.find(b => b.id === branchId) ?? branches?.[0], active = ['visit', 'sale', 'reviews'].includes(section) ? 'home' : section === 'support' ? 'account' : section;
+    const branch = branches?.find(b => b.id === branchId) ?? branches?.[0], active = ['sale', 'reviews'].includes(section) ? 'home' : section === 'support' ? 'account' : section;
     return <div className="trainee-portal mobile-mirror staff-mirror"><PortalHeader intro={!["account", "support", "reviews"].includes(section)} user={user} onNavigate={next => navigate(next === 'support' ? 'support' : 'reviews')}/><main className="trainee-content"><Notice text={error || loadError}/>
  {section === 'account' ? <PortalAccount user={user} onPassword={onPassword} onPurchases={() => navigate('sales')} onSupport={() => navigate('support')} logout={logout} loggingOut={loggingOut}/> : section === 'support' ? <Support /> : section === 'reviews' ? <OperationReviews admin={false}/> : !branches && !loadError ? <Busy /> : !branch ? <Empty title="مفيش فرع متاح للتشغيل">راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.</Empty> : <>
  <div className="portal-welcome staff-intro"><small>{user.role === 'BRANCH_MANAGER' ? 'مدير الفرع' : 'كاشير الفرع'}</small>{branches!.length > 1 ? <label className="field">الفرع الحالي<select value={branch.id} onChange={e => { setBranchId(e.target.value); navigate('home'); }}>{branches!.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label> : <h1>{branch.name}</h1>}<p className="muted">{branch.gymName}</p></div>

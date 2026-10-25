@@ -106,7 +106,7 @@ test('financial evidence stays immutable while unrelated personal receipts are e
  const {publishPolicy,savePaymentMethod}=await import('../src/topups/settings.js');
  const u=await user(),admin=await user('PLATFORM_ADMIN');await db.pointAccount.create({data:{ownerUserId:u.id,type:'TRAINEE_WALLET'}});
  let policy=await db.pricingPolicy.findFirst({orderBy:{version:'desc'}});
- if(!policy){await publishPolicy(db,admin.id,{expectedVersion:0,pointPricePiasters:'100',gymDiscountBps:1000,redemptionBps:8000});policy=await db.pricingPolicy.findFirstOrThrow({orderBy:{version:'desc'}});}
+ if(!policy){await publishPolicy(db,admin.id,{expectedVersion:0,pointPricePiasters:'100',gymDiscountBps: 0,redemptionBps:8000});policy=await db.pricingPolicy.findFirstOrThrow({orderBy:{version:'desc'}});}
  const oldMethod=await db.paymentMethod.findUnique({where:{type:'INSTAPAY'}});
  await savePaymentMethod(db,admin.id,'INSTAPAY',{expectedVersion:oldMethod?.version??0,account:'synthetic-deletion@instapay',accountName:'Synthetic Receiver',enabled:true});
  const method=await db.paymentMethod.findUniqueOrThrow({where:{type:'INSTAPAY'}});

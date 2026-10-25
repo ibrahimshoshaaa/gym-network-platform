@@ -1229,3 +1229,21 @@ model AccountUploadLease {
  expiresAt DateTime
  @@index([userId,expiresAt])
 }
+
+// Platform-owned welcome campaign. No retrospective grants when enabled.
+model WelcomePointsPolicy {
+  id          String   @id
+  version     Int
+  enabled     Boolean  @default(false)
+  points      Int      @default(0)
+  createdById String   @db.Uuid
+  updatedAt   DateTime @updatedAt
+}
+
+model WelcomePointsGrant {
+  userId             String   @id @db.Uuid
+  points             Int
+  policyVersion      Int
+  pointTransactionId String   @unique @db.Uuid
+  createdAt          DateTime @default(now())
+}

@@ -103,9 +103,6 @@ test(
         sessionMinutes: 120,
       },
     });
-    const stock = await db.pointAccount.create({
-      data: { type: "BRANCH_INVENTORY", branchId: branch.id },
-    });
     const apiProcess = spawn(process.execPath, ["apps/api/dist/server.js"], {
       cwd: repo,
       env: { ...process.env, PORT: "4011", HOST: "127.0.0.1" },
@@ -196,7 +193,7 @@ test(
         body: {
           expectedVersion: settings.policy.version,
           pointPricePiasters: "125",
-          gymDiscountBps: 1000,
+          gymDiscountBps: 0,
           redemptionBps: 8000,
         },
       });
@@ -313,28 +310,30 @@ test(
         ).status,
         403,
       );
+      const earlyRegistration=await request('/api/register',{method:'POST',body:{displayName:'Synthetic early trainee',email:`early-${id}@example.test`,phone:'+2010'+String(BigInt('0x'+id.replaceAll('-','').slice(0,12))%100000000n).padStart(8,'0'),password}});
+      assert.equal(earlyRegistration.status,201);const earlyIdentity=await earlyRegistration.clone().json(),earlyCookie=sessionCookie(earlyRegistration);
+      const earlyWallet=await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:earlyIdentity.user.id}}});
       const optionsResponse = await request(
-        "/api/backend/topup-options?kind=BRANCH_STOCK",
-        { cookie: ownerCookie },
+        "/api/backend/topup-options?kind=TRAINEE",
+        { cookie: earlyCookie },
       );
       assert.equal(optionsResponse.status, 200);
       const options = await optionsResponse.json(),
         selection = {
-          kind: "BRANCH_STOCK",
-          receivingBranchId: branch.id,
+          kind: "TRAINEE",
           points: 100,
         };
       const quoteResponse = await request("/api/backend/topup-quotes", {
-        cookie: ownerCookie,
+        cookie: earlyCookie,
         method: "POST",
         body: selection,
       });
       assert.equal(quoteResponse.status, 200);
       const quote = await quoteResponse.json();
-      assert.equal(quote.chargePiasters, "11250");
+      assert.equal(quote.chargePiasters, "12500");
       const badImage = await fetch(origin + "/api/backend/receipts", {
         method: "POST",
-        headers: { cookie: ownerCookie, origin, "content-type": "image/jpeg" },
+        headers: { cookie: earlyCookie, origin, "content-type": "image/jpeg" },
         body: "invalid image",
       });
       assert.equal(badImage.status, 400);
@@ -342,7 +341,7 @@ test(
       // injected storage in API tests; no real Cloudinary account is touched here.
       const receipt = await db.receiptEvidence.create({
         data: {
-          ownerUserId: owner.id,
+          ownerUserId: earlyIdentity.user.id,
           objectKey: `synthetic-http/${id}`,
           assetId: id,
           contentHash: id,
@@ -361,7 +360,7 @@ test(
       const key = randomUUID();
       const create = () =>
         request("/api/backend/topups", {
-          cookie: ownerCookie,
+          cookie: earlyCookie,
           method: "POST",
           headers: { "idempotency-key": key },
           body,
@@ -371,7 +370,7 @@ test(
       const pending = await created.json();
       assert.equal((await (await create()).json()).id, pending.id);
       assert.equal(
-        (await db.pointAccount.findUniqueOrThrow({ where: { id: stock.id } }))
+        (await db.pointAccount.findUniqueOrThrow({ where: { id: earlyWallet.id } }))
           .balance,
         0,
       );
@@ -382,8 +381,8 @@ test(
       const listed = (await pendingList.json()).items.find(
         (row) => row.id === pending.id,
       );
-      assert.equal(listed.requestor.displayName, owner.displayName);
-      assert.equal(listed.branch.name, branch.name);
+      assert.equal(listed.requestor.displayName, earlyIdentity.user.displayName);
+      assert.equal(listed.branch, null);
       const review = await request(
         `/api/backend/admin/topups/${pending.id}/review`,
         {
@@ -401,7 +400,7 @@ test(
       );
       assert.equal(review.status, 200);
       assert.equal(
-        (await db.pointAccount.findUniqueOrThrow({ where: { id: stock.id } }))
+        (await db.pointAccount.findUniqueOrThrow({ where: { id: earlyWallet.id } }))
           .balance,
         100,
       );
@@ -552,7 +551,7 @@ test(
       );
       assert.equal(branchList.status, 200);
       assert.equal(
-        (await branchList.json()).items[0].pointAccounts[0].balance,
+        (await branchList.json()).items[0].pointAccounts.length,
         0,
       );
       const profileEdit = await request(
@@ -636,7 +635,7 @@ test(
       assert.equal(automaticStaff.status, 200);
       assert.equal((await automaticStaff.json()).user.role, staffPerson.role);
 
-      // Real cashier sale and visit postings through the same-origin gateway.
+      // Platform charging and cashier visits through the same-origin gateway.
       const cashierCookie = sessionCookie(acceptedStaff);
       const traineeBody = {
         displayName: "Synthetic Visiting Trainee",
@@ -677,95 +676,12 @@ test(
       assert.equal(localAds.status,200,await localAds.clone().text());assert.ok((await localAds.json()).items.some(r=>r.id===ad.id));
       const noLocationAds=await request('/api/backend/trainee/nearby-promotions',{cookie:traineeCookie});assert.equal(noLocationAds.status,200);assert.equal((await noLocationAds.json()).items.length,0);
 
-      const optionResponse = await request(
-        "/api/backend/topup-options?kind=BRANCH_STOCK",
-        { cookie: invitedOwnerCookie },
-      );
-      const config = await optionResponse.json();
-      const stockReceipt = await db.receiptEvidence.create({
-        data: {
-          ownerUserId: newGym.owner.id,
-          objectKey: `synthetic-stock/${id}`,
-          assetId: `stock-${id}`,
-          contentHash: `stock-${id}`,
-          mimeType: "image/jpeg",
-          bytes: 10,
-        },
-      });
-      const stockSubmission = await request("/api/backend/topups", {
-        cookie: invitedOwnerCookie,
-        method: "POST",
-        headers: { "idempotency-key": randomUUID() },
-        body: {
-          kind: "BRANCH_STOCK",
-          receivingBranchId: newBranch.branch.id,
-          points: 100,
-          pricingVersion: config.policy.version,
-          receiptId: stockReceipt.id,
-          paymentMethod: "INSTAPAY",
-          paymentMethodVersion: config.paymentMethods.find(
-            (m) => m.type === "INSTAPAY",
-          ).version,
-        },
-      });
-      assert.equal(stockSubmission.status, 201);
-      const stockRequest = await stockSubmission.json();
-      assert.equal(
-        (
-          await request(`/api/backend/admin/topups/${stockRequest.id}/review`, {
-            cookie,
-            method: "POST",
-            body: {
-              decision: "APPROVED",
-              reason: "Synthetic cashier stock funding",
-              paymentReference: `CASHIER-${id}`,
-              receivedAmountPiasters: "11250",
-              fundsReceived: true,
-              receiptReviewed: true,
-            },
-          })
-        ).status,
-        200,
-      );
-      const customer = await request(
-        `/api/backend/cashier/branches/${newBranch.branch.id}/trainee-lookup`,
-        {
-          cookie: cashierCookie,
-          method: "POST",
-          body: { phone: traineeBody.phone },
-        },
-      );
-      assert.equal(customer.status, 200);
-      const matched = await customer.json();
-      assert.equal(matched.id, traineeIdentity.user.id);
-      assert.equal(JSON.stringify(matched).includes(traineeBody.phone), false);
-      const quoteSale = await request(
-        `/api/backend/cashier/branches/${newBranch.branch.id}/sale-quotes`,
-        {
-          cookie: cashierCookie,
-          method: "POST",
-          body: { traineeId: matched.id, points: 60 },
-        },
-      );
-      assert.equal(quoteSale.status, 200);
-      const saleQuote = await quoteSale.json();
-      const sell = await request(
-        `/api/backend/cashier/branches/${newBranch.branch.id}/sales`,
-        {
-          cookie: cashierCookie,
-          method: "POST",
-          headers: { "idempotency-key": randomUUID() },
-          body: {
-            traineeId: matched.id,
-            points: 60,
-            pricingVersion: saleQuote.pricingVersion,
-            receivedAmountPiasters: saleQuote.chargePiasters,
-            fundsReceived: true,
-          },
-        },
-      );
-      assert.equal(sell.status, 201);
-      const sold = await sell.json();
+      assert.equal((await request('/api/backend/topup-options?kind=BRANCH_STOCK',{cookie:invitedOwnerCookie})).status,403);
+      const directQuoteResponse=await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:traineeIdentity.user.id,points:60}});
+      assert.equal(directQuoteResponse.status,200);const directQuote=await directQuoteResponse.json();
+      const directResponse=await request('/api/backend/admin/point-transfers',{cookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{recipientId:directQuote.recipientId,recipientLabel:directQuote.recipientLabel,points:60,pricingVersion:directQuote.pricingVersion,receivedAmountPiasters:directQuote.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH'}});
+      assert.equal(directResponse.status,201);const sold=await directResponse.json();
+      for(const endpoint of ['trainee-lookup','sale-quotes','sales'])assert.equal((await request(`/api/backend/cashier/branches/${newBranch.branch.id}/${endpoint}`,{cookie:cashierCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{phone:traineeBody.phone,traineeId:traineeIdentity.user.id,points:60}})).status,403);
       const ticketResponse = await request("/api/backend/trainee/qr", {
         cookie: traineeCookie,
         method: "POST",
@@ -861,7 +777,7 @@ test(
         (b) => b.id === newBranch.branch.id,
       );
       assert.equal(managerBranch.canCancel, true);
-      assert.equal(managerBranch.canSell, true);
+      assert.equal(managerBranch.canOperate, true);
       const cancelPath = `/api/backend/operations/branches/${newBranch.branch.id}/visits/${entered.visit.id}/cancel`;
       const cancellationKey = randomUUID(),
         cancelBody = { reason: "Synthetic duplicate admission cancelled" };
@@ -998,39 +914,7 @@ test(
         ).balance,
         60,
       );
-      const saleCorrection = await request("/api/backend/operation-reviews", {
-        cookie: cashierCookie,
-        method: "POST",
-        headers: { "idempotency-key": randomUUID() },
-        body: { ...correctionBody, kind: "SALE_CORRECTION", targetId: sold.id },
-      });
-      assert.equal(saleCorrection.status, 200);
-      const saleReview = await saleCorrection.json();
-      const policyBlocked = await request(
-        `/api/backend/admin/operation-reviews/${saleReview.id}/review`,
-        { cookie, method: "POST", body: approvalBody },
-      );
-      assert.equal(policyBlocked.status, 409);
-      assert.equal(
-        (await policyBlocked.json()).code,
-        "SALE_REFUND_POLICY_REQUIRED",
-      );
-      assert.equal(
-        (
-          await request(
-            `/api/backend/admin/operation-reviews/${saleReview.id}/review`,
-            {
-              cookie,
-              method: "POST",
-              body: {
-                decision: "REJECT",
-                reason: "Synthetic valid sale kept unchanged",
-              },
-            },
-          )
-        ).status,
-        200,
-      );
+      // New point sales belong to the platform; archived branch-sale correction is covered by historical DB fixtures.
       // Manual withdrawals reserve one consolidated gym wallet, snapshot the
       // destination/calendar, record proof and retain a paid-transfer dispute.
       const earnTicket = await (
@@ -1260,15 +1144,15 @@ test(
       );
       assert.equal(summaryResponse.status, 200);
       const report = await summaryResponse.json();
-      assert.equal(report.sales.points, "60");
-      assert.equal(report.sales.amountPiasters, "7500");
+      assert.equal(report.sales.points, "0");
+      assert.equal(report.sales.amountPiasters, "0");
       assert.equal(report.visits.count, "3");
       assert.equal(report.visits.amountPiasters, "9000");
       assert.equal(report.cancellations.count, "2");
       assert.equal(report.netVisitReceivablesPiasters, "3000");
       assert.equal(report.paidWithdrawals.amountPiasters, "1000");
       assert.equal(report.alerts.withdrawals.disputed, "1");
-      assert.equal(report.currentStockPoints, "40");
+      assert.equal(report.currentStockPoints, "0");
       const reportCsv = await request(
         `/api/backend/reports/export?${reportQuery}&kind=SALES`,
         { cookie: invitedOwnerCookie },
@@ -1282,7 +1166,7 @@ test(
       assert.match(reportCsv.headers.get("cache-control"), /no-store/);
       assert.equal(reportCsv.headers.get("x-content-type-options"), "nosniff");
       const csvText = await reportCsv.text();
-      assert.match(csvText, /"60","7500"/);
+      assert.doesNotMatch(csvText, /"60","7500"/);
       assert.equal(csvText.includes("tokenHash"), false);
       assert.equal(csvText.includes("beneficiary"), false);
       assert.equal(
@@ -1385,109 +1269,15 @@ test(
         ).status,
         200,
       );
-      const stockPath = `/api/backend/gyms/${newGym.gym.id}/stock-transfers`,
-        stockKey = randomUUID(),
-        stockBody = {
-          fromBranchId: newBranch.branch.id,
-          toBranchId: receivingBranch.branch.id,
-          points: 20,
-        };
-      const beforeStock = await request(
-        `/api/backend/inventory/branches/${newBranch.branch.id}`,
-        { cookie: invitedOwnerCookie },
-      );
-      assert.equal(beforeStock.status, 200);
-      assert.equal((await beforeStock.json()).stock, 40);
-      for (const forbiddenCookie of [
-        cashierCookie,
-        managerCookie,
-        ownerCookie,
-        cookie,
-      ])
-        assert.equal(
-          (
-            await request(stockPath, {
-              cookie: forbiddenCookie,
-              method: "POST",
-              headers: { "idempotency-key": randomUUID() },
-              body: stockBody,
-            })
-          ).status,
-          403,
-        );
-      const transferStock = () =>
-        request(stockPath, {
-          cookie: invitedOwnerCookie,
-          method: "POST",
-          headers: { "idempotency-key": stockKey },
-          body: stockBody,
-        });
-      const stockTransfer = await transferStock();
-      assert.equal(stockTransfer.status, 201);
-      const transferredStock = await stockTransfer.json();
-      assert.ok(transferredStock.id);
-      assert.equal(
-        (await (await transferStock()).json()).id,
-        transferredStock.id,
-      );
-      assert.equal(
-        (
-          await request(stockPath, {
-            cookie: invitedOwnerCookie,
-            method: "POST",
-            headers: { "idempotency-key": stockKey },
-            body: { ...stockBody, points: 21 },
-          })
-        ).status,
-        409,
-      );
-      const afterSource = await (
-          await request(
-            `/api/backend/inventory/branches/${newBranch.branch.id}`,
-            { cookie: invitedOwnerCookie },
-          )
-        ).json(),
-        afterTarget = await (
-          await request(
-            `/api/backend/inventory/branches/${receivingBranch.branch.id}`,
-            { cookie: invitedOwnerCookie },
-          )
-        ).json();
-      assert.equal(afterSource.stock, 20);
-      assert.equal(afterTarget.stock, 20);
-      const sourceMovements = await request(
-          `/api/backend/inventory/branches/${newBranch.branch.id}/movements`,
-          { cookie: cashierCookie },
-        ),
-        targetMovements = await request(
-          `/api/backend/inventory/branches/${receivingBranch.branch.id}/movements`,
-          { cookie: invitedOwnerCookie },
-        );
-      assert.equal(sourceMovements.status, 200);
-      assert.match(sourceMovements.headers.get("cache-control"), /no-store/);
-      const sourceMovement = (await sourceMovements.json()).items.find(
-          (m) => m.transactionId === transferredStock.id,
-        ),
-        targetMovement = (await targetMovements.json()).items[0];
-      assert.equal(sourceMovement.delta, -20);
-      assert.equal(sourceMovement.operation, "BRANCH_TRANSFER");
-      assert.equal(targetMovement.delta, 20);
-      assert.equal(targetMovement.transactionId, transferredStock.id);
-      assert.equal(
-        (
-          await request(
-            `/api/backend/inventory/branches/${receivingBranch.branch.id}/movements`,
-            { cookie: cashierCookie },
-          )
-        ).status,
-        403,
-      );
+      const stockPath=`/api/backend/gyms/${newGym.gym.id}/stock-transfers`;
+      for(const currentCookie of [invitedOwnerCookie,cashierCookie,managerCookie,ownerCookie,cookie])assert.equal((await request(stockPath,{cookie:currentCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{fromBranchId:newBranch.branch.id,toBranchId:receivingBranch.branch.id,points:20}})).status,404);
+      assert.equal((await request(`/api/backend/inventory/branches/${newBranch.branch.id}`,{cookie:invitedOwnerCookie})).status,404);
       const conserved = await (
         await request(`/api/backend/reports/summary?${reportQuery}`, {
           cookie: invitedOwnerCookie,
         })
       ).json();
-      assert.equal(conserved.currentStockPoints, "40");
+      assert.equal(conserved.currentStockPoints, "0");
       assert.equal(conserved.netVisitReceivablesPiasters, "3000");
       assert.equal(
         (await request("/api/backend/directory/branches")).status,
@@ -1634,7 +1424,7 @@ test(
         30,
       );
       assert.equal(
-        pointHistory.items.filter((m) => m.operation === "SALE").length,
+        pointHistory.items.filter((m) => m.operation === "TOPUP").length,
         1,
       );
       assert.equal(
@@ -1651,15 +1441,15 @@ test(
         false,
       );
       assert.equal(JSON.stringify(pointHistory).includes("requestHash"), false);
-      const onlySales = await (
+      const onlyTopups = await (
         await request(
-          "/api/backend/trainee/wallet/movements?operation=SALE&limit=1",
+          "/api/backend/trainee/wallet/movements?operation=TOPUP&limit=1",
           { cookie: traineeCookie },
         )
       ).json();
-      assert.equal(onlySales.items.length, 1);
-      assert.equal(onlySales.items[0].delta, 60);
-      assert.equal(onlySales.items[0].referenceId, sold.id);
+      assert.equal(onlyTopups.items.length, 1);
+      assert.equal(onlyTopups.items[0].delta, 60);
+      assert.equal(onlyTopups.items[0].referenceId, sold.id);
       const activeSessions = await request(
         "/api/backend/trainee/active-visits",
         { cookie: traineeCookie },
@@ -1914,13 +1704,13 @@ test(
           assert.equal((await db.branch.findUniqueOrThrow({where:{id:setupBranch.branch.id}})).pricingVersion,1);
           assert.deepEqual([await db.pointTransaction.count(),await db.moneyTransaction.count()],setupLedgerBefore);
           assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'unified branch review must fit mobile');
-          // The admin and owner use the same phone → name → points → confirmation flow.
+          // Only the admin can charge points; owners see visit entitlements instead.
           const walletBeforeDispatch=(await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance;
           await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();
           if(await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).getAttribute('aria-expanded')!=='true')await page.getByRole('navigation',{name:'القائمة الرئيسية'}).getByRole('button',{name:'المالية',exact:true}).click();
           await page.getByRole('group',{name:'قائمة المالية',exact:true}).getByRole('button',{name:'نظرة عامة',exact:true}).click();
           await page.getByRole('navigation',{name:'أقسام المالية'}).getByRole('button',{name:'شحن مباشر بالرقم',exact:true}).click();
-          await page.getByLabel('رقم موبايل المتدرب أو صاحب الجيم').fill(traineeBody.phone);
+          await page.getByLabel('رقم موبايل المتدرب').fill(traineeBody.phone);
           await page.getByRole('button',{name:'متابعة',exact:true}).click();
           await expect(page.locator('.transfer-recipient')).toContainText(traineeBody.displayName);
           await page.getByLabel('عدد النقاط',{exact:true}).fill('١٠');
@@ -1933,47 +1723,21 @@ test(
           for(const width of [320,393]){await page.setViewportSize({width,height:851});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'direct topup receipt must fit mobile');}
           await page.setViewportSize({width:393,height:851});
           const ownerPointQuote=await request('/api/backend/admin/point-transfers/quotes',{cookie,method:'POST',body:{recipientId:newGym.owner.id,gymId:newGym.gym.id,points:30}});
-          assert.equal(ownerPointQuote.status,200);
-          const ownerPointData=await ownerPointQuote.json();
-          const ownerTopup=await request('/api/backend/admin/point-transfers',{cookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{recipientId:ownerPointData.recipientId,recipientLabel:ownerPointData.recipientLabel,gymId:newGym.gym.id,branchId:ownerPointData.branchId,points:30,pricingVersion:ownerPointData.pricingVersion,receivedAmountPiasters:ownerPointData.chargePiasters,fundsReceived:true,recipientConfirmed:true,paymentMethod:'CASH'}});
-          assert.equal(ownerTopup.status,201,await ownerTopup.text());
-          // Fund the reserve, allocate to a branch, and recall through the real gateway.
-          const reservePath = `/api/backend/gyms/${newGym.gym.id}/inventory`, transfersPath = `/api/backend/gyms/${newGym.gym.id}/stock-transfers`;
-          const reserveBefore = await (await request(reservePath,{cookie:invitedOwnerCookie})).json();
-          assert.equal(reserveBefore.central,'30');
-          const allocateKey=randomUUID(), allocationBody={fromBranchId:null,toBranchId:setupBranch.branch.id,points:3};
-          const allocation=await request(transfersPath,{cookie:invitedOwnerCookie,method:'POST',headers:{'idempotency-key':allocateKey},body:allocationBody});
-          assert.equal(allocation.status,201);const allocationId=(await allocation.json()).id;
-          assert.equal((await (await request(transfersPath,{cookie:invitedOwnerCookie,method:'POST',headers:{'idempotency-key':allocateKey},body:allocationBody})).json()).id,allocationId);
-          const allocated=await (await request(reservePath,{cookie:invitedOwnerCookie})).json();
-          assert.equal(allocated.central,'27');assert.equal(allocated.total,reserveBefore.total);
-          assert.equal(allocated.branches.find(b=>b.id===setupBranch.branch.id).stock,3);
-          assert.equal((await request(transfersPath,{cookie:invitedOwnerCookie,method:'POST',headers:{'idempotency-key':randomUUID()},body:{fromBranchId:setupBranch.branch.id,toBranchId:null,points:3}})).status,201);
-          assert.equal((await (await request(reservePath,{cookie:invitedOwnerCookie})).json()).central,'30');
-          const transferHistory=await request(transfersPath,{cookie:invitedOwnerCookie});
-          assert.equal(transferHistory.status,200);assert.ok((await transferHistory.json()).items.some(r=>r.id===allocationId));
+          assert.equal(ownerPointQuote.status,403);
           const ownerContext=await browser.newContext({viewport:{width:393,height:851},ignoreHTTPSErrors:true});
           const ownerSeparator=invitedOwnerCookie.indexOf('=');
           await ownerContext.addCookies([{name:invitedOwnerCookie.slice(0,ownerSeparator),value:invitedOwnerCookie.slice(ownerSeparator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
           const ownerPage=await ownerContext.newPage();await ownerPage.goto(origin);
           await expect(ownerPage.locator('.wallet-signature .wallet-balance')).toBeVisible();
           const ownerWalletBounds=await ownerPage.locator('.wallet-signature').boundingBox();
-          assert.ok(ownerWalletBounds.height<320,'owner stock card must keep the Flutter spacing');
+          assert.ok(ownerWalletBounds.height<320,'owner entitlement card must keep the Flutter spacing');
           await expect(ownerPage.locator('.portal-app-header>img')).toHaveAttribute('src','/brand/gymbank-wordmark.png');
-          await ownerPage.getByRole('button',{name:/محفظتي وإرسال النقاط/}).click();
-          await expect(ownerPage.getByRole('heading',{name:'هترسل لمين؟',exact:true})).toBeVisible();
-          await ownerPage.getByLabel('رقم موبايل المتدرب',{exact:true}).fill(traineeBody.phone);
-          await ownerPage.getByRole('button',{name:'متابعة',exact:true}).click();
-          await expect(ownerPage.locator('.transfer-recipient')).toContainText(traineeBody.displayName);
-          await ownerPage.getByLabel('عدد النقاط',{exact:true}).fill('5');
-          await ownerPage.getByRole('button',{name:'مراجعة الإرسال',exact:true}).click();
-          await expect(ownerPage.getByText('المتبقي من رصيد الجيم المتاح',{exact:true})).toBeVisible();
-          await ownerPage.getByRole('checkbox',{name:'تأكدت من اسم المستلم واستلمت المبلغ كاملًا',exact:true}).check();
-          await ownerPage.getByRole('button',{name:'تأكيد الإرسال',exact:true}).click();
-          await expect(ownerPage.getByRole('heading',{name:'تم إرسال النقاط',exact:true})).toBeVisible();
-          assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance,walletBeforeDispatch+15);
-          assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_gymId:{type:'GYM_INVENTORY',gymId:newGym.gym.id}}})).balance,25);
-          assert.equal(await ownerPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'gym wallet must fit mobile');
+          await expect(ownerPage.getByRole('button',{name:'بيع نقاط لمتدرب',exact:true})).toHaveCount(0);
+          await expect(ownerPage.getByRole('button',{name:'شراء نقاط لرصيد الجيم',exact:true})).toHaveCount(0);
+          await expect(ownerPage.getByRole('button',{name:/مستحقاتي والسحب/})).toBeVisible();
+          assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance,walletBeforeDispatch+10);
+          assert.equal(await db.pointAccount.count({where:{type:'GYM_INVENTORY',gymId:newGym.gym.id}}),0);
+          assert.equal(await ownerPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'gym entitlements must fit mobile');
           await ownerContext.close();
           const incomingSupport=await request('/api/backend/support/tickets',{cookie:traineeCookie,method:'POST',body:{subject:'Synthetic browser support',category:'HELP',body:'Synthetic support message from mobile viewport',clientKey:randomUUID()}});
           assert.equal(incomingSupport.status,200);
@@ -2001,7 +1765,7 @@ test(
             const separator=staffCookie.indexOf('=');
             await staffContext.addCookies([{name:staffCookie.slice(0,separator),value:staffCookie.slice(separator+1),domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);
             const staffPage=await staffContext.newPage();await staffPage.goto(origin);
-            await expect(staffPage.locator('.staff-stock .wallet-balance')).toBeVisible();
+            await expect(staffPage.getByRole('heading',{name:'تشغيل الزيارات',exact:true})).toBeVisible();
             await expect(staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button')).toHaveCount(4);
             for(const width of [320,393,700,1280]){
               await staffPage.setViewportSize({width,height:851});
@@ -2010,8 +1774,8 @@ test(
             await staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button',{name:'الزيارات',exact:true}).click();
             await expect(staffPage.getByRole('heading',{name:'الزيارات المسجلة',exact:true})).toBeVisible();
             await expect(staffPage.getByRole('heading',{name:'مبيعات النقاط',exact:true})).toHaveCount(0);
-            await staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button',{name:'المبيعات',exact:true}).click();
-            await expect(staffPage.getByRole('heading',{name:'مبيعات النقاط',exact:true})).toBeVisible();
+            await staffPage.getByRole('navigation',{name:'قائمة موظف الفرع'}).getByRole('button',{name:'التشغيل',exact:true}).click();
+            await expect(staffPage.getByText('زيارة بدون حجز مسبق',{exact:true})).toBeVisible();
             await staffContext.close();
           }
           assert.equal((await request(`/api/backend/gyms/${newGym.gym.id}/staff/${membership.id}`,{cookie:invitedOwnerCookie,method:'PATCH',body:{active:false}})).status,200);

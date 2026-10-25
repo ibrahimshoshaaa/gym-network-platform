@@ -82,7 +82,7 @@ class MoneyScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const PortalNote(
-            'التحويل خلال ٣ أيام عمل من قبول طلب السحب. مخزون النقاط منفصل عن المستحقات دي.',
+            'التحويل خلال ٣ أيام عمل من قبول طلب السحب.',
           ),
           const SizedBox(height: 16),
           Panel(

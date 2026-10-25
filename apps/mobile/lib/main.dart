@@ -263,7 +263,7 @@ class _NativeShellState extends State<NativeShell> {
         ? const [
             (Icons.dashboard_outlined, 'الرئيسية'),
             (Icons.directions_run_rounded, 'الزيارات'),
-            (Icons.receipt_long_outlined, 'المبيعات'),
+            (Icons.qr_code_scanner_rounded, 'التشغيل'),
             (Icons.shopping_bag_outlined, 'الماركت'),
             (Icons.person_outline_rounded, 'حسابي'),
           ]

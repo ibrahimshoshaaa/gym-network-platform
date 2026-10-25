@@ -13,6 +13,6 @@ for(const role of ['CASHIER','BRANCH_MANAGER'])test(`${role} uses the native fou
  const html=renderToStaticMarkup(createElement(StaffPortal,{user:{...user,role},logout:async()=>{},loggingOut:false,onPassword:()=>{},error:''}));
  const nav=html.match(/<nav[\s\S]*?<\/nav>/)?.[0]??'';
  assert.equal((nav.match(/<button/g)??[]).length,4);
- for(const label of ['الرئيسية','الزيارات','المبيعات','حسابي'])assert.ok(nav.includes(label));
+ for(const label of ['الرئيسية','الزيارات','التشغيل','حسابي'])assert.ok(nav.includes(label));
  assert.doesNotMatch(html,/sidebar|إدارة المنصة/);
 });

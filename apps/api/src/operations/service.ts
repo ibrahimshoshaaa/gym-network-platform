@@ -126,134 +126,10 @@ export function visitView(v: Visit) {
     cancellationReason: v.cancellationReason,
   };
 }
-export async function lookupTrainee(
-  db: PrismaClient,
-  actorId: string,
-  branchId: string,
-  input: unknown,
-) {
-  const { phone } = parse(z.object({ phone: phoneSchema }).strict(), input);
-  return db.$transaction(async (tx) => {
-    await requireBranchAccess(tx, actorId, branchId, "SELL_POINTS");
-    const user = await tx.user.findUnique({ where: { phoneE164: phone } });
-    if (!user?.isActive || user.role !== "TRAINEE")
-      throw new DomainError("TRAINEE_UNAVAILABLE");
-    return {
-      id: user.id,
-      label: label(user.displayName),
-      phoneLast4: user.phoneE164.slice(-4),
-    };
-  });
-}
-async function saleQuote(
-  tx: Tx,
-  actorId: string,
-  branchId: string,
-  input: z.infer<typeof saleQuoteSchema>,
-) {
-  await requireBranchAccess(tx, actorId, branchId, "SELL_POINTS");
-  const user = await trainee(tx, input.traineeId);
-  await wallet(tx, user.id, true);
-  const p = await policy(tx),
-    charge = BigInt(input.points) * p.pointPricePiasters;
-  if (charge > maxMoney) throw new DomainError("INVALID_INPUT");
-  const stock = await tx.pointAccount.findUnique({
-    where: { type_branchId: { type: "BRANCH_INVENTORY", branchId } },
-  });
-  if (!stock) throw new DomainError("ACCOUNT_NOT_FOUND");
-  return { user, p, charge, stock };
-}
-export async function quoteSale(
-  db: PrismaClient,
-  actorId: string,
-  branchId: string,
-  input: unknown,
-) {
-  const data = parse(saleQuoteSchema, input);
-  return db.$transaction(async (tx) => {
-    const q = await saleQuote(tx, actorId, branchId, data);
-    return {
-      points: data.points,
-      chargePiasters: q.charge.toString(),
-      pricingVersion: q.p.version,
-      stock: q.stock.balance,
-      traineeLabel: label(q.user.displayName),
-      phoneLast4: q.user.phoneE164.slice(-4),
-    };
-  });
-}
-export async function sellPoints(
-  db: PrismaClient,
-  actorId: string,
-  branchId: string,
-  key: string,
-  input: unknown,
-) {
-  const data = parse(saleSchema, input);
-  parse(uuid, key);
-  const idempotencyKey = `sale:${actorId}:${key}`,
-    requestHash = digest({ branchId, ...data });
-  return serializable(db, async (tx) => {
-    await requireBranchAccess(tx, actorId, branchId, "SELL_POINTS");
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey},0))`;
-    const old = await tx.pointSale.findUnique({ where: { idempotencyKey } });
-    if (old) {
-      if (old.requestHash !== requestHash)
-        throw new DomainError("IDEMPOTENCY_CONFLICT");
-      return saleView(old);
-    }
-    const q = await saleQuote(tx, actorId, branchId, data);
-    if (q.p.version !== data.pricingVersion)
-      throw new DomainError("STALE_SETTINGS");
-    if (q.charge !== BigInt(data.receivedAmountPiasters))
-      throw new DomainError("PAYMENT_AMOUNT_MISMATCH");
-    const destination = await wallet(tx, data.traineeId, true),
-      id = randomUUID();
-    const posted = await postInTransaction(tx, {
-      actorId,
-      idempotencyKey,
-      referenceId: id,
-      reason: "Cashier confirmed collection; branch stock sale to trainee",
-      points: {
-        kind: "TRANSFER",
-        entries: [
-          { accountId: q.stock.id, delta: -BigInt(data.points) },
-          { accountId: destination.id, delta: BigInt(data.points) },
-        ],
-      },
-    });
-    await tx.pointAccount.update({
-      where: { id: destination.id },
-      data: { expiresAt: new Date(Date.now() + 90 * 86400000) },
-    });
-    const sale = await tx.pointSale.create({
-      data: {
-        id,
-        cashierId: actorId,
-        branchId,
-        traineeId: data.traineeId,
-        traineeLabel: label(q.user.displayName),
-        phoneLast4: q.user.phoneE164.slice(-4),
-        points: data.points,
-        chargePiasters: q.charge,
-        unitPricePiasters: q.p.pointPricePiasters,
-        policyId: q.p.id,
-        pricingVersion: q.p.version,
-        idempotencyKey,
-        requestHash,
-        pointTransactionId: posted.pointTransactionId!,
-      },
-    });
-    await audit(
-      tx,
-      actorId,
-      "CASHIER_POINTS_SOLD",
-      id,
-      "Cash collected by distributing gym; no platform cash or hosting receivable posted",
-    );
-    return saleView(sale);
-  });
-}
+// Kept as explicit denials for older installed clients; no retired mutation can replay.
+export async function lookupTrainee(db:PrismaClient,actorId:string,branchId:string,input:unknown):Promise<{id:string;label:string;phoneLast4:string}>{throw new DomainError('ACCESS_DENIED');}
+export async function quoteSale(db:PrismaClient,actorId:string,branchId:string,input:unknown):Promise<{points:number;chargePiasters:string;pricingVersion:number;stock:number;traineeLabel:string;phoneLast4:string}>{throw new DomainError('ACCESS_DENIED');}
+export async function sellPoints(db:PrismaClient,actorId:string,branchId:string,key:string,input:unknown):Promise<ReturnType<typeof saleView>>{throw new DomainError('ACCESS_DENIED');}
 export async function issueQr(
   db: PrismaClient,
   actorId: string,
@@ -330,7 +206,7 @@ async function visitQuote(
     tx,
     actorId,
     branchId,
-    "SELL_POINTS",
+    "OPERATE_BRANCH",
   );
   if (await tx.branchService.count({where:{branchId}})) throw new DomainError("SERVICE_SELECTION_REQUIRED");
   if (!branch.priceApprovedAt || branch.pricingVersion < 1)
@@ -407,7 +283,7 @@ export async function confirmVisit(
   const idempotencyKey = `entry:${actorId}:${key}`,
     requestHash = digest({ branchId, ...data, token: hashToken(data.token) });
   return serializable(db, async (tx) => {
-    await requireBranchAccess(tx, actorId, branchId, "SELL_POINTS");
+    await requireBranchAccess(tx, actorId, branchId, "OPERATE_BRANCH");
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${idempotencyKey},0))`;
     const old = await tx.visitEntry.findUnique({ where: { idempotencyKey } });
     if (old) {

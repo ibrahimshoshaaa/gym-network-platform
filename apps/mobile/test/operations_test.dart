@@ -15,7 +15,7 @@ const branch = <String, dynamic>{
   'gymId': 'g1',
   'name': 'فرع شبين',
   'gymName': 'جيم التجربة',
-  'canSell': true,
+  'canOperate': true,
   'canCancel': false,
 };
 http.Response reply(Object data) => http.Response(
@@ -94,7 +94,7 @@ void main() {
       expect(find.text('مساحة الإدارة على الويب'), findsNothing);
       expect(find.text('فرع شبين'), findsOneWidget);
       expect(find.text('تسجيل زيارة'), findsOneWidget);
-      expect(find.text('بيع نقاط لمتدرب'), findsOneWidget);
+      expect(find.text('بيع نقاط لمتدرب'), findsNothing);
       expect(t.takeException(), isNull);
     });
   }
@@ -105,7 +105,7 @@ void main() {
     await t.pumpWidget(page(Scaffold(body: BranchDashboard(api: api, branch: branch))));
     await t.pumpAndSettle();
     expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'تسجيل زيارة')).onPressed, isNotNull);
-    expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'بيع نقاط لمتدرب')).onPressed, isNull);
+    expect(find.text('بيع نقاط لمتدرب'), findsNothing);
     expect(t.takeException(), isNull);
   });
   for (final manager in [false, true]) {
@@ -135,9 +135,9 @@ void main() {
     await t.pumpAndSettle();
     expect(find.textContaining('مدير الفرع ·'), findsOneWidget);
     expect(find.textContaining('فرع تاني'), findsWidgets);
-    await t.tap(find.text('المبيعات'));
+    await t.tap(find.text('التشغيل'));
     await t.pumpAndSettle();
-    expect(paths.last, endsWith('/operations/branches/b2/sales'));
+    expect(paths.any((p)=>p.endsWith('/operations/branches/b2/sales')),isFalse);
     await t.tap(find.text('الزيارات'));
     await t.pumpAndSettle();
     expect(paths.last, endsWith('/operations/branches/b2/visits'));
@@ -149,11 +149,11 @@ void main() {
     await t.pumpWidget(page(Scaffold(body: BranchDashboard(api: api, branch: branch))));
     await t.pump();
     await t.pump(const Duration(milliseconds: 100));
-    expect(find.text('50 نقطة'), findsOneWidget);
+    expect(find.text('20 نقطة'), findsOneWidget);
     expect(t.widget<FilledButton>(find.widgetWithText(FilledButton, 'تسجيل زيارة')).onPressed, isNotNull);
     delayed.complete(http.Response('{"code":"SERVICE_UNAVAILABLE"}', 503));
     await t.pumpAndSettle();
-    expect(find.text('50 نقطة'), findsOneWidget);
+    expect(find.text('20 نقطة'), findsOneWidget);
     expect(find.text('0 ج.م'), findsNothing);
     expect(t.takeException(), isNull);
   });
@@ -164,60 +164,10 @@ void main() {
     expect(find.text('مفيش فرع متاح للتشغيل'), findsOneWidget);
     expect(find.text('افتح لوحة الويب'), findsNothing);
   });
-  testWidgets('branch sale requires review and exact quoted collection', (
-    t,
-  ) async {
-    Json? posted;
-    final api = client('CASHIER', (r) async {
-      if (r.url.path.endsWith('/trainee-lookup'))
-        return reply({
-          'id': 't1',
-          'label': 'متدرب تجريبي',
-          'phoneLast4': '5678',
-        });
-      if (r.url.path.endsWith('/sale-quotes'))
-        return reply({
-          'points': 10,
-          'chargePiasters': '1250',
-          'pricingVersion': 2,
-          'stock': 100,
-        });
-      posted = Map<String, dynamic>.from(jsonDecode(r.body));
-      expect(r.headers['idempotency-key'], isNotNull);
-      return reply({'id': 'sale1', 'points': 10, 'chargePiasters': '1250'});
-    });
-    await t.pumpWidget(page(BranchSale(api: api, branch: branch)));
-    await t.enterText(find.byType(TextField).first, '01012345678');
-    await t.tap(find.text('بحث عن المتدرب'));
-    await t.pumpAndSettle();
-    await t.enterText(find.byType(TextField).first, '10');
-    await t.ensureVisible(find.text('مراجعة الشحن'));
-    await t.tap(find.text('مراجعة الشحن'));
-    await t.pumpAndSettle();
-    expect(posted, isNull);
-    expect(find.text('90 نقطة'), findsOneWidget);
-    await t.scrollUntilVisible(find.text('تعديل النقاط'), 150,
-      scrollable: find.byType(Scrollable).first);
-    await t.tap(find.text('تعديل النقاط'));
-    await t.pumpAndSettle();
-    expect(find.text('متدرب تجريبي'), findsOneWidget);
-    expect(find.text('بحث عن المتدرب'), findsNothing);
-    await t.ensureVisible(find.text('مراجعة الشحن'));
-    await t.tap(find.text('مراجعة الشحن'));
-    await t.pumpAndSettle();
-    expect(t.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value, false);
-    expect(posted, isNull);
-    await t.ensureVisible(find.byType(CheckboxListTile));
-    await t.tap(find.byType(CheckboxListTile));
-    await t.pumpAndSettle();
-    await t.ensureVisible(find.text('تأكيد الشحن'));
-    await t.tap(find.text('تأكيد الشحن'));
-    await t.pumpAndSettle();
-    expect(posted?['receivedAmountPiasters'], '1250');
-    expect(posted?['fundsReceived'], true);
-    expect(posted?['traineeId'], 't1');
-    expect(find.text('تم شحن المتدرب'), findsOneWidget);
-    expect(t.takeException(), isNull);
+  testWidgets('retired branch sale has no action and makes no request',(t)async{
+    var calls=0;final api=client('CASHIER',(r)async{calls++;return reply({});});
+    await t.pumpWidget(page(BranchSale(api:api,branch:branch)));await t.pumpAndSettle();
+    expect(find.text('شحن النقاط من صاحب المنصة فقط'),findsOneWidget);expect(find.byType(TextField),findsNothing);expect(calls,0);
   });
   testWidgets(
     'visit keeps token and versions from review and handles existing attendance',

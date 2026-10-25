@@ -496,7 +496,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 if(phoneOtpPreview)...[
-                                  Text(tr('سجّل برقم موبايلك. تجربة بدون SMS — الكود 123456 بيتملّى تلقائيًا.','Register with your mobile number. No SMS is sent in test mode; code 123456 is autofilled.'),style:TextStyle(color:muted,fontSize:12)),
+                                  Text(tr('سجّل برقم موبايلك، وأكّد رقمك بكود التحقق.','Register with your mobile number and confirm it with a verification code.'),style:TextStyle(color:muted,fontSize:12)),
                                   const SizedBox(height:12),
                                 ],
                                 if (register) ...[

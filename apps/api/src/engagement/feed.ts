@@ -47,7 +47,7 @@ export async function notificationFeed(db:PrismaClient,id:string){return db.$tra
   if(wallet?.balance && wallet.expiresAt){const days=Math.ceil((wallet.expiresAt.getTime()-Date.now())/86400000);const threshold=days<=0?0:days<=1?1:days<=7?7:days<=15?15:null;
    if(threshold!==null)events.push({id:`expiry:${wallet.expiresAt.toISOString()}:${threshold}`,title:threshold===0?'رصيدك المنتهي يحتاج مراجعة':`صلاحية نقاطك خلال ${Math.max(1,days)} يوم`,description:'راجع المحفظة. التنبيه لا يحذف نقاطًا ولا يغيّر سياسة الرصيد.',at:new Date(),destination:'wallet'});
   }
- } else if(!admin && branchIds.length){const zero=await tx.pointAccount.findMany({where:{type:'BRANCH_INVENTORY',branchId:{in:branchIds},balance:0},include:{branch:{select:{name:true}}},take:25});for(const z of zero)events.push({id:`stock:${z.id}:empty`,title:`مخزون ${z.branch?.name??'الفرع'} صفر`,description:'لا يمكن بيع نقاط من هذا المخزون حتى شحنه.',at:new Date(),destination:actor.role==='GYM_OWNER'?'purchases':actor.role==='CASHIER'?'cashier':'inventory'});}
+ }
  events.sort((a,b)=>b.at.getTime()-a.at.getTime()||a.id.localeCompare(b.id));
  const items=events.slice(0,100),reads=await tx.notificationRead.findMany({where:{userId:id,eventId:{in:items.map(e=>e.id)}},select:{eventId:true}}),seen=new Set(reads.map(r=>r.eventId));
  return {asOf:new Date(),items:items.map(e=>({...e,read:seen.has(e.id)})),unread:items.filter(e=>!seen.has(e.id)).length,limited:events.length>100};
@@ -78,8 +78,6 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
   add('فروعك',branchIds.length,'gyms');
   add('زيارات اليوم',await tx.visit.count({where:{branchId:{in:branchIds},...(actor.role==='CASHIER'?{cashierId:id}:{}),startedAt:{gte:range.start,lt:range.end}}}),'cashier');
   add('جلسات نشطة',await tx.visit.count({where:{branchId:{in:branchIds},...(actor.role==='CASHIER'?{cashierId:id}:{}),status:'ACTIVE',expiresAt:{gt:now}}}),'cashier');
-  add('نقاط بيعت اليوم',Number((await tx.pointDispatch.aggregate({where:{kind:'GYM_SALE',gymId:{in:gymIds},createdAt:{gte:range.start,lt:range.end}},_sum:{points:true}}))._sum.points??0)+((await tx.pointSale.aggregate({where:{branchId:{in:branchIds},...(actor.role==='CASHIER'?{cashierId:id}:{}),createdAt:{gte:range.start,lt:range.end}},_sum:{points:true}}))._sum.points??0),actor.role==='GYM_OWNER'?'point-wallet':'cashier','نقطة');
-  add('مخزون الفروع',(await tx.pointAccount.aggregate({where:{type:'BRANCH_INVENTORY',branchId:{in:branchIds}},_sum:{balance:true}}))._sum.balance??0,actor.role==='CASHIER'?'cashier':'inventory','نقطة');
  }
  if(admin||actor.role==='GYM_OWNER'){
   const balances=await tx.moneyAccount.groupBy({by:['type'],where:{branchId:null,...(!admin?{gymId:{in:gymIds}}:{gymId:{not:null}})},_sum:{balancePiasters:true}});

@@ -70,7 +70,7 @@ class StaffWorkplace extends StatelessWidget {
         ])),
         Expanded(child: KeyedSubtree(key: ValueKey('${branch['id']}:$section'), child: switch(section) {
           1 => BranchRecords(api: api, branch: branch, kind: 'visits', embedded: true),
-          2 => BranchRecords(api: api, branch: branch, kind: 'sales', embedded: true),
+          2 => RecordVisit(api: api, branch: branch),
           _ => BranchDashboard(api: api, branch: branch, showVisits: showVisits, showSales: showSales,controls:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
            if(branches.length>1) DropdownButton<String>(value:branch['id'],isExpanded:true,items:branches.map((b)=>DropdownMenuItem<String>(value:b['id'],child:Text('${b['name']}',maxLines:1,overflow:TextOverflow.ellipsis))).toList(),onChanged:api.pending!=null?null:(id)=>onBranchChanged(id!))
            else Padding(padding:const EdgeInsets.only(top:10),child:Text('${branch['name']}',style:const TextStyle(color:green,fontSize:12))),
@@ -128,24 +128,20 @@ class _BranchDashboardState extends State<BranchDashboard> {
     final branch = widget.branch, locked = widget.api.pending != null;
     return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh: load, child: ListView(
       padding: const EdgeInsets.only(bottom:28), physics: const AlwaysScrollableScrollPhysics(), children: [
-        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'رصيد الفرع لبيع النقاط',points:summary==null?null:'${summary!['stock']??'—'}',loading:summaryLoading,
-         primary:BalanceHeroAction('تسجيل زيارة',Icons.qr_code_scanner_rounded,locked||branch['canSell']!=true?null:()=>action(RecordVisit(api:widget.api,branch:branch))),
-         secondary:BalanceHeroAction('بيع نقاط لمتدرب',Icons.arrow_outward_rounded,locked||branch['canSell']!=true||summary==null||summaryLoading||'${summary!['stock']}'=='0'?null:()=>action(BranchSale(api:widget.api,branch:branch))),
-         footer:BalanceHeroAction('كود حضور الفرع',Icons.qr_code_2_rounded,locked||branch['canSell']!=true?null:()=>action(BranchEntryQrScreen(api:widget.api,branch:branch)))),
+        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'سعر الزيارة',points:summary==null?null:'${summary!['visitPricePoints']??'—'}',loading:summaryLoading,
+         primary:BalanceHeroAction('تسجيل زيارة',Icons.qr_code_scanner_rounded,locked||branch['canOperate']!=true?null:()=>action(RecordVisit(api:widget.api,branch:branch))),
+         secondary:BalanceHeroAction('سجل الزيارات',Icons.history_rounded,()=>records('visits')),
+         footer:BalanceHeroAction('كود حضور الفرع',Icons.qr_code_2_rounded,locked||branch['canOperate']!=true?null:()=>action(BranchEntryQrScreen(api:widget.api,branch:branch)))),
         if(widget.controls!=null)widget.controls!,
         if(summary!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text('الزيارة ${summary!['visitPricePoints']??'—'} نقطة · ${summary!['sessionMinutes']??'—'} دقيقة',style:const TextStyle(color:muted,fontSize:11))),
         const SizedBox(height:12),
         BranchFinance(key: ValueKey(generation), api: widget.api, branch: branch),
         if (summaryError != null) ErrorNote(summaryError, retry: load),
-        if (summary != null && '${summary!['stock']}' == '0') const Padding(padding: EdgeInsets.only(top: 12),
-          child: PortalNote('رصيد بيع النقاط خلص. اطلب من صاحب الجيم يوزّع نقاط للفرع. تسجيل الزيارات متاح من رصيد المتدرب.')),
         const SectionTitle('حركة الفرع النهارده'),
         Panel(padding: const EdgeInsets.all(16), child: Column(children: [
           if (reportLoading && report == null) const LinearProgressIndicator(minHeight: 2),
           if (report != null) ...[
             Fact('زيارات مسجلة', '${report!['visits']?['count'] ?? '—'}'),
-            Fact('نقاط مباعة', '${report!['sales']?['points'] ?? '—'}'),
-            if (report!['sales']?['amountPiasters'] != null) Fact('تحصيل بيع النقاط', '${money(report!['sales']['amountPiasters'])} ج.م', strong: true),
           ],
           if (reportError != null) ErrorNote(reportError, retry: load),
         ])),
@@ -155,7 +151,6 @@ class _BranchDashboardState extends State<BranchDashboard> {
             for(final item in const [
               ('MANAGE_CASHIERS','staff','فريق الكاشير'),('EDIT_BRANCH','edit','بيانات الفرع'),
               ('REQUEST_PRICING','price','طلب تعديل السعر'),('REQUEST_WITHDRAWAL','withdraw','مستحقات الفرع والسحب'),
-              ('TRANSFER_STOCK','transfer','تحويل نقاط الفرع'),
             ])if((branch['permissions'] as List).contains(item.$1))ListTile(contentPadding:EdgeInsets.zero,title:Text(item.$3),trailing:const Icon(Icons.chevron_left_rounded),onTap:locked?null:()=>action(ManagedBranch(api:widget.api,branch:branch,task:item.$2))),
           ])),
         ],
@@ -163,9 +158,6 @@ class _BranchDashboardState extends State<BranchDashboard> {
         Panel(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), child: Column(children: [
           ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.directions_run_rounded, color: green),
             title: const Text('سجل الزيارات'), trailing: const Icon(Icons.chevron_left_rounded), onTap: () => records('visits')),
-          const Divider(height: 1),
-          ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.receipt_long_outlined, color: green),
-            title: const Text('سجل المبيعات'), trailing: const Icon(Icons.chevron_left_rounded), onTap: () => records('sales')),
           if (branch['canCancel'] == true) ...[
             const Divider(height: 1),
             const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('إلغاء الزيارة متاح خلال أول ١٠ دقائق من سجل الزيارات. بعد كده يُرسل طلب مراجعة.', style: TextStyle(color: muted, fontSize: 12))),
@@ -247,7 +239,7 @@ class OperationsHome extends StatelessWidget {
                         'تقدر تلغي الزيارة خلال أول ١٠ دقائق.',
                         style: TextStyle(color: green, fontSize: 12),
                       ),
-                    if (branch['canSell'] == true) ...[
+                    if (branch['canOperate'] == true) ...[
                       const SizedBox(height: 14),
                       PortalGrid(
                         children: [
@@ -265,18 +257,7 @@ class OperationsHome extends StatelessWidget {
                               await reload();
                             },
                           ),
-                          PortalTask(
-                            'شحن متدرب',
-                            icon: Icons.add_card_rounded,
-                            detail: 'من رصيد الفرع',
-                            onTap: () async {
-                              await open(
-                                context,
-                                BranchSale(api: api, branch: branch),
-                              );
-                              await reload();
-                            },
-                          ),
+
                         ],
                       ),
                     ],
@@ -340,185 +321,10 @@ class BranchWorkspace extends StatelessWidget {
     child: BranchDashboard(api: api, branch: branch));
 }
 
-class BranchSale extends StatefulWidget {
-  final ApiClient api;
-  final Json branch;
-  const BranchSale({super.key, required this.api, required this.branch});
-  @override
-  State<BranchSale> createState() => _BranchSaleState();
-}
-
-class _BranchSaleState extends State<BranchSale> {
-  final phone = TextEditingController(), points = TextEditingController();
-  Json? person, quote, result;
-  bool busy = false, confirmed = false;
-  Object? error;
-  String get path => 'cashier/branches/${widget.branch['id']}';
-  @override
-  void dispose() {
-    phone.dispose();
-    points.dispose();
-    super.dispose();
-  }
-
-  Future<void> advance() async {
-    if (busy || widget.api.pending != null) return;
-    FocusScope.of(context).unfocus();
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      if (person == null) {
-        final r = await widget.api.request(
-          '$path/trainee-lookup',
-          method: 'POST',
-          body: {'phone': phone.text},
-        );
-        if (mounted) setState(() => person = Map<String, dynamic>.from(r));
-      } else if (quote == null) {
-        final r = await widget.api.request(
-          '$path/sale-quotes',
-          method: 'POST',
-          body: {
-            'traineeId': person!['id'],
-            'points': int.tryParse(digits(points.text)),
-          },
-        );
-        if (mounted) setState(() => quote = Map<String, dynamic>.from(r));
-      } else if (confirmed) {
-        final r = await widget.api.transact('$path/sales', {
-          'traineeId': person!['id'],
-          'points': quote!['points'],
-          'pricingVersion': quote!['pricingVersion'],
-          'receivedAmountPiasters': quote!['chargePiasters'],
-          'fundsReceived': true,
-        });
-        if (mounted) setState(() => result = r);
-      }
-    } catch (e) {
-      if (mounted) setState(() => error = e);
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => Screen(
-    title: 'بيع نقاط لمتدرب',
-    child: ListView(
-      padding: const EdgeInsets.all(22),
-      children: [
-        OperationContext(title:'${widget.branch['name']}',detail:'بيع من مخزون الفرع بعد تحصيل المبلغ'),
-        if (result != null) ...[
-          const EmptyState(
-            'تم شحن المتدرب',
-            icon: Icons.check_circle_rounded,
-            detail: 'اتخصمت النقاط من رصيد الفرع واتضافت لمحفظة المتدرب.',
-          ),
-          Fact('النقاط', '${result!['points']}', strong: true),
-          Fact('المبلغ المحصّل', '${money(result!['chargePiasters'])} ج.م'),
-          Reference('${result!['id']}'),
-          ActionButton('تم', onPressed: () => Navigator.pop(context)),
-        ] else ...[
-          FlowSteps(
-            labels: const ['المتدرب', 'النقاط', 'التأكيد'],
-            current: person == null
-                ? 0
-                : quote == null
-                ? 1
-                : 2,
-          ),
-          Text(
-            person == null
-                ? 'حدد المتدرب'
-                : quote == null
-                ? 'حدد عدد النقاط'
-                : 'راجع الشحن',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
-          if (person == null)
-            TextField(
-              controller: phone,
-              enabled: !busy && widget.api.pending == null,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'رقم موبايل المتدرب',
-              ),
-            ),
-          if (person != null)
-            Panel(
-              child: Column(
-                children: [
-                  Fact('المتدرب', '${person!['label']}'),
-                  Fact('آخر أرقام الموبايل', '${person!['phoneLast4']}'),
-                ],
-              ),
-            ),
-          if (person != null && quote == null) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: points,
-              enabled: !busy && widget.api.pending == null,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'عدد النقاط'),
-            ),
-          ],
-          if (quote != null) ...[
-            Fact('النقاط', '${quote!['points']}'),
-            Fact(
-              'المطلوب تحصيله',
-              '${money(quote!['chargePiasters'])} ج.م',
-              strong: true,
-            ),
-            Fact('رصيد الفرع قبل البيع', '${quote!['stock']} نقطة'),
-            Fact('المتبقي بعد البيع', '${BigInt.parse('${quote!['stock']}') - BigInt.from(quote!['points'])} نقطة'),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: confirmed,
-              title: const Text('راجعت هوية المتدرب واستلمت المبلغ كاملًا'),
-              onChanged: busy || widget.api.pending != null
-                  ? null
-                  : (v) => setState(() => confirmed = v == true),
-            ),
-          ],
-          ErrorNote(error),
-          if (widget.api.pending != null)
-            const Text(
-              'فيه عملية نتيجتها غير مؤكدة. ارجع للرئيسية وأعد نفس العملية بأمان.',
-            ),
-          const SizedBox(height: 20),
-          ActionButton(
-            person == null
-                ? 'بحث عن المتدرب'
-                : quote == null
-                ? 'مراجعة الشحن'
-                : 'تأكيد الشحن',
-            busy: busy,
-            onPressed: widget.api.pending != null || quote != null && !confirmed
-                ? null
-                : advance,
-          ),
-          if (person != null)
-            TextButton(
-              onPressed: busy || widget.api.pending != null
-                  ? null
-                  : () => setState(() {
-                      if (quote != null) {
-                        quote = null;
-                      } else {
-                        person = null;
-                      }
-                      confirmed = false;
-                      error = null;
-                    }),
-              child: Text(quote != null ? 'تعديل النقاط' : 'اختيار متدرب آخر'),
-            ),
-        ],
-      ],
-    ),
-  );
+class BranchSale extends StatelessWidget {
+ final ApiClient api;final Json branch;
+ const BranchSale({super.key,required this.api,required this.branch});
+ @override Widget build(BuildContext context)=>const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط من صاحب المنصة فقط')));
 }
 
 class RecordVisit extends StatefulWidget {

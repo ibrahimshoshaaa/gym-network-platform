@@ -9,10 +9,10 @@ import { DomainError } from '../domain/errors.js';
 export const maxMoney = 9223372036854775807n;
 export const moneySchema = z.string().regex(/^[1-9]\d{0,18}$/).refine(v => BigInt(v) <= maxMoney);
 const expectedVersion = z.number().int().min(0).max(2147483646);
-export const policySchema = z.object({ expectedVersion, pointPricePiasters: moneySchema, gymDiscountBps: z.number().int().min(0).max(9999), redemptionBps: z.number().int().min(1).max(10000) }).strict();
+export const policySchema = z.object({ expectedVersion, pointPricePiasters: moneySchema, gymDiscountBps: z.literal(0).default(0), redemptionBps: z.number().int().min(1).max(10000) }).strict();
 export const methodTypeSchema = z.enum(['INSTAPAY', 'WALLET']);
 export const methodSchema = z.object({ expectedVersion, account: z.string().trim().min(3).max(150), accountName: z.string().trim().min(2).max(150), enabled: z.boolean() }).strict();
-export const packageSchema = z.object({ expectedVersion, label: z.string().trim().min(1).max(100), kind: z.enum(['TRAINEE', 'BRANCH_STOCK']), points: z.number().int().positive().max(2147483647), enabled: z.boolean() }).strict();
+export const packageSchema = z.object({ expectedVersion, label: z.string().trim().min(1).max(100), kind: z.literal('TRAINEE'), points: z.number().int().positive().max(2147483647), enabled: z.boolean() }).strict();
 export const policyView = (p: { id: string; version: number; pointPricePiasters: bigint; gymDiscountBps: number; redemptionBps: number }) => ({ id: p.id, version: p.version, pointPricePiasters: p.pointPricePiasters.toString(), gymDiscountBps: p.gymDiscountBps, redemptionBps: p.redemptionBps });
 
 export async function publishPolicy(db: PrismaClient, actorId: string, input: unknown) {
@@ -25,7 +25,7 @@ export async function publishPolicy(db: PrismaClient, actorId: string, input: un
       if ((current?.version ?? 0) !== data.expectedVersion) throw new DomainError('STALE_SETTINGS');
       const policy = await tx.pricingPolicy.create({ data: { version: data.expectedVersion + 1, pointPricePiasters: BigInt(data.pointPricePiasters), gymDiscountBps: data.gymDiscountBps, redemptionBps: data.redemptionBps, createdById: actorId } });
       if (!await tx.pointAccount.findFirst({ where: { type: 'ISSUANCE' } })) await tx.pointAccount.create({ data: { type: 'ISSUANCE' } });
-      await audit(tx, actorId, 'PRICING_POLICY_PUBLISHED', policy.id, 'Admin configured point price, gym purchase discount and gym redemption ratio');
+      await audit(tx, actorId, 'PRICING_POLICY_PUBLISHED', policy.id, 'Admin configured point price, trainee pricing and visit settlement ratio');
       return policyView(policy);
     });
   } catch (e) {

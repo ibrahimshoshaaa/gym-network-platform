@@ -28,6 +28,7 @@ export type Package = {
   enabled: boolean;
 };
 export type Settings = {
+  welcomePoints?: {version:number;enabled:boolean;points:number};
   policy: Policy | null;
   paymentMethods: PaymentMethod[];
   packages: Package[];

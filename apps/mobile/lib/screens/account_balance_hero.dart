@@ -9,9 +9,10 @@ class BalanceHeroAction {
 /// One layout for every role. Width and alignment include the logo's real bounds.
 class AccountBalanceHero extends StatelessWidget {
  final ApiClient api;final String subtitle,label,status;final String? points;
+ final String unit;
  final bool loading;final VoidCallback notifications;
  final BalanceHeroAction primary,secondary,footer;
- const AccountBalanceHero({super.key,required this.api,required this.subtitle,required this.label,required this.status,required this.points,required this.loading,required this.notifications,required this.primary,required this.secondary,required this.footer});
+ const AccountBalanceHero({super.key,required this.api,required this.subtitle,required this.label,required this.status,required this.points,required this.loading,required this.notifications,required this.primary,required this.secondary,required this.footer,this.unit='نقطة'});
  @override Widget build(BuildContext context){
   final name='${api.user?['displayName']??'متدرب'}'.trim();
   Widget button(BalanceHeroAction a,bool filled)=>Expanded(child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:filled?lime:Colors.white.withValues(alpha:.10),foregroundColor:filled?ink:Colors.white,disabledBackgroundColor:Colors.white.withValues(alpha:.06),disabledForegroundColor:Colors.white38,minimumSize:const Size(0,52),padding:const EdgeInsets.symmetric(horizontal:7,vertical:10),textStyle:const TextStyle(fontSize:11,fontWeight:FontWeight.w800),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17))),onPressed:a.onPressed,icon:Icon(a.icon,size:18),label:Text(a.label,textAlign:TextAlign.center)));
@@ -27,8 +28,8 @@ class AccountBalanceHero extends StatelessWidget {
    ])),
    const SizedBox(height:8),Row(children:[Expanded(child:Align(alignment:AlignmentDirectional.centerStart,child:FittedBox(fit:BoxFit.scaleDown,child:Text(label,style:const TextStyle(color:Colors.white60,fontSize:12,height:1.3))))),const SizedBox(width:10),Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:3),decoration:BoxDecoration(color:lime.withValues(alpha:.1),borderRadius:BorderRadius.circular(20)),child:Text(status,style:const TextStyle(color:lime,fontSize:10,height:1.3)))]),const SizedBox(height:4),
    if(loading&&points==null)const SizedBox(height:46,child:Center(child:LinearProgressIndicator(color:lime,minHeight:2)))
-   else if(points==null)const SizedBox(height:46,child:Align(alignment:AlignmentDirectional.centerStart,child:Text('تعذر تحميل رصيد النقاط',style:TextStyle(color:Colors.white,fontSize:12))))
-   else SizedBox(width:double.infinity,child:FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,child:Text.rich(style:const TextStyle(fontSize:40,height:1.15),TextSpan(children:[TextSpan(text:points,style:const TextStyle(color:Colors.white,fontSize:40,fontWeight:FontWeight.w900,height:1.15)),const TextSpan(text:' نقطة',style:TextStyle(color:lime,fontSize:17,fontWeight:FontWeight.w800))])))),
+   else if(points==null)const SizedBox(height:46,child:Align(alignment:AlignmentDirectional.centerStart,child:Text('تعذر تحميل الرصيد',style:TextStyle(color:Colors.white,fontSize:12))))
+   else SizedBox(width:double.infinity,child:FittedBox(fit:BoxFit.scaleDown,alignment:AlignmentDirectional.centerStart,child:Text.rich(style:const TextStyle(fontSize:40,height:1.15),TextSpan(children:[TextSpan(text:points,style:const TextStyle(color:Colors.white,fontSize:40,fontWeight:FontWeight.w900,height:1.15)),TextSpan(text:' $unit',style:TextStyle(color:lime,fontSize:17,fontWeight:FontWeight.w800))])))),
    const SizedBox(height:8),Row(children:[button(primary,true),const SizedBox(width:10),button(secondary,false)]),
    Align(alignment:AlignmentDirectional.centerEnd,child:TextButton(onPressed:footer.onPressed,style:TextButton.styleFrom(foregroundColor:Colors.white60,minimumSize:const Size(44,44),tapTargetSize:MaterialTapTargetSize.shrinkWrap,padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),textStyle:const TextStyle(fontSize:10)),child:Text(footer.label))),
   ]))));
