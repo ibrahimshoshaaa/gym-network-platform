@@ -381,7 +381,7 @@ test(
         (row) => row.id === pending.id,
       );
       assert.equal(listed.requestor.displayName, earlyIdentity.user.displayName);
-      assert.equal(listed.branch, null);
+      assert.equal('branch' in listed,false);
       const review = await request(
         `/api/backend/admin/topups/${pending.id}/review`,
         {
@@ -549,10 +549,7 @@ test(
         { cookie },
       );
       assert.equal(branchList.status, 200);
-      assert.equal(
-        (await branchList.json()).items[0].pointAccounts.length,
-        0,
-      );
+      assert.equal('pointAccounts' in (await branchList.json()).items[0],false);
       const profileEdit = await request(
         `/api/backend/gyms/${newGym.gym.id}/branches/${newBranch.branch.id}`,
         {
@@ -1275,7 +1272,7 @@ test(
           cookie: invitedOwnerCookie,
         })
       ).json();
-      assert.equal(conserved.currentStockPoints, "0");
+      assert.equal('currentStockPoints' in conserved,false);
       assert.equal(conserved.netVisitReceivablesPiasters, "3000");
       assert.equal(
         (await request("/api/backend/directory/branches")).status,
@@ -1734,7 +1731,8 @@ test(
           await expect(ownerPage.getByRole('button',{name:'شراء نقاط لرصيد الجيم',exact:true})).toHaveCount(0);
           await expect(ownerPage.getByRole('button',{name:/مستحقاتي والسحب/})).toBeVisible();
           assert.equal((await db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:traineeIdentity.user.id}}})).balance,walletBeforeDispatch+10);
-          assert.equal(await db.pointAccount.count({where:{type:'GYM_INVENTORY',gymId:newGym.gym.id}}),0);
+          const registeredGymOwner=await db.gym.findUniqueOrThrow({where:{id:newGym.gym.id},select:{ownerId:true}});
+          assert.equal(await db.pointAccount.count({where:{ownerUserId:registeredGymOwner.ownerId}}),0);
           assert.equal(await ownerPage.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),true,'gym entitlements must fit mobile');
           await ownerContext.close();
           const incomingSupport=await request('/api/backend/support/tickets',{cookie:traineeCookie,method:'POST',body:{subject:'Synthetic browser support',category:'HELP',body:'Synthetic support message from mobile viewport',clientKey:randomUUID()}});
