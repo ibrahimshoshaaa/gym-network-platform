@@ -139,7 +139,7 @@ const allTabs = [
     id: "cashier" as const,
     label: "الكاشير والزيارات",
     icon: Building2,
-    description: "بيع نقاط الفرع وتأكيد حضور المتدربين بالـQR",
+    description: "تأكيد حضور المتدربين بالـQR ومتابعة الزيارات",
   },
   {
     id: "trainee" as const,
@@ -169,7 +169,7 @@ const allTabs = [
     id: "pricing" as const,
     label: "الأسعار والنسب",
     icon: Coins,
-    description: "إدارة سعر النقطة وخصم الجيم ونسبة إعادة البيع",
+    description: "إدارة سعر النقطة ونسبة تسوية الزيارة والنقاط الترحيبية",
   },
   {
     id: "payments" as const,
@@ -181,7 +181,7 @@ const allTabs = [
     id: "packages" as const,
     label: "باقات النقاط",
     icon: Package,
-    description: "كميات نقاط مناسبة للمتدربين والجيمات",
+    description: "كميات نقاط مناسبة للمتدربين",
   },
   {
     id: "purchases" as const,

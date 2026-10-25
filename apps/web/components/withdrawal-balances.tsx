@@ -26,7 +26,7 @@ export function WithdrawalBalanceCard({balances:b, amount, status}:{balances:Wit
   <p className="muted">المطلوب في هذا الطلب: <strong>{decimal(amount)} ج.م</strong></p>
   <dl className="withdrawal-balance-grid">{values.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value===null?"غير متاح":decimal(value!)+ " ج.م"}</dd></div>)}</dl>
   {!b.consistent?<Notice text="بيانات الحجز أو الأرصدة غير متطابقة. لا تعتمد صرف الطلب قبل مراجعة السجل."/>:held?<div className="subtle-box"><strong>مبلغ الطلب محجوز بالفعل من مستحقات الجيم.</strong><p>قبول الطلب يبدأ مهلة التنفيذ ولا يخصم المبلغ مرة أخرى. بعد تسجيل التحويل يظل المتاح {decimal(b.availableAfterPaymentPiasters!)} ج.م، ويتحول حجز هذا الطلب إلى مدفوع. الرفض يعيد حجز هذا الطلب فقط إلى المتاح.</p></div>:<p className="muted">{["PAID","DISPUTED"].includes(status)?"مبلغ هذا الطلب مسجل ضمن المدفوع، وليس محجوزًا حاليًا.":"هذا الطلب مغلق ومبلغه غير محجوز حاليًا."}</p>}
-  <p className="muted">الصافي يجمع المتاح والمحجوز والمدفوع بعد التسويات المسجلة؛ ليس مخزون نقاط الفرع أو كشفًا بنكيًا.</p>
+  <p className="muted">الصافي يجمع المتاح والمحجوز والمدفوع بعد التسويات المسجلة؛ وفق حركات المستحقات المسجلة.</p>
   <details className="withdrawal-earnings"><summary>مصدر المستحقات وآخر الزيارات</summary>
    <p>{b.visitCount} زيارة غير ملغاة · مستحقاتها {decimal(b.visitEarningsPiasters)} ج.م</p>
    <p>صافي التسويات الأخرى المسجلة: {decimal(b.otherAdjustmentsPiasters)} ج.م</p>

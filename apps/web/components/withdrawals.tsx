@@ -82,7 +82,7 @@ function OwnerWithdrawals({initialGymId}:{initialGymId?:string}) {
   <PortalIntro title="مستحقاتك واضحة" eyebrow={gym.name} detail="تابع فلوس زيارات الجيم وحالة كل طلب سحب."/>
   {gyms.rows.length>1&&<label className="field">الجيم<select value={id} onChange={e=>setGymId(e.target.value)}>{gyms.rows.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>}<More list={gyms}/>
   <section className="card wallet-signature native-money-balance"><p>متاح للسحب</p>{balances?<h2 className="wallet-balance">{decimal(available)} ج.م</h2>:!error?<Busy/>:null}<button className="primary full" disabled={!balances||gym.status!=="ACTIVE"||BigInt(available)<=0n} onClick={()=>setOpen(true)}><ArrowDownLeft size={20}/>طلب سحب مستحقات</button></section>
-  <PortalNote>التحويل خلال ٣ أيام عمل من قبول طلب السحب. مخزون النقاط منفصل عن المستحقات دي.</PortalNote>
+  <PortalNote>التحويل خلال ٣ أيام عمل من قبول طلب السحب.</PortalNote>
   <section className="card native-money-facts">{[["GYM_RESERVED","محجوز للسحب"],["GYM_DISPUTED","محجوز لمراجعة نزاع"],["GYM_PAID","إجمالي مدفوع للجيم"]].map(([type,label])=><Fact key={type} label={label!}>{balances?decimal(value(type!)):"—"} ج.م</Fact>)}</section>
   <h2>طلبات السحب</h2><WithdrawalList key={`${id}:${revision}`} admin={false} path={`gyms/${id}/withdrawals`} onChanged={()=>setRevision(n=>n+1)}/>
   {open&&<RequestForm gymId={id!} available={available} onClose={()=>setOpen(false)} onDone={()=>setRevision(n=>n+1)}/>}

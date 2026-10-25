@@ -200,7 +200,7 @@ void main() {
         }
         if (role == 'GYM_OWNER') {
           await t.scrollUntilVisible(
-            find.text('تقارير الجيم'),
+            find.text('تقارير الزيارات والتسويات'),
             160,
             scrollable: find.byType(Scrollable).first,
           );

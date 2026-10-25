@@ -42,7 +42,7 @@ class _OwnerHomeState extends State<OwnerHome> {
  Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Panel(child:Column(children:[
  _ownerTask('الفروع والموظفين','بيانات الفروع والتعيينات',Icons.storefront_outlined,widget.showBranches),
  _ownerTask('تقارير الزيارات والتسويات','راجع الزيارات والمستحقات',Icons.insights_rounded,()=>open(context,OwnerReport(api:widget.api,gymId:widget.gym['id']))),
- Fact('محجوز لطلبات السحب','${money(balance('GYM_RESERVED'))} ج.م'),Fact('محجوز للمراجعة','${money(balance('GYM_DISPUTED'))} ج.م'),
+ Fact('محجوز لطلبات السحب',report==null?'—':'${money(balance('GYM_RESERVED'))} ج.م'),Fact('محجوز للمراجعة',report==null?'—':'${money(balance('GYM_DISPUTED'))} ج.م'),
  ]))),
  ])));
 }
@@ -577,8 +577,8 @@ class _StaffAccessCardState extends State<StaffAccessCard> {
           const SizedBox(height: 14),
           Text(
             manager
-                ? 'تسجيل الزيارات، شحن المتدربين وإلغاء الزيارة خلال ١٠ دقائق.'
-                : 'تسجيل الزيارات وشحن المتدربين. الإلغاء يحتاج طلب مراجعة.',
+                ? 'تسجيل الزيارات وإلغاء الزيارة خلال ١٠ دقائق.'
+                : 'تسجيل الزيارات. الإلغاء يحتاج طلب مراجعة.',
             style: const TextStyle(color: muted, fontSize: 12),
           ),
           if(manager&&widget.assignment['canDelegate']==true)TextButton.icon(icon:const Icon(Icons.admin_panel_settings_outlined),label:const Text('تفويض الصلاحيات'),onPressed:()=>open(context,StaffDelegation(api:widget.api,gymId:widget.gymId,userId:'${widget.assignment['user']['id']}',branchId:'${widget.assignment['branchId']}',name:'${widget.assignment['user']['displayName']}'))),

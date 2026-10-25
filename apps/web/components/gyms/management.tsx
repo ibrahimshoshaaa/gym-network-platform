@@ -290,7 +290,7 @@ function GymDetails({
                 ج.م
               </strong>
               <small>
-                مستحقات الزيارات مستقلة عن مخزون النقاط. تابع صرفها من السحب والتسويات.
+                تابع مستحقات الزيارات وصرفها من السحب والتسويات.
               </small>
             </div>
             <div className="actions">
@@ -422,7 +422,6 @@ function GymDetails({
                         <th>الفرع</th>
                         <th>الحالة</th>
                         <th>سعر الزيارة</th>
-                        <th>رصيد المخزون</th>
                         <th>الإجراءات</th>
                       </tr>
                     </thead>
@@ -459,11 +458,6 @@ function GymDetails({
                                   ? "سعر معتمد"
                                   : "السعر غير معتمد"}
                               </small>
-                            </td>
-                            <td data-label="رصيد المخزون">
-                              <span className="points-pill">
-                                {branch.pointAccounts[0]?.balance ?? 0} نقطة
-                              </span>
                             </td>
                             <td data-label="الإجراءات">
                               <div className="row-actions">
@@ -873,7 +867,7 @@ function GymDetails({
               />
               {action.kind === "createBranch" && (
                 <p className="subtle-box">
-                  الفرع يبدأ بمخزون صفر وسعر مقترح. صاحب المنصة يراجع السعر ثم
+                  الفرع يبدأ بسعر زيارة مقترح. صاحب المنصة يراجع السعر ثم
                   يفعّل الفرع.
                 </p>
               )}
