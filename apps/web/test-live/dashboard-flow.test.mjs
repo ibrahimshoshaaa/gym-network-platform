@@ -551,7 +551,7 @@ test(
       );
       assert.equal(branchList.status, 200);
       assert.equal(
-        (await branchList.json()).items[0].pointAccounts[0].balance,
+        (await branchList.json()).items[0].pointAccounts.length,
         0,
       );
       const profileEdit = await request(
@@ -635,7 +635,7 @@ test(
       assert.equal(automaticStaff.status, 200);
       assert.equal((await automaticStaff.json()).user.role, staffPerson.role);
 
-      // Real cashier sale and visit postings through the same-origin gateway.
+      // Platform charging and cashier visits through the same-origin gateway.
       const cashierCookie = sessionCookie(acceptedStaff);
       const traineeBody = {
         displayName: "Synthetic Visiting Trainee",
@@ -1730,7 +1730,7 @@ test(
           const ownerPage=await ownerContext.newPage();await ownerPage.goto(origin);
           await expect(ownerPage.locator('.wallet-signature .wallet-balance')).toBeVisible();
           const ownerWalletBounds=await ownerPage.locator('.wallet-signature').boundingBox();
-          assert.ok(ownerWalletBounds.height<320,'owner stock card must keep the Flutter spacing');
+          assert.ok(ownerWalletBounds.height<320,'owner entitlement card must keep the Flutter spacing');
           await expect(ownerPage.locator('.portal-app-header>img')).toHaveAttribute('src','/brand/gymbank-wordmark.png');
           await expect(ownerPage.getByRole('button',{name:'بيع نقاط لمتدرب',exact:true})).toHaveCount(0);
           await expect(ownerPage.getByRole('button',{name:'شراء نقاط لرصيد الجيم',exact:true})).toHaveCount(0);
