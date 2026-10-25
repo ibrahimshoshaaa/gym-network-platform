@@ -220,7 +220,9 @@ void main() {
           // The page reaches the opaque bar, filling the raised button's headroom.
           expect(t.getRect(home).bottom, closeTo(whiteBar.top, 0.1));
           expect(t.getRect(home).bottom, greaterThan(badge.top));
-          expect(find.ancestor(of: find.byType(NavigationBar), matching: find.byType(ColoredBox)), findsNothing);
+          for (final fill in t.widgetList<ColoredBox>(find.ancestor(of: find.byType(NavigationBar), matching: find.byType(ColoredBox)))) {
+            expect(fill.color.a, 0, reason: 'The raised QR headroom must not have an opaque fill');
+          }
           // Tap the part above the white bar, rather than the ordinary tab area.
           await t.tapAt(Offset(badge.center.dx, badge.top + 4));
           await t.pumpAndSettle();
