@@ -79,18 +79,18 @@ void main() {
     await t.pumpWidget(MaterialApp(theme:appTheme(),supportedLocales:const [Locale('ar'),Locale('en')],
       localizationsDelegates:GlobalMaterialLocalizations.delegates,home:AuthScreen(api:api)));
     await t.pumpAndSettle();
-    await t.ensureVisible(find.byKey(const ValueKey('auth.mode.link')));
-    await t.tap(find.byKey(const ValueKey('auth.mode.link'))); await t.pumpAndSettle();
+    await t.ensureVisible(find.byKey(const ValueKey('auth.signup.tab'))); await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('auth.signup.tab'))); await t.pumpAndSettle();
     for(final entry in {'displayName':'عميل تجربة','phone':'01055550123','password':'A memorable password'}.entries) {
       final field=find.byKey(ValueKey('auth.${entry.key}'));
-      await t.ensureVisible(field); await t.enterText(field,entry.value);
+      await t.ensureVisible(field); await t.pumpAndSettle(); await t.enterText(field,entry.value);
     }
     final submit=find.widgetWithText(FilledButton,'إنشاء حساب متدرب');
-    await t.ensureVisible(submit); await t.tap(submit); await t.pumpAndSettle();
+    await t.ensureVisible(submit); await t.pumpAndSettle(); await t.tap(submit); await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('phone.method.whatsapp'))); await t.pumpAndSettle();
     expect(find.byType(WhatsappPhoneFlow),findsNothing);
     final signIn=find.byKey(const ValueKey('auth.existingAccount'));
-    await t.ensureVisible(signIn); await t.tap(signIn); await t.pumpAndSettle();
+    await t.ensureVisible(signIn); await t.pumpAndSettle(); await t.tap(signIn); await t.pumpAndSettle();
     expect(t.widget<TextFormField>(find.byKey(const ValueKey('auth.identifier'))).controller!.text,'01055550123');
     expect(t.takeException(),isNull);
   });
