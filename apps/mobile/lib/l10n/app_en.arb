@@ -1,0 +1,1728 @@
+{
+  "@@locale": "en",
+  "s274": "Enter {p0}",
+  "@s274": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s276": "Show password",
+  "s277": "Hide password",
+  "s279": "Enter a valid email address",
+  "s285": "Sign up",
+  "s286": "Log in",
+  "s287": "Register with your mobile number and confirm it with a verification code.",
+  "s296": "Gym details",
+  "s303": "Remember me",
+  "s304": "Forgot password?",
+  "s311": "Log in",
+  "s546": "WhatsApp is currently unavailable",
+  "s547": "Verify through WhatsApp",
+  "s548": "Waiting for your message",
+  "s549": "Verification expired",
+  "s550": "Number verified",
+  "s551": "WhatsApp verification failed",
+  "s552": "You can continue with SMS verification.",
+  "s553": "Open the chat, send the prepared message from your registered number, then return here.",
+  "s554": "Tap Send inside WhatsApp. Opening the chat alone does not verify your number.",
+  "s555": "Start a new attempt and send the new message. The old one has expired.",
+  "s556": "You can continue to the next step.",
+  "s557": "Check your connection and try again, or choose SMS.",
+  "s558": "Verify with WhatsApp",
+  "s559": "1. Open WhatsApp\n2. Send the prepared message without editing\n3. Return and wait for confirmation",
+  "s560": "Reopen WhatsApp",
+  "s561": "Open WhatsApp to send",
+  "s562": "Try again",
+  "s563": "Verify with SMS",
+  "s564": "Verification method",
+  "s565": "Choose how to verify",
+  "s566": "WhatsApp · currently unavailable",
+  "s567": "Send the verification message from this number, then return here.",
+  "s568": "With WhatsApp, you send the verification message from this number. Coming soon.",
+  "s934": "Verify mobile number",
+  "s935": "Enter your code",
+  "s936": "Check your number before continuing.",
+  "s937": "Change number",
+  "s938": "The SMS spells out each digit; enter the code here as numbers.",
+  "s939": "Verification code",
+  "s940": "Continue",
+  "s941": "Request again in {p0} seconds",
+  "@s941": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s942": "Request a new code",
+  "s943": "Test mode: no SMS is sent. Code 123456 is autofilled and expires in 5 minutes.",
+  "s944": "Enter your registered mobile number.",
+  "s945": "Use 15 to 128 characters.",
+  "s946": "Passwords do not match.",
+  "s947": "Reset password",
+  "s948": "Password changed",
+  "s949": "Recover your account",
+  "s950": "Choose a new password",
+  "s951": "Previous sessions are closed. Sign in with your new password.",
+  "s952": "Enter your registered mobile number, then verify the code.",
+  "s953": "Choose a memorable phrase that is hard to guess.",
+  "s954": "Back to sign in",
+  "s533": "Registered mobile number",
+  "s955": "Continue to code",
+  "s956": "New password",
+  "s957": "At least 15 characters",
+  "s958": "Show or hide password",
+  "s959": "Confirm new password",
+  "s960": "Save password",
+  "s961": "Start again",
+  "s962": "Use the mobile number registered to your account, then verify the code and choose a new password.",
+  "s275": "At least 15 characters. Try a memorable phrase.",
+  "s278": "Use at least 15 characters",
+  "s281": "Your next chapter",
+  "s282": "Welcome back",
+  "s283": "One account. A world of gyms.",
+  "s284": "Your gyms, your wallet, your next workout.",
+  "s290": "Manage your gyms",
+  "s291": "Find your next workout",
+  "s292": "Full name",
+  "s293": "Email address",
+  "s294": "Mobile number",
+  "s295": "Password",
+  "s297": "Gym name",
+  "s298": "Governorate",
+  "s299": "City or area",
+  "s300": "Full address",
+  "s301": "About your gym",
+  "s302": "Your application goes to the platform team for review. Track its status after signing up.",
+  "s305": "Please wait",
+  "s306": "Create account & apply",
+  "s307": "Create trainee account",
+  "s308": "Log in",
+  "s309": "Already a member?",
+  "s310": "Don't have an account?",
+  "s312": "Create account",
+  "s313": "Got an invitation? Accept invite",
+  "s0": "Your account",
+  "s1": "Platform web dashboard",
+  "s2": "Manage the platform from the web dashboard. For gym accounts, check gym activation and branch assignments.",
+  "s3": "Open web dashboard",
+  "s4": "Delete account",
+  "s5": "Log out",
+  "s6": "Home",
+  "s7": "Branches",
+  "s8": "Operations",
+  "s9": "Marketplace",
+  "s10": "My account",
+  "s11": "Visits",
+  "s12": "Gyms",
+  "s13": "Entry QR",
+  "s14": "Current gym",
+  "s15": "Trainee account",
+  "s16": "My gym workspace",
+  "s17": "A saved transaction has an uncertain result. Check it before making another transfer.",
+  "s18": "Transaction confirmed",
+  "s19": "Reference: {p0}",
+  "@s19": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s20": "Done",
+  "s21": "Checking the transaction…",
+  "s22": "Safely retry the same transaction",
+  "s23": "Walk-in visit",
+  "s24": "My bookings",
+  "s25": "My visit history",
+  "s26": "Arriving without a booking? Select a branch and services, book now, then scan the branch QR from your booking. Your personal QR remains available for point transactions.",
+  "s27": "Choose a branch",
+  "s28": "Choose a branch and book now",
+  "s30": "WhatsApp verification is unavailable. Please use SMS.",
+  "s31": "Phone verification is currently unavailable.",
+  "s32": "Could not request a verification message. Try again later.",
+  "s33": "Wait one minute before requesting another code.",
+  "s34": "The code is invalid, expired or already used. Request a new code.",
+  "s35": "Confirm this booking by scanning the branch QR in the trainee app.",
+  "s36": "This QR belongs to another branch.",
+  "s37": "The branch has not set its location. Contact support.",
+  "s38": "Enable location and allow access to confirm attendance.",
+  "s39": "Your location is outdated. Refresh it and try again.",
+  "s40": "Location accuracy is too low. Enable precise location and try again.",
+  "s41": "Go to the branch to confirm attendance.",
+  "s42": "A service is no longer available. Refresh services and choose again.",
+  "s43": "The branch has not set booking hours.",
+  "s44": "Choose a time within opening hours.",
+  "s45": "The selected services finish after closing. Choose an earlier time or fewer services.",
+  "s46": "Select services before confirming the booking.",
+  "s47": "The cost exceeds the approved amount. A new quote and owner approval are required.",
+  "s48": "You have reached the limit of 30 active listings.",
+  "s49": "Incorrect email, mobile number or password.",
+  "s50": "This email or mobile number is already registered. Try signing in.",
+  "s51": "Check the required fields and values.",
+  "s52": "Your session has expired. Sign in again.",
+  "s53": "Your account cannot perform this action.",
+  "s54": "You do not have access to this branch. Refresh branches or contact the owner.",
+  "s55": "Too many attempts. Wait a little and try again.",
+  "s56": "You do not have enough available points.",
+  "s57": "The amount exceeds your available receivables.",
+  "s58": "Settings have changed. Refresh the details and review the transaction.",
+  "s59": "Expired points require an administrator review before recharging.",
+  "s60": "The QR has expired. Generate a new one and try again.",
+  "s61": "This QR has already been used. Ask the trainee for a new one.",
+  "s62": "The direct cancellation window has ended. Submit a review request.",
+  "s63": "This visit is already cancelled. Refresh the history.",
+  "s64": "A review request already exists for this transaction.",
+  "s65": "This visit requires settlement review before points can be refunded.",
+  "s66": "This gym is inactive. Contact support.",
+  "s67": "The branch location and visit price need approval.",
+  "s68": "There is no active trainee account with this number.",
+  "s69": "This transfer method is currently unavailable.",
+  "s70": "Point pricing has not been configured. Contact support.",
+  "s71": "The request status has changed. Refresh the page.",
+  "s72": "The requested information was not found.",
+  "s73": "A request is already awaiting review.",
+  "s74": "Upload a clear JPG, PNG or WebP image.",
+  "s75": "This receipt is already linked to a previous request. Check your recharge history.",
+  "s76": "Choose an image smaller than 4 MB.",
+  "s77": "The previous request contains different details. Review transaction history.",
+  "s78": "The amount does not match the current price. Review the transaction.",
+  "s79": "Could not connect to the service. Try again.",
+  "s80": "The result is uncertain. Safely retry the same transaction before starting a new one.",
+  "s81": "Could not complete this step. Try again or contact support.",
+  "s82": "Under review",
+  "s83": "Approved",
+  "s84": "Rejected",
+  "s85": "Active",
+  "s86": "Suspended",
+  "s87": "New request",
+  "s88": "Transferred",
+  "s89": "Disputed",
+  "s90": "Cancelled",
+  "s91": "Expired",
+  "s92": "Recorded",
+  "s93": "Open",
+  "s94": "Waiting for administration",
+  "s95": "Waiting for your reply",
+  "s96": "Closed",
+  "s97": "Step {p0} of {p1}: {p2}",
+  "@s97": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "s98": "Try again",
+  "s99": "Refreshing details",
+  "s100": "Transaction reference",
+  "s101": "Copy reference",
+  "s102": "Reference copied",
+  "s103": "No transactions yet",
+  "s104": "Load more",
+  "s105": "points",
+  "s106": "EGP",
+  "s107": "Visit receivables",
+  "s108": "Branch operations",
+  "s109": "Record a visit",
+  "s110": "Visit history",
+  "s111": "Confirm booking attendance",
+  "s112": "Trainee points",
+  "s113": "Only the platform owner can recharge trainee points",
+  "s114": "Your wallet",
+  "s115": "Recharge your balance",
+  "s116": "Recharge request received",
+  "s117": "You will receive the result after the transfer is reviewed.",
+  "s118": "Point destination",
+  "s119": "Points",
+  "s120": "{p0} points",
+  "@s120": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s121": "Amount",
+  "s122": "EGP {p0}",
+  "@s122": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s123": "Back to wallet",
+  "s124": "Recharging is temporarily unavailable",
+  "s125": "No transfer method is currently enabled. Contact support.",
+  "s126": "Point pricing unavailable",
+  "s127": "Administration will enable pricing before accepting new requests.",
+  "s128": "Choose your balance",
+  "s129": "Review recharge request",
+  "s130": "Transfer and upload receipt",
+  "s131": "Points will be added to {p0} after approval.",
+  "@s131": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s132": "Ready-made packages",
+  "s133": "Or choose another amount",
+  "s134": "Points",
+  "s135": "EGP",
+  "s136": "Amount in EGP",
+  "s137": "Number of points",
+  "s138": "Selected points",
+  "s139": "Estimated price",
+  "s140": "Continue to transfer details",
+  "s141": "Recharge request for {p0}",
+  "@s141": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s142": "Amount to transfer",
+  "s143": "Transfer only the displayed amount. The remaining EGP {p0} does not cover a whole point.",
+  "@s143": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s144": "Transfer details",
+  "s145": "InstaPay",
+  "s146": "Mobile wallet",
+  "s147": "Transfer method",
+  "s148": "Copy account",
+  "s149": "Transfer receipt",
+  "s150": "Upload receipt image",
+  "s151": "Receipt ready · Change image",
+  "s152": "Review recharge request",
+  "s153": "Change selected balance",
+  "s154": "Account holder",
+  "s155": "Account",
+  "s156": "Receipt",
+  "s157": "Uploaded and ready for review",
+  "s158": "I transferred the amount and checked the account and receipt.",
+  "s159": "Submit recharge request",
+  "s160": "Change transfer details",
+  "s161": "A saved transaction has an uncertain result. Return home and safely retry the same transaction.",
+  "s162": "Recharge requests",
+  "s163": "No recharge requests yet",
+  "s164": "Rate your gym experience",
+  "s165": "{p0} stars",
+  "@s165": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s166": "Later",
+  "s167": "Saving…",
+  "s168": "Save rating",
+  "s169": "Rate your visit",
+  "s170": "Your rating: {p0} / 5 · Edit",
+  "@s170": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s171": "Confirmed booking · Points held",
+  "s172": "Awaiting administrator decision",
+  "s173": "Attended",
+  "s174": "Cancelled and points refunded",
+  "s175": "No-show settled",
+  "s176": "After the deadline, points remain held until the no-show reason and distribution are reviewed.",
+  "s177": "To trainee",
+  "s178": "To gym",
+  "s179": "To platform",
+  "s180": "After the deadline: {p0}.",
+  "@s180": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s181": "Book your visit",
+  "s182": "Total points",
+  "s183": "Total duration",
+  "s184": "{p0} minutes",
+  "@s184": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s185": "Your visit is booked",
+  "s186": "Points are held for your visit and transferred to the gym when attendance is confirmed by QR.",
+  "s187": "Visit time",
+  "s188": "View my bookings",
+  "s189": "Booking currently unavailable",
+  "s190": "Administration has not configured the booking policy.",
+  "s191": "Refresh services and policy",
+  "s192": "Choose services",
+  "s193": "{p0} points · {p1} minutes",
+  "@s193": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s194": "No approved services are currently available for booking.",
+  "s195": "Daily from {p0} to {p1} · Cairo time",
+  "@s195": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s196": "The selected services exceed the limit for one booking.",
+  "s197": "Services run consecutively in one session and must finish before closing.",
+  "s198": "Book now",
+  "s199": "Choose date and time",
+  "s200": "Time is shown in your device time zone.",
+  "s201": "Booking policy",
+  "s202": "Points are held now and transferred to the gym when you scan the branch QR on arrival and your location is confirmed.",
+  "s203": "Grace period: {p0} minutes after the booking time.",
+  "@s203": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s204": "Cancel with a full refund until {p0}.",
+  "@s204": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s205": "I reviewed the time, cancellation and no-show policy",
+  "s206": "Safely retry the same booking",
+  "s207": "Confirm booking · {p0} points",
+  "@s207": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s208": "The result is uncertain. Safely retry this booking before starting another one.",
+  "s209": "Refresh bookings",
+  "s210": "Your schedule, points and attendance QR in one place.",
+  "s211": "No bookings yet",
+  "s212": "Choose a gym and book your workout from its details.",
+  "s213": "No-show reason",
+  "s214": "Cancel booking",
+  "s215": "The booking will be cancelled with a full points refund if it is within the cancellation window.",
+  "s216": "Reason",
+  "s217": "Back",
+  "s218": "Submit reason",
+  "s219": "Confirm cancellation",
+  "s220": "{p0} · {p1} points · {p2} minutes",
+  "@s220": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "s221": "Grace period deadline",
+  "s222": "This booking's policy",
+  "s223": "No-show reason: {p0}",
+  "@s223": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s224": "Decision: {p0}",
+  "@s224": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s225": "You: {p0} · Gym: {p1} · Platform: {p2} points",
+  "@s225": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "s226": "Confirm attendance · Scan branch QR",
+  "s227": "You can check in early during opening hours while at the branch.",
+  "s228": "Submitting…",
+  "s229": "Add a no-show reason",
+  "s230": "Visit booking QR",
+  "s231": "{p0} points held",
+  "@s231": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s232": "Valid for {p0} seconds",
+  "@s232": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s233": "Refresh the QR when you arrive",
+  "s234": "Refresh QR",
+  "s235": "Copy booking QR",
+  "s236": "Show this to gym staff while present. Scanning confirms attendance and transfers points to the gym.",
+  "s237": "Is the trainee here? Scan their booking QR to confirm attendance and transfer the held points.",
+  "s238": "If the connection drops, check visit history before scanning again.",
+  "s239": "Attendance confirmed",
+  "s240": "Points transferred to gym",
+  "s241": "Scan booking QR",
+  "s242": "Paste booking token instead of using the camera",
+  "s243": "Booking token",
+  "s244": "Confirm attendance with token",
+  "s245": "Scan booking QR",
+  "s246": "Ask the trainee to open their QR under My bookings.",
+  "s247": "Assign and unassign cashiers",
+  "s248": "Edit branch details",
+  "s249": "Request visit price change",
+  "s250": "Request branch receivables withdrawal",
+  "s251": "Permissions for {p0}",
+  "@s251": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s252": "Each action is recorded under the manager's account. Delegation does not transfer gym ownership or allow further delegation.",
+  "s253": "Permission scope",
+  "s254": "This branch only",
+  "s255": "Gym and all branches",
+  "s256": "Permissions enabled",
+  "s257": "Manager with full gym permissions",
+  "s258": "All additional branch permissions",
+  "s259": "Withdrawals are limited to the branch's share of visit receivables. Only the platform owner sells points.",
+  "s260": "Permissions saved",
+  "s261": "Save permissions",
+  "s262": "Ready for your workout?",
+  "s263": "Your current balance",
+  "s264": "Balance expired",
+  "s265": "Available balance",
+  "s266": "Full history",
+  "s267": "New",
+  "s268": "Services coming soon",
+  "s269": "From {p0} points",
+  "@s269": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s270": "{p0} km · {p1}",
+  "@s270": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s271": "No offers are currently available. Check back for new offers.",
+  "s272": "Platform offer",
+  "s273": "Offer near you",
+  "s280": "العربية",
+  "s314": "Your gym application",
+  "s315": "Your application needs changes",
+  "s316": "Application received",
+  "s317": "Review the rejection reason, edit the details and resubmit.",
+  "s318": "We are reviewing {p0}. You can manage your gym once approved.",
+  "@s318": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s319": "Gym",
+  "s320": "Location",
+  "s321": "Refresh application status",
+  "s322": "Delete my account",
+  "s323": "Edit details and reapply",
+  "s324": "Edit gym application",
+  "s325": "About",
+  "s326": "City",
+  "s327": "Address",
+  "s328": "Complete the details",
+  "s329": "Resubmit application",
+  "s330": "Accept invitation",
+  "s331": "Paste the invitation link from your administrator or gym owner. Choose a new password, or enter your existing password if you have an account.",
+  "s332": "Invitation link or token",
+  "s333": "Accept invitation and sign in",
+  "s334": "Point distribution",
+  "s335": "Full refund to trainee",
+  "s336": "All to gym",
+  "s337": "Trainee and gym",
+  "s338": "Gym and platform",
+  "s339": "Trainee share %",
+  "s340": "Gym share %",
+  "s341": "Remainder to gym",
+  "s342": "Remainder to platform",
+  "s343": "Booking policy saved for new bookings.",
+  "s344": "Bookings and attendance policy",
+  "s345": "Web dashboard",
+  "s346": "Changes apply to new bookings; existing bookings retain their policy.",
+  "s347": "Booking and no-show policy",
+  "s348": "Grace period after booking time — minutes",
+  "s349": "Cancelling within the grace period refunds all points. After the deadline:",
+  "s350": "Decision method",
+  "s351": "Manual review by platform owner",
+  "s352": "Automatic distribution using fixed shares",
+  "s353": "Points remain held until you review the no-show reason and decide how to distribute them.",
+  "s354": "Save booking policy",
+  "s355": "Bookings awaiting a decision",
+  "s356": "No bookings need a decision",
+  "s357": "Held points",
+  "s358": "Review and decide",
+  "s359": "No-show decision",
+  "s360": "{p0} · {p1} points",
+  "@s360": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s361": "Reason: {p0}",
+  "@s361": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s362": "Decision reason",
+  "s363": "Confirm decision and distribute points",
+  "s364": "No branches available to operate",
+  "s365": "Ask the gym owner to activate the branch and assign your account.",
+  "s366": "Branch manager",
+  "s367": "Branch cashier",
+  "s368": "Notifications",
+  "s369": "Visit price",
+  "s370": "Branch attendance QR",
+  "s371": "Visit: {p0} points · {p1} minutes",
+  "@s371": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s372": "Today's branch activity",
+  "s373": "Recorded visits",
+  "s374": "Your delegated permissions",
+  "s375": "Cashier team",
+  "s376": "Branch details",
+  "s377": "Request price change",
+  "s378": "Branch receivables and withdrawals",
+  "s379": "Branch overview",
+  "s380": "Visits can be cancelled from history within 10 minutes. After that, submit a review request.",
+  "s381": "Review requests",
+  "s382": "Administrator response",
+  "s383": "Manage your branch",
+  "s384": "Gym operations",
+  "s385": "Gym owner",
+  "s386": "Staff workspace",
+  "s387": "Choose the correct branch for your task. Every action is recorded under your account.",
+  "s388": "{p0} branches available for your account",
+  "@s388": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s389": "The branch must be active and assigned to you. Contact the owner or administrator.",
+  "s390": "You can cancel a visit within the first 10 minutes.",
+  "s391": "Display at reception for trainees",
+  "s392": "Scan trainee QR",
+  "s393": "Open branch",
+  "s394": "Track review requests",
+  "s395": "Only the platform owner can recharge points",
+  "s396": "Review the trainee and visit points before confirming",
+  "s397": "Visit already recorded",
+  "s398": "Visit recorded",
+  "s399": "Points were not deducted again.",
+  "s400": "Visit points were deducted from the trainee's wallet.",
+  "s401": "Visit points",
+  "s402": "Session ends",
+  "s403": "Trainee QR",
+  "s404": "Confirm attendance",
+  "s405": "Ask the trainee to open their entry QR. After scanning, review the visit details and confirm attendance.",
+  "s406": "Scan trainee QR with camera",
+  "s407": "Or paste entry token",
+  "s408": "Trainee",
+  "s409": "Last mobile number digits",
+  "s410": "Visit cost",
+  "s411": "Trainee balance",
+  "s412": "Visit duration",
+  "s413": "A visit is already active. Confirming will not deduct points again.",
+  "s414": "I verified the trainee's identity and presence at the branch",
+  "s415": "Return home and check the saved transaction before recording another visit.",
+  "s416": "Review visit",
+  "s417": "Scan a new QR",
+  "s418": "Scan entry QR",
+  "s419": "Point the camera at the trainee's QR. If the camera is unavailable, go back and paste the token.",
+  "s420": "Branch visits",
+  "s421": "Date",
+  "s422": "Review or cancel visit",
+  "s423": "Request visit review",
+  "s424": "Visit worth {p0} points",
+  "@s424": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s425": "Visit cancelled and points refunded",
+  "s426": "Request sent to administration",
+  "s427": "Cancel within the first 10 minutes with a full visit points refund.",
+  "s428": "Cancellation requires administrator review before points can be refunded.",
+  "s429": "Cancellation reason (at least 5 characters)",
+  "s430": "Review details (at least 10 characters for administrator review)",
+  "s431": "I reviewed the visit and cancellation reason",
+  "s432": "Confirm visit cancellation",
+  "s433": "Submit review request",
+  "s434": "Choose an image smaller than 4 MB",
+  "s435": "Branch cover updated",
+  "s436": "Delete branch cover?",
+  "s437": "Other branch images will remain.",
+  "s438": "Delete cover",
+  "s439": "Branch cover",
+  "s440": "The cover appears on your branch card in nearby gyms. Choose a clear landscape image of the branch.",
+  "s441": "Add cover",
+  "s442": "Change cover",
+  "s447": "Withdrawn",
+  "s448": "No branches are available for advertising from your account",
+  "s449": "Branch advertising",
+  "s450": "Refresh",
+  "s451": "Show your branch offer to nearby trainees",
+  "s452": "The platform reviews the ad and sets its cost and schedule. The owner or an authorized manager approves the cost.",
+  "s453": "Request a new ad",
+  "s454": "No advertising requests yet",
+  "s455": "Details and cost",
+  "s456": "Choose the advertised service",
+  "s457": "Branch advertising request",
+  "s458": "Branch",
+  "s459": "Advertised service",
+  "s460": "Choose a service",
+  "s461": "Offer title",
+  "s462": "Enter a clear title",
+  "s463": "Offer details and terms",
+  "s464": "Explain the offer details and terms",
+  "s465": "Offer image — optional",
+  "s466": "Remove image",
+  "s467": "Submit for platform review",
+  "s468": "Approve advertising cost",
+  "s469": "Withdraw ad",
+  "s470": "Agreed cost: EGP {p0}\nOffer runs from {p1} to {p2}.\nApproval records a debt due when the ad starts. It is deducted from available gym receivables, with any remainder collected from future income.",
+  "@s470": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "s471": "The ad will be removed from public display if it is published.",
+  "s472": "Confirm",
+  "s473": "Ad details",
+  "s474": "Service: {p0}",
+  "@s474": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s475": "Platform decision and cost",
+  "s476": "Cost not set yet",
+  "s477": "Cost: EGP {p0}",
+  "@s477": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s478": "From {p0} to {p1}",
+  "@s478": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s479": "For customers within {p0} km of the branch",
+  "@s479": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s480": "Platform note: {p0}",
+  "@s480": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s481": "Approve advertising cost",
+  "s482": "Only the owner or a manager with full permissions can approve the cost.",
+  "s483": "Request recorded successfully",
+  "s484": "Cashiers at {p0}",
+  "@s484": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s485": "Invite cashier",
+  "s486": "Disable assignment",
+  "s487": "Enable assignment",
+  "s488": "Manage branch",
+  "s489": "Branch name",
+  "s490": "Proposed visit points",
+  "s491": "Visit duration in minutes",
+  "s492": "Reason for change",
+  "s493": "Available from branch share",
+  "s494": "Some old withdrawals are not allocated. Availability is calculated conservatively pending review.",
+  "s495": "Recipient account holder",
+  "s496": "Recipient account",
+  "s497": "I reviewed the branch, amounts and request details",
+  "s498": "Submit withdrawal request",
+  "s499": "Save request",
+  "s500": "Branch withdrawal requests",
+  "s501": "Track branch withdrawal requests",
+  "s502": "Choose a gym",
+  "s503": "Ad {p0} of {p1}",
+  "@s503": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s504": "Could not load ad",
+  "s505": "Show ad {p0}",
+  "@s505": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s506": "Start ad rotation",
+  "s507": "Pause ad rotation",
+  "s508": "Account deletion is permanent. We delete your name, contact details, password, personal content and nonfinancial images, and close your sessions. We retain financial transactions, receipts and security records needed for accounting and disputes. Deletion does not cancel balances or receivables.",
+  "s524": "Service charges need settlement",
+  "s525": "Enter the mobile number registered to your account.",
+  "s526": "Type DELETE in English to confirm deletion.",
+  "s527": "This mobile number does not match your registered number.",
+  "s528": "If you have a balance or open requests, we record your deletion request and explain what needs settlement. Administration reviews it within 7 days; completion depends on settlement. Image removal from storage may take longer.",
+  "s529": "Deletion request recorded",
+  "s530": "Review due: {p0}",
+  "@s530": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s531": "You can use the account to settle obligations, or cancel the request before deletion starts.",
+  "s532": "An obligation needs review",
+  "s534": "Enter your account phone number to confirm",
+  "s535": "Type DELETE to confirm deletion",
+  "s536": "Recheck settlement and complete deletion",
+  "s537": "Confirm account deletion",
+  "s538": "Cancel deletion request",
+  "s539": "Account deletion status",
+  "s540": "Account deleted",
+  "s541": "Account details deleted; images are being removed",
+  "s542": "Your sign-in session has ended. Financial and security records required for accounting and disputes are retained with restricted access.",
+  "s543": "Could not refresh status. Try again.",
+  "s544": "Refresh image deletion status",
+  "s545": "Back to sign in",
+  "s569": "Branch receivables",
+  "s570": "Available to withdraw from branch",
+  "s571": "Total confirmed visit income",
+  "s572": "Withdrawn or held for withdrawals",
+  "s573": "Held for review",
+  "s574": "Some old withdrawals have not been allocated to branches. Availability is calculated conservatively pending review.",
+  "s575": "Current branch receivables across all periods. Withdrawable funds depend on the gym balance.",
+  "s576": "Visit summary",
+  "s577": "Today",
+  "s578": "Last 30 days",
+  "s579": "Visits cancelled during period",
+  "s580": "Net visit points",
+  "s581": "Net visit income during period",
+  "s582": "Net = visits recorded during the period minus cancellations processed during it.",
+  "s583": "Area",
+  "s584": "Phone",
+  "s585": "Opening hours",
+  "s586": "Confirm attendance at branch",
+  "s587": "On arrival, scan the branch QR at reception. Your location must be close to the branch and sufficiently accurate.",
+  "s588": "Your session starts when attendance is confirmed and ends no later than closing.",
+  "s589": "Your attendance is confirmed",
+  "s590": "Back to bookings",
+  "s591": "Checking location and attendance…",
+  "s592": "Scan branch QR",
+  "s593": "If disconnected, retry. The same booking cannot be transferred twice.",
+  "s594": "Paste branch token instead of using the camera",
+  "s595": "Branch token",
+  "s596": "Pasting the token still requires verification that you are at the branch.",
+  "s597": "Confirm my attendance",
+  "s598": "Scan branch QR",
+  "s599": "Scan the fixed branch QR at reception.",
+  "s600": "Replace branch QR?",
+  "s601": "The old QR will stop working. Display or print the new QR at reception.",
+  "s602": "Replace QR",
+  "s603": "A fixed reception QR for trainees to scan from their booking after arriving.",
+  "s604": "You can save a screenshot and print it for reception. It stays valid until replaced.",
+  "s605": "Copy branch token",
+  "s606": "Replace branch QR",
+  "s607": "Enable location services and try again.",
+  "s608": "Location access is unavailable. Search by name or area, or choose a location on the map.",
+  "s609": "Discover your gym",
+  "s610": "Find the right location and see visit points.",
+  "s611": "Gym name, city or area",
+  "s612": "Search",
+  "s613": "Nearest to me",
+  "s614": "Refresh my location",
+  "s615": "List view",
+  "s616": "Map view",
+  "s617": "Clear distance sorting",
+  "s618": "Filter by visit price",
+  "s619": "Maximum points per visit",
+  "s620": "Apply",
+  "s621": "Clear filters",
+  "s622": "No matching branches",
+  "s623": "Try another area or fewer filters.",
+  "s624": "Show all gyms",
+  "s625": "{p0}, {p1}",
+  "@s625": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s626": "{p0} · {p1} reviews",
+  "@s626": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s627": "{p0} points / visit",
+  "@s627": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s628": "Duration depends on services",
+  "s629": "{p0} km",
+  "@s629": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s630": "Gym details and directions",
+  "s631": "Gym details",
+  "s632": "Get directions",
+  "s633": "About this gym",
+  "s634": "Location",
+  "s635": "Set branch location",
+  "s636": "Tap the branch location on the map. You can start with your current location and adjust it.",
+  "s637": "Finding your location…",
+  "s638": "Use my current location",
+  "s639": "Confirm selected location",
+  "s640": "{p0} points are currently unavailable. Contact support to review balance expiry.",
+  "@s640": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s641": "Gyms near you",
+  "s642": "View all",
+  "s643": "Find the nearest gym with your location",
+  "s644": "Allow location access or search for a gym yourself.",
+  "s645": "Enable location",
+  "s646": "Find a gym",
+  "s647": "No branches are currently available in these results.",
+  "s648": "Offers for you",
+  "s649": "Recent visits",
+  "s650": "Your visits",
+  "s651": "All visits",
+  "s652": "Your first confirmed visit will appear here. Ready to start?",
+  "s653": "Your point activity",
+  "s658": "Balance adjustment",
+  "s659": "Point movement",
+  "s660": "Session ends: {p0}",
+  "@s660": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s661": "Every workout and its points, in one history.",
+  "s662": "No visits yet",
+  "s663": "Book from the gym details and show your booking QR when you arrive. Your visit will appear here after attendance is confirmed.",
+  "s664": "Open entry QR",
+  "s665": "Show your QR to the cashier when you arrive.",
+  "s666": "Your personal QR",
+  "s667": "Temporary entry QR · Show only to the cashier",
+  "s668": "QR unavailable or expired",
+  "s669": "Generate a new QR when entering",
+  "s670": "Refresh entry QR",
+  "s671": "This temporary QR can be used once. Do not share it with anyone outside the gym.",
+  "s672": "The cashier reviews visit points before confirming attendance.",
+  "s678": "Cancelled",
+  "s679": "Not set",
+  "s680": "Not set",
+  "s681": "Maintenance",
+  "s682": "Keep your branch ready for workouts",
+  "s683": "Report faults, track appointments and review maintenance quotes before work starts.",
+  "s684": "New maintenance request",
+  "s685": "All branches",
+  "s686": "Request status",
+  "s687": "All requests",
+  "s688": "No branches available for your account",
+  "s689": "No requests here",
+  "s690": "Ask the gym owner to assign you to a branch.",
+  "s691": "Report a fault by creating a new maintenance request.",
+  "s692": "Estimated cost: {p0}",
+  "@s692": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s693": "Appointment: {p0}",
+  "@s693": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s694": "Request details and tracking",
+  "s695": "Loading…",
+  "s696": "Show more",
+  "s697": "Maximum of 6 images",
+  "s698": "Uploading image {p0} of {p1}",
+  "@s698": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s699": "Check the contact number",
+  "s700": "Check {p0}",
+  "@s700": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s701": "Tell us about the fault",
+  "s702": "Platform administration will arrange inspection, cost and timing. The final cost becomes a gym debt after receipt confirmation. It is deducted from available receivables, with the remainder collected from future income.",
+  "s703": "Remove uploaded images before changing the branch.",
+  "s704": "Device or equipment name",
+  "s705": "Fault description",
+  "s706": "Contact number",
+  "s707": "Fault images ({p0}/6) — optional",
+  "@s707": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s708": "Submit maintenance request",
+  "s713": "Reject quote",
+  "s714": "Cost: {p0}\nAppointment: {p1}\nAfter receipt confirmation, the final cost becomes a debt deducted from available gym receivables, with the remainder collected from future income.",
+  "@s714": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s715": "Was the fault repaired and the equipment received?\nFinal cost: {p0}\nConfirmation adds the cost to the gym debt, deducted from available receivables with the remainder collected from future income.",
+  "@s715": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s716": "Enter a reason for platform administration.",
+  "s717": "Enter a clearer reason",
+  "s718": "Maintenance details",
+  "s719": "Refresh request",
+  "s720": "Quote and tracking",
+  "s721": "Estimated cost",
+  "s722": "Approved cost",
+  "s723": "Final cost",
+  "s724": "Maintenance appointment",
+  "s725": "Maintenance contact",
+  "s726": "Call maintenance contact",
+  "s727": "Work completed",
+  "s728": "Reject quote and explain why",
+  "s729": "The fault is still present",
+  "s730": "Cancel maintenance request",
+  "s731": "Only the owner or a manager with full permissions can approve the cost and confirm receipt.",
+  "s732": "Request history",
+  "s733": "Quote: {p0}",
+  "@s733": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s734": "Final: {p0}",
+  "@s734": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s735": "Gym owner · {p0}",
+  "@s735": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s736": "Available visit receivables",
+  "s737": "My receivables and withdrawals",
+  "s738": "Manage branches",
+  "s739": "Only the platform owner sells and recharges trainee points. Gym receivables come from visits and their settlements.",
+  "s740": "Branches and staff",
+  "s741": "Branch details and assignments",
+  "s742": "Visit and settlement reports",
+  "s743": "Review visits and receivables",
+  "s744": "Held for withdrawal requests",
+  "s745": "Branches of {p0}",
+  "@s745": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s746": "Add branch",
+  "s747": "Set the branch location on the map and propose visit points and duration. Administration reviews them before activation.",
+  "s748": "Add your first branch",
+  "s749": "Tap + and complete branch details and location.",
+  "s750": "Visit",
+  "s751": "Location and visit price await approval.",
+  "s752": "Edit details",
+  "s753": "Branch services",
+  "s754": "Staff",
+  "s755": "Activity",
+  "s756": "Set the branch location on the map first.",
+  "s757": "New branch",
+  "s758": "Edit branch",
+  "s759": "Branch contact number · optional",
+  "s760": "Opening hours · optional",
+  "s761": "Session duration in minutes",
+  "s762": "Complete this field",
+  "s763": "Set location on map",
+  "s764": "Location set · Edit location",
+  "s765": "Submit branch for review",
+  "s766": "Save branch details",
+  "s767": "Staff at {p0}",
+  "@s767": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s768": "This branch has no staff yet",
+  "s769": "Invite a manager or cashier. Each employee signs in with their own account after accepting the invitation.",
+  "s770": "Branch team",
+  "s771": "Permissions are branch-specific. Disabling this assignment does not disable the account or assignments elsewhere.",
+  "s772": "Invite employee",
+  "s773": "Enable employee assignment?",
+  "s774": "Disable employee assignment?",
+  "s775": "{p0}\nThis change only affects the employee's access to this branch.",
+  "@s775": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s776": "Enable",
+  "s777": "Disable",
+  "s779": "Cashier",
+  "s780": "Record visits and cancel within 10 minutes.",
+  "s781": "Record visits. Cancellation requires a review request.",
+  "s782": "Delegate permissions",
+  "s783": "Disable branch assignment",
+  "s784": "Enable branch assignment",
+  "s785": "Employee name",
+  "s786": "Role",
+  "s787": "Create invitation",
+  "s788": "Invitation ready",
+  "s789": "Share the link with the employee to choose a password and accept. The link is temporary and private.",
+  "s790": "Set manager permissions",
+  "s791": "Gym activity",
+  "s792": "Activity for {p0}",
+  "@s792": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s793": "Gym visit",
+  "s794": "Value",
+  "s795": "Receivables and service debts",
+  "s796": "Your receivables at a glance",
+  "s797": "Track gym visit income and each withdrawal request.",
+  "s798": "Available to withdraw",
+  "s799": "Request receivables withdrawal",
+  "s800": "Transfer within 3 business days of withdrawal approval.",
+  "s801": "Held for withdrawals",
+  "s802": "Held for dispute review",
+  "s803": "Total paid to gym",
+  "s804": "Service debts",
+  "s805": "Service costs are deducted from receivables. If debt exceeds receivables, withdrawable funds are zero and the remainder carries forward.",
+  "s806": "Receivables before deductions",
+  "s807": "Debt due",
+  "s808": "Scheduled ads not yet due",
+  "s809": "Net available to withdraw",
+  "s810": "Cost",
+  "s811": "Deducted",
+  "s812": "Remaining",
+  "s813": "Withdrawal requests",
+  "s814": "No withdrawal requests yet",
+  "s815": "Execution date",
+  "s816": "Details and tracking",
+  "s817": "Withdrawal request",
+  "s818": "Your available balance",
+  "s819": "Account holder name",
+  "s820": "InstaPay account or wallet number",
+  "s821": "Receiving method",
+  "s822": "Review request",
+  "s823": "Review the amount and recipient details.",
+  "s824": "Recipient",
+  "s825": "The amount is held from your available balance when submitted. Transfer is processed manually after review. The execution date appears after approval.",
+  "s826": "I checked the recipient account and amount.",
+  "s827": "Confirm withdrawal request",
+  "s828": "Edit request",
+  "s829": "Withdrawal details",
+  "s830": "Transfer date",
+  "s831": "Transfer reference",
+  "s832": "Reason or follow-up notes · at least 5 characters",
+  "s833": "Cancel withdrawal and release the held amount",
+  "s834": "Confirm transfer receipt",
+  "s835": "Dispute this transfer",
+  "s836": "Your update was recorded: {p0}",
+  "@s836": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s840": "Clothing and supplies",
+  "s844": "Sold",
+  "s845": "Filter listings",
+  "s846": "All governorates",
+  "s847": "Condition",
+  "s848": "All",
+  "s849": "Used",
+  "s850": "Minimum price",
+  "s851": "To",
+  "s852": "Sort by",
+  "s853": "Newest",
+  "s854": "Lowest price",
+  "s855": "Highest price",
+  "s856": "Show results",
+  "s857": "Something for your workout… or an opportunity for someone else",
+  "s858": "Sell an item",
+  "s859": "All listings",
+  "s860": "My listings",
+  "s861": "What are you looking for?",
+  "s862": "Filters",
+  "s863": "Listings in {p0}",
+  "@s863": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s864": "You have no listings yet",
+  "s865": "No suitable listings yet",
+  "s866": "Tap Sell an item and upload your first listing.",
+  "s867": "Try changing filters or publish your first listing.",
+  "s868": "Has the item been sold?",
+  "s869": "Hide listing?",
+  "s870": "The listing will be removed from public results.",
+  "s871": "Report listing",
+  "s872": "Report reason",
+  "s873": "Report sent to platform administration",
+  "s874": "Submitting…",
+  "s875": "Submit report",
+  "s876": "Item details",
+  "s877": "About this item",
+  "s878": "Seller",
+  "s879": "Arrange payment directly with the seller. No points are deducted from your balance.",
+  "s880": "Manage your listing",
+  "s881": "Administrator note: {p0}",
+  "@s881": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s882": "Edit listing",
+  "s883": "Hide listing",
+  "s884": "Hello, regarding {p0} listed on GymBank",
+  "@s884": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s885": "WhatsApp",
+  "s886": "Call",
+  "s887": "Maximum of 6 images. Choose fewer images.",
+  "s888": "Image exceeds 4 MB",
+  "s889": "Upload at least one image",
+  "s890": "Choose governorate",
+  "s891": "Check the contact number, for example 01012345678",
+  "s892": "Check the price in EGP",
+  "s893": "Your listing is under review. It will be published after approval.",
+  "s894": "Enter a clearer {p0}",
+  "@s894": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s895": "Offer it to someone who needs it",
+  "s896": "Your listing appears after administrator review. Buyers will see the price and contact number.",
+  "s897": "Add images ({p0}/6)",
+  "@s897": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s898": "Remove image",
+  "s899": "Item name",
+  "s900": "Category",
+  "s901": "Price in EGP",
+  "s902": "Load governorates",
+  "s903": "Item description and condition",
+  "s904": "Submit for review",
+  "s905": "Save and submit for review",
+  "s906": "Arrange payment directly with the buyer. Marketplace items cannot be sold or paid for with points.",
+  "s907": "Each service has a point price and duration. New services and prices require platform approval before publishing.",
+  "s908": "Add service",
+  "s909": "No services yet",
+  "s910": "Add your first service and submit it for review.",
+  "s911": "Service not approved yet",
+  "s912": "{p0} points · {p1} minutes · {p2}",
+  "@s912": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      },
+      "p2": {
+        "type": "String"
+      }
+    }
+  },
+  "s913": "A change request is awaiting review",
+  "s914": "Request rejected: {p0}",
+  "@s914": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s915": "Request service and price changes",
+  "s916": "Branch opening time · Cairo time",
+  "s917": "Branch closing time · Cairo time",
+  "s918": "Not set",
+  "s919": "Daily booking hours",
+  "s920": "{p0} — {p1} · Cairo time",
+  "@s920": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s921": "Repeats daily. If closing is after midnight, select that time. Bookings must end before closing.",
+  "s922": "Saving…",
+  "s923": "Set opening and closing times",
+  "s924": "Disable service",
+  "s925": "Enable service",
+  "s926": "New service",
+  "s927": "Request service change",
+  "s928": "Service name",
+  "s929": "Service description",
+  "s930": "Duration in minutes",
+  "s931": "Request reason",
+  "s932": "Enter a number from 1 to {p0}",
+  "@s932": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s933": "Check the required details",
+  "s963": "?",
+  "s964": "Hi, {p0}",
+  "@s964": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s965": "Could not load balance",
+  "s966": "Your details and activity, in one place.",
+  "s967": "Your details and security",
+  "s968": "Edit name",
+  "s969": "Password and security",
+  "s970": "Activity and help",
+  "s971": "Help and support",
+  "s972": "Logging out…",
+  "s973": "Your details, security and support in one place.",
+  "s974": "Gym employee",
+  "s975": "GymBank account",
+  "s976": "GYMBANK\nVersion 0.2.7 · ShoTech Solutions",
+  "s977": "Edit your name",
+  "s978": "Save changes",
+  "s979": "Change password",
+  "s980": "Choose a passphrase of at least 15 characters. Changing it closes your previous sessions.",
+  "s981": "Current password",
+  "s982": "Password changed and account secured",
+  "s983": "Your in-app notifications",
+  "s984": "All quiet for now",
+  "s985": "Mark as read",
+  "s986": "We are here to help",
+  "s987": "Ask about your account, recharges or visits. The administration team will reply here.",
+  "s988": "New support request",
+  "s989": "Contact us on WhatsApp",
+  "s990": "Your requests",
+  "s991": "Support request",
+  "s992": "Short title",
+  "s993": "Describe the issue",
+  "s994": "Submit request",
+  "s995": "Track support request",
+  "s996": "Showing the latest 50 messages. Contact support if you need earlier details.",
+  "s997": "Write your reply",
+  "s998": "Send reply",
+  "s288": "Gym owner",
+  "s289": "Trainee",
+  "s443": "Awaiting platform review",
+  "s444": "Awaiting advertising cost approval",
+  "s445": "Approved for scheduled display",
+  "s446": "Stopped",
+  "s509": "An image upload is ongoing or its result is uncertain. Try again after 10 minutes.",
+  "s510": "Account needs administrator review",
+  "s511": "Administration must close the gym before deletion",
+  "s512": "Previous financial obligations need review",
+  "s513": "Points balance needs settlement",
+  "s514": "Financial receivables need settlement",
+  "s515": "Bookings are still open",
+  "s516": "Visits are still active",
+  "s517": "Recharge requests under review",
+  "s518": "Open withdrawal requests",
+  "s519": "Disputed amounts",
+  "s520": "Transaction review requests",
+  "s521": "Open financial support requests",
+  "s522": "Open maintenance requests",
+  "s523": "Advertising requests or active ads",
+  "s654": "Balance recharge",
+  "s655": "Visit deduction",
+  "s656": "Visit refund",
+  "s657": "Expiry",
+  "s673": "Awaiting cost approval",
+  "s674": "Appointment scheduled",
+  "s675": "In progress",
+  "s676": "Awaiting gym confirmation",
+  "s677": "Completed",
+  "s709": "Approve cost and appointment",
+  "s710": "Confirm maintenance receipt",
+  "s711": "Cancel request",
+  "s712": "Report unresolved fault",
+  "s778": "Branch manager",
+  "s837": "Equipment",
+  "s838": "Weights",
+  "s839": "Accessories",
+  "s841": "Awaiting review",
+  "s842": "Published",
+  "s843": "Hidden",
+  "s999": "Choose balance",
+  "s1000": "Transfer",
+  "s1001": "Review",
+  "s1002": "Booked visit",
+  "s1003": "Visit",
+  "s1004": "No reason submitted yet.",
+  "s1005": "Not set",
+  "s1006": "Booked branch",
+  "s1007": "Gym",
+  "s1008": "Platform",
+  "s1009": "Gym visit",
+  "s1010": "Available",
+  "s1011": "Disabled",
+  "s1012": "Language",
+  "s1013": "Maintenance · {p0}",
+  "@s1013": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1014": "Branch ad · {p0}",
+  "@s1014": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1015": "Marketplace · {p0}",
+  "@s1015": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1016": "Recharge {p0} points · {p1}",
+  "@s1016": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s1017": "Withdrawal request · {p0}",
+  "@s1017": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1018": "Transaction review · {p0}",
+  "@s1018": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1019": "Price for {p0} · {p1}",
+  "@s1019": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s1020": "Visit funds held for review",
+  "s1021": "Visit funds released",
+  "s1022": "Direct recharge · {p0} points",
+  "@s1022": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1023": "Support · {p0}",
+  "@s1023": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1024": "Cancelled visit at {p0}",
+  "@s1024": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1025": "Visit at {p0}",
+  "@s1025": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1026": "Your points expire in {p0} days",
+  "@s1026": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1027": "Your expired balance needs review",
+  "s1028": "Request status: {p0}",
+  "@s1028": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1029": "Track ad status and cost",
+  "s1030": "Listing status: {p0}",
+  "@s1030": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1031": "A recharge request needs your decision",
+  "s1032": "Track request status",
+  "s1033": "Past the execution date; follow-up required",
+  "s1034": "Track request details and receivables",
+  "s1035": "Review request recorded",
+  "s1036": "Points added to your wallet",
+  "s1037": "Review your wallet. This alert does not remove points or change the balance policy."
+}

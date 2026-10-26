@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
@@ -10,29 +11,29 @@ class BranchServicesScreen extends StatelessWidget {
   const BranchServicesScreen({super.key, required this.api, required this.gymId, required this.branchId, required this.branchName});
   String get path => 'gyms/$gymId/branches/$branchId/services';
   @override
-  Widget build(BuildContext context) => Screen(title: 'خدمات الفرع', child: DataView(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(title: appText('s753'), child: DataView(
     load: () => api.request(path),
-    builder: (data, reload) => ListView(padding: const EdgeInsets.all(20), children: [
+    builder: (data, reload) { return  ListView(padding: const EdgeInsets.all(20), children: [
       Text(branchName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
       BookingHoursEditor(api: api, path: path, hours: data['hours'] == null ? null : Map<String,dynamic>.from(data['hours']), reload: reload),
-      const Text('كل خدمة لها نقاط ومدة. الخدمات والأسعار الجديدة تحتاج موافقة إدارة المنصة قبل نشرها.'),
+      Text(appText('s907')),
       const SizedBox(height: 16),
-      ActionButton('إضافة خدمة', onPressed: () async { await open(context, BranchServiceForm(api: api, path: path)); await reload(); }),
+      ActionButton(appText('s908'), onPressed: () async { await open(context, BranchServiceForm(api: api, path: path)); await reload(); }),
       const SizedBox(height: 16),
-      if (rows(data).isEmpty) const EmptyState('لسه مفيش خدمات', detail: 'ضيف أول خدمة وابعتها للإدارة للمراجعة.'),
+      if (rows(data).isEmpty) EmptyState(appText('s909'), detail: appText('s910')),
       for (final service in rows(data)) Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('${service['name']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         if ('${service['description'] ?? ''}'.isNotEmpty) Text('${service['description']}'),
-        Text(service['approvedAt'] == null ? 'لم يتم اعتماد الخدمة بعد' : '${service['points']} نقطة · ${service['durationMinutes']} دقيقة · ${service['active'] == true ? 'متاحة' : 'متوقفة'}'),
-        if (_hasPending(service)) const Text('يوجد طلب تعديل بانتظار مراجعة الإدارة', style: TextStyle(color: green)),
-        if ((service['requests'] as List? ?? []).isNotEmpty && service['requests'][0]['status'] == 'REJECTED') Text('تم رفض الطلب: ${service['requests'][0]['reviewReason'] ?? ''}'),
+        Text(service['approvedAt'] == null ? appText('s911') : appText('s912', [service['points'], service['durationMinutes'], service['active'] == true ? appText('s1010') : appText('s1011')])),
+        if (_hasPending(service)) Text(appText('s913'), style: TextStyle(color: green)),
+        if ((service['requests'] as List? ?? []).isNotEmpty && service['requests'][0]['status'] == 'REJECTED') Text(appText('s914', [service['requests'][0]['reviewReason'] ?? ''])),
         TextButton(onPressed: _hasPending(service) ? null : () async {
           await open(context, BranchServiceForm(api: api, path: path, service: service)); await reload();
-        }, child: const Text('طلب تعديل الخدمة والسعر')),
+        }, child: Text(appText('s915'))),
         if (service['approvedAt'] != null) _Availability(api: api, path: path, service: service, reload: reload),
       ])),
-    ]),
-  ));
+    ]); },
+  )); }
 }
 
 class BookingHoursEditor extends StatefulWidget {
@@ -48,9 +49,9 @@ class _BookingHoursEditorState extends State<BookingHoursEditor> {
   Object? error;
   Future<void> edit() async {
     final hours = widget.hours;
-    final start = await showTimePicker(context: context, helpText: 'وقت فتح الفرع · توقيت القاهرة', initialTime: TimeOfDay(hour: (hours?['openMinute'] as int? ?? 540) ~/ 60, minute: (hours?['openMinute'] as int? ?? 540) % 60));
+    final start = await showTimePicker(context: context, helpText: appText('s916'), initialTime: TimeOfDay(hour: (hours?['openMinute'] as int? ?? 540) ~/ 60, minute: (hours?['openMinute'] as int? ?? 540) % 60));
     if(start == null || !mounted) return;
-    final end = await showTimePicker(context: context, helpText: 'وقت إغلاق الفرع · توقيت القاهرة', initialTime: TimeOfDay(hour: (hours?['closeMinute'] as int? ?? 1380) ~/ 60, minute: (hours?['closeMinute'] as int? ?? 1380) % 60));
+    final end = await showTimePicker(context: context, helpText: appText('s917'), initialTime: TimeOfDay(hour: (hours?['closeMinute'] as int? ?? 1380) ~/ 60, minute: (hours?['closeMinute'] as int? ?? 1380) % 60));
     if(end == null || !mounted) return;
     setState(() { busy = true; error = null; });
     try {
@@ -59,13 +60,13 @@ class _BookingHoursEditorState extends State<BookingHoursEditor> {
     } catch(e) { if(mounted) setState(() => error = e); }
     finally { if(mounted) setState(() => busy = false); }
   }
-  String label(dynamic minute) => minute == null ? 'غير محدد' : '${((minute as int) ~/ 60).toString().padLeft(2,'0')}:${(minute % 60).toString().padLeft(2,'0')}';
-  @override Widget build(BuildContext context) => Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    const Text('مواعيد الحجز اليومية', style: TextStyle(fontWeight: FontWeight.w800)),
-    Text('${label(widget.hours?['openMinute'])} — ${label(widget.hours?['closeMinute'])} · توقيت القاهرة'),
-    const Text('تتكرر يوميًا. لو الإغلاق بعد منتصف الليل اختار وقته، والحجز لازم ينتهي قبل الإغلاق.'),
-    ErrorNote(error), TextButton(onPressed: busy ? null : edit, child: Text(busy ? 'جاري الحفظ…' : 'ضبط وقت الفتح والإغلاق')),
-  ]));
+  String label(dynamic minute) => minute == null ? appText('s918') : '${((minute as int) ~/ 60).toString().padLeft(2,'0')}:${(minute % 60).toString().padLeft(2,'0')}';
+  @override Widget build(BuildContext context) { AppLanguage.watch(context); return  Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(appText('s919'), style: TextStyle(fontWeight: FontWeight.w800)),
+    Text(appText('s920', [label(widget.hours?['openMinute']), label(widget.hours?['closeMinute'])])),
+    Text(appText('s921')),
+    ErrorNote(error), TextButton(onPressed: busy ? null : edit, child: Text(busy ? appText('s922') : appText('s923'))),
+  ])); }
 }
 
 class _Availability extends StatefulWidget {
@@ -84,7 +85,7 @@ class _AvailabilityState extends State<_Availability> {
     } catch (e) { if (mounted) setState(() => error = e); }
     finally { if (mounted) setState(() => busy = false); }
   }
-  @override Widget build(BuildContext context) => Column(children: [ErrorNote(error), TextButton(onPressed: busy || _hasPending(widget.service) ? null : change, child: Text(busy ? 'جاري الحفظ…' : widget.service['active'] == true ? 'إيقاف الخدمة' : 'إتاحة الخدمة'))]);
+  @override Widget build(BuildContext context) { AppLanguage.watch(context); return  Column(children: [ErrorNote(error), TextButton(onPressed: busy || _hasPending(widget.service) ? null : change, child: Text(busy ? appText('s922') : widget.service['active'] == true ? appText('s924') : appText('s925')))]); }
 }
 
 class BranchServiceForm extends StatefulWidget {
@@ -112,8 +113,8 @@ class _BranchServiceFormState extends State<BranchServiceForm> {
     } catch (e) { if (mounted) setState(() => error = e); }
     finally { if (mounted) setState(() => busy = false); }
   }
-  @override Widget build(BuildContext context) => Screen(title: widget.service == null ? 'خدمة جديدة' : 'طلب تعديل خدمة', child: Form(key: form, child: ListView(padding: const EdgeInsets.all(20), children: [
-    for (final entry in {'name': 'اسم الخدمة', 'description': 'وصف الخدمة', 'points': 'عدد النقاط', 'durationMinutes': 'المدة بالدقائق', 'reason': 'سبب الطلب'}.entries) Padding(padding: const EdgeInsets.only(bottom: 14), child: TextFormField(
+  @override Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(title: widget.service == null ? appText('s926') : appText('s927'), child: Form(key: form, child: ListView(padding: const EdgeInsets.all(20), children: [
+    for (final entry in {'name': appText('s928'), 'description': appText('s929'), 'points': appText('s137'), 'durationMinutes': appText('s930'), 'reason': appText('s931')}.entries) Padding(padding: const EdgeInsets.only(bottom: 14), child: TextFormField(
       controller: fields[entry.key], enabled: !busy, decoration: InputDecoration(labelText: entry.value),
       maxLength: entry.key == 'description' ? 2000 : entry.key == 'name' ? 150 : entry.key == 'reason' ? 1000 : 7,
       keyboardType: ['points', 'durationMinutes'].contains(entry.key) ? TextInputType.number : TextInputType.text,
@@ -122,11 +123,11 @@ class _BranchServiceFormState extends State<BranchServiceForm> {
         if (entry.key == 'description') return null;
         if (['points', 'durationMinutes'].contains(entry.key)) {
           final number = int.tryParse(digits(text)), max = entry.key == 'points' ? 1000000 : 1440;
-          return number == null || number < 1 || number > max ? 'اكتب عددًا من 1 إلى $max' : null;
+          return number == null || number < 1 || number > max ? appText('s932', [max]) : null;
         }
-        return text.length < (entry.key == 'reason' ? 5 : 1) ? 'راجع البيانات المطلوبة' : null;
+        return text.length < (entry.key == 'reason' ? 5 : 1) ? appText('s933') : null;
       },
     )),
-    ErrorNote(error), ActionButton('إرسال للمراجعة', busy: busy, onPressed: busy ? null : save),
-  ])));
+    ErrorNote(error), ActionButton(appText('s904'), busy: busy, onPressed: busy ? null : save),
+  ]))); }
 }

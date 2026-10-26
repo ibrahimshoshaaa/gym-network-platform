@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 
 import '../core/api.dart';
@@ -10,8 +11,8 @@ class MoneyScreen extends StatelessWidget {
   final Json gym;
   const MoneyScreen({super.key, required this.api, required this.gym});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'المستحقات ومديونيات الخدمات',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s795'),
     child: DataView(
     load: () => Future.wait([
       api.request('reports/summary?gymId=${gym['id']}&${reportRange()}'),
@@ -28,24 +29,24 @@ class MoneyScreen extends StatelessWidget {
         padding: const EdgeInsets.all(22),
         children: [
           PortalIntro(
-            'مستحقاتك واضحة',
+            appText('s796'),
             eyebrow: '${gym['name']}',
-            detail: 'تابع فلوس زيارات الجيم وحالة كل طلب سحب.',
+            detail: appText('s797'),
           ),
           Panel(
             color: ink,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'متاح للسحب',
+                Text(
+                  appText('s798'),
                   style: TextStyle(color: Colors.white70),
                 ),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: AlignmentDirectional.centerStart,
                   child: Text(
-                    '${money(net)} ج.م',
+                    appText('s122', [money(net)]),
                     style: const TextStyle(
                       fontSize: 37,
                       fontWeight: FontWeight.w900,
@@ -75,31 +76,31 @@ class MoneyScreen extends StatelessWidget {
                           await reload();
                         },
                   icon: const Icon(Icons.south_west_rounded),
-                  label: const Text('طلب سحب مستحقات'),
+                  label: Text(appText('s799')),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const PortalNote(
-            'التحويل خلال ٣ أيام عمل من قبول طلب السحب.',
+          PortalNote(
+            appText('s800'),
           ),
           const SizedBox(height: 16),
           Panel(
             child: Column(
               children: [
-                Fact('محجوز للسحب', '${money(get('GYM_RESERVED'))} ج.م'),
-                Fact('محجوز لمراجعة نزاع', '${money(get('GYM_DISPUTED'))} ج.م'),
-                Fact('إجمالي مدفوع للجيم', '${money(get('GYM_PAID'))} ج.م'),
+                Fact(appText('s801'), appText('s122', [money(get('GYM_RESERVED'))])),
+                Fact(appText('s802'), appText('s122', [money(get('GYM_DISPUTED'))])),
+                Fact(appText('s803'), appText('s122', [money(get('GYM_PAID'))])),
               ],
             ),
           ),
-          const SectionTitle('مديونيات الخدمات'),
-          const PortalNote('تكلفة الخدمات بتتخصم من المستحقات. لو المديونية أكبر، المتاح للسحب بيكون صفر والباقي بيترحّل للتحصيل القادم.'),
-          Panel(child:Column(children:[Fact('مستحقات قبل الخصم','${money(charges['grossAvailablePiasters']??'0')} ج.م'),Fact('مديونية مستحقة','${money(charges['debtPiasters']??'0')} ج.م'),Fact('إعلانات مجدولة لم تستحق بعد','${money(charges['scheduledPiasters']??'0')} ج.م'),Fact('صافي متاح للسحب','${money(net)} ج.م')])),
-          for(final c in (charges['items'] as List? ?? []))Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${c['description']}'),Fact('التكلفة','${money(c['amountPiasters'])} ج.م'),Fact('تم خصمه','${money(c['collectedPiasters'])} ج.م'),Fact('متبقي','${money(c['outstandingPiasters'])} ج.م')])),
-          const SectionTitle('طلبات السحب'),
-          if (rows(data[1]).isEmpty) const EmptyState('مفيش طلبات سحب لسه'),
+          SectionTitle(appText('s804')),
+          PortalNote(appText('s805')),
+          Panel(child:Column(children:[Fact(appText('s806'),appText('s122', [money(charges['grossAvailablePiasters']??'0')])),Fact(appText('s807'),appText('s122', [money(charges['debtPiasters']??'0')])),Fact(appText('s808'),appText('s122', [money(charges['scheduledPiasters']??'0')])),Fact(appText('s809'),appText('s122', [money(net)]))])),
+          for(final c in (charges['items'] as List? ?? []))Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${c['description']}'),Fact(appText('s810'),appText('s122', [money(c['amountPiasters'])])),Fact(appText('s811'),appText('s122', [money(c['collectedPiasters'])])),Fact(appText('s812'),appText('s122', [money(c['outstandingPiasters'])]))])),
+          SectionTitle(appText('s813')),
+          if (rows(data[1]).isEmpty) EmptyState(appText('s814')),
           ...rows(data[1]).map(
             (w) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -111,7 +112,7 @@ class MoneyScreen extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            '${money(w['amountPiasters'])} ج.م',
+                            appText('s122', [money(w['amountPiasters'])]),
                             style: const TextStyle(
                               fontSize: 23,
                               fontWeight: FontWeight.w900,
@@ -126,7 +127,7 @@ class MoneyScreen extends StatelessWidget {
                       style: const TextStyle(color: muted, fontSize: 12),
                     ),
                     if (w['dueAt'] != null)
-                      Fact('موعد التنفيذ', '${shortDate(w['dueAt'])}'),
+                      Fact(appText('s815'), '${shortDate(w['dueAt'])}'),
                     if (w['reviewReason'] != null) Text('${w['reviewReason']}'),
                     TextButton(
                       onPressed: () async {
@@ -136,7 +137,7 @@ class MoneyScreen extends StatelessWidget {
                         );
                         await reload();
                       },
-                      child: const Text('التفاصيل والمتابعة'),
+                      child: Text(appText('s816')),
                     ),
                   ],
                 ),
@@ -147,7 +148,7 @@ class MoneyScreen extends StatelessWidget {
       );
     },
     ),
-  );
+  ); }
 }
 
 class WithdrawalForm extends StatefulWidget {
@@ -179,24 +180,24 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'طلب سحب',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s817'),
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
         Panel(
           child: Fact(
-            'رصيدك المتاح',
-            '${money(widget.available)} ج.م',
+            appText('s818'),
+            appText('s122', [money(widget.available)]),
             strong: true,
           ),
         ),
         const SizedBox(height: 22),
         if (!review) ...[
           for (final f in [
-            (amount, 'المبلغ بالجنيه'),
-            (name, 'اسم صاحب الحساب'),
-            (account, 'حساب إنستا باي أو رقم المحفظة'),
+            (amount, appText('s136')),
+            (name, appText('s819')),
+            (account, appText('s820')),
           ])
             Padding(
               padding: const EdgeInsets.only(bottom: 15),
@@ -211,16 +212,16 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
             ),
           DropdownButtonFormField<String>(
             initialValue: method,
-            decoration: const InputDecoration(labelText: 'طريقة الاستلام'),
-            items: const [
-              DropdownMenuItem(value: 'INSTAPAY', child: Text('إنستا باي')),
-              DropdownMenuItem(value: 'WALLET', child: Text('محفظة إلكترونية')),
+            decoration: InputDecoration(labelText: appText('s821')),
+            items: [
+              DropdownMenuItem(value: 'INSTAPAY', child: Text(appText('s145'))),
+              DropdownMenuItem(value: 'WALLET', child: Text(appText('s146'))),
             ],
             onChanged: busy ? null : (v) => setState(() => method = v!),
           ),
           const SizedBox(height: 22),
           ActionButton(
-            'مراجعة الطلب',
+            appText('s822'),
             onPressed: () {
               final n = piasters(amount.text);
               if (n == null ||
@@ -229,7 +230,7 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
                   name.text.trim().length < 2 ||
                   account.text.trim().length < 3) {
                 setState(
-                  () => error = Exception('راجع المبلغ وبيانات الاستلام.'),
+                  () => error = Exception(appText('s823')),
                 );
                 return;
               }
@@ -244,18 +245,18 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
             child: Column(
               children: [
                 Fact(
-                  'المبلغ',
-                  '${money(piasters(amount.text))} ج.م',
+                  appText('s121'),
+                  appText('s122', [money(piasters(amount.text))]),
                   strong: true,
                 ),
-                Fact('المستلم', name.text),
-                Fact('حساب الاستلام', account.text),
+                Fact(appText('s824'), name.text),
+                Fact(appText('s496'), account.text),
               ],
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
-            'المبلغ يتحجز من رصيدك المتاح عند إرسال الطلب، والتحويل يتم يدويًا بعد مراجعة الإدارة. موعد التنفيذ يظهر بعد القبول.',
+          Text(
+            appText('s825'),
             style: TextStyle(color: muted, fontSize: 13),
           ),
           CheckboxListTile(
@@ -264,10 +265,10 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
             onChanged: busy
                 ? null
                 : (v) => setState(() => verified = v ?? false),
-            title: const Text('راجعت بيانات حساب الاستلام والمبلغ.'),
+            title: Text(appText('s826')),
           ),
           ActionButton(
-            'تأكيد طلب السحب',
+            appText('s827'),
             busy: busy,
             onPressed: !verified || widget.api.pending != null
                 ? null
@@ -296,13 +297,13 @@ class _WithdrawalFormState extends State<WithdrawalForm> {
             onPressed: busy || widget.api.pending != null
                 ? null
                 : () => setState(() => review = false),
-            child: const Text('تعديل الطلب'),
+            child: Text(appText('s828')),
           ),
         ],
         ErrorNote(error),
       ],
     ),
-  );
+  ); }
 }
 
 class WithdrawalDetail extends StatefulWidget {
@@ -341,8 +342,8 @@ class _WithdrawalDetailState extends State<WithdrawalDetail> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'تفاصيل السحب',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s829'),
     child: DataView(
       load: () => widget.api.request('withdrawals/${widget.id}'),
       builder: (d, reload) {
@@ -355,19 +356,19 @@ class _WithdrawalDetailState extends State<WithdrawalDetail> {
                 children: [
                   StatusPill(w['status']),
                   Fact(
-                    'المبلغ',
-                    '${money(w['amountPiasters'])} ج.م',
+                    appText('s121'),
+                    appText('s122', [money(w['amountPiasters'])]),
                     strong: true,
                   ),
-                  Fact('المستلم', '${w['destinationName']}'),
-                  Fact('حساب الاستلام', '${w['destinationAccount']}'),
+                  Fact(appText('s824'), '${w['destinationName']}'),
+                  Fact(appText('s496'), '${w['destinationAccount']}'),
                   if (w['dueAt'] != null)
-                    Fact('موعد التحويل', shortDate(w['dueAt'])),
+                    Fact(appText('s830'), shortDate(w['dueAt'])),
                   if (w['reviewReason'] != null) Text('${w['reviewReason']}'),
                   if (w['rejectionReason'] != null)
                     Text('${w['rejectionReason']}'),
                   if (w['transferReference'] != null)
-                    Fact('مرجع التحويل', '${w['transferReference']}'),
+                    Fact(appText('s831'), '${w['transferReference']}'),
                   Reference('${w['id']}'),
                 ],
               ),
@@ -379,14 +380,14 @@ class _WithdrawalDetailState extends State<WithdrawalDetail> {
                 controller: reason,
                 enabled: !busy,
                 maxLength: 1000,
-                decoration: const InputDecoration(
-                  labelText: 'السبب أو ملاحظات المتابعة · 5 حروف على الأقل',
+                decoration: InputDecoration(
+                  labelText: appText('s832'),
                 ),
               ),
               ErrorNote(error),
               if (w['status'] == 'REQUESTED')
                 ActionButton(
-                  'إلغاء طلب السحب وإعادة المبلغ للمتاح',
+                  appText('s833'),
                   busy: busy,
                   onPressed: widget.api.pending != null
                       ? null
@@ -394,7 +395,7 @@ class _WithdrawalDetailState extends State<WithdrawalDetail> {
                 )
               else ...[
                 ActionButton(
-                  'تأكيد استلام التحويل',
+                  appText('s834'),
                   busy: busy,
                   onPressed: widget.api.pending != null
                       ? null
@@ -410,18 +411,18 @@ class _WithdrawalDetailState extends State<WithdrawalDetail> {
                           'kind': 'DISPUTE',
                           'reason': reason.text,
                         }, reload),
-                  child: const Text('عندي اعتراض على التحويل'),
+                  child: Text(appText('s835')),
                 ),
               ],
             ],
             if (d['feedback'] != null)
               Panel(
-                child: Text('تم تسجيل متابعتك: ${d['feedback']['reason']}'),
+                child: Text(appText('s836', [d['feedback']['reason']])),
               ),
           ],
         );
       },
     ),
-  );
+  ); }
 }
 

@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 
 import 'ui.dart';
@@ -13,7 +14,7 @@ class PortalIntro extends StatelessWidget {
     this.trailing,
   });
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Padding(
     padding: const EdgeInsets.only(bottom: 20),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +48,7 @@ class PortalIntro extends StatelessWidget {
         if (trailing != null) ...[const SizedBox(width: 8), trailing!],
       ],
     ),
-  );
+  ); }
 }
 
 /// Wrap instead of fixed-height tiles: Arabic, large text and long values can grow.
@@ -55,7 +56,7 @@ class PortalGrid extends StatelessWidget {
   final List<Widget> children;
   const PortalGrid({super.key, required this.children});
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  LayoutBuilder(
     builder: (context, box) {
       final largeText = MediaQuery.textScalerOf(context).scale(14) > 19;
       final columns = box.maxWidth < 280 || largeText
@@ -72,7 +73,7 @@ class PortalGrid extends StatelessWidget {
         ],
       );
     },
-  );
+  ); }
 }
 
 class PortalTask extends StatelessWidget {
@@ -89,7 +90,7 @@ class PortalTask extends StatelessWidget {
     this.primary = false,
   });
   @override
-  Widget build(BuildContext context) => Material(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Material(
     color: primary ? ink : Colors.white,
     borderRadius: BorderRadius.circular(20),
     clipBehavior: Clip.antiAlias,
@@ -114,7 +115,7 @@ class PortalTask extends StatelessWidget {
                   ),
                   const Spacer(),
                   Icon(
-                    Icons.arrow_back_rounded,
+                    Icons.arrow_forward_rounded,
                     size: 17,
                     color: primary ? Colors.white70 : muted,
                   ),
@@ -144,7 +145,7 @@ class PortalTask extends StatelessWidget {
         ),
       ),
     ),
-  );
+  ); }
 }
 
 class PortalMetric extends StatelessWidget {
@@ -158,7 +159,7 @@ class PortalMetric extends StatelessWidget {
     this.detail = '',
   });
   @override
-  Widget build(BuildContext context) => Panel(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Panel(
     padding: const EdgeInsets.all(18),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,7 +190,7 @@ class PortalMetric extends StatelessWidget {
           Text(detail, style: const TextStyle(fontSize: 11, color: muted)),
       ],
     ),
-  );
+  ); }
 }
 
 class PortalNote extends StatelessWidget {
@@ -201,7 +202,7 @@ class PortalNote extends StatelessWidget {
     this.icon = Icons.info_outline_rounded,
   });
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: const Color(0xffe4f8f1),
@@ -217,7 +218,7 @@ class PortalNote extends StatelessWidget {
         ),
       ],
     ),
-  );
+  ); }
 }
 
 class FlowSteps extends StatelessWidget {
@@ -225,8 +226,8 @@ class FlowSteps extends StatelessWidget {
   final int current;
   const FlowSteps({super.key, required this.labels, required this.current});
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'الخطوة ${current + 1} من ${labels.length}: ${labels[current]}',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Semantics(
+    label: appText('s97', [current + 1, labels.length, labels[current]]),
     child: ExcludeSemantics(
       child: Padding(
         padding: const EdgeInsets.only(bottom: 24),
@@ -307,7 +308,7 @@ class FlowSteps extends StatelessWidget {
         ),
       ),
     ),
-  );
+  ); }
 }
 
 /// Compact headings for the trainee's five primary destinations.
@@ -315,7 +316,7 @@ class TraineeSectionHeader extends StatelessWidget {
  final String title,subtitle;
  final Widget? trailing;
  const TraineeSectionHeader(this.title,{super.key,this.subtitle='',this.trailing});
- @override Widget build(BuildContext context)=>Padding(
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Padding(
   padding:const EdgeInsets.only(bottom:18),
   child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
    Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -326,5 +327,5 @@ class TraineeSectionHeader extends StatelessWidget {
     ],
    ])),
    if(trailing!=null)...[const SizedBox(width:10),trailing!],
-  ]));
+  ])); }
 }

@@ -9,8 +9,9 @@ export function textbeeConfig(env:NodeJS.ProcessEnv=process.env){
  return {apiKey,deviceId,secret,...(sim===undefined?{}:{simSubscriptionId:Number(sim)})};
 }
 export const newPhoneCode=()=>String(randomInt(0,1000000)).padStart(6,'0');
-export function phoneCodeMessage(code:string){
+export function phoneCodeMessage(code:string,language:'ar'|'en'='ar'){
  if(!/^\d{6}$/.test(code))throw new DomainError('INVALID_INPUT');
+ if(language==='en'){const words=['zero','one','two','three','four','five','six','seven','eight','nine'];return `GymBank code: ${[...code].map(d=>words[Number(d)]).join(' ')}. Do not share.`;}
  const words=['صفر','واحد','اتنين','تلاتة','أربعة','خمسة','ستة','سبعة','تمانية','تسعة'];
  return `رمز جيم بانك: ${[...code].map(d=>words[Number(d)]).join(' ')}. لا تشاركه.`;
 }
@@ -19,9 +20,9 @@ export function smsCodeHash(id:string,phone:string,purpose:string,code:string){
  return createHmac('sha256',config.secret).update(`${id}:${phone}:${purpose}:${code}`).digest('hex');
 }
 // Server-only. No automatic retry: a timeout may follow a successfully queued SMS.
-export async function sendTextbeeCode(phone:string,code:string,_purpose:'REGISTER'|'RESET',transport:typeof fetch=fetch){
+export async function sendTextbeeCode(phone:string,code:string,_purpose:'REGISTER'|'RESET',transport:typeof fetch=fetch,language:'ar'|'en'='ar'){
  const config=textbeeConfig();if(!config)throw new DomainError('PHONE_OTP_DISABLED');
- const message=phoneCodeMessage(code);
+ const message=phoneCodeMessage(code,language);
  try{
   const response=await transport('https://api.textbee.dev/api/v1/gateway/send-sms',{
    method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),

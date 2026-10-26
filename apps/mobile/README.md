@@ -42,3 +42,18 @@ See [iOS build/signing](../../docs/codemagic-ios.md). Simulator ZIPs and unsigne
 Real TextBee verification and the account-deletion lifecycle are implemented; older rollout notes describing them as deferred are historical. Store privacy/support/retention details still need the owner's approved information. Background push and wallet PIN are not claimed as completed.
 
 Financial retry envelopes use encrypted storage and are bound to the user, request body/path and UUID. A pending mutation blocks new financial actions until its original outcome is definitive. Never clear pending state to bypass an uncertain result. Receipt upload and quotes do not change financial balances.
+
+## Arabic and English
+
+The application uses paired `lib/l10n/app_ar.arb` and `app_en.arb` catalogs. All roles can select a language from their account or workspace. First launch follows the device language (Arabic or English; other languages fall back to Arabic), and the choice is saved independently of account sessions. The previous `auth.language` preference is migrated automatically.
+
+Translate only application copy with `appText(key, values)`. User names, gym/service names, descriptions, reference IDs, QR payloads and typed input must remain unchanged. Indexed placeholders are inserted once, so user content cannot be treated as another translation template. Financial values retain the existing exact piaster conversion and Western decimal input format; currency labels and date display follow the selected language.
+
+Edit both ARB files together and regenerate:
+
+```bash
+python3 tool/generate_translations.py
+python3 tool/generate_translations.py --check
+```
+
+The generator checks equal key coverage, placeholder parity, missing source keys and untranslated English copy. Flutter tests cover language persistence, RTL/LTR switching, input preservation and unchanged financial parsing. Language changes keep the navigator and pending operations alive.

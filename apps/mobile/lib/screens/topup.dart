@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'campaigns.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -163,50 +164,51 @@ class _TopupScreenState extends State<TopupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if(widget.api.user?['role']!='TRAINEE')return const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط للمتدرب من صاحب المنصة فقط')));
+    AppLanguage.watch(context);
+    if(widget.api.user?['role']!='TRAINEE')return Screen(title:appText('s112'),child:Center(child:Text(appText('s113'))));
     final methods = (options?['paymentMethods'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final packages = (options?['packages'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)).toList();
     final locked = busy || widget.api.pending != null;
     final estimate = estimateFor(selectedPackage != null ? selectedPackage!['points'] as int : byAmount ? null : customPoints);
     final step = quote == null ? 0 : reviewing ? 2 : 1;
-    const destination = 'محفظتك';
+    final destination = appText('s114');
     final chosenMethod = methods.where((m) => m['type'] == method).firstOrNull;
-    return Screen(title: 'اشحن رصيدك', child: ListView(
+    return Screen(title: appText('s115'), child: ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 28), children: [
         CampaignBanner(api:widget.api,placement:'WALLET'),
         if (result != null) ...[
-          const EmptyState('طلب الشحن وصل', detail: 'هتوصلك النتيجة بعد مراجعة التحويل.', icon: Icons.task_alt_rounded),
+          EmptyState(appText('s116'), detail: appText('s117'), icon: Icons.task_alt_rounded),
           Panel(child: Column(children: [
-            Fact('وجهة النقاط', destination),
-            Fact('النقاط', '${result!['points']} نقطة', strong: true),
-            Fact('المبلغ', '${money(result!['chargePiasters'])} ج.م'),
+            Fact(appText('s118'), destination),
+            Fact(appText('s119'), appText('s120', [result!['points']]), strong: true),
+            Fact(appText('s121'), appText('s122', [money(result!['chargePiasters'])])),
             StatusPill(result!['status']), Reference('${result!['id']}'),
           ])),
           const SizedBox(height: 16),
-          ActionButton('رجوع للمحفظة', onPressed: () => Navigator.pop(context, true)),
+          ActionButton(appText('s123'), onPressed: () => Navigator.pop(context, true)),
         ] else if (options == null) ...[
           if (busy) const Center(child: CircularProgressIndicator()), ErrorNote(error, retry: load),
         ] else if (methods.isEmpty)
-          const EmptyState('الشحن غير متاح مؤقتًا', detail: 'لا توجد وسيلة تحويل مفعّلة حاليًا. تواصل مع الإدارة.')
+          EmptyState(appText('s124'), detail: appText('s125'))
         else if (options!['policy'] == null)
-          const EmptyState('تسعير النقاط غير متاح', detail: 'الإدارة هتفعّل الأسعار قبل استقبال طلبات جديدة.')
+          EmptyState(appText('s126'), detail: appText('s127'))
         else ...[
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (var i = 0; i < 3; i++) Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(color: step == i ? ink : Colors.white, borderRadius: BorderRadius.circular(12)),
-              child: Text('${i + 1} · ${['اختيار الرصيد', 'التحويل', 'المراجعة'][i]}',
+              child: Text('${i + 1} · ${[appText('s999'), appText('s1000'), appText('s1001')][i]}',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: step == i ? Colors.white : muted))),
           ]),
           const SizedBox(height: 20),
-          Text(quote == null ? 'اختار رصيدك' : reviewing ? 'راجع طلب الشحن' : 'حوّل وارفع الإيصال',
+          Text(quote == null ? appText('s128') : reviewing ? appText('s129') : appText('s130'),
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          Text('النقاط هتضاف إلى $destination بعد اعتماد الطلب.', style: const TextStyle(color: muted, fontSize: 12)),
+          Text(appText('s131', [destination]), style: const TextStyle(color: muted, fontSize: 12)),
           const SizedBox(height: 20),
           if (quote == null) ...[
             if (!byAmount && packages.isNotEmpty) ...[
-              const Text('باقات جاهزة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(appText('s132'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               const SizedBox(height: 10),
               LayoutBuilder(builder: (context, box) {
                 final columns = box.maxWidth < 280 || MediaQuery.textScalerOf(context).scale(14) > 20 ? 1 : 2;
@@ -217,19 +219,19 @@ class _TopupScreenState extends State<TopupScreen> {
                     clipBehavior: Clip.antiAlias, child: InkWell(onTap: locked ? null : () => setState(() {
                       selectedPackage = p; amount.text = '${p['points']}'; error = null;
                     }), child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${p['points']} نقطة', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                      Text(appText('s120', [p['points']]), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 4),
-                      Text('${money(estimateFor(p['points'])?['chargePiasters'])} ج.م', style: const TextStyle(color: green, fontWeight: FontWeight.w700)),
+                      Text(appText('s122', [money(estimateFor(p['points'])?['chargePiasters'])]), style: const TextStyle(color: green, fontWeight: FontWeight.w700)),
                       if (!digits('${p['label']}').contains('${p['points']}')) Text('${p['label']}', style: const TextStyle(color: muted, fontSize: 11)),
                     ]))))),
                 ]);
               }),
               const SizedBox(height: 20),
-              const Text('أو اختار قيمة تانية', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(appText('s133'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
               const SizedBox(height: 10),
             ],
-            SegmentedButton<bool>(segments: const [
-              ButtonSegment(value: false, label: Text('نقاط')), ButtonSegment(value: true, label: Text('جنيه')),
+            SegmentedButton<bool>(segments: [
+              ButtonSegment(value: false, label: Text(appText('s134'))), ButtonSegment(value: true, label: Text(appText('s135'))),
             ], selected: {byAmount}, onSelectionChanged: locked ? null : (v) => setState(() {
               byAmount = v.first; selectedPackage = null; amount.clear(); error = null;
             })),
@@ -237,63 +239,63 @@ class _TopupScreenState extends State<TopupScreen> {
             TextField(controller: amount, enabled: !locked,
               onChanged: (_) => setState(() { selectedPackage = null; error = null; }),
               keyboardType: TextInputType.numberWithOptions(decimal: byAmount), textDirection: TextDirection.ltr,
-              decoration: InputDecoration(labelText: byAmount ? 'المبلغ بالجنيه' : 'عدد النقاط', hintText: '100')),
+              decoration: InputDecoration(labelText: byAmount ? appText('s136') : appText('s137'), hintText: '100')),
             if (estimate != null) ...[
               const SizedBox(height: 14),
               Panel(padding: const EdgeInsets.all(14), child: Column(children: [
-                Fact('النقاط المختارة', '${estimate['points']} نقطة'),
-                Fact('السعر المتوقع', '${money(estimate['chargePiasters'])} ج.م', strong: true),
+                Fact(appText('s138'), appText('s120', [estimate['points']])),
+                Fact(appText('s139'), appText('s122', [money(estimate['chargePiasters'])]), strong: true),
               ])),
             ],
             ErrorNote(error), const SizedBox(height: 16),
-            ActionButton('متابعة لبيانات التحويل', onPressed: locked || estimate == null ? null : review, busy: busy),
+            ActionButton(appText('s140'), onPressed: locked || estimate == null ? null : review, busy: busy),
           ] else ...[
             Panel(color: ink, padding: const EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(reviewing ? 'طلب شحن إلى $destination' : 'المبلغ المطلوب تحويله', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(reviewing ? appText('s141', [destination]) : appText('s142'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 8),
-              FittedBox(fit: BoxFit.scaleDown, child: Text('${money(quote!['chargePiasters'])} ج.م', style: const TextStyle(color: lime, fontSize: 32, fontWeight: FontWeight.w900))),
-              Text('${quote!['points']} نقطة', style: const TextStyle(color: Colors.white, fontSize: 16)),
+              FittedBox(fit: BoxFit.scaleDown, child: Text(appText('s122', [money(quote!['chargePiasters'])]), style: const TextStyle(color: lime, fontSize: 32, fontWeight: FontWeight.w900))),
+              Text(appText('s120', [quote!['points']]), style: const TextStyle(color: Colors.white, fontSize: 16)),
             ])),
             if (quote!['unallocatedPiasters'] != null && quote!['unallocatedPiasters'] != '0') Padding(padding: const EdgeInsets.only(top: 12),
-              child: Text('حوّل القيمة الموضحة فقط؛ المتبقي ${money(quote!['unallocatedPiasters'])} ج.م لا يقابل نقاطًا كاملة.', style: const TextStyle(fontSize: 12))),
+              child: Text(appText('s143', [money(quote!['unallocatedPiasters'])]), style: const TextStyle(fontSize: 12))),
             if (!reviewing) ...[
-              const SectionTitle('بيانات التحويل'),
+              SectionTitle(appText('s144')),
               DropdownButtonFormField<String>(initialValue: method, isExpanded: true,
-                items: methods.map((m) => DropdownMenuItem(value: '${m['type']}', child: Text(m['type'] == 'INSTAPAY' ? 'إنستا باي' : 'محفظة إلكترونية'))).toList(),
+                items: methods.map((m) => DropdownMenuItem(value: '${m['type']}', child: Text(m['type'] == 'INSTAPAY' ? appText('s145') : appText('s146')))).toList(),
                 onChanged: locked ? null : (v) => setState(() { method = v; receipt = null; confirmed = false; }),
-                decoration: const InputDecoration(labelText: 'وسيلة التحويل')),
+                decoration: InputDecoration(labelText: appText('s147'))),
               const SizedBox(height: 12),
               if (chosenMethod != null) Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('${chosenMethod['accountName']}', style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
                 SelectableText('${chosenMethod['account']}', textDirection: TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
                 TextButton.icon(onPressed: () => Clipboard.setData(ClipboardData(text: '${chosenMethod['account']}')),
-                  icon: const Icon(Icons.copy_rounded, size: 17), label: const Text('نسخ الحساب')),
+                  icon: const Icon(Icons.copy_rounded, size: 17), label: Text(appText('s148'))),
               ])),
-              const SectionTitle('إيصال التحويل'),
+              SectionTitle(appText('s149')),
               OutlinedButton.icon(onPressed: locked ? null : upload,
                 icon: Icon(receipt == null ? Icons.add_photo_alternate_outlined : Icons.check_circle_rounded),
-                label: Text(receipt == null ? 'ارفع صورة الإيصال' : 'الإيصال جاهز · تغيير الصورة')),
+                label: Text(receipt == null ? appText('s150') : appText('s151'))),
               ErrorNote(error), const SizedBox(height: 16),
-              ActionButton('مراجعة طلب الشحن', onPressed: locked || receipt == null ? null : () => setState(() { reviewing = true; confirmed = false; error = null; })),
-              TextButton(onPressed: locked ? null : () => setState(() { quote = null; receipt = null; reviewedSelection = null; confirmed = false; error = null; }), child: const Text('تعديل الرصيد المختار')),
+              ActionButton(appText('s152'), onPressed: locked || receipt == null ? null : () => setState(() { reviewing = true; confirmed = false; error = null; })),
+              TextButton(onPressed: locked ? null : () => setState(() { quote = null; receipt = null; reviewedSelection = null; confirmed = false; error = null; }), child: Text(appText('s153'))),
             ] else ...[
               const SizedBox(height: 16),
               Panel(child: Column(children: [
-                Fact('وسيلة التحويل', method == 'INSTAPAY' ? 'إنستا باي' : 'محفظة إلكترونية'),
-                Fact('صاحب الحساب', '${chosenMethod?['accountName']}'),
-                Fact('الحساب', '${chosenMethod?['account']}'),
-                const Fact('الإيصال', 'مرفوع وجاهز للمراجعة'),
+                Fact(appText('s147'), method == 'INSTAPAY' ? appText('s145') : appText('s146')),
+                Fact(appText('s154'), '${chosenMethod?['accountName']}'),
+                Fact(appText('s155'), '${chosenMethod?['account']}'),
+                Fact(appText('s156'), appText('s157')),
               ])),
               CheckboxListTile(contentPadding: EdgeInsets.zero, value: confirmed,
                 onChanged: locked ? null : (v) => setState(() => confirmed = v ?? false),
-                title: const Text('حوّلت المبلغ وراجعت الحساب والإيصال.')),
+                title: Text(appText('s158'))),
               ErrorNote(error),
-              ActionButton('إرسال طلب الشحن', busy: busy, onPressed: locked || !confirmed ? null : submit),
-              TextButton(onPressed: locked ? null : () => setState(() { reviewing = false; confirmed = false; error = null; }), child: const Text('تعديل بيانات التحويل')),
+              ActionButton(appText('s159'), busy: busy, onPressed: locked || !confirmed ? null : submit),
+              TextButton(onPressed: locked ? null : () => setState(() { reviewing = false; confirmed = false; error = null; }), child: Text(appText('s160'))),
             ],
           ],
-          if (widget.api.pending != null) const PortalNote('فيه عملية محفوظة غير مؤكدة. ارجع للرئيسية وأعد نفس العملية بأمان.'),
+          if (widget.api.pending != null) PortalNote(appText('s161')),
         ],
       ],
     ));
@@ -304,12 +306,12 @@ class TopupHistory extends StatelessWidget {
   final ApiClient api;
   const TopupHistory({super.key, required this.api});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'طلبات الشحن',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s162'),
     child: PagedRecords(
       api: api,
       path: 'topups',
-      empty: 'لسه مفيش طلبات شحن',
+      empty: appText('s163'),
       item: (r) => Panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,14 +320,14 @@ class TopupHistory extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '${r['points']} نقطة',
+                    appText('s120', [r['points']]),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
                 StatusPill(r['status']),
               ],
             ),
-            Fact('المبلغ', '${money(r['chargePiasters'])} ج.م'),
+            Fact(appText('s121'), appText('s122', [money(r['chargePiasters'])])),
             Text(
               shortDate(r['createdAt']),
               style: const TextStyle(color: muted, fontSize: 12),
@@ -336,6 +338,6 @@ class TopupHistory extends StatelessWidget {
         ),
       ),
     ),
-  );
+  ); }
 }
 

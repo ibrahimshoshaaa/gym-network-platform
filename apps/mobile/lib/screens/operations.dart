@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'branch_entry.dart';
 import 'work_balance_hero.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +22,7 @@ class OperationContext extends StatelessWidget {
  final String title,detail;
  final IconData icon;
  const OperationContext({super.key,required this.title,this.detail='',this.icon=Icons.storefront_outlined});
- @override Widget build(BuildContext context)=>Padding(
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Padding(
   padding:const EdgeInsets.only(bottom:18),
   child:Panel(padding:const EdgeInsets.all(14),child:Row(children:[
    Container(padding:const EdgeInsets.all(9),
@@ -32,7 +33,7 @@ class OperationContext extends StatelessWidget {
     Text(title,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w800)),
     if(detail.isNotEmpty)Text(detail,style:const TextStyle(color:muted,fontSize:11)),
    ])),
-  ])));
+  ]))); }
 }
 
 class StaffWorkplace extends StatelessWidget {
@@ -45,19 +46,19 @@ class StaffWorkplace extends StatelessWidget {
   const StaffWorkplace({super.key, required this.api, required this.section,
     required this.branchId, required this.onBranchChanged, required this.showVisits, required this.showSales,this.homeTools});
   @override
-  Widget build(BuildContext context) => DataView(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  DataView(
     load: () => api.request('operations/branches'),
     builder: (data, reload) {
       final branches = rows(data);
       if (branches.isEmpty) return ListView(padding: const EdgeInsets.all(20), children: [
         if(section==0 && homeTools!=null) homeTools!,
-        const EmptyState('مفيش فرع متاح للتشغيل', detail: 'راجع صاحب الجيم لتفعيل الفرع وتعيين حسابك عليه.'),
+        EmptyState(appText('s364'), detail: appText('s365')),
       ]);
       final branch = branches.where((b) => b['id'] == branchId).firstOrNull ?? branches.first;
       return Column(children: [
         if(section!=0) Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 12), child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(branch['canCancel'] == true ? 'مدير الفرع' : 'كاشير الفرع', style: const TextStyle(color: green, fontSize: 12, fontWeight: FontWeight.w700)),
+            Text(branch['canCancel'] == true ? appText('s366') : appText('s367'), style: const TextStyle(color: green, fontSize: 12, fontWeight: FontWeight.w700)),
             if (branches.length > 1) DropdownButton<String>(value: branch['id'], isExpanded: true,
               underline: const SizedBox.shrink(), items: branches.map((b) => DropdownMenuItem<String>(value: b['id'],
                 child: Text('${b['name']}', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
@@ -65,7 +66,7 @@ class StaffWorkplace extends StatelessWidget {
             else Text('${branch['name']}', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             Text('${branch['gymName']}', style: const TextStyle(color: muted, fontSize: 11)),
           ])),
-          if (section != 0) IconButton(tooltip: 'الإشعارات', icon: const Icon(Icons.notifications_none_rounded),
+          if (section != 0) IconButton(tooltip: appText('s368'), icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () => open(context, NotificationsScreen(api: api))),
         ])),
         Expanded(child: KeyedSubtree(key: ValueKey('${branch['id']}:$section'), child: switch(section) {
@@ -79,7 +80,7 @@ class StaffWorkplace extends StatelessWidget {
         })),
       ]);
     },
-  );
+  ); }
 }
 
 class BranchDashboard extends StatefulWidget {
@@ -125,46 +126,47 @@ class _BranchDashboardState extends State<BranchDashboard> {
   }
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     final branch = widget.branch, locked = widget.api.pending != null;
     return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh: load, child: ListView(
       padding: const EdgeInsets.only(bottom:28), physics: const AlwaysScrollableScrollPhysics(), children: [
-        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?'مدير الفرع':'كاشير الفرع'} · ${branch['gymName']??''} · ${branch['name']}',label:'سعر الزيارة',points:summary==null?null:'${summary!['visitPricePoints']??'—'}',loading:summaryLoading,
-         primary:BalanceHeroAction('تسجيل زيارة',Icons.qr_code_scanner_rounded,locked||branch['canOperate']!=true?null:()=>action(RecordVisit(api:widget.api,branch:branch))),
-         secondary:BalanceHeroAction('سجل الزيارات',Icons.history_rounded,()=>records('visits')),
-         footer:BalanceHeroAction('كود حضور الفرع',Icons.qr_code_2_rounded,locked||branch['canOperate']!=true?null:()=>action(BranchEntryQrScreen(api:widget.api,branch:branch)))),
+        WorkBalanceHero(api:widget.api,scope:'${branch['canCancel']==true?appText('s366'):appText('s367')} · ${branch['gymName']??''} · ${branch['name']}',label:appText('s369'),points:summary==null?null:'${summary!['visitPricePoints']??'—'}',loading:summaryLoading,
+         primary:BalanceHeroAction(appText('s109'),Icons.qr_code_scanner_rounded,locked||branch['canOperate']!=true?null:()=>action(RecordVisit(api:widget.api,branch:branch))),
+         secondary:BalanceHeroAction(appText('s110'),Icons.history_rounded,()=>records('visits')),
+         footer:BalanceHeroAction(appText('s370'),Icons.qr_code_2_rounded,locked||branch['canOperate']!=true?null:()=>action(BranchEntryQrScreen(api:widget.api,branch:branch)))),
         if(widget.controls!=null)widget.controls!,
-        if(summary!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text('الزيارة ${summary!['visitPricePoints']??'—'} نقطة · ${summary!['sessionMinutes']??'—'} دقيقة',style:const TextStyle(color:muted,fontSize:11))),
+        if(summary!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(appText('s371', [summary!['visitPricePoints']??'—', summary!['sessionMinutes']??'—']),style:const TextStyle(color:muted,fontSize:11))),
         const SizedBox(height:12),
         BranchFinance(key: ValueKey(generation), api: widget.api, branch: branch),
         if (summaryError != null) ErrorNote(summaryError, retry: load),
-        const SectionTitle('حركة الفرع النهارده'),
+        SectionTitle(appText('s372')),
         Panel(padding: const EdgeInsets.all(16), child: Column(children: [
           if (reportLoading && report == null) const LinearProgressIndicator(minHeight: 2),
           if (report != null) ...[
-            Fact('زيارات مسجلة', '${report!['visits']?['count'] ?? '—'}'),
+            Fact(appText('s373'), '${report!['visits']?['count'] ?? '—'}'),
           ],
           if (reportError != null) ErrorNote(reportError, retry: load),
         ])),
         if((branch['permissions'] as List? ?? []).isNotEmpty)...[
-          const SectionTitle('الصلاحيات المفوّضة لك'),
+          SectionTitle(appText('s374')),
           Panel(child:Column(children:[
-            for(final item in const [
-              ('MANAGE_CASHIERS','staff','فريق الكاشير'),('EDIT_BRANCH','edit','بيانات الفرع'),
-              ('REQUEST_PRICING','price','طلب تعديل السعر'),('REQUEST_WITHDRAWAL','withdraw','مستحقات الفرع والسحب'),
-            ])if((branch['permissions'] as List).contains(item.$1))ListTile(contentPadding:EdgeInsets.zero,title:Text(item.$3),trailing:const Icon(Icons.chevron_left_rounded),onTap:locked?null:()=>action(ManagedBranch(api:widget.api,branch:branch,task:item.$2))),
+            for(final item in [
+              ('MANAGE_CASHIERS','staff',appText('s375')),('EDIT_BRANCH','edit',appText('s376')),
+              ('REQUEST_PRICING','price',appText('s377')),('REQUEST_WITHDRAWAL','withdraw',appText('s378')),
+            ])if((branch['permissions'] as List).contains(item.$1))ListTile(contentPadding:EdgeInsets.zero,title:Text(item.$3),trailing:const Icon(Icons.chevron_right_rounded),onTap:locked?null:()=>action(ManagedBranch(api:widget.api,branch:branch,task:item.$2))),
           ])),
         ],
-        const SectionTitle('متابعة الفرع'),
+        SectionTitle(appText('s379')),
         Panel(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), child: Column(children: [
           ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.directions_run_rounded, color: green),
-            title: const Text('سجل الزيارات'), trailing: const Icon(Icons.chevron_left_rounded), onTap: () => records('visits')),
+            title: Text(appText('s110')), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => records('visits')),
           if (branch['canCancel'] == true) ...[
             const Divider(height: 1),
-            const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('إلغاء الزيارة متاح خلال أول ١٠ دقائق من سجل الزيارات. بعد كده يُرسل طلب مراجعة.', style: TextStyle(color: muted, fontSize: 12))),
+            Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text(appText('s380'), style: TextStyle(color: muted, fontSize: 12))),
           ],
         ])),
         TextButton.icon(onPressed: () => open(context, OperationReviewsScreen(api: widget.api)),
-          icon: const Icon(Icons.fact_check_outlined), label: const Text('طلبات المراجعة')),
+          icon: const Icon(Icons.fact_check_outlined), label: Text(appText('s381'))),
       ].asMap().entries.map((e)=>e.key==0?e.value:Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:e.value)).toList(),
     )));
   }
@@ -174,12 +176,12 @@ class OperationReviewsScreen extends StatelessWidget {
   final ApiClient api;
   const OperationReviewsScreen({super.key, required this.api});
   @override
-  Widget build(BuildContext context) => Screen(title: 'طلبات المراجعة', child: PagedRecords(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(title: appText('s381'), child: PagedRecords(
     api: api, path: 'operation-reviews', item: (r) => Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      StatusPill('${r['status']}'), Fact('السبب', '${r['reason']}'),
-      if (r['reviewReason'] != null) Fact('رد الإدارة', '${r['reviewReason']}'), Reference('${r['id']}'),
+      StatusPill('${r['status']}'), Fact(appText('s216'), '${r['reason']}'),
+      if (r['reviewReason'] != null) Fact(appText('s382'), '${r['reviewReason']}'), Reference('${r['id']}'),
     ])),
-  ));
+  )); }
 }
 
 class OperationsHome extends StatelessWidget {
@@ -187,7 +189,7 @@ class OperationsHome extends StatelessWidget {
   final String? gymId;
   const OperationsHome({super.key, required this.api, this.gymId});
   @override
-  Widget build(BuildContext context) => DataView(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  DataView(
     load: () => api.request('operations/branches'),
     builder: (data, reload) {
       final branches = rows(data)
@@ -199,24 +201,24 @@ class OperationsHome extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           PortalIntro(
-            manager ? 'إدارة فرعك' : 'تشغيل الجيم',
+            manager ? appText('s383') : appText('s384'),
             eyebrow: manager
-                ? 'مدير الفرع'
+                ? appText('s366')
                 : api.user?['role'] == 'GYM_OWNER'
-                ? 'صاحب الجيم'
-                : 'مساحة الموظف',
-            detail: 'اختار مهمتك من الفرع الصحيح. كل عملية بتتسجل باسم حسابك.',
+                ? appText('s385')
+                : appText('s386'),
+            detail: appText('s387'),
           ),
           if (branches.isNotEmpty)
             Text(
-              '${branches.length} فرع متاح لحسابك',
+              appText('s388', [branches.length]),
               style: const TextStyle(color: muted, fontSize: 12),
             ),
           const SizedBox(height: 14),
           if (branches.isEmpty)
-            const EmptyState(
-              'مفيش فرع متاح للتشغيل',
-              detail: 'لازم الفرع يكون نشط وحسابك متعيّن عليه. راجع صاحب الجيم أو الإدارة.',
+            EmptyState(
+              appText('s364'),
+              detail: appText('s389'),
             ),
           for (final branch in branches)
             Padding(
@@ -235,20 +237,20 @@ class OperationsHome extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     if (branch['canCancel'] == true)
-                      const Text(
-                        'تقدر تلغي الزيارة خلال أول ١٠ دقائق.',
+                      Text(
+                        appText('s390'),
                         style: TextStyle(color: green, fontSize: 12),
                       ),
                     if (branch['canOperate'] == true) ...[
                       const SizedBox(height: 14),
                       PortalGrid(
                         children: [
-                          PortalTask('كود حضور الفرع',icon:Icons.qr_code_2_rounded,detail:'اعرضه في الاستقبال للمتدربين',onTap:()=>open(context,BranchEntryQrScreen(api:api,branch:branch))),
+                          PortalTask(appText('s370'),icon:Icons.qr_code_2_rounded,detail:appText('s391'),onTap:()=>open(context,BranchEntryQrScreen(api:api,branch:branch))),
                           PortalTask(
-                            'تسجيل زيارة',
+                            appText('s109'),
                             icon: Icons.qr_code_scanner_rounded,
                             primary: true,
-                            detail: 'مسح رمز المتدرب',
+                            detail: appText('s392'),
                             onTap: () async {
                               await open(
                                 context,
@@ -263,7 +265,7 @@ class OperationsHome extends StatelessWidget {
                     ],
                     const SizedBox(height: 12),
                     ActionButton(
-                      'فتح الفرع',
+                      appText('s393'),
                       onPressed: () async {
                         await open(
                           context,
@@ -279,13 +281,13 @@ class OperationsHome extends StatelessWidget {
           TextButton.icon(
             onPressed: () => open(context, NotificationsScreen(api: api)),
             icon: const Icon(Icons.notifications_none_rounded),
-            label: const Text('الإشعارات'),
+            label: Text(appText('s368')),
           ),
           TextButton.icon(
             onPressed: () => open(
               context,
               Screen(
-                title: 'طلبات المراجعة',
+                title: appText('s381'),
                 child: PagedRecords(
                   api: api,
                   path: 'operation-reviews',
@@ -293,9 +295,9 @@ class OperationsHome extends StatelessWidget {
                     child: Column(
                       children: [
                         StatusPill('${r['status']}'),
-                        Fact('السبب', '${r['reason']}'),
+                        Fact(appText('s216'), '${r['reason']}'),
                         if (r['reviewReason'] != null)
-                          Fact('رد الإدارة', '${r['reviewReason']}'),
+                          Fact(appText('s382'), '${r['reviewReason']}'),
                         Reference('${r['id']}'),
                       ],
                     ),
@@ -304,12 +306,12 @@ class OperationsHome extends StatelessWidget {
               ),
             ),
             icon: const Icon(Icons.fact_check_outlined),
-            label: const Text('متابعة طلبات المراجعة'),
+            label: Text(appText('s394')),
           ),
         ],
       );
     },
-  );
+  ); }
 }
 
 class BranchWorkspace extends StatelessWidget {
@@ -317,14 +319,14 @@ class BranchWorkspace extends StatelessWidget {
   final Json branch;
   const BranchWorkspace({super.key, required this.api, required this.branch});
   @override
-  Widget build(BuildContext context) => Screen(title: '${branch['name']}',
-    child: BranchDashboard(api: api, branch: branch));
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(title: '${branch['name']}',
+    child: BranchDashboard(api: api, branch: branch)); }
 }
 
 class BranchSale extends StatelessWidget {
  final ApiClient api;final Json branch;
  const BranchSale({super.key,required this.api,required this.branch});
- @override Widget build(BuildContext context)=>const Screen(title:'نقاط المتدرب',child:Center(child:Text('شحن النقاط من صاحب المنصة فقط')));
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Screen(title:appText('s112'),child:Center(child:Text(appText('s395')))); }
 }
 
 class RecordVisit extends StatefulWidget {
@@ -386,38 +388,38 @@ class _RecordVisitState extends State<RecordVisit> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'تسجيل زيارة',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s109'),
     child: ListView(
       padding: const EdgeInsets.all(22),
       children: [
-        OperationContext(title:'${widget.branch['name']}',detail:'راجع المتدرب ونقاط الزيارة قبل التأكيد',icon:Icons.qr_code_scanner_rounded),
+        OperationContext(title:'${widget.branch['name']}',detail:appText('s396'),icon:Icons.qr_code_scanner_rounded),
         if (result != null) ...[
           EmptyState(
             result!['alreadyActive'] == true
-                ? 'الزيارة مسجلة بالفعل'
-                : 'تم تسجيل الزيارة',
+                ? appText('s397')
+                : appText('s398'),
             detail: result!['alreadyActive'] == true
-                ? 'لم يتم خصم نقاط مرة تانية.'
-                : 'اتخصمت نقاط الزيارة من محفظة المتدرب.',
+                ? appText('s399')
+                : appText('s400'),
             icon: Icons.check_circle_rounded,
           ),
-          Fact('نقاط الزيارة', '${result!['visit']['pointsCharged']}'),
-          Fact('نهاية الجلسة', shortDate(result!['visit']['expiresAt'])),
+          Fact(appText('s401'), '${result!['visit']['pointsCharged']}'),
+          Fact(appText('s402'), shortDate(result!['visit']['expiresAt'])),
           Reference('${result!['visit']['id']}'),
-          ActionButton('تم', onPressed: () => Navigator.pop(context)),
+          ActionButton(appText('s20'), onPressed: () => Navigator.pop(context)),
         ] else ...[
           FlowSteps(
-            labels: const ['رمز المتدرب', 'تأكيد الحضور'],
+            labels: [appText('s403'), appText('s404')],
             current: preview == null ? 0 : 1,
           ),
-          const Text(
-            'المتدرب يفتح رمز الدخول من حسابه، وبعد المسح راجع بيانات الزيارة وأكد حضوره.',
+          Text(
+            appText('s405'),
           ),
           const SizedBox(height: 20),
           if (preview == null) ...[
             ActionButton(
-              'مسح رمز المتدرب بالكاميرا',
+              appText('s406'),
               icon: Icons.qr_code_scanner_rounded,
               onPressed: busy || widget.api.pending != null
                   ? null
@@ -436,27 +438,27 @@ class _RecordVisitState extends State<RecordVisit> {
               controller: token,
               enabled: !busy && widget.api.pending == null,
               textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'أو الصق رمز الدخول',
+              decoration: InputDecoration(
+                labelText: appText('s407'),
               ),
             ),
           ] else ...[
             Panel(
               child: Column(
                 children: [
-                  Fact('المتدرب', '${preview!['traineeLabel']}'),
-                  Fact('آخر أرقام الموبايل', '${preview!['phoneLast4']}'),
+                  Fact(appText('s408'), '${preview!['traineeLabel']}'),
+                  Fact(appText('s409'), '${preview!['phoneLast4']}'),
                   Fact(
-                    'تكلفة الزيارة',
-                    '${preview!['points']} نقطة',
+                    appText('s410'),
+                    appText('s120', [preview!['points']]),
                     strong: true,
                   ),
                   if (preview!['balance'] != null)
-                    Fact('رصيد المتدرب', '${preview!['balance']} نقطة'),
-                  Fact('مدة الزيارة', '${preview!['sessionMinutes']} دقيقة'),
+                    Fact(appText('s411'), appText('s120', [preview!['balance']])),
+                  Fact(appText('s412'), appText('s184', [preview!['sessionMinutes']])),
                   if (preview!['alreadyActive'] == true)
-                    const Text(
-                      'فيه زيارة شغالة بالفعل؛ التأكيد مش هيخصم نقاط تاني.',
+                    Text(
+                      appText('s413'),
                     ),
                 ],
               ),
@@ -464,7 +466,7 @@ class _RecordVisitState extends State<RecordVisit> {
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: confirmed,
-              title: const Text('تأكدت من هوية المتدرب وحضوره في الفرع'),
+              title: Text(appText('s414')),
               onChanged: busy || widget.api.pending != null
                   ? null
                   : (v) => setState(() => confirmed = v == true),
@@ -472,12 +474,12 @@ class _RecordVisitState extends State<RecordVisit> {
           ],
           ErrorNote(error),
           if (widget.api.pending != null)
-            const Text(
-              'ارجع للرئيسية للتحقق من العملية المحفوظة قبل تسجيل زيارة جديدة.',
+            Text(
+              appText('s415'),
             ),
           const SizedBox(height: 20),
           ActionButton(
-            preview == null ? 'مراجعة الزيارة' : 'تأكيد الحضور',
+            preview == null ? appText('s416') : appText('s404'),
             busy: busy,
             onPressed:
                 widget.api.pending != null || preview != null && !confirmed
@@ -495,12 +497,12 @@ class _RecordVisitState extends State<RecordVisit> {
                       error = null;
                       token.clear();
                     }),
-              child: const Text('مسح رمز جديد'),
+              child: Text(appText('s417')),
             ),
         ],
       ],
     ),
-  );
+  ); }
 }
 
 class ScanTicket extends StatefulWidget {
@@ -512,14 +514,14 @@ class ScanTicket extends StatefulWidget {
 class _ScanTicketState extends State<ScanTicket> {
   bool done = false;
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'مسح رمز الدخول',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s418'),
     child: Column(
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.all(20),
           child: Text(
-            'وجّه الكاميرا لرمز المتدرب. لو الكاميرا غير متاحة، ارجع والصق الرمز.',
+            appText('s419'),
           ),
         ),
         Expanded(
@@ -539,7 +541,7 @@ class _ScanTicketState extends State<ScanTicket> {
         ),
       ],
     ),
-  );
+  ); }
 }
 
 class BranchRecords extends StatefulWidget {
@@ -565,12 +567,13 @@ class _BranchRecordsState extends State<BranchRecords> {
   String get kind => widget.kind;
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     final content = PagedRecords(
       key: ValueKey(version), api: api, path: 'operations/branches/${branch['id']}/$kind',
       item: (r) => _record(context, r),
     );
     return widget.embedded ? content : Screen(
-    title: 'زيارات الفرع',
+    title: appText('s420'),
     child: content,
   );
   }
@@ -579,17 +582,17 @@ class _BranchRecordsState extends State<BranchRecords> {
         child: Column(
           children: [
             Fact(
-              'النقاط',
+              appText('s119'),
               '${r['pointsCharged']}',
               strong: true,
             ),
             if (kind == 'visits') StatusPill('${r['status']}'),
             Fact(
-              'التاريخ',
+              appText('s421'),
               shortDate(r['startedAt']),
             ),
             if (kind == 'visits')
-              Fact('نهاية الجلسة', shortDate(r['expiresAt'])),
+              Fact(appText('s402'), shortDate(r['expiresAt'])),
             Reference('${r['id']}'),
             if (kind == 'visits' && r['status'] != 'CANCELLED')
               TextButton(
@@ -600,7 +603,7 @@ class _BranchRecordsState extends State<BranchRecords> {
                   );
                   if (mounted) setState(() => version++);
                 },
-                child: Text(branch['canCancel'] == true ? 'مراجعة أو إلغاء الزيارة' : 'طلب مراجعة الزيارة'),
+                child: Text(branch['canCancel'] == true ? appText('s422') : appText('s423')),
               ),
           ],
         ),
@@ -642,33 +645,33 @@ class _VisitCancellationState extends State<VisitCancellation> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'مراجعة الزيارة',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s416'),
     child: ListView(
       padding: const EdgeInsets.all(22),
       children: [
-        OperationContext(title:'${widget.branch['name']}',detail:'زيارة بقيمة ${widget.visit['pointsCharged']} نقطة'),
+        OperationContext(title:'${widget.branch['name']}',detail:appText('s424', [widget.visit['pointsCharged']])),
         if (result != null) ...[
           EmptyState(
             result!['visit'] != null
-                ? 'تم إلغاء الزيارة ورد النقاط'
-                : 'تم إرسال الطلب للإدارة',
+                ? appText('s425')
+                : appText('s426'),
             icon: Icons.check_circle_rounded,
           ),
           Reference('${result!['id']}'),
-          ActionButton('تم', onPressed: () => Navigator.pop(context)),
+          ActionButton(appText('s20'), onPressed: () => Navigator.pop(context)),
         ] else ...[
           Text(
             direct
-                ? 'إلغاء خلال أول ١٠ دقائق مع رد نقاط الزيارة.'
-                : 'الإلغاء محتاج مراجعة الإدارة قبل رد النقاط.',
+                ? appText('s427')
+                : appText('s428'),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: reason,
             enabled: !busy && widget.api.pending == null,
-            decoration: const InputDecoration(
-              labelText: 'سبب الإلغاء (٥ حروف على الأقل)',
+            decoration: InputDecoration(
+              labelText: appText('s429'),
             ),
           ),
           const SizedBox(height: 12),
@@ -676,20 +679,20 @@ class _VisitCancellationState extends State<VisitCancellation> {
             controller: details,
             enabled: !busy && widget.api.pending == null,
             maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'تفاصيل المراجعة (١٠ حروف على الأقل لو الطلب للإدارة)',
+            decoration: InputDecoration(
+              labelText: appText('s430'),
             ),
           ),
           CheckboxListTile(
             value: confirmed,
-            title: const Text('راجعت الزيارة وسبب الإلغاء'),
+            title: Text(appText('s431')),
             onChanged: busy || widget.api.pending != null
                 ? null
                 : (v) => setState(() => confirmed = v == true),
           ),
           ErrorNote(error),
           ActionButton(
-            direct ? 'تأكيد إلغاء الزيارة' : 'إرسال طلب مراجعة',
+            direct ? appText('s432') : appText('s433'),
             busy: busy,
             onPressed: !confirmed || widget.api.pending != null
                 ? null
@@ -725,5 +728,5 @@ class _VisitCancellationState extends State<VisitCancellation> {
         ],
       ],
     ),
-  );
+  ); }
 }

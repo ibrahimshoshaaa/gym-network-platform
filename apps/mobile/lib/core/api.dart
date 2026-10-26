@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+import '../l10n/language.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -36,60 +38,60 @@ String? piasters(String value) {
       .toString();
 }
 
-const messages = {
-  'WHATSAPP_UNAVAILABLE': 'التحقق عبر واتساب غير متاح حاليًا. استخدم رسالة SMS.',
-  'PHONE_OTP_DISABLED': 'خدمة التحقق بالموبايل غير مفعلة حاليًا.',
-  'PHONE_OTP_SEND_FAILED': 'تعذر طلب رسالة التحقق. حاول لاحقًا.',
-  'PHONE_OTP_WAIT': 'انتظر دقيقة قبل طلب كود جديد.',
-  'PHONE_OTP_INVALID': 'الكود غير صحيح أو انتهت صلاحيته أو استُخدم. اطلب كود جديد.',
-  'BRANCH_QR_REQUIRED': 'تأكيد حضور هذا الحجز يتم بمسح كود الفرع من تطبيق المتدرب.',
-  'QR_WRONG_BRANCH': 'الكود لفرع مختلف عن الفرع المحجوز.',
-  'BRANCH_LOCATION_REQUIRED': 'الفرع لم يحدد موقعه بعد. تواصل مع الإدارة.',
-  'LOCATION_PERMISSION_REQUIRED': 'شغّل الموقع واسمح للتطبيق بالوصول إليه لتأكيد حضورك.',
-  'LOCATION_STALE': 'موقعك قديم. حدّث موقعك وأعد المحاولة.',
-  'LOCATION_INACCURATE': 'دقة الموقع غير كافية. شغّل الموقع الدقيق وأعد المحاولة.',
-  'GO_TO_BRANCH': 'برجاء التوجه للفرع لتأكيد حضورك.',
+Map<String, String> get messages => {
+  'WHATSAPP_UNAVAILABLE': appText('s30'),
+  'PHONE_OTP_DISABLED': appText('s31'),
+  'PHONE_OTP_SEND_FAILED': appText('s32'),
+  'PHONE_OTP_WAIT': appText('s33'),
+  'PHONE_OTP_INVALID': appText('s34'),
+  'BRANCH_QR_REQUIRED': appText('s35'),
+  'QR_WRONG_BRANCH': appText('s36'),
+  'BRANCH_LOCATION_REQUIRED': appText('s37'),
+  'LOCATION_PERMISSION_REQUIRED': appText('s38'),
+  'LOCATION_STALE': appText('s39'),
+  'LOCATION_INACCURATE': appText('s40'),
+  'GO_TO_BRANCH': appText('s41'),
 
-  'BOOKING_SERVICE_UNAVAILABLE': 'إحدى الخدمات لم تعد متاحة. حدّث الخدمات واختر من جديد.',
-  'BOOKING_HOURS_NOT_CONFIGURED': 'الفرع لم يحدد مواعيد الحجز بعد.',
-  'OUTSIDE_OPENING_HOURS': 'اختار موعدًا داخل ساعات عمل الفرع.',
-  'SESSION_ENDS_AFTER_CLOSING': 'مدة الخدمات تتجاوز إغلاق الفرع. اختار موعدًا أبكر أو خدمات أقل.',
-  'SERVICE_SELECTION_REQUIRED': 'اختار الخدمات المطلوبة قبل تأكيد الحجز.',
-  'MAINTENANCE_REAPPROVAL_REQUIRED': 'التكلفة زادت عن المعتمد. لازم عرض جديد وموافقة صاحب الجيم أولًا.',
-  'MARKET_LISTING_LIMIT': 'وصلت للحد المسموح للإعلانات النشطة (٣٠ إعلان).',
-  'INVALID_CREDENTIALS': 'الإيميل أو رقم الموبايل أو كلمة السر غير صحيح.',
+  'BOOKING_SERVICE_UNAVAILABLE': appText('s42'),
+  'BOOKING_HOURS_NOT_CONFIGURED': appText('s43'),
+  'OUTSIDE_OPENING_HOURS': appText('s44'),
+  'SESSION_ENDS_AFTER_CLOSING': appText('s45'),
+  'SERVICE_SELECTION_REQUIRED': appText('s46'),
+  'MAINTENANCE_REAPPROVAL_REQUIRED': appText('s47'),
+  'MARKET_LISTING_LIMIT': appText('s48'),
+  'INVALID_CREDENTIALS': appText('s49'),
   'ACCOUNT_UNAVAILABLE':
-      'الإيميل أو رقم الموبايل مسجل بالفعل. جرّب تسجيل الدخول.',
-  'INVALID_INPUT': 'راجع الحقول المطلوبة والقيم المدخلة.',
-  'UNAUTHENTICATED': 'انتهت الجلسة. سجّل الدخول مرة تانية.',
-  'ACCESS_DENIED': 'حسابك غير مسموح له بالخطوة دي.',
-  'BRANCH_ACCESS_DENIED': 'صلاحيتك على الفرع غير متاحة. حدّث الفروع أو راجع صاحب الجيم.',
-  'RATE_LIMITED': 'محاولات كتير في وقت قصير. انتظر قليلًا وحاول تاني.',
-  'INSUFFICIENT_POINTS': 'رصيد النقاط المتاح مش كافي لإتمام العملية.',
-  'INSUFFICIENT_FUNDS': 'المبلغ المطلوب أكبر من مستحقاتك المتاحة.',
-  'STALE_SETTINGS': 'الإعدادات اتغيرت. ارجع وحدّث البيانات وراجع العملية.',
+      appText('s50'),
+  'INVALID_INPUT': appText('s51'),
+  'UNAUTHENTICATED': appText('s52'),
+  'ACCESS_DENIED': appText('s53'),
+  'BRANCH_ACCESS_DENIED': appText('s54'),
+  'RATE_LIMITED': appText('s55'),
+  'INSUFFICIENT_POINTS': appText('s56'),
+  'INSUFFICIENT_FUNDS': appText('s57'),
+  'STALE_SETTINGS': appText('s58'),
   'WALLET_EXPIRY_REVIEW_REQUIRED':
-      'الرصيد المنتهي يحتاج مراجعة الإدارة قبل شحن جديد.',
-  'QR_INVALID': 'الرمز انتهى. افتح رمز جديد وحاول تاني.',
-  'QR_ALREADY_USED': 'الرمز اتستخدم بالفعل. اطلب من المتدرب يفتح رمز جديد.',
-  'CANCEL_WINDOW_CLOSED': 'مدة الإلغاء المباشر انتهت. ارجع وافتح طلب مراجعة للإدارة.',
-  'VISIT_ALREADY_CANCELLED': 'الزيارة ملغية بالفعل. حدّث السجل.',
-  'OPERATION_REVIEW_EXISTS': 'فيه طلب مراجعة للعملية دي بالفعل.',
-  'SETTLEMENT_REVIEW_REQUIRED': 'الزيارة محتاجة مراجعة التسوية من الإدارة قبل رد النقاط.',
-  'GYM_INACTIVE': 'الجيم غير نشط حاليًا. تواصل مع الإدارة.',
-  'BRANCH_NOT_READY': 'الفرع محتاج اعتماد الموقع وسعر الزيارة من الإدارة.',
-  'TRAINEE_UNAVAILABLE': 'مفيش حساب متدرب نشط بالرقم ده.',
-  'PAYMENT_METHOD_UNAVAILABLE': 'طريقة التحويل غير متاحة حاليًا.',
-  'PRICING_NOT_CONFIGURED': 'أسعار النقاط لم تُحدد بعد. تواصل مع الإدارة.',
-  'INVALID_STATE': 'حالة الطلب اتغيرت. حدّث الصفحة.',
-  'NOT_FOUND': 'البيانات المطلوبة غير موجودة.',
-  'PENDING_REQUEST_EXISTS': 'فيه طلب قيد المراجعة بالفعل.',
-  'INVALID_RECEIPT': 'ارفع صورة واضحة بصيغة JPG أو PNG أو WebP.',
-  'RECEIPT_ALREADY_USED': 'الصورة دي مرتبطة بطلب سابق. راجع طلبات الشحن.',
-  'BODY_TOO_LARGE': 'اختار صورة أقل من 4 ميجابايت.',
-  'IDEMPOTENCY_CONFLICT': 'الطلب السابق بياناته مختلفة. راجع سجل العمليات.',
-  'PAYMENT_AMOUNT_MISMATCH': 'المبلغ لا يطابق السعر الحالي. راجع العملية.',
-  'SERVICE_UNAVAILABLE': 'تعذر الاتصال بالخدمة. حاول تاني.',
+      appText('s59'),
+  'QR_INVALID': appText('s60'),
+  'QR_ALREADY_USED': appText('s61'),
+  'CANCEL_WINDOW_CLOSED': appText('s62'),
+  'VISIT_ALREADY_CANCELLED': appText('s63'),
+  'OPERATION_REVIEW_EXISTS': appText('s64'),
+  'SETTLEMENT_REVIEW_REQUIRED': appText('s65'),
+  'GYM_INACTIVE': appText('s66'),
+  'BRANCH_NOT_READY': appText('s67'),
+  'TRAINEE_UNAVAILABLE': appText('s68'),
+  'PAYMENT_METHOD_UNAVAILABLE': appText('s69'),
+  'PRICING_NOT_CONFIGURED': appText('s70'),
+  'INVALID_STATE': appText('s71'),
+  'NOT_FOUND': appText('s72'),
+  'PENDING_REQUEST_EXISTS': appText('s73'),
+  'INVALID_RECEIPT': appText('s74'),
+  'RECEIPT_ALREADY_USED': appText('s75'),
+  'BODY_TOO_LARGE': appText('s76'),
+  'IDEMPOTENCY_CONFLICT': appText('s77'),
+  'PAYMENT_AMOUNT_MISMATCH': appText('s78'),
+  'SERVICE_UNAVAILABLE': appText('s79'),
 };
 
 class ApiFailure implements Exception {
@@ -99,8 +101,8 @@ class ApiFailure implements Exception {
   const ApiFailure(this.code, {this.status = 0, this.uncertain = false});
   @override
   String toString() => uncertain
-      ? 'نتيجة العملية غير مؤكدة. استخدم «إعادة نفس العملية» بأمان قبل أي عملية جديدة.'
-      : messages[code] ?? 'تعذر إتمام الخطوة. حاول تاني أو تواصل مع الدعم.';
+      ? appText('s80')
+      : messages[code] ?? appText('s81');
 }
 
 abstract class TokenStore {
@@ -398,28 +400,28 @@ List<Json> rows(dynamic data) =>
         .toList();
 String shortDate(dynamic s) {
   final d = DateTime.tryParse('$s')?.toLocal();
-  return d == null
-      ? '—'
-      : '${d.day}/${d.month}/${d.year} · ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  if (d == null) return '—';
+  if (AppLanguage.instance.english) return '${DateFormat.yMMMd("en").format(d)} · ${DateFormat.Hm("en").format(d)}';
+  return '${d.day}/${d.month}/${d.year} · ${d.hour.toString().padLeft(2, "0")}:${d.minute.toString().padLeft(2, "0")}';
 }
 
 String statusName(dynamic s) =>
     {
-      'PENDING': 'قيد المراجعة',
-      'APPROVED': 'مقبول',
-      'REJECTED': 'مرفوض',
-      'ACTIVE': 'نشط',
-      'SUSPENDED': 'موقوف',
-      'REQUESTED': 'طلب جديد',
-      'PAID': 'تم التحويل',
-      'DISPUTED': 'يوجد اعتراض',
-      'CANCELLED': 'ملغى',
-      'EXPIRED': 'منتهي',
-      'RECORDED': 'تمت',
-      'OPEN': 'مفتوح',
-      'WAITING_ADMIN': 'بانتظار الإدارة',
-      'WAITING_USER': 'بانتظار ردك',
-      'CLOSED': 'مغلق',
+      'PENDING': appText('s82'),
+      'APPROVED': appText('s83'),
+      'REJECTED': appText('s84'),
+      'ACTIVE': appText('s85'),
+      'SUSPENDED': appText('s86'),
+      'REQUESTED': appText('s87'),
+      'PAID': appText('s88'),
+      'DISPUTED': appText('s89'),
+      'CANCELLED': appText('s90'),
+      'EXPIRED': appText('s91'),
+      'RECORDED': appText('s92'),
+      'OPEN': appText('s93'),
+      'WAITING_ADMIN': appText('s94'),
+      'WAITING_USER': appText('s95'),
+      'CLOSED': appText('s96'),
     }['$s'] ??
     '$s';
 

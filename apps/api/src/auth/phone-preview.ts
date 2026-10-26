@@ -26,7 +26,7 @@ export function phoneOtpMode(): 'test'|'textbee'|null {
 export function phonePreviewStatus(){const mode=phoneOtpMode();return {enabled:mode!==null||whatsappConfig()!==null,testMode:mode==='test',smsEnabled:mode!==null,whatsappEnabled:whatsappConfig()!==null};}
 function requirePreview(){const mode=phoneOtpMode();if(!mode)throw new DomainError('PHONE_OTP_DISABLED');return mode;}
 
-const challengeInput=z.object({phone:phoneSchema,purpose:z.enum(['REGISTER','RESET'])}).strict();
+const challengeInput=z.object({phone:phoneSchema,purpose:z.enum(['REGISTER','RESET']),language:z.enum(['ar','en']).default('ar')}).strict();
 const proof={phone:phoneSchema,challengeId:z.string().uuid(),code:phoneCodeSchema.optional(),whatsappToken:whatsappSecretSchema.optional()};
 const oneProof=(v:{code?:string;whatsappToken?:string})=>Boolean(v.code)!==Boolean(v.whatsappToken);
 const registerInput=z.object({...proof,displayName:z.string().trim().min(2).max(100),password:newPasswordSchema,accountType:z.enum(['trainee','owner']).default('trainee'),gym:applicationFields.optional()}).strict().refine(oneProof).refine(v=>v.accountType!=='owner'||v.gym!==undefined);
@@ -34,7 +34,7 @@ const resetInput=z.object({...proof,newPassword:newPasswordSchema}).strict().ref
 function parse<S extends z.ZodType>(schema:S,input:unknown):z.infer<S>{const r=schema.safeParse(input);if(!r.success)throw new DomainError('INVALID_INPUT');return r.data;}
 
 export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
- const data=parse(challengeInput,input),mode=requirePreview();
+ const {language,...data}=parse(challengeInput,input),mode=requirePreview();
  // Avoid billing an SMS for an already registered number, before consuming send limits.
  if(data.purpose==='REGISTER'&&await db.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
  if(mode==='textbee'){
@@ -55,7 +55,7 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
   return {challengeId:id,expiresAt:expiresAt.toISOString(),retryAfterSeconds:60,testMode:mode==='test'};
  });
  // Send only after commit: serializable retries must never send duplicate messages.
- if(mode==='textbee')try{await sendTextbeeCode(data.phone,code,data.purpose);}catch(error){
+ if(mode==='textbee')try{await sendTextbeeCode(data.phone,code,data.purpose,undefined,language);}catch(error){
   await db.phoneOtpChallenge.updateMany({where:{id:challenge.challengeId,consumedAt:null},data:{consumedAt:new Date()}});
   throw error;
  }

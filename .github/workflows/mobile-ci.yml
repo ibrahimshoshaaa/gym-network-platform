@@ -46,6 +46,7 @@ jobs:
         working-directory: apps/mobile
         run: |
           python3 -m unittest discover -s tool -p 'test_signing.py'
+          python3 tool/generate_translations.py --check
           flutter analyze lib test --no-fatal-infos
           flutter test
       - name: Build optimized Android APKs

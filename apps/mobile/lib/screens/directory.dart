@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'campaigns.dart';
 import 'bookings.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +13,12 @@ import '../core/portal_ui.dart';
 
 Future<Position> currentPosition() async {
   if (!await Geolocator.isLocationServiceEnabled())
-    throw Exception('شغّل خدمة الموقع في الموبايل وحاول تاني.');
+    throw Exception(appText('s607'));
   var p = await Geolocator.checkPermission();
   if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
   if (p == LocationPermission.denied || p == LocationPermission.deniedForever)
     throw Exception(
-      'السماح بالموقع غير متاح. تقدر تبحث بالاسم والمنطقة أو تختار المكان على الخريطة.',
+      appText('s608'),
     );
   return Geolocator.getCurrentPosition(
     locationSettings: const LocationSettings(
@@ -125,24 +126,24 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  RefreshIndicator(
     onRefresh: () => load(),
     child: ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
-        const TraineeSectionHeader('اكتشف جيمك', subtitle: 'اختار المكان المناسب وشوف نقاط الزيارة.'),
+        TraineeSectionHeader(appText('s609'), subtitle: appText('s610')),
         TextField(
           controller: search,
           onSubmitted: (_) => load(),
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            hintText: 'اسم الجيم، المدينة أو المنطقة',
+            hintText: appText('s611'),
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon: IconButton(
-              tooltip: 'بحث',
+              tooltip: appText('s612'),
               onPressed: busy ? null : () => load(),
-              icon: const Icon(Icons.arrow_back_rounded),
+              icon: const Icon(Icons.arrow_forward_rounded),
             ),
           ),
         ),
@@ -153,12 +154,12 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
               child: OutlinedButton.icon(
                 onPressed: busy ? null : nearby,
                 icon: const Icon(Icons.near_me_rounded, size: 18),
-                label: Text(location == null ? 'الأقرب لموقعي' : 'تحديث موقعي'),
+                label: Text(location == null ? appText('s613') : appText('s614')),
               ),
             ),
             const SizedBox(width: 10),
             IconButton.filledTonal(
-              tooltip: map ? 'عرض القائمة' : 'عرض الخريطة',
+              tooltip: map ? appText('s615') : appText('s616'),
               onPressed: () => setState(() => map = !map),
               icon: Icon(map ? Icons.view_list_rounded : Icons.map_outlined),
             ),
@@ -166,34 +167,34 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         ),
         if (location != null)
           Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerStart,
             child: TextButton(
               onPressed: () {
                 setState(() => location = null);
                 load();
               },
-              child: const Text('إلغاء ترتيب المسافة'),
+              child: Text(appText('s617')),
             ),
           ),
         ExpansionTile(
           dense: true,
           visualDensity: VisualDensity.compact,
           tilePadding: EdgeInsets.zero,
-          title: const Text(
-            'تصفية بسعر الزيارة',
+          title: Text(
+            appText('s618'),
             style: TextStyle(fontSize: 13),
           ),
           children: [
             TextField(
               controller: maxPrice,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'أقصى عدد نقاط للزيارة',
+              decoration: InputDecoration(
+                labelText: appText('s619'),
               ),
             ),
             TextButton(
               onPressed: busy ? null : () => load(),
-              child: const Text('تطبيق'),
+              child: Text(appText('s620')),
             ),
           ],
         ),
@@ -207,7 +208,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             child: TextButton.icon(
               onPressed: busy ? null : clearFilters,
               icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-              label: const Text('مسح الفلاتر'),
+              label: Text(appText('s621')),
             ),
           ),
         if (busy && branches.isEmpty)
@@ -217,11 +218,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           ),
         if (!busy && branches.isEmpty && error == null)
           EmptyState(
-            'مفيش فروع مطابقة',
-            detail: 'جرّب منطقة مختلفة أو قلّل الفلاتر.',
+            appText('s622'),
+            detail: appText('s623'),
             action: OutlinedButton(
               onPressed: clearFilters,
-              child: const Text('عرض كل الجيمات'),
+              child: Text(appText('s624')),
             ),
           ),
         if (map && branches.isNotEmpty)
@@ -273,11 +274,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         if (cursor != null)
           OutlinedButton(
             onPressed: busy ? null : () => load(more: true),
-            child: Text(busy ? '…' : 'تحميل المزيد'),
+            child: Text(busy ? '…' : appText('s104')),
           ),
       ],
     ),
-  );
+  ); }
 }
 
 /// Prefer the gym identity image, then a branch photo. Invalid/missing images
@@ -299,6 +300,7 @@ class GymThumbnail extends StatelessWidget {
   const GymThumbnail({super.key,required this.branch,this.size=54});
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     final url=gymThumbnail(branch);
     final fallback=Container(color:const Color(0xffe3fbf3),
       alignment:Alignment.center,
@@ -318,8 +320,9 @@ class GymMapMarker extends StatelessWidget {
   const GymMapMarker({super.key,required this.branch,this.onTap});
   @override
   Widget build(BuildContext context) {
-    final name='${branch['gym']?['name'] ?? branch['name'] ?? 'جيم'}';
-    return Semantics(button:onTap!=null,label:'$name، ${branch['name'] ?? ''}',
+    AppLanguage.watch(context);
+    final name='${branch['gym']?['name'] ?? branch['name'] ?? appText('s1007')}';
+    return Semantics(button:onTap!=null,label:appText('s625', [name, branch['name'] ?? '']),
       child:GestureDetector(
         behavior:HitTestBehavior.opaque,onTap:onTap,
         child:Column(mainAxisAlignment:MainAxisAlignment.end,children:[
@@ -349,7 +352,7 @@ class BranchTile extends StatelessWidget {
   final VoidCallback onTap;
   const BranchTile({super.key,required this.branch,required this.onTap});
   @override
-  Widget build(BuildContext context)=>Material(
+  Widget build(BuildContext context){ AppLanguage.watch(context); return Material(
     color:Colors.white,borderRadius:BorderRadius.circular(22),clipBehavior:Clip.antiAlias,
     child:InkWell(onTap:onTap,child:Padding(
       padding:const EdgeInsets.all(16),
@@ -369,35 +372,35 @@ class BranchTile extends StatelessWidget {
         ]),
         const SizedBox(height:14),
         Wrap(spacing:8,runSpacing:8,children:[
-          if(branch['ratingAverage']!=null)_DirectoryChip('${(branch['ratingAverage'] as num).toStringAsFixed(1)} · ${branch['ratingCount']} تقييم',Icons.star_rounded),
-          _DirectoryChip(branch['serviceBooking']==true?(branch['minimumServicePoints']==null?'الخدمات قريبًا':'تبدأ من ${branch['minimumServicePoints']} نقطة'):'${branch['visitPricePoints']} نقطة / زيارة',Icons.toll_rounded,primary:true),
-          _DirectoryChip(branch['serviceBooking']==true?'المدة حسب الخدمات':'${branch['sessionMinutes']} دقيقة',Icons.schedule_rounded),
+          if(branch['ratingAverage']!=null)_DirectoryChip(appText('s626', [(branch['ratingAverage'] as num).toStringAsFixed(1), branch['ratingCount']]),Icons.star_rounded),
+          _DirectoryChip(branch['serviceBooking']==true?(branch['minimumServicePoints']==null?appText('s268'):appText('s269', [branch['minimumServicePoints']])):appText('s627', [branch['visitPricePoints']]),Icons.toll_rounded,primary:true),
+          _DirectoryChip(branch['serviceBooking']==true?appText('s628'):appText('s184', [branch['sessionMinutes']]),Icons.schedule_rounded),
           if(branch['distanceKm']!=null)
-            _DirectoryChip('${(branch['distanceKm'] as num).toStringAsFixed(1)} كم',Icons.near_me_outlined),
+            _DirectoryChip(appText('s629', [(branch['distanceKm'] as num).toStringAsFixed(1)]),Icons.near_me_outlined),
         ]),
         const SizedBox(height:12),
-        const Row(children:[
-          Expanded(child:Text('تفاصيل الجيم والاتجاهات',
+        Row(children:[
+          Expanded(child:Text(appText('s630'),
             style:TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w700))),
-          Icon(Icons.arrow_back_rounded,size:17,color:green),
+          Icon(Icons.arrow_forward_rounded,size:17,color:green),
         ]),
       ]),
     )),
-  );
+  ); }
 }
 class _DirectoryChip extends StatelessWidget {
  final String text;
  final IconData icon;
  final bool primary;
  const _DirectoryChip(this.text,this.icon,{this.primary=false});
- @override Widget build(BuildContext context)=>Container(
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Container(
   padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
   decoration:BoxDecoration(color:primary?const Color(0xffe3fbf3):canvas,
     borderRadius:BorderRadius.circular(10)),
   child:Row(mainAxisSize:MainAxisSize.min,children:[
     Icon(icon,size:14,color:green),const SizedBox(width:5),
     Flexible(child:Text(text,style:TextStyle(fontSize:11,color:primary?green:ink,fontWeight:FontWeight.w600))),
-  ]));
+  ])); }
 }
 
 class BranchDetail extends StatelessWidget {
@@ -405,8 +408,8 @@ class BranchDetail extends StatelessWidget {
   final String id;
   const BranchDetail({super.key, required this.api, required this.id});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'تفاصيل الجيم',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s631'),
     child: DataView(
       load: () => api.request('directory/branches/$id'),
       builder: (d, reload) {
@@ -417,7 +420,7 @@ class BranchDetail extends StatelessWidget {
             BranchTile(branch: b, onTap: () {}),
             const SizedBox(height: 18),
             ActionButton(
-              'افتح الاتجاهات',
+              appText('s632'),
               icon: Icons.directions_outlined,
               onPressed: () => launchUrl(
                 Uri.https('www.google.com', '/maps/dir/', {
@@ -428,16 +431,16 @@ class BranchDetail extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            ActionButton('احجز زيارتك',icon:Icons.calendar_month_outlined,onPressed:()=>open(context,CreateBookingScreen(api:api,branch:b))),
-            const SectionTitle('عن المكان'),
+            ActionButton(appText('s181'),icon:Icons.calendar_month_outlined,onPressed:()=>open(context,CreateBookingScreen(api:api,branch:b))),
+            SectionTitle(appText('s633')),
             Panel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('${b['gym']?['description'] ?? ''}'),
-                  Fact('العنوان', '${b['address']}'),
+                  Fact(appText('s327'), '${b['address']}'),
                   if (b['openingHours'] != null)
-                    Fact('مواعيد العمل', '${b['openingHours']}'),
+                    Fact(appText('s585'), '${b['openingHours']}'),
                   if (b['contactPhone'] != null)
                     TextButton.icon(
                       onPressed: () => launchUrl(
@@ -452,7 +455,7 @@ class BranchDetail extends StatelessWidget {
                 ],
               ),
             ),
-            const SectionTitle('الموقع'),
+            SectionTitle(appText('s634')),
             SizedBox(
               height: 230,
               child: ClipRRect(
@@ -494,7 +497,7 @@ class BranchDetail extends StatelessWidget {
         );
       },
     ),
-  );
+  ); }
 }
 
 class LocationPicker extends StatefulWidget {
@@ -510,16 +513,16 @@ class _LocationPickerState extends State<LocationPicker> {
   bool busy = false;
   Object? error;
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'حدد مكان الفرع',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s635'),
     child: Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
           child: Column(
             children: [
-              const Text(
-                'اضغط على مكان الفرع على الخريطة. تقدر تستخدم موقعك الحالي وتعدّله.',
+              Text(
+                appText('s636'),
               ),
               ErrorNote(error),
               TextButton.icon(
@@ -539,7 +542,7 @@ class _LocationPickerState extends State<LocationPicker> {
                         }
                       },
                 icon: const Icon(Icons.my_location_rounded),
-                label: Text(busy ? 'بنحدد موقعك…' : 'استخدم موقعي الحالي'),
+                label: Text(busy ? appText('s637') : appText('s638')),
               ),
             ],
           ),
@@ -576,7 +579,7 @@ class _LocationPickerState extends State<LocationPicker> {
         Padding(
           padding: const EdgeInsets.all(22),
           child: ActionButton(
-            'تأكيد المكان المحدد',
+            appText('s639'),
             onPressed: selected == null
                 ? null
                 : () => Navigator.pop(context, selected),
@@ -585,5 +588,5 @@ class _LocationPickerState extends State<LocationPicker> {
         ),
       ],
     ),
-  );
+  ); }
 }

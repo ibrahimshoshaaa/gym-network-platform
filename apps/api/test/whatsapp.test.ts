@@ -49,3 +49,11 @@ test('WhatsApp opt-in requires complete configuration and messages expose neithe
  assert.equal(whatsappMessages(payload,'other').length,0);
  assert.throws(()=>whatsappMessages({},'123456789'),/INVALID_INPUT/);
 });
+
+test('English inbound WhatsApp verification preserves purpose and the same signed-proof protocol',async()=>{
+ const {whatsappMessages}=await import('../src/auth/whatsapp-service.js');
+ for(const [label,purpose] of [['Verify mobile number in GymBank','REGISTER'],['Verify password recovery in GymBank','RESET']]){
+  const payload={object:'whatsapp_business_account',entry:[{changes:[{field:'messages',value:{metadata:{phone_number_id:'123456789'},messages:[{id:'synthetic-en',from:'201055549901',timestamp:'1792979000',type:'text',text:{body:label+'\nGBVERIFY '+'x'.repeat(43)}}]}}]}]};
+  assert.equal(whatsappMessages(payload,'123456789')[0]?.purpose,purpose);
+ }
+});

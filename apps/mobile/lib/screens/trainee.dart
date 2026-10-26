@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'home_cards.dart';
 import 'directory.dart';
 import 'ratings.dart';
@@ -40,32 +41,32 @@ class _TraineeHomeState extends State<TraineeHome>{
   }catch(e){if(mounted&&current==locationGeneration)setState((){locationError=e;location=null;nearby=[];});}finally{if(mounted&&current==locationGeneration)setState(()=>locating=false);}
  }
  Future<void> topup()async{await open(context,TopupScreen(api:widget.api));if(mounted)await load();}
- @override Widget build(BuildContext context)=>ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:()async{await Future.wait([load(),locate()]);},child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.only(bottom:28),children:[
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:()async{await Future.wait([load(),locate()]);},child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.only(bottom:28),children:[
   TraineeBalanceHero(api:widget.api,wallet:wallet,loading:walletLoading,topup:topup,qr:widget.showQr,history:()=>open(context,WalletHistory(api:widget.api)),notifications:()=>open(context,NotificationsScreen(api:widget.api)),workplace:widget.showWork),
-  if(widget.showWork!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Align(alignment:AlignmentDirectional.centerEnd,child:TextButton(onPressed:widget.showWork,child:const Text('عملي في الجيم')))),
+  if(widget.showWork!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Align(alignment:AlignmentDirectional.centerEnd,child:TextButton(onPressed:widget.showWork,child:Text(appText('s16'))))),
   if(walletError!=null)Padding(padding:const EdgeInsets.all(16),child:ErrorNote(walletError,retry:load)),
-  if((int.tryParse('${wallet?['unavailablePoints']}')??0)>0)Padding(padding:const EdgeInsets.all(16),child:PortalNote('${wallet!['unavailablePoints']} نقطة غير متاحة حاليًا. راجع الإدارة لتسوية صلاحية الرصيد.')),
-  Padding(padding:const EdgeInsets.fromLTRB(20,20,20,12),child:SectionTitle('جيمات قريبة منك',trailing:TextButton(onPressed:widget.showGyms,child:const Text('عرض الكل')))),
+  if((int.tryParse('${wallet?['unavailablePoints']}')??0)>0)Padding(padding:const EdgeInsets.all(16),child:PortalNote(appText('s640', [wallet!['unavailablePoints']]))),
+  Padding(padding:const EdgeInsets.fromLTRB(20,20,20,12),child:SectionTitle(appText('s641'),trailing:TextButton(onPressed:widget.showGyms,child:Text(appText('s642'))))),
   if(locating)const Padding(padding:EdgeInsets.all(20),child:LinearProgressIndicator(minHeight:2))
-  else if(locationError!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('موقعك يوصّلك للجيم الأقرب',style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:8),const Text('اسمح بالموقع أو ابحث عن الجيم بنفسك.',style:TextStyle(color:muted,fontSize:12)),const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[TextButton.icon(onPressed:locate,icon:const Icon(Icons.my_location_rounded),label:const Text('تفعيل الموقع')),TextButton(onPressed:widget.showGyms,child:const Text('البحث عن جيم'))])]))),
-  if(!locating&&locationError==null&&nearby.isEmpty)const Padding(padding:EdgeInsets.symmetric(horizontal:20,vertical:12),child:Text('مفيش فروع متاحة حاليًا في النتائج.',style:TextStyle(color:muted))),
+  else if(locationError!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(appText('s643'),style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:8),Text(appText('s644'),style:TextStyle(color:muted,fontSize:12)),const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[TextButton.icon(onPressed:locate,icon:const Icon(Icons.my_location_rounded),label:Text(appText('s645'))),TextButton(onPressed:widget.showGyms,child:Text(appText('s646')))])]))),
+  if(!locating&&locationError==null&&nearby.isEmpty)Padding(padding:EdgeInsets.symmetric(horizontal:20,vertical:12),child:Text(appText('s647'),style:TextStyle(color:muted))),
   if(nearby.isNotEmpty)SizedBox(height:270,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:20),itemCount:nearby.length,separatorBuilder:(_,_)=>const SizedBox(width:14),itemBuilder:(context,i)=>SizedBox(width:(MediaQuery.sizeOf(context).width*.72).clamp(230.0,320.0).toDouble(),child:NearbyGymCard(branch:nearby[i],onTap:()=>open(context,BranchDetail(api:widget.api,id:'${nearby[i]['id']}')))))),
-  const Padding(padding:EdgeInsets.fromLTRB(20,0,20,2),child:SectionTitle('عروض ليك')),
+  Padding(padding:EdgeInsets.fromLTRB(20,0,20,2),child:SectionTitle(appText('s648'))),
   HomeOffers(api:widget.api,latitude:location?.latitude,longitude:location?.longitude),
-  Padding(padding:const EdgeInsets.fromLTRB(20,4,20,0),child:SectionTitle('آخر الزيارات',trailing:TextButton(onPressed:()=>open(context,Screen(title:'زياراتك',child:VisitsScreen(api:widget.api))),child:const Text('كل الزيارات')))),
+  Padding(padding:const EdgeInsets.fromLTRB(20,4,20,0),child:SectionTitle(appText('s649'),trailing:TextButton(onPressed:()=>open(context,Screen(title:appText('s650'),child:VisitsScreen(api:widget.api))),child:Text(appText('s651'))))),
   if(visitsLoading)const Padding(padding:EdgeInsets.all(20),child:LinearProgressIndicator(minHeight:2))
   else if(visitsError!=null)Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:ErrorNote(visitsError,retry:load))
-  else if(visits?.isEmpty==true)const Padding(padding:EdgeInsets.symmetric(horizontal:20,vertical:12),child:Text('أول زيارة مؤكدة هتظهر هنا. جاهز تبدأ؟',style:TextStyle(color:muted,fontSize:12)))
+  else if(visits?.isEmpty==true)Padding(padding:EdgeInsets.symmetric(horizontal:20,vertical:12),child:Text(appText('s652'),style:TextStyle(color:muted,fontSize:12)))
   else ...?visits?.map((v)=>Padding(padding:const EdgeInsets.fromLTRB(20,0,20,14),child:RatedVisitCard(api:widget.api,visit:v))),
- ])));
+ ]))); }
 }
 
 class WalletHistory extends StatelessWidget {
   final ApiClient api;
   const WalletHistory({super.key, required this.api});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'حركة نقاطك',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s653'),
     child: PagedRecords(
       api: api,
       path: 'trainee/wallet/movements',
@@ -94,13 +95,13 @@ class WalletHistory extends StatelessWidget {
                   Expanded(
                     child: Text(
                       {
-                            'TOPUP': 'شحن رصيد',
-                            'VISIT': 'خصم زيارة',
-                            'VISIT_CANCELLATION': 'استرداد زيارة',
-                            'EXPIRY': 'انتهاء صلاحية',
-                            'ADJUSTMENT': 'تسوية رصيد',
+                            'TOPUP': appText('s654'),
+                            'VISIT': appText('s655'),
+                            'VISIT_CANCELLATION': appText('s656'),
+                            'EXPIRY': appText('s657'),
+                            'ADJUSTMENT': appText('s658'),
                           }[r['operation']] ??
-                          'حركة نقاط',
+                          appText('s659'),
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
@@ -117,7 +118,7 @@ class WalletHistory extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                '${r['sourceLabel'] ?? r['branch']?['name'] ?? 'المنصة'}',
+                '${r['sourceLabel'] ?? r['branch']?['name'] ?? appText('s1008')}',
                 style: const TextStyle(color: muted),
               ),
               Text(
@@ -130,7 +131,7 @@ class WalletHistory extends StatelessWidget {
         );
       },
     ),
-  );
+  ); }
 }
 
 class VisitCard extends StatelessWidget {
@@ -138,7 +139,7 @@ class VisitCard extends StatelessWidget {
   final Widget? rating;
   const VisitCard(this.visit, {super.key, this.rating});
   @override
-  Widget build(BuildContext context) => Panel(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Panel(
     padding:const EdgeInsets.all(16),
     child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -147,7 +148,7 @@ class VisitCard extends StatelessWidget {
           child:const Icon(Icons.fitness_center_rounded,color:green,size:21)),
         const SizedBox(width:10),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('${visit['branch']?['gym']?['name'] ?? 'زيارة جيم'}',
+          Text('${visit['branch']?['gym']?['name'] ?? appText('s1009')}',
             style:const TextStyle(fontWeight:FontWeight.w800,fontSize:15)),
           Text('${visit['branch']?['name'] ?? visit['branchName'] ?? ''}',
             style:const TextStyle(color:muted,fontSize:12)),
@@ -157,19 +158,19 @@ class VisitCard extends StatelessWidget {
       ]),
       const SizedBox(height:14),
       Wrap(spacing:14,runSpacing:8,children:[
-        Text('${visit['pointsCharged']} نقطة',
+        Text(appText('s120', [visit['pointsCharged']]),
           style:const TextStyle(color:green,fontWeight:FontWeight.w800,fontSize:16)),
         Text(shortDate(visit['startedAt']),style:const TextStyle(color:muted,fontSize:11)),
       ]),
       if(visit['status']=='ACTIVE')...[
         const SizedBox(height:10),
-        Text('نهاية الجلسة: ${shortDate(visit['expiresAt'])}',
+        Text(appText('s660', [shortDate(visit['expiresAt'])]),
           style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w600)),
       ],
       if (rating != null) ...[const SizedBox(height: 12), rating!],
       Reference('${visit['id']}'),
     ]),
-  );
+  ); }
 }
 
 class VisitsScreen extends StatelessWidget {
@@ -177,21 +178,21 @@ class VisitsScreen extends StatelessWidget {
   final VoidCallback? showQr;
   const VisitsScreen({super.key, required this.api, this.showQr});
   @override
-  Widget build(BuildContext context) => PagedRecords(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  PagedRecords(
     api: api,
     path: 'trainee/visits',
-    header: const TraineeSectionHeader('زياراتك', subtitle: 'كل تمرينة ونقاطها، في سجل واحد.'),
-    empty: 'لسه مفيش زيارات',
-    emptyDetail: 'احجز موعدك من تفاصيل الجيم واعرض QR الحجز عند وصولك. الزيارة هتظهر هنا بعد تأكيد حضورك.',
+    header: TraineeSectionHeader(appText('s650'), subtitle: appText('s661')),
+    empty: appText('s662'),
+    emptyDetail: appText('s663'),
     emptyAction: showQr == null
         ? null
         : ActionButton(
-            'افتح رمز الدخول',
+            appText('s664'),
             icon: Icons.qr_code_2_rounded,
             onPressed: showQr,
           ),
     item: (r) => RatedVisitCard(api: api, visit: r),
-  );
+  ); }
 }
 
 class QrScreen extends StatefulWidget {
@@ -267,18 +268,19 @@ class _QrScreenState extends State<QrScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     final valid=qr!=null && remaining>0 && foreground;
     return ListView(
       padding:const EdgeInsets.fromLTRB(20,8,20,28),
       children:[
-        const TraineeSectionHeader('رمز الدخول',subtitle:'اعرض الرمز للكاشير عند وصولك للجيم.'),
+        TraineeSectionHeader(appText('s13'),subtitle:appText('s665')),
         Panel(
           padding:const EdgeInsets.all(20),
           child:Column(children:[
-            const Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+            Row(mainAxisAlignment:MainAxisAlignment.center,children:[
               Icon(Icons.verified_user_outlined,size:18,color:green),
               SizedBox(width:7),
-              Flexible(child:Text('رمزك الشخصي',textAlign:TextAlign.center,
+              Flexible(child:Text(appText('s666'),textAlign:TextAlign.center,
                 style:TextStyle(color:green,fontSize:13,fontWeight:FontWeight.w700))),
             ]),
             const SizedBox(height:20),
@@ -287,33 +289,33 @@ class _QrScreenState extends State<QrScreen> with WidgetsBindingObserver {
               return SizedBox(width:size,height:size,child:busy
                 ? const Center(child:CircularProgressIndicator())
                 : valid
-                ? Semantics(label:'رمز دخول مؤقت؛ اعرضه للكاشير فقط',
+                ? Semantics(label:appText('s667'),
                     child:QrImageView(data:qr!['token'],version:QrVersions.auto,
                       size:size,backgroundColor:Colors.white))
-                : const Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+                : Column(mainAxisAlignment:MainAxisAlignment.center,children:[
                     Icon(Icons.qr_code_2_rounded,size:100,color:muted),
                     SizedBox(height:10),
-                    Text('الرمز غير متاح أو انتهت صلاحيته',textAlign:TextAlign.center,
+                    Text(appText('s668'),textAlign:TextAlign.center,
                       style:TextStyle(fontSize:12,color:muted)),
                   ]));
             }),
             const SizedBox(height:20),
-            Text(valid?'صالح لمدة $remaining ثانية':'افتح رمزًا جديدًا وقت الدخول',
+            Text(valid?appText('s232', [remaining]):appText('s669'),
               style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:green)),
             const SizedBox(height:12),
             ClipRRect(borderRadius:BorderRadius.circular(8),
               child:LinearProgressIndicator(value:valid?remaining/60:0,
                 color:green,backgroundColor:canvas,minHeight:4)),
             const SizedBox(height:18),
-            ActionButton('تحديث رمز الدخول',onPressed:load,busy:busy,icon:Icons.refresh_rounded),
+            ActionButton(appText('s670'),onPressed:load,busy:busy,icon:Icons.refresh_rounded),
           ]),
         ),
         ErrorNote(error,retry:load),
         const SizedBox(height:16),
-        const PortalNote('الرمز مؤقت وبيستخدم مرة واحدة. متشاركوش مع حد خارج الجيم.',
+        PortalNote(appText('s671'),
           icon:Icons.shield_outlined),
         const SizedBox(height:12),
-        const Text('نقاط الزيارة بتتراجع عند الكاشير قبل تأكيد حضورك.',
+        Text(appText('s672'),
           textAlign:TextAlign.center,style:TextStyle(color:muted,fontSize:11)),
       ],
     );
