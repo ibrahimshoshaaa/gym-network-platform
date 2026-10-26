@@ -43,23 +43,37 @@ class _MarketScreenState extends State<MarketScreen>{
   ]))); }); });
   if(changed==true&&mounted){setState((){condition=c;governorate=g;sort=s;});await load();}
  }
- @override Widget build(BuildContext context){ AppLanguage.watch(context); return RefreshIndicator(onRefresh:()=>load(),child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(18,10,18,28),children:[
-  Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(appText('s9'),style:TextStyle(fontSize:26,fontWeight:FontWeight.w900)),Text(appText('s857'),style:TextStyle(color:muted,fontSize:11))])),FilledButton.icon(style:FilledButton.styleFrom(minimumSize:const Size(0,54)),onPressed:editor,icon:const Icon(Icons.add_rounded,size:18),label:Text(appText('s858')))]),const SizedBox(height:18),
-  Wrap(spacing:8,runSpacing:8,children:[ChoiceChip(label:Text(appText('s859')),selected:!mine,onSelected:(_){setState(()=>mine=false);load();}),ChoiceChip(label:Text(appText('s860')),selected:mine,onSelected:(_){setState(()=>mine=true);load();})]),const SizedBox(height:16),
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return RefreshIndicator(onRefresh:()=>load(),child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,0,16,28),children:[
+  Row(children:[Expanded(child:Text(appText('s1059'),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800))),const SizedBox(width:8),FilledButton.icon(key:const Key('market.create'),style:FilledButton.styleFrom(minimumSize:const Size(0,36),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontSize:12,fontWeight:FontWeight.w700),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(12))),onPressed:editor,icon:const Icon(Icons.add_rounded,size:17),label:Text(appText('s1060')))]),const SizedBox(height:8),
+  Container(padding:const EdgeInsets.all(3),decoration:BoxDecoration(color:const Color(0xffe9edf2),borderRadius:BorderRadius.circular(15)),child:Row(children:[_tab(false,appText('s859')),_tab(true,appText('s860'))])),const SizedBox(height:8),
   if(!mine)...[
-   Row(children:[Expanded(child:TextField(controller:search,onSubmitted:(_)=>load(),decoration:InputDecoration(hintText:appText('s861'),prefixIcon:IconButton(tooltip:appText('s612'),onPressed:()=>load(),icon:const Icon(Icons.search_rounded))))),const SizedBox(width:10),IconButton.filledTonal(tooltip:appText('s862'),onPressed:filter,icon:const Icon(Icons.tune_rounded))]),const SizedBox(height:12),
-   SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[Padding(padding:const EdgeInsetsDirectional.only(end:8),child:ChoiceChip(label:Text(appText('s848')),selected:category==null,onSelected:(_){setState(()=>category=null);load();})),...marketCategories.entries.map((entry)=>Padding(padding:const EdgeInsetsDirectional.only(end:8),child:ChoiceChip(label:Text(entry.value),selected:category==entry.key,onSelected:(_){setState(()=>category=entry.key);load();})))])),
+   Row(children:[Expanded(child:TextField(controller:search,onSubmitted:(_)=>load(),style:const TextStyle(fontSize:13),decoration:InputDecoration(isDense:true,contentPadding:const EdgeInsets.symmetric(horizontal:10,vertical:10),hintText:appText('s861'),prefixIcon:IconButton(tooltip:appText('s612'),onPressed:()=>load(),icon:const Icon(Icons.search_rounded,size:19))))),const SizedBox(width:6),IconButton.outlined(key:const Key('market.filters'),tooltip:appText('s862'),onPressed:filter,icon:const Icon(Icons.tune_rounded,size:19))]),const SizedBox(height:4),
+   SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[_categoryChip(null,appText('s848')),...marketCategories.entries.map((entry)=>_categoryChip(entry.key,entry.value))])),
    if(governorate!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(appText('s863', [governorate]),style:const TextStyle(color:green))),
-  ],const SizedBox(height:14),
+  ],const SizedBox(height:6),
   if(error!=null)ErrorNote(error,retry:()=>load()),
   if(loading)const Padding(padding:EdgeInsets.all(30),child:Center(child:CircularProgressIndicator()))
   else if(items.isEmpty&&error==null)EmptyState(mine?appText('s864'):appText('s865'),detail:mine?appText('s866'):appText('s867'))
-  else GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:items.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:12,mainAxisSpacing:14,mainAxisExtent:260),itemBuilder:(context,i){final p=items[i],images=(p['images'] as List? ??[]);return Material(color:Colors.white,borderRadius:BorderRadius.circular(20),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()async{await open(context,MarketDetail(api:widget.api,id:p['id']));if(mounted)await load();},child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+  else GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:items.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:12,mainAxisSpacing:14,mainAxisExtent:260),itemBuilder:(context,i){final p=items[i],images=(p['images'] as List? ??[]);return Material(key:ValueKey('market.card.${p['id']}'),color:Colors.white,borderRadius:BorderRadius.circular(20),clipBehavior:Clip.antiAlias,child:InkWell(onTap:()async{await open(context,MarketDetail(api:widget.api,id:p['id']));if(mounted)await load();},child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
    Expanded(child:Stack(fit:StackFit.expand,children:[marketImage(images.isEmpty?null:images.first['publicUrl']),PositionedDirectional(top:8,start:8,child:Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(10)),child:Text(p['condition']=='NEW'?appText('s267'):appText('s849'),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700))))])),
    Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(appText('s122', [money(p['pricePiasters'])]),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:green,fontWeight:FontWeight.w900,fontSize:17)),const SizedBox(height:5),Text('${p['title']}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:13)),const SizedBox(height:6),Text(mine?(marketStatuses[p['status']]??''):'${p['governorate']} · ${p['city']}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:muted,fontSize:10))])),
   ])));}),
   if(cursor!=null)Padding(padding:const EdgeInsets.only(top:16),child:OutlinedButton(onPressed:more?null:()=>load(next:true),child:Text(more?appText('s695'):appText('s696')))),
  ])); }
+ Widget _tab(bool value,String label)=>Expanded(child:Semantics(selected:mine==value,child:Padding(
+  padding:const EdgeInsets.symmetric(horizontal:1),child:Material(color:mine==value?Colors.white:Colors.transparent,
+   elevation:mine==value?1:0,borderRadius:BorderRadius.circular(12),child:InkWell(
+    key:ValueKey('market.tab.$value'),borderRadius:BorderRadius.circular(12),onTap:(){if(mine==value)return;setState(()=>mine=value);load();},
+    child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:11),child:Text(label,textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w700,color:mine==value?ink:muted))),
+  )),
+ )));
+ Widget _categoryChip(String? value,String label)=>Padding(padding:const EdgeInsetsDirectional.only(end:6),child:ChoiceChip(
+  label:Text(label),showCheckmark:false,shape:const StadiumBorder(),selected:category==value,
+  selectedColor:ink,labelStyle:TextStyle(fontSize:11,color:category==value?Colors.white:ink),
+  padding:const EdgeInsets.symmetric(horizontal:3),labelPadding:const EdgeInsets.symmetric(horizontal:8),
+  side:BorderSide(color:category==value?ink:const Color(0xffe0e5e8)),
+  onSelected:(_){setState(()=>category=value);load();},
+ ));
 }
 Widget marketImage(dynamic url)=>url==null?const ColoredBox(color:Color(0xffedf3ef),child:Icon(Icons.fitness_center_rounded,color:muted,size:36)):Image.network('$url',fit:BoxFit.cover,errorBuilder:(_,_,_)=>const ColoredBox(color:Color(0xffedf3ef),child:Icon(Icons.broken_image_outlined,color:muted)));
 

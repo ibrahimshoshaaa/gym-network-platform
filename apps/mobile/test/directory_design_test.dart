@@ -89,6 +89,11 @@ void main(){
   testWidgets('retain directory and detail review screenshots in $language',(t)async{
    t.view.physicalSize=const Size(393,851);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);AppLanguage.instance.use(language);
    final api=client('TRAINEE',(r)async{
+    if(r.url.path.endsWith('/market/options'))return reply({'governorates':['القاهرة']});
+    if(r.url.path.endsWith('/market/listings'))return reply({'items':[
+     {'id':'review1','title':'بار جيم','condition':'USED','pricePiasters':'180000','governorate':'القاهرة','city':'مدينة نصر','images':[]},
+     {'id':'review2','title':'بار حديد','condition':'NEW','pricePiasters':'55000','governorate':'المنوفية','city':'أشمون','images':[]},
+    ]});
     if(r.url.path.endsWith('/b1'))return reply({'branch':gym});
     if(r.url.path.contains('/directory/'))return reply({'items':[gym,{...gym,'id':'b2','gym':{'name':'Titan Fitness'},'name':'فرع شبين','visitPricePoints':45,'ratingAverage':4.6},{...gym,'id':'b3','gym':{'name':'Iron Club'},'name':'فرع الباجور','visitPricePoints':30,'ratingAverage':4.9}]});
     return reply({'items':[]});
@@ -99,6 +104,10 @@ void main(){
    expect(find.byType(AppBar),findsNothing,reason:'Discovery has its own heading instead of a second logo toolbar.');
    expect(t.getTopLeft(find.byType(BranchTile).first).dy,lessThan(185),reason:'Check the actual native shell so extra toolbar space cannot go unnoticed.');
    await capture(t,boundary,'directory-$language-${defaultTargetPlatform.name}');
+   await t.tap(find.byType(NavigationDestination).at(3));await t.pumpAndSettle();
+   expect(find.byType(AppBar),findsNothing);
+   expect(t.getTopLeft(find.byKey(const ValueKey('market.card.review1'))).dy,lessThan(235),reason:'Marketplace results should follow a compact header in the native shell.');
+   await capture(t,boundary,'market-$language-${defaultTargetPlatform.name}');
    await t.pumpWidget(RepaintBoundary(key:boundary,child:host(BranchDetail(api:api,id:'b1'),language:language,fontFamily:reviewFont)));await t.pump();await t.pump(const Duration(milliseconds:300));
    await capture(t,boundary,'gym-detail-$language-${defaultTargetPlatform.name}');
    await t.pumpWidget(const SizedBox());await t.pump();
