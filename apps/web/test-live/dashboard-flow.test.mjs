@@ -87,7 +87,7 @@ test('platform-only browser administration and independent native workflows',{ti
      if(width<=800){
       await page.locator('aside.sidebar').waitFor({state:'hidden'});
       await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();await page.locator('aside.sidebar').waitFor({state:'visible'});
-      await page.getByRole('button',{name:'إغلاق القائمة',exact:true}).click();await page.locator('aside.sidebar').waitFor({state:'hidden'});
+      await page.getByRole('button',{name:'إغلاق القائمة',exact:true}).click({position:{x:8,y:80}});await page.locator('aside.sidebar').waitFor({state:'hidden'});
      }
 
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2),false);
