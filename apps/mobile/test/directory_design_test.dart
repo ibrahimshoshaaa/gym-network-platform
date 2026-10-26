@@ -32,9 +32,13 @@ void main(){
  setUpAll(()async{
   final file=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
   if(await file.exists()){
-   final loader=FontLoader('GymReviewSans')..addFont(Future.value(ByteData.sublistView(await file.readAsBytes())));
-   await loader.load();reviewFont='GymReviewSans';
+   final bytes=ByteData.sublistView(await file.readAsBytes());
+   for(final name in ['GymReviewSans','Roboto','Ahem']){final loader=FontLoader(name)..addFont(Future.value(bytes));await loader.load();}
+   reviewFont='GymReviewSans';
   }
+  final icons=FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));await icons.load();
+  final cache=await Directory.systemTemp.createTemp('gym-map-review-');
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/path_provider'),(_)async=>cache.path);
  });
  test('gallery prefers covers and real photos, filters unsafe URLs, and retains a logo fallback',(){
   expect(gymGallery({'images':[{'url':'https://test.invalid/logo','purpose':'LOGO'},{'url':'http://test.invalid/no','purpose':'COVER'},{'url':'https://test.invalid/photo','purpose':'PHOTO'},{'url':'https://test.invalid/cover','purpose':'COVER'},{'url':'https://test.invalid/photo','purpose':'PHOTO'}]}).map((p)=>p['url']),['https://test.invalid/cover','https://test.invalid/photo']);
@@ -85,9 +89,9 @@ void main(){
     return reply({'items':[]});
    });
    const boundary=Key('directory.review');
-   await t.pumpWidget(host(RepaintBoundary(key:boundary,child:DirectoryScreen(api:api)),language:language,fontFamily:reviewFont));await t.pumpAndSettle();
+   await t.pumpWidget(RepaintBoundary(key:boundary,child:host(DirectoryScreen(api:api),language:language,fontFamily:reviewFont)));await t.pumpAndSettle();
    await capture(t,boundary,'directory-$language-${defaultTargetPlatform.name}');
-   await t.pumpWidget(host(RepaintBoundary(key:boundary,child:BranchDetail(api:api,id:'b1')),language:language,fontFamily:reviewFont));await t.pump();await t.pump(const Duration(milliseconds:300));
+   await t.pumpWidget(RepaintBoundary(key:boundary,child:host(BranchDetail(api:api,id:'b1'),language:language,fontFamily:reviewFont)));await t.pump();await t.pump(const Duration(milliseconds:300));
    await capture(t,boundary,'gym-detail-$language-${defaultTargetPlatform.name}');
    await t.pumpWidget(const SizedBox());await t.pump();
   },variant:platforms);
@@ -105,6 +109,14 @@ void main(){
    await t.pumpWidget(const SizedBox());await t.pump();
   },variant:platforms);
  }
+ testWidgets('large text gym details keep booking reachable on a narrow phone',(t)async{
+  t.view.physicalSize=const Size(320,740);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);
+  final api=client('TRAINEE',(r)async=>r.url.path.endsWith('/b1')?reply({'branch':{...gym,'gym':{'name':'جيم باسم طويل جدًا لاختبار تفاصيل المكان وحجم الخط الكبير'}}}):reply({'items':[]}));
+  await t.pumpWidget(host(BranchDetail(api:api,id:'b1'),scale:1.8));await t.pump();await t.pump(const Duration(milliseconds:300));
+  await t.scrollUntilVisible(find.byKey(const Key('gym.book')),180,scrollable:find.byType(Scrollable).first);await t.pump(const Duration(milliseconds:300));
+  expect(find.byKey(const Key('gym.book')).hitTestable(),findsOneWidget);expect(t.takeException(),isNull);
+  await t.pumpWidget(const SizedBox());await t.pump();
+ });
  testWidgets('service chips load within the scrolling detail page and open their actual booking',(t)async{
   final b={...gym,'serviceBooking':true,'minimumServicePoints':35};
   final api=client('TRAINEE',(r)async{if(r.url.path.endsWith('/b1'))return reply({'branch':b});if(r.url.path.endsWith('/services'))return reply({'serviceBooking':true,'items':[{'id':'s1','name':'تمرين بأجهزة الجيم','points':35,'durationMinutes':90,'version':1}],'hours':{'openMinute':480,'closeMinute':1380,'version':1}});return reply({'policy':{'version':1,'policy':{'mode':'MANUAL','graceMinutes':60}}});});

@@ -93,12 +93,12 @@ class _BranchDetailBodyState extends State<_BranchDetailBody>{
  void book({String? service})=>open(context,CreateBookingScreen(api:widget.api,branch:b,initialServiceId:service));
  Future<void> directions()=>launchUrl(Uri.https('www.google.com','/maps/dir/',{'api':'1','destination':'${point.latitude},${point.longitude}'}),mode:LaunchMode.externalApplication).then((_){ });
  return ListView(padding:const EdgeInsets.only(bottom:28),children:[
-  SizedBox(height:220,child:Semantics(button:photos.isNotEmpty,label:appText('s1042'),child:GestureDetector(onTap:photos.isEmpty?null:()=>open(context,_GymGallery(photos:photos,initial:selected)),child:Stack(fit:StackFit.expand,children:[
+  SizedBox(height:220*(MediaQuery.textScalerOf(context).scale(14)/14).clamp(1.0,1.8),child:Semantics(button:photos.isNotEmpty,label:appText('s1042'),child:GestureDetector(onTap:photos.isEmpty?null:()=>open(context,_GymGallery(photos:photos,initial:selected)),child:Stack(fit:StackFit.expand,children:[
    _BusinessPhoto(photo),const DecoratedBox(decoration:BoxDecoration(gradient:LinearGradient(begin:Alignment.topCenter,end:Alignment.bottomCenter,colors:[Colors.transparent,Color(0xee0d1b18)]))),
    PositionedDirectional(start:18,end:18,bottom:18,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     if(b['ratingAverage'] is num)Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(9)),child:Row(mainAxisSize:MainAxisSize.min,children:[_GymRating(branch:b),const SizedBox(width:5),Text(appText('s1043',[b['ratingCount']??0]),style:const TextStyle(fontSize:10,color:muted))])),
-    const SizedBox(height:7),Text(_gymName(b),style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
-    const SizedBox(height:3),Text('${b['name']} · ${_placeLabel(b)}',style:const TextStyle(color:Colors.white70,fontSize:12)),
+    const SizedBox(height:7),Text(_gymName(b),maxLines:3,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:24,fontWeight:FontWeight.w800)),
+    const SizedBox(height:3),Text('${b['name']} · ${_placeLabel(b)}',maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white70,fontSize:12)),
    ])),
   ])))),
   Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -150,7 +150,7 @@ class _BranchServiceChipsState extends State<_BranchServiceChips>{
   if(error!=null)return ErrorNote(error,retry:()=>load());
   if(services==null)return const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator()));
   if(services!.isEmpty)return Text(appText('s268'),style:const TextStyle(color:muted));
-  return Wrap(spacing:8,runSpacing:8,children:services!.map((s)=>ActionChip(avatar:const Icon(Icons.check_circle_outline,size:16,color:green),label:Text('${s['name']} · ${s['points']} ${appText('s1058')}'),onPressed:()=>widget.onBook(service:'${s['id']}'))).toList());
+  return Wrap(spacing:8,runSpacing:8,children:services!.map((s)=>ActionChip(avatar:const Icon(Icons.check_circle_outline,size:16,color:green),label:Text('${s['name']} · ${s['points']} ${appText('s1058')}',maxLines:2,overflow:TextOverflow.ellipsis),onPressed:()=>widget.onBook(service:'${s['id']}'))).toList());
  }
 }
 class _GymGallery extends StatefulWidget{
