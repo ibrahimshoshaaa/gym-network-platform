@@ -29,10 +29,10 @@ void main() {
       await t.tap(find.text('إعلاناتي'));
       await t.pumpAndSettle();
       expect(requested.any((u) => u.path.endsWith('/market/mine')), isTrue);
+      expect(t.takeException(), isNull);
       await t.tap(find.byKey(const Key('market.create')));
       await t.pumpAndSettle();
       expect(find.byType(MarketEditor), findsOneWidget);
-      expect(t.takeException(), isNull);
     });
   }
 
