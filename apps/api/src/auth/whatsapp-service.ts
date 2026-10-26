@@ -39,7 +39,7 @@ export async function requestWhatsappChallenge(db:PrismaClient,input:unknown) {
  await serializable(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`phone-otp:${data.phone}`},0))`;
   if(data.purpose==='REGISTER'&&await tx.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
-  const previous=await tx.phoneOtpChallenge.findFirst({where:{phone:data.phone,purpose:data.purpose},orderBy:{createdAt:'desc'}});
+  const previous=await tx.phoneOtpChallenge.findFirst({where:{phone:data.phone,purpose:data.purpose,mode:'whatsapp'},orderBy:{createdAt:'desc'}});
   if(previous&&Date.now()-previous.createdAt.getTime()<60000)throw new DomainError('PHONE_OTP_WAIT');
   await tx.phoneOtpChallenge.updateMany({where:{phone:data.phone,purpose:data.purpose,consumedAt:null},data:{consumedAt:new Date()}});
   await tx.phoneOtpChallenge.create({data:{id,...data,mode:'whatsapp',expiresAt,
