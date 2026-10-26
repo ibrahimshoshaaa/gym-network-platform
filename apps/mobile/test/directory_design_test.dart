@@ -17,7 +17,11 @@ import 'package:gym_network/screens/bookings.dart';
 import 'operations_test.dart' show client,reply;
 
 final gym=<String,dynamic>{'id':'b1','name':'فرع أشمون','gym':{'name':'جيم تجربة','description':'تفاصيل الجيم الحقيقية'},'governorate':'المنوفية','city':'أشمون','address':'عنوان الفرع الحقيقي','latitude':30.4,'longitude':31.1,'visitPricePoints':25,'sessionMinutes':90,'pricingVersion':1,'ratingAverage':4.8,'ratingCount':12,'openingHours':'من ٨ صباحًا إلى ١٢ مساءً','images':<dynamic>[]};
-Widget host(Widget child,{String language='ar',double scale=1,String? fontFamily})=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(theme:fontFamily==null?appTheme():appTheme().copyWith(textTheme:appTheme().textTheme.apply(fontFamily:fontFamily)),locale:Locale(language),supportedLocales:const[Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:MediaQuery(data:MediaQueryData(textScaler:TextScaler.linear(scale)),child:Scaffold(body:child))));
+ThemeData reviewTheme(String? font){
+ final theme=appTheme();
+ return font==null?theme:theme.copyWith(textTheme:theme.textTheme.apply(fontFamily:font),filledButtonTheme:FilledButtonThemeData(style:theme.filledButtonTheme.style!.copyWith(textStyle:WidgetStatePropertyAll(TextStyle(fontFamily:font,fontSize:16,fontWeight:FontWeight.w700)))));
+}
+Widget host(Widget child,{String language='ar',double scale=1,String? fontFamily})=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(debugShowCheckedModeBanner:false,theme:reviewTheme(fontFamily),locale:Locale(language),supportedLocales:const[Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:MediaQuery(data:MediaQueryData(textScaler:TextScaler.linear(scale)),child:Scaffold(body:child))));
 Future<void> capture(WidgetTester t,Key key,String name)async{
  await t.runAsync(()async{
   final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));

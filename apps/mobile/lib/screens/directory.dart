@@ -113,7 +113,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
    key:const PageStorageKey('trainee.directory'),physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,8,16,28),children:[
     Wrap(alignment:WrapAlignment.spaceBetween,crossAxisAlignment:WrapCrossAlignment.center,spacing:12,runSpacing:8,children:[
      Text(appText('s609'),style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800)),
-     OutlinedButton.icon(key:const Key('directory.map'),onPressed:()=>setState(()=>map=!map),icon:Icon(map?Icons.view_list_outlined:Icons.map_outlined,size:17),label:Text(map?appText('s615'):appText('s616')),style:OutlinedButton.styleFrom(minimumSize:const Size(0,42),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
+     OutlinedButton.icon(key:const Key('directory.map'),onPressed:()=>setState(()=>map=!map),icon:Icon(map?Icons.view_list_outlined:Icons.map_outlined,size:17),label:Text(map?appText('s615'):appText('s616')),style:OutlinedButton.styleFrom(minimumSize:const Size(0,42),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontSize:12,fontWeight:FontWeight.w600))),
     ]),
     const SizedBox(height:14),
     Row(children:[Expanded(child:TextField(key:const Key('directory.search'),controller:search,maxLength:80,
@@ -130,7 +130,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     ])),
     const SizedBox(height:10),
     Wrap(spacing:8,runSpacing:6,crossAxisAlignment:WrapCrossAlignment.center,children:[
-     OutlinedButton.icon(key:const Key('directory.nearby'),onPressed:busy?null:nearby,icon:Icon(location==null?Icons.near_me_outlined:Icons.my_location_rounded,size:17),label:Text(location==null?appText('s613'):appText('s614')),style:OutlinedButton.styleFrom(textStyle:const TextStyle(fontSize:12),foregroundColor:green)),
+     OutlinedButton.icon(key:const Key('directory.nearby'),onPressed:busy?null:nearby,icon:Icon(location==null?Icons.near_me_outlined:Icons.my_location_rounded,size:17),label:Text(location==null?appText('s613'):appText('s614')),style:OutlinedButton.styleFrom(textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontSize:12),foregroundColor:green)),
      if(filtered)TextButton.icon(onPressed:clearFilters,icon:const Icon(Icons.filter_alt_off_outlined,size:16),label:Text(appText('s621'),style:const TextStyle(fontSize:12))),
     ]),
     if(maxPrice.isNotEmpty||city.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Wrap(spacing:6,runSpacing:6,children:[if(maxPrice.isNotEmpty)_DirectoryChip(appText('s1048',[maxPrice]),Icons.toll_outlined),if(city.isNotEmpty)_DirectoryChip(city,Icons.place_outlined)])),
