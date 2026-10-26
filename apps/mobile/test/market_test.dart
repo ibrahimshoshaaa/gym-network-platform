@@ -23,13 +23,16 @@ void main() {
       await t.pumpAndSettle();
       expect(find.byType(MarketScreen), findsOneWidget);
       expect(find.text('كل المعروض'), findsOneWidget);
-      expect(find.text('بيع حاجة'), findsOneWidget);
+      expect(find.text('إعلان جديد'), findsOneWidget);
       expect(requested.where((u) => u.path.endsWith('/market/listings')).length, 1);
       expect(requested.where((u) => u.path.endsWith('/market/listings')).single.queryParameters.containsKey('gymId'), isFalse);
       await t.tap(find.text('إعلاناتي'));
       await t.pumpAndSettle();
       expect(requested.any((u) => u.path.endsWith('/market/mine')), isTrue);
       expect(t.takeException(), isNull);
+      await t.tap(find.byKey(const Key('market.create')));
+      await t.pumpAndSettle();
+      expect(find.byType(MarketEditor), findsOneWidget);
     });
   }
 

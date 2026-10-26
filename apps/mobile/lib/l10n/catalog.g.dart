@@ -1057,6 +1057,8 @@ const arCatalog = <String, String>{
   "s1056": "عند الوصول افتح الحجز واتبع تعليمات تأكيد الحضور بالـQR.",
   "s1057": "راجع تفاصيل الحجز وحالة النقاط من سجل حجوزاتك.",
   "s1058": "نقطة",
+  "s1059": "الإعلانات",
+  "s1060": "إعلان جديد",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2116,4 +2118,6 @@ const enCatalog = <String, String>{
   "s1056": "When you arrive, open your booking and follow its QR check-in instructions.",
   "s1057": "Check the booking details and points status in your bookings.",
   "s1058": "points",
+  "s1059": "Marketplace",
+  "s1060": "New listing",
 };
