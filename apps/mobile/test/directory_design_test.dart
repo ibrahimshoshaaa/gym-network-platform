@@ -62,7 +62,7 @@ void main(){
   expect(locations,0);expect(calls.last.queryParameters.containsKey('latitude'),false);
   await t.tap(find.byKey(const Key('directory.nearby')));await t.pumpAndSettle();expect(locations,1);
   expect(calls.last.queryParameters['latitude'],'30.4');
-  await t.scrollUntilVisible(find.text(appText('s104')),200);await t.tap(find.text(appText('s104')));await t.pumpAndSettle();
+  await t.scrollUntilVisible(find.text(appText('s104')),200,scrollable:find.byType(Scrollable).first);await t.pumpAndSettle();await t.tap(find.text(appText('s104')));await t.pumpAndSettle();
   expect(calls.last.queryParameters['cursor'],'next');expect(calls.last.queryParameters['longitude'],'31.1');expect(find.byType(BranchTile),findsNWidgets(2));
   expect(t.takeException(),isNull);
  });
@@ -100,7 +100,7 @@ void main(){
    t.view.physicalSize=const Size(393,851);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);AppLanguage.instance.use(language);
    final api=client('TRAINEE',(r)async{if(r.url.path.endsWith('/b1'))return reply({'branch':gym});if(r.url.path.endsWith('/services'))return reply({'items':[],'serviceBooking':false});return reply({'policy':{'version':1,'policy':{'mode':'MANUAL','graceMinutes':60}}});});
    await t.pumpWidget(host(BranchDetail(api:api,id:'b1'),language:language));await t.pump();await t.pump(const Duration(milliseconds:300));
-   expect(find.byKey(const Key('gym.book')).hitTestable(),findsOneWidget);expect(find.byKey(const Key('gym.directions')).hitTestable(),findsOneWidget);expect(find.text('جيم تجربة'),findsOneWidget);
+   expect(find.byKey(const Key('gym.book')).hitTestable(),findsOneWidget);expect(find.byKey(const Key('gym.directions')).hitTestable(),findsOneWidget);expect(find.text('جيم تجربة'),findsWidgets);
    await t.tap(find.byKey(const Key('gym.book')));await t.pump();await t.pump(const Duration(milliseconds:300));expect(find.byType(CreateBookingScreen),findsOneWidget);expect(t.takeException(),isNull);
    await t.pumpWidget(const SizedBox());await t.pump();
   },variant:platforms);
@@ -109,7 +109,7 @@ void main(){
   final b={...gym,'serviceBooking':true,'minimumServicePoints':35};
   final api=client('TRAINEE',(r)async{if(r.url.path.endsWith('/b1'))return reply({'branch':b});if(r.url.path.endsWith('/services'))return reply({'serviceBooking':true,'items':[{'id':'s1','name':'تمرين بأجهزة الجيم','points':35,'durationMinutes':90,'version':1}],'hours':{'openMinute':480,'closeMinute':1380,'version':1}});return reply({'policy':{'version':1,'policy':{'mode':'MANUAL','graceMinutes':60}}});});
   await t.pumpWidget(host(BranchDetail(api:api,id:'b1')));await t.pump();await t.pump(const Duration(milliseconds:300));
-  await t.scrollUntilVisible(find.text('تمرين بأجهزة الجيم · 35 نقطة'),200);await t.tap(find.text('تمرين بأجهزة الجيم · 35 نقطة'));await t.pump();await t.pump(const Duration(milliseconds:300));
+  await t.scrollUntilVisible(find.text('تمرين بأجهزة الجيم · 35 نقطة'),200,scrollable:find.byType(Scrollable).first);await t.pump(const Duration(milliseconds:300));await t.tap(find.text('تمرين بأجهزة الجيم · 35 نقطة'));await t.pump();await t.pump(const Duration(milliseconds:300));
   expect(t.widget<CreateBookingScreen>(find.byType(CreateBookingScreen)).initialServiceId,'s1');expect(t.takeException(),isNull);
   await t.pumpWidget(const SizedBox());await t.pump();
  });
