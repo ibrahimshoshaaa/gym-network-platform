@@ -83,3 +83,12 @@ jobs:
           GYM_BROWSER_TEST: "1"
           DATABASE_URL: postgresql://gym_app:gym_app@localhost:5432/gym_ci?schema=public
         run: pnpm --filter @gym/web test:live
+
+      - name: Retain platform-admin browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-admin-browser-checks
+          path: apps/web/build-verification/*.png
+          if-no-files-found: ignore
+          retention-days: 7

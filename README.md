@@ -4,6 +4,8 @@ Multi-gym visits, trainee points and gym settlements. ShoTech Solutions.
 
 ## Project status — 26 October 2026
 
+**The website is exclusively the platform administrator workspace; all customer and gym-team interfaces are in the Flutter app.** See [web scope and access boundaries](apps/web/README.md).
+
 **Implemented MVP in testing:** the web/API is deployed and signed Android APKs are available. Flutter screens serve trainees, gym owners, branch managers and cashiers. iOS simulator builds, unsigned device Release compilation and simulator startup checks pass; signed iPhone distribution and store publication remain separate release steps.
 
 The latest merged application changes are [#93](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/93) (platform-only points and TextBee), [#94](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/94) (short Arabic OTP messages), [#95](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/95) (staff password recovery) [#96](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/96) (transparent raised-QR navigation), and [#97](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/97) (complete removal of retired gym point commerce from API, web, mobile and the current database schema).
@@ -16,7 +18,7 @@ The latest merged application changes are [#93](https://github.com/ibrahimshosha
 | Visits and bookings | Branch/service selection, held booking points, QR attendance, walk-ins, arrival windows, cancellations and durable no-show review scheduling. |
 | Mobile experiences | Native role-specific screens, remembered sessions, wallet/recharge, nearby directory/map, visit history and ratings, account/password management. Raised QR button with transparent headroom. |
 | Shared services | Marketplace listings/reporting/moderation, maintenance tickets, campaign carousel, and service charges owed by gyms. |
-| Account deletion | Android/iOS confirmation and external web entry; settlement blockers, identity/content erasure and queued remote-media cleanup. |
+| Account deletion | Android/iOS confirmation and administrator review; settlement blockers, identity/content erasure and queued remote-media cleanup. |
 | Platform dashboard | Onboarding and price reviews, trainee topups, welcome-point settings, withdrawals, account-deletion reviews, moderation and reports. |
 
 ### Run and download
@@ -36,7 +38,7 @@ The merged `204762b` revision passed [API/ledger CI](https://github.com/ibrahims
 
 Public store release still needs Apple signing/TestFlight and real-device acceptance, store listings/privacy declarations, and the owner's approved privacy/retention/support details. Confirm carrier delivery and operational settlement/deletion review procedures before public rollout. Implemented features and passing CI do not establish store approval or full production acceptance.
 
-Optional [WhatsApp reverse verification](docs/whatsapp-verification-foundation.md) includes server challenges, signed inbound verification and mobile/web flows. It remains disabled until the migration, server configuration and handset acceptance steps are completed.
+Optional [WhatsApp reverse verification](docs/whatsapp-verification-foundation.md) includes server challenges, signed inbound verification and native mobile flows. It remains disabled until the migration, server configuration and handset acceptance steps are completed.
 
 ## Current business rules and guides
 

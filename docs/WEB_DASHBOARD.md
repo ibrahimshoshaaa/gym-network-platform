@@ -1,35 +1,8 @@
-# Arabic operations dashboard
+# Platform administrator web dashboard
 
-This increment adds `apps/web`, a Next.js dashboard using the existing Fastify
-API and PostgreSQL identity/ledger. No new identity vendor or parallel database
-is introduced. Source is prepared on a feature branch for review; it is not a
-hosted deployment. Merge prerequisite gym management/topup branches first.
+The website serves the platform administrator only. Trainee, gym-owner, branch-manager and cashier interfaces are provided by the Flutter app. See the [current web scope](../apps/web/README.md) for navigation and route boundaries.
 
-## Implemented screens
-
-- Responsive Arabic RTL sign-in for platform admin, gym owner/staff and invitation
-  acceptance. Loading/error states remain visible until requests finish.
-- Admin pricing: point price in EGP, gym stock purchase discount, independent
-  gym-to-platform redemption ratio, optimistic version checks, no seeded prices.
-- Admin InstaPay/wallet receiver identifiers, account names and enable/disable.
-- Admin point-quantity packages for trainees or branch stock, edit and disable.
-- Admin pending requests with pagination, applicant and branch identity, immutable
-  receiver snapshot, private receipt view/refresh, explicit received amount,
-  transfer reference and independent verification confirmations, approval/rejection.
-- Gym owner branch-stock purchases: active owned gym/branch selection, quantity,
-  amount or package quotes, exact payable amount, receiver copy, binary receipt
-  upload, idempotent submit and paginated own history.
-- Admin gym creation/owner invitations, gym activation/suspension/rejection,
-  branch activation and visit-pricing review; paginated management lists.
-- Accepted gym owners can edit gym/branch metadata, add branches and propose visit
-  prices, inspect price history, invite scoped cashiers/managers, disable/re-enable
-  assignments, and revoke/reissue invitations. Every branch shows its stock balance.
-- Password change and session revocation; logout waits for server confirmation.
-
-Cashiers and managers now have scoped operation screens, and trainees have a
-temporary web QR/wallet panel; see [CASHIER_VISITS.md](CASHIER_VISITS.md). Flutter,
-cancellation review and payout/settlement workflows remain later increments. The current owner selector shows at most 100 gyms/branches;
-admin package settings show the first 100 packages. Request histories paginate.
+The platform workspace has dedicated groups for daily reviews, gym management, finance, services, communication, account oversight, and general settings. Pricing, welcome points, payment accounts, packages, booking policy and support contact each have an independent screen and save action. Booking decisions, support conversations, user access, account deletion requests and expired-wallet reviews stay in their operational sections.
 
 ## Operator setup
 
@@ -48,14 +21,14 @@ admin package settings show the first 100 packages. Request histories paginate.
    `http://localhost:3000`. Restart after changing environment variables.
 4. `pnpm --filter @gym/web dev` starts the local Next.js dashboard. Sign in as
    platform owner using the account you provisioned. Create gyms and owner invitations from the admin Gym/Branches screen. Owners
-   accept through the login invitation mode, add branches and propose visit
+   accept the invitation code in the mobile app, add branches and propose visit
    pricing. Admin approves prices and explicitly activates each branch.
 5. For deployment, run `pnpm --filter @gym/web build` then `start`, or use the
    Next.js hosting adapter. Both origin variables are required in production.
    Use HTTPS for public origins. API HTTP is allowed only for loopback hosts in
    production, supporting API and web running on the same machine. Never expose
    private API traffic across a network using HTTP. Preview credentials and
-   database must be separate from production. No deployment is created by this PR.
+   database must be separate from production. The production website and embedded API are deployed in the same Vercel project.
 
 The API now exposes rate-limited `POST /auth/admin/login` for provisioned active
 admins only, with eight-hour sessions, dummy KDF for invalid identities and a
@@ -71,13 +44,13 @@ from an HttpOnly, SameSite=Strict cookie; production uses Secure and the `__Host
 prefix. Tokens are never returned to browser JavaScript, including password
 rotation, and are not stored in local/session storage. Backend authorization
 remains authoritative for every operation; menu visibility is only navigation.
-The allowlist is not an unrestricted URL proxy. Browser-supplied Authorization,
+The browser gateway additionally requires a current PLATFORM_ADMIN actor on every request, including when an old non-admin cookie is replayed. The native Bearer bridge remains separate. The allowlist is not an unrestricted URL proxy. Browser-supplied Authorization,
 Cookie and forwarded client-address headers are not passed to the backend.
 
 Every mutation, including login/logout/upload, checks exact configured Origin;
 missing, null and cross-site origins fail closed. Production does not trust a
 browser-controlled Host to select its allowed origin. Requests have bounded
-streamed bodies (8 KiB JSON / 5 MiB image), bounded query strings, no redirect
+streamed bodies (8 KiB JSON / 4 MiB image), bounded query strings, no redirect
 following, an upstream timeout, and private no-store responses. No CORS wildcard
 or backend credentials are exposed to the client. Cookie renewal is server-side.
 Security headers deny framing, objects and external form destinations. Receipt

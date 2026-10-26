@@ -4,11 +4,10 @@ import "@fontsource-variable/noto-sans-arabic";
 import "./globals.css";
 import "./market.css";
 import "./maintenance.css";
-import "./identity.css";
-import "./portal-parity.css";
+import "./admin-theme.css";
 export const metadata: Metadata = {
-  title: "GymBank | رصيد واحد، كل الجيمات",
-  description: "شبكة جيمات، محفظة نقاط واحدة، وتجربة تمرين أسهل.",
+  title: "GymBank | إدارة المنصة",
+  description: "لوحة صاحب منصة GymBank لإدارة الطلبات والجيمات والمالية والإعدادات.",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({

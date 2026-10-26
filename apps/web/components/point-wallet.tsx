@@ -1,37 +1,100 @@
 "use client";
-import { useEffect,useRef,useState,type FormEvent } from 'react';
-import { ArrowLeft,ArrowRight,CheckCircle2,Send,Wallet,RefreshCw,UserRound } from 'lucide-react';
-import { api,send,message,decimal,date } from '../lib/client';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Send, Wallet, RefreshCw, UserRound } from 'lucide-react';
+import { api, send, message, decimal, date } from '../lib/client';
 import { useCommand } from '../lib/use-financial-command';
-import { Busy,Empty,Field,Notice } from './ui';
-import { More,usePage } from './gyms/shared';
+import { Busy, Empty, Field, Notice } from './ui';
+import { More, usePage } from './gyms/shared';
 import { RecordReference } from './record-reference';
-type Person={id:string;label:string;phoneLast4:string;role:string};
-type Quote={recipientId:string;recipientLabel:string;phoneLast4:string;points:number;chargePiasters:string;pricingVersion:number;discountBps:number;recipientBalance:string;recipientAfter:string};
-type Receipt={id:string;kind:string;recipientLabel:string;phoneLast4:string;points:number;chargePiasters:string;createdAt:string};
-export function PointWallet({admin,}:{admin:boolean;}){
- const [version,setVersion]=useState(0);
- if(!admin)return <Empty title="شحن النقاط متاح لصاحب المنصة فقط"/>;
- return <><section className="card point-wallet-intro"><h2>شحن نقاط المتدرب</h2><p>راجع رقم المتدرب والمبلغ المحصّل قبل تأكيد الشحن.</p></section><PhoneTransfer admin source="admin/point-transfers" onLocked={()=>{}} onDone={()=>setVersion(v=>v+1)}/><PointTransferHistory key={version} source="admin/point-transfers"/></>;
+type Person = {
+    id: string;
+    label: string;
+    phoneLast4: string;
+    role: string;
+};
+type Quote = {
+    recipientId: string;
+    recipientLabel: string;
+    phoneLast4: string;
+    points: number;
+    chargePiasters: string;
+    pricingVersion: number;
+    discountBps: number;
+    recipientBalance: string;
+    recipientAfter: string;
+};
+type Receipt = {
+    id: string;
+    kind: string;
+    recipientLabel: string;
+    phoneLast4: string;
+    points: number;
+    chargePiasters: string;
+    createdAt: string;
+};
+export function PointWallet({ admin, }: {
+    admin: boolean;
+}) {
+    const [version, setVersion] = useState(0);
+    ;
+    return <><section className="card point-wallet-intro"><h2>شحن نقاط المتدرب</h2><p>راجع رقم المتدرب والمبلغ المحصّل قبل تأكيد الشحن.</p></section><PhoneTransfer admin source="admin/point-transfers" onLocked={() => { }} onDone={() => setVersion(v => v + 1)}/><PointTransferHistory key={version} source="admin/point-transfers"/></>;
 }
+function PhoneTransfer({ admin, source, onDone, onLocked }: {
+    admin: boolean;
+    source: string;
+    onDone: () => void;
+    onLocked: (locked: boolean) => void;
+}) {
+    const [phone, setPhone] = useState(''), [person, setPerson] = useState<Person | null>(null), [points, setPoints] = useState(''), [quote, setQuote] = useState<Quote | null>(null), [receipt, setReceipt] = useState<Receipt | null>(null), [method, setMethod] = useState('CASH'), [reference, setReference] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('');
+    const running = useRef(false), { call, uncertain } = useCommand();
+    useEffect(() => { onLocked(busy || uncertain); return () => onLocked(false); }, [busy, uncertain, onLocked]);
+    const number = Number(points.replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 1632)).replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 1776)));
+    async function find(e: FormEvent) { e.preventDefault(); if (running.current || uncertain)
+        return; running.current = true; setBusy(true); setError(''); try {
+        const p = await api<Person>(source + '/lookup', send({ phone }));
+        setPerson(p);
+    }
+    catch (e) {
+        setError(message(e));
+    }
+    finally {
+        running.current = false;
+        setBusy(false);
+    } }
+    async function review(e: FormEvent) { e.preventDefault(); if (running.current || uncertain || !person)
+        return; running.current = true; setBusy(true); setError(''); try {
+        setQuote(await api<Quote>(source + '/quotes', send({ recipientId: person.id, points: number })));
+    }
+    catch (e) {
+        setError(message(e));
+    }
+    finally {
+        running.current = false;
+        setBusy(false);
+    } }
+    async function confirm(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (running.current || !quote)
+        return; running.current = true; setBusy(true); setError(''); const form = new FormData(e.currentTarget); try {
+        const r = await call<Receipt>(source, { recipientId: quote.recipientId, recipientLabel: quote.recipientLabel, points: quote.points, pricingVersion: quote.pricingVersion, receivedAmountPiasters: quote.chargePiasters, fundsReceived: form.get('verified') === 'on', recipientConfirmed: form.get('verified') === 'on', paymentMethod: method, ...(method !== 'CASH' ? { paymentReference: reference } : {}) });
+        setReceipt(r);
+        onDone();
+    }
+    catch (e) {
+        setError(message(e));
+    }
+    finally {
+        running.current = false;
+        setBusy(false);
+    } }
+    function reset() { setReceipt(null); setQuote(null); setPerson(null); setPhone(''); setPoints(''); setReference(''); setMethod('CASH'); setError(''); }
+    const step = receipt ? 4 : quote ? 3 : person ? 2 : 1;
+    return <section className="card phone-transfer"><ol className="transfer-steps" aria-label="خطوات الإرسال">{['رقم الموبايل', 'الاسم والنقاط', 'مراجعة وتأكيد'].map((label, i) => <li key={label} className={step >= i + 1 ? 'current' : ''}><span>{step > i + 1 ? <CheckCircle2 size={15}/> : i + 1}</span>{label}</li>)}</ol><Notice text={error}/>
+ {receipt ? <div className="transfer-success" role="status"><CheckCircle2 size={44}/><h2>{'تم شحن النقاط'}</h2><p>{receipt.points} نقطة إلى {receipt.recipientLabel}</p><p>المبلغ المحصّل: {decimal(receipt.chargePiasters)} ج.م</p><RecordReference value={receipt.id}/><small>{date(receipt.createdAt)}</small><button className="primary full" onClick={reset}>عملية جديدة<Send size={17}/></button></div> : !person ? <form onSubmit={find}><fieldset disabled={busy}><h2>هترسل لمين؟</h2><Field label={'رقم موبايل المتدرب'} type="tel" name="phone" value={phone} onChange={e => setPhone(e.target.value)} required dir="ltr" autoComplete="tel" maxLength={40} placeholder="01xxxxxxxxx"/><button className="primary full">{busy ? <Busy /> : <>متابعة<ArrowLeft size={17}/></>}</button></fieldset></form> : !quote ? <form onSubmit={review}><fieldset disabled={busy}><div className="transfer-recipient"><span><UserRound size={25}/></span><div><small>المستلم</small><h3>{person.label}</h3><p dir="ltr">{phone}</p></div><button type="button" className="text-button" onClick={() => { setPerson(null); setError(''); }}>تغيير</button></div>
 
-function PhoneTransfer({admin,source,onDone,onLocked}:{admin:boolean;source:string;onDone:()=>void;onLocked:(locked:boolean)=>void}){
- const [phone,setPhone]=useState(''),[person,setPerson]=useState<Person|null>(null),[points,setPoints]=useState(''),[quote,setQuote]=useState<Quote|null>(null),[receipt,setReceipt]=useState<Receipt|null>(null),[method,setMethod]=useState('CASH'),[reference,setReference]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');const running=useRef(false),{call,uncertain}=useCommand();
- useEffect(()=>{onLocked(busy||uncertain);return()=>onLocked(false);},[busy,uncertain,onLocked]);
- const number=Number(points.replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)));
- async function find(e:FormEvent){e.preventDefault();if(running.current||uncertain)return;running.current=true;setBusy(true);setError('');try{const p=await api<Person>(source+'/lookup',send({phone}));setPerson(p);}catch(e){setError(message(e));}finally{running.current=false;setBusy(false);}}
- async function review(e:FormEvent){e.preventDefault();if(running.current||uncertain||!person)return;running.current=true;setBusy(true);setError('');try{setQuote(await api<Quote>(source+'/quotes',send({recipientId:person.id,points:number})));}catch(e){setError(message(e));}finally{running.current=false;setBusy(false);}}
- async function confirm(e:FormEvent<HTMLFormElement>){e.preventDefault();if(running.current||!quote)return;running.current=true;setBusy(true);setError('');const form=new FormData(e.currentTarget);try{const r=await call<Receipt>(source,{recipientId:quote.recipientId,recipientLabel:quote.recipientLabel,points:quote.points,pricingVersion:quote.pricingVersion,receivedAmountPiasters:quote.chargePiasters,fundsReceived:form.get('verified')==='on',recipientConfirmed:form.get('verified')==='on',paymentMethod:admin?method:'CASH',...(admin&&method!=='CASH'?{paymentReference:reference}:{})});setReceipt(r);onDone();}catch(e){setError(message(e));}finally{running.current=false;setBusy(false);}}
- function reset(){setReceipt(null);setQuote(null);setPerson(null);setPhone('');setPoints('');setReference('');setMethod('CASH');setError('');}
- const step=receipt?4:quote?3:person?2:1;
- return <section className="card phone-transfer"><ol className="transfer-steps" aria-label="خطوات الإرسال">{['رقم الموبايل','الاسم والنقاط','مراجعة وتأكيد'].map((label,i)=><li key={label} className={step>=i+1?'current':''}><span>{step>i+1?<CheckCircle2 size={15}/>:i+1}</span>{label}</li>)}</ol><Notice text={error}/>
- {receipt?<div className="transfer-success" role="status"><CheckCircle2 size={44}/><h2>{admin?'تم شحن النقاط':'تم إرسال النقاط'}</h2><p>{receipt.points} نقطة إلى {receipt.recipientLabel}</p><p>المبلغ المحصّل: {decimal(receipt.chargePiasters)} ج.م</p><RecordReference value={receipt.id}/><small>{date(receipt.createdAt)}</small><button className="primary full" onClick={reset}>عملية جديدة<Send size={17}/></button></div>:!person?<form onSubmit={find}><fieldset disabled={busy}><h2>هترسل لمين؟</h2><Field label={admin?'رقم موبايل المتدرب':'رقم موبايل المتدرب'} type="tel" name="phone" value={phone} onChange={e=>setPhone(e.target.value)} required dir="ltr" autoComplete="tel" maxLength={40} placeholder="01xxxxxxxxx"/><button className="primary full">{busy?<Busy/>:<>متابعة<ArrowLeft size={17}/></>}</button></fieldset></form>:!quote?<form onSubmit={review}><fieldset disabled={busy}><div className="transfer-recipient"><span><UserRound size={25}/></span><div><small>المستلم</small><h3>{person.label}</h3><p dir="ltr">{phone}</p></div><button type="button" className="text-button" onClick={()=>{setPerson(null);setError('');}}>تغيير</button></div>
-
- <Field label="عدد النقاط" name="points" inputMode="numeric" pattern="[0-9٠-٩۰-۹]+" value={points} onChange={e=>setPoints(e.target.value)} required maxLength={10} placeholder="مثال: 100"/><button className="primary full" disabled={!Number.isInteger(number)||number<=0||number>2147483647}>{busy?<Busy/>:<>مراجعة الإرسال<ArrowLeft size={17}/></>}</button></fieldset></form>:<form onSubmit={confirm}><fieldset disabled={busy||uncertain}><h2>راجع العملية</h2><div className="transfer-recipient"><UserRound size={25}/><div><small>المستلم</small><h3>{quote.recipientLabel}</h3><p dir="ltr">{phone}</p></div></div><dl className="finance-lines"><div><dt>النقاط المرسلة</dt><dd>{quote.points} نقطة</dd></div><div className="finance-total"><dt>المبلغ المطلوب تحصيله</dt><dd>{decimal(quote.chargePiasters)} ج.م</dd></div><div><dt>رصيد المستلم بعد العملية</dt><dd>{quote.recipientAfter} نقطة</dd></div></dl>
- {admin&&<><label className="field">طريقة استلام المبلغ<select value={method} onChange={e=>setMethod(e.target.value)}><option value="CASH">نقدًا</option><option value="INSTAPAY">إنستا باي</option><option value="WALLET">محفظة إلكترونية</option></select></label>{method!=='CASH'&&<Field label="مرجع التحويل المستلم" value={reference} onChange={e=>setReference(e.target.value)} required minLength={3} maxLength={100} dir="ltr"/>}</>}
- <label className="check"><input type="checkbox" name="verified" required/>تأكدت من اسم المستلم واستلمت المبلغ كاملًا</label><button type="button" className="text-button" onClick={()=>{setQuote(null);setError('');}}><ArrowRight size={16}/>تعديل النقاط</button></fieldset><Notice text={uncertain?'نتيجة العملية غير مؤكدة. اضغط التأكيد لإعادة نفس الطلب بأمان. لا تبدأ عملية جديدة قبل التحقق من السجل.':''}/><button className="primary full" disabled={busy}>{busy?<Busy/>:<>{uncertain?'إعادة تأكيد نفس العملية':admin?'تأكيد الشحن':'تأكيد الإرسال'}<Send size={17}/></>}</button></form>}
+ <Field label="عدد النقاط" name="points" inputMode="numeric" pattern="[0-9٠-٩۰-۹]+" value={points} onChange={e => setPoints(e.target.value)} required maxLength={10} placeholder="مثال: 100"/><button className="primary full" disabled={!Number.isInteger(number) || number <= 0 || number > 2147483647}>{busy ? <Busy /> : <>مراجعة الإرسال<ArrowLeft size={17}/></>}</button></fieldset></form> : <form onSubmit={confirm}><fieldset disabled={busy || uncertain}><h2>راجع العملية</h2><div className="transfer-recipient"><UserRound size={25}/><div><small>المستلم</small><h3>{quote.recipientLabel}</h3><p dir="ltr">{phone}</p></div></div><dl className="finance-lines"><div><dt>النقاط المرسلة</dt><dd>{quote.points} نقطة</dd></div><div className="finance-total"><dt>المبلغ المطلوب تحصيله</dt><dd>{decimal(quote.chargePiasters)} ج.م</dd></div><div><dt>رصيد المستلم بعد العملية</dt><dd>{quote.recipientAfter} نقطة</dd></div></dl>
+ {<><label className="field">طريقة استلام المبلغ<select value={method} onChange={e => setMethod(e.target.value)}><option value="CASH">نقدًا</option><option value="INSTAPAY">إنستا باي</option><option value="WALLET">محفظة إلكترونية</option></select></label>{method !== 'CASH' && <Field label="مرجع التحويل المستلم" value={reference} onChange={e => setReference(e.target.value)} required minLength={3} maxLength={100} dir="ltr"/>}</>}
+ <label className="check"><input type="checkbox" name="verified" required/>تأكدت من اسم المستلم واستلمت المبلغ كاملًا</label><button type="button" className="text-button" onClick={() => { setQuote(null); setError(''); }}><ArrowRight size={16}/>تعديل النقاط</button></fieldset><Notice text={uncertain ? 'نتيجة العملية غير مؤكدة. اضغط التأكيد لإعادة نفس الطلب بأمان. لا تبدأ عملية جديدة قبل التحقق من السجل.' : ''}/><button className="primary full" disabled={busy}>{busy ? <Busy /> : <>{uncertain ? 'إعادة تأكيد نفس العملية' : 'تأكيد الشحن'}<Send size={17}/></>}</button></form>}
  </section>;
 }
-function PointTransferHistory({source}:{source:string}){const list=usePage<Receipt>(source);return <section className="card"><div className="section-toolbar"><h2>آخر العمليات</h2><button className="text-button" disabled={list.loading} onClick={()=>void list.refresh()}><RefreshCw size={16}/>تحديث</button></div><Notice text={list.error}/>{list.loading&&!list.rows.length?<Busy/>:!list.rows.length&&!list.error?<Empty title="لا توجد عمليات مباشرة مسجلة"/>:<div className="timeline">{list.rows.map(r=><article key={r.id}><div className="section-toolbar"><strong>شحن من المنصة · {r.points} نقطة</strong><span className="badge approved">تمت</span></div><p>{r.recipientLabel} · آخر الرقم {r.phoneLast4}</p><small>{decimal(r.chargePiasters)} ج.م · {date(r.createdAt)}</small><RecordReference value={r.id}/></article>)}</div>}<More list={list}/></section>}
-
-
+function PointTransferHistory({ source }: {
+    source: string;
+}) { const list = usePage<Receipt>(source); return <section className="card"><div className="section-toolbar"><h2>آخر العمليات</h2><button className="text-button" disabled={list.loading} onClick={() => void list.refresh()}><RefreshCw size={16}/>تحديث</button></div><Notice text={list.error}/>{list.loading && !list.rows.length ? <Busy /> : !list.rows.length && !list.error ? <Empty title="لا توجد عمليات مباشرة مسجلة"/> : <div className="timeline">{list.rows.map(r => <article key={r.id}><div className="section-toolbar"><strong>شحن من المنصة · {r.points} نقطة</strong><span className="badge approved">تمت</span></div><p>{r.recipientLabel} · آخر الرقم {r.phoneLast4}</p><small>{decimal(r.chargePiasters)} ج.م · {date(r.createdAt)}</small><RecordReference value={r.id}/></article>)}</div>}<More list={list}/></section>; }

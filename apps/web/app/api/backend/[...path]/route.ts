@@ -1,8 +1,7 @@
 import {dispatchAccountErasure} from '../../../../lib/account-deletion';
-import { bookingWorkflowRequest } from "../../../../lib/scheduled-reservation";
+import {allowedAdminPath} from "../../../../lib/admin-access";
 import { cookies } from "next/headers";
 import {
-  allowedPath,
   boundedBody,
   checkOrigin,
   GatewayError,
@@ -13,6 +12,7 @@ import {
   failure,
   json,
   sessionToken,
+  currentUser,
   upstream,
 } from "../../../../lib/gateway";
 export const runtime = "nodejs";
@@ -20,11 +20,12 @@ type Context = { params: Promise<{ path: string[] }> };
 async function handle(request: Request, context: Context) {
   try {
     const path = (await context.params).path.join("/");
-    if (!allowedPath(request.method, path))
+    if (!allowedAdminPath(request.method, path))
       return json({ code: "NOT_FOUND" }, 404);
     if (request.method !== "GET") checkOrigin(request);
     const token = await sessionToken();
     if (!token) return json({ code: "UNAUTHENTICATED" }, 401);
+    await currentUser().then(user=>{if(!user)throw new GatewayError("UNAUTHENTICATED",401);});
     const upload = /^(maintenance|promotions)\/branches\/[0-9a-f-]{36}\/assets$/i.test(path) || path === "market/assets" || path === "receipts" || path === "admin/campaign-assets" || /^gyms\/[^/]+\/images$/.test(path),
       headers: Record<string, string> = {};
     let body: Uint8Array | undefined;
@@ -55,8 +56,6 @@ async function handle(request: Request, context: Context) {
     }
     const query = new URL(request.url).search;
     if (query.length > (path === "directory/branches" ? 2048 : 1024)) throw new GatewayError("INVALID_INPUT", 400);
-    const scheduled = await bookingWorkflowRequest(path,request.method,token,body,request.headers.get("idempotency-key")??"");
-    if(scheduled)return scheduled;
     const response = await upstream(
       path + query,
       {

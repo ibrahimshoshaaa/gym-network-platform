@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, Circle, Coins, CreditCard, RefreshCw } from "lucide-react";
 import { api, date, decimal, message, type Settings } from "../lib/client";
 import { Busy, Notice } from "./ui";
-export type AdminDestination = "requests" | "finance" | "more" | "gym-applications" | "direct-topup" | "pricing" | "payments" | "gyms" | "reviews" | "reports" | "branch-prices" | "withdrawals" | "operation-reviews" | "packages" | "support" | "users" | "audit" | "disputes";
+import type {AdminDestination} from "../lib/navigation";
+export type {AdminDestination} from "../lib/navigation";
 export type AdminSummary = {asOf:string;cards:{label:string;value:string;destination:string;unit?:string}[]};
 const queues = [
  {label:"شحن ينتظر المراجعة",title:"طلبات الشحن",description:"طابق التحويل وأضف النقاط.",destination:"reviews"},
@@ -69,7 +70,7 @@ export function AdminSetup({ settings, onNavigate }: { settings: Settings; onNav
   const ready = priced && payment;
   const steps = [
     { id: "pricing" as const, title: "حدد سعر النقطة والنسب", done: priced, icon: Coins,
-      detail: priced ? `سعر النقطة الحالي ${decimal(settings.policy!.pointPricePiasters)} ج.م. راجع خصم شراء الجيم ونسبة بيعه لصاحب المنصة.` : "حدد سعر النقطة وخصم شراء الجيم ونسبة بيع الجيم لصاحب المنصة." },
+      detail: priced ? `سعر النقطة الحالي ${decimal(settings.policy!.pointPricePiasters)} ج.م. راجع نسبة مستحقات الجيم من الزيارة.` : "حدد سعر النقطة ونسبة مستحقات الجيم من الزيارة." },
     { id: "payments" as const, title: "فعّل حسابًا لاستقبال التحويل", done: payment, icon: CreditCard,
       detail: payment ? "توجد طريقة دفع مفعّلة. راجع رقم الحساب واسم صاحبه قبل استقبال التحويلات." : "أضف حساب إنستا باي أو المحفظة واسم صاحبه، ثم فعّل إتاحته للعملاء." },
   ];

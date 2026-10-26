@@ -1,3 +1,4 @@
+import {requirePlatformAdmin} from "./admin-access";
 import { sessionExpiry } from "./session-policy";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -65,12 +66,14 @@ export async function currentUser() {
   const result = await upstream("me", {}, token);
   if (result.status === 401 || result.status === 403) return null;
   if (!result.ok) throw new GatewayError("SERVICE_UNAVAILABLE", 503);
-  return (await result.json()) as {
+  const user = (await result.json()) as {
     id: string;
     displayName: string;
     role: string;
     email: string;
     phone: string;
   };
+  requirePlatformAdmin(user);
+  return user;
 }
 

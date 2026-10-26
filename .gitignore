@@ -29,3 +29,6 @@ apps/mobile/ios/
 *.mobileprovision
 
 __pycache__/
+
+# Ephemeral browser verification screenshots retained by CI artifacts.
+apps/web/build-verification/
