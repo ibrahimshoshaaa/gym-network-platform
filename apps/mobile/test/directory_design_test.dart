@@ -4,7 +4,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:gym_network/core/api.dart';
 import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/l10n/language.dart';
 import 'package:gym_network/screens/directory.dart';

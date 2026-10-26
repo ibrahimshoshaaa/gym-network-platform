@@ -113,7 +113,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
    key:const PageStorageKey('trainee.directory'),physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,8,16,28),children:[
     Wrap(alignment:WrapAlignment.spaceBetween,crossAxisAlignment:WrapCrossAlignment.center,spacing:12,runSpacing:8,children:[
      Text(appText('s609'),style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800)),
-     OutlinedButton.icon(key:const Key('directory.map'),onPressed:()=>setState(()=>map=!map),icon:Icon(map?Icons.view_list_outlined:Icons.map_outlined,size:17),label:Text(map?appText('s615'):appText('s616'),style:OutlinedButton.styleFrom(minimumSize:const Size(0,42),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
+     OutlinedButton.icon(key:const Key('directory.map'),onPressed:()=>setState(()=>map=!map),icon:Icon(map?Icons.view_list_outlined:Icons.map_outlined,size:17),label:Text(map?appText('s615'):appText('s616')),style:OutlinedButton.styleFrom(minimumSize:const Size(0,42),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
     ]),
     const SizedBox(height:14),
     Row(children:[Expanded(child:TextField(key:const Key('directory.search'),controller:search,maxLength:80,
