@@ -36,6 +36,15 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
     foreground = state == AppLifecycleState.resumed;
     if (foreground && challenge != null && !verified) unawaited(check());
   }
+  void fail(Object failure) {
+    // A registered number is an account error, not a WhatsApp transport failure.
+    if (failure is ApiFailure && failure.code == 'ACCOUNT_UNAVAILABLE') {
+      timer?.cancel();
+      Navigator.pop(context, <String, dynamic>{'failure': failure});
+      return;
+    }
+    setState(() { error = failure; phase = failure is ApiFailure && failure.code == 'WHATSAPP_UNAVAILABLE' ? WhatsappPhase.unavailable : WhatsappPhase.error; });
+  }
   Future<void> start() async {
     if (completing) return;
     timer?.cancel();
@@ -46,7 +55,7 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
       if (!mounted) { await cancel(result); return; }
       setState(() { challenge = result; verified = false; phase = WhatsappPhase.ready; });
       timer = Timer.periodic(const Duration(seconds: 5), (_) { if (foreground) unawaited(check()); });
-    } catch (e) { if (mounted) setState(() { error = e; phase = e is ApiFailure && e.code == 'WHATSAPP_UNAVAILABLE' ? WhatsappPhase.unavailable : WhatsappPhase.error; }); }
+    } catch (e) { if (mounted) fail(e); }
     finally { if (mounted) setState(() => loading = false); }
   }
   Future<void> openWhatsapp() async {
@@ -87,7 +96,7 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
       await widget.onConfirm?.call(value);
       finished = true;
       if (mounted) Navigator.pop(context, value);
-    } catch (e) { if (mounted) setState(() { error = e; phase = WhatsappPhase.error; }); }
+    } catch (e) { if (mounted) fail(e); }
     finally { if (mounted) setState(() => completing = false); }
   }
   Future<void> retry() async {
@@ -99,9 +108,7 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
   }
   @override Widget build(BuildContext context) { AppLanguage.watch(context); return  PopScope(canPop: !completing, child:
     loading || completing ? Screen(title: widget.english ? 'WhatsApp verification' : appText('s558'), child: const Center(child: CircularProgressIndicator())) :
-    Column(children: [if (error != null) Padding(padding: const EdgeInsets.all(16), child: ErrorNote(error)),
-      Expanded(child: WhatsappVerificationScreen(phone: '${challenge?['phone'] ?? widget.phone}', english: widget.english, phase: phase,
+    WhatsappVerificationScreen(phone: '${challenge?['phone'] ?? widget.phone}', english: widget.english, phase: phase, error: error,
         onOpen: () => unawaited(openWhatsapp()), onRetry: () => unawaited(retry()),
-        onSms: () => Navigator.pop(context, <String,dynamic>{'useSms': true}))),
-    ])); }
+        onSms: () => Navigator.pop(context, <String,dynamic>{'useSms': true}))); }
 }

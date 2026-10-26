@@ -8,6 +8,7 @@ import 'package:gym_network/l10n/language.dart';
 import 'package:gym_network/l10n/catalog.g.dart';
 import 'package:gym_network/screens/account.dart';
 import 'package:gym_network/screens/auth.dart';
+import 'package:gym_network/screens/whatsapp_phone_flow.dart';
 import 'operations_test.dart' show client, reply;
 
 void main() {
@@ -60,6 +61,8 @@ void main() {
         home:Scaffold(body:AccountScreen(api:api))))));
     await t.pumpAndSettle();
     await t.scrollUntilVisible(find.byKey(const ValueKey('language.choice')),200);
+    expect(find.ancestor(of:find.byKey(const ValueKey('account.language')),matching:find.byType(Panel)),findsOneWidget);
+    expect(find.descendant(of:find.byKey(const ValueKey('account.language')),matching:find.text('العربية')),findsOneWidget);
     await t.tap(find.byKey(const ValueKey('language.choice')));await t.pumpAndSettle();
     await t.tap(find.text('English').last);await t.pumpAndSettle();
     expect(Directionality.of(t.element(find.byKey(const ValueKey('language.choice')))),TextDirection.ltr);
@@ -67,6 +70,29 @@ void main() {
     expect(find.text('Your details and security'),findsOneWidget);
     expect(api.user!['displayName'],'محمد شوشه');
     expect(find.byType(AccountScreen),findsOneWidget);
+  });
+  testWidgets('existing WhatsApp number offers sign in and keeps the typed number', (t) async {
+    final api=client('TRAINEE',(r) async {
+      if(r.url.path.endsWith('/status')) return reply({'smsEnabled':true,'whatsappEnabled':true});
+      throw const ApiFailure('ACCOUNT_UNAVAILABLE');
+    });
+    await t.pumpWidget(MaterialApp(theme:appTheme(),supportedLocales:const [Locale('ar'),Locale('en')],
+      localizationsDelegates:GlobalMaterialLocalizations.delegates,home:AuthScreen(api:api)));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.byKey(const ValueKey('auth.signup.tab'))); await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('auth.signup.tab'))); await t.pumpAndSettle();
+    for(final entry in {'displayName':'عميل تجربة','phone':'01055550123','password':'A memorable password'}.entries) {
+      final field=find.byKey(ValueKey('auth.${entry.key}'));
+      await t.ensureVisible(field); await t.pumpAndSettle(); await t.enterText(field,entry.value);
+    }
+    final submit=find.widgetWithText(FilledButton,'إنشاء حساب متدرب');
+    await t.ensureVisible(submit); await t.pumpAndSettle(); await t.tap(submit); await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('phone.method.whatsapp'))); await t.pumpAndSettle();
+    expect(find.byType(WhatsappPhoneFlow),findsNothing);
+    final signIn=find.byKey(const ValueKey('auth.existingAccount'));
+    await t.ensureVisible(signIn); await t.pumpAndSettle(); await t.tap(signIn); await t.pumpAndSettle();
+    expect(t.widget<TextFormField>(find.byKey(const ValueKey('auth.identifier'))).controller!.text,'01055550123');
+    expect(t.takeException(),isNull);
   });
   testWidgets('login language changes retain typed form values on a narrow screen', (t) async {
     t.view.physicalSize=const Size(375,812);t.view.devicePixelRatio=1;

@@ -12,9 +12,10 @@ class WhatsappVerificationScreen extends StatelessWidget {
   final bool english;
   final WhatsappPhase phase;
   final VoidCallback? onOpen, onRetry, onSms;
+  final Object? error;
   const WhatsappVerificationScreen({super.key, required this.phone,
     this.english = false, this.phase = WhatsappPhase.unavailable,
-    this.onOpen, this.onRetry, this.onSms});
+    this.onOpen, this.onRetry, this.onSms, this.error});
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +47,7 @@ class WhatsappVerificationScreen extends StatelessWidget {
                 Icon(phase == WhatsappPhase.verified ? Icons.check_circle_outline : Icons.chat_outlined, color: green, size: 48),
                 const SizedBox(height: 20), Text(title, style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 12), Semantics(liveRegion: true, child: Text(detail)),
+                ErrorNote(error),
                 const SizedBox(height: 20), Text(phone, textDirection: TextDirection.ltr, textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 24),

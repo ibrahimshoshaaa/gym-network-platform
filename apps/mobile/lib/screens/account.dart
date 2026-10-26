@@ -73,6 +73,8 @@ class _AccountScreenState extends State<AccountScreen> {
         const Divider(height:1),
         _item(appText('s969'),Icons.lock_outline_rounded,
           ()=>open(context,PasswordScreen(api:widget.api))),
+        const Divider(height:1),
+        const LanguageSelector(),
       ])),
       SectionTitle(appText('s970')),
       Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
@@ -89,7 +91,6 @@ class _AccountScreenState extends State<AccountScreen> {
       const SizedBox(height:20),
       _deleteAccountButton(context),
       const SizedBox(height: 8),
-      const LanguageSelector(),
       _logoutButton(),
       const SizedBox(height:18),
       const Text('GYMBANK · 0.2.7\nShoTech Solutions',
@@ -191,6 +192,7 @@ class _AccountScreenState extends State<AccountScreen> {
               Icons.lock_outline_rounded,
               () => open(context, PasswordScreen(api: widget.api)),
             ),
+            const LanguageSelector(),
             if (!widget.workplace)
               _item(
                 appText('s162'),
@@ -214,7 +216,6 @@ class _AccountScreenState extends State<AccountScreen> {
       const SizedBox(height: 22),
       _deleteAccountButton(context),
       const SizedBox(height: 8),
-      const LanguageSelector(),
       _logoutButton(),
       const SizedBox(height: 26),
       Text(

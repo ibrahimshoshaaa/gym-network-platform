@@ -27,6 +27,7 @@ Future<Json?> choosePhoneVerification(BuildContext context, ApiClient api, Strin
   if (!context.mounted || method == null) return null;
   if (method == 'whatsapp') {
     final result = await open<Json>(context, WhatsappPhoneFlow(api: api, phone: phone, purpose: purpose, english: english, onConfirm: onConfirm));
+    if (result?['failure'] is ApiFailure) throw result!['failure'] as ApiFailure;
     if (!context.mounted || result?['useSms'] != true) return result;
   }
   return requestPhoneCode(context, api, phone, purpose, onConfirm: onConfirm, english: english);
