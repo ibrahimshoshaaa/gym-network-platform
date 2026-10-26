@@ -59,7 +59,7 @@ void main(){
   await t.enterText(find.byKey(const Key('directory.filter.price')),'٨٠');
   await t.ensureVisible(find.byKey(const Key('directory.filter.apply')));await t.pumpAndSettle();await t.tap(find.byKey(const Key('directory.filter.apply')));await t.pumpAndSettle();
   expect(calls.last.queryParameters['maxPrice'],'80');expect(calls.last.queryParameters['governorate'],'القاهرة');expect(calls.last.queryParameters['city'],'مدينة نصر');
-  await t.tap(find.text('مسح الفلاتر'));await t.pumpAndSettle();
+  await t.tap(find.byKey(const Key('directory.clear')));await t.pumpAndSettle();
   expect(calls.last.queryParameters.keys,contains('limit'));expect(calls.last.queryParameters.containsKey('maxPrice'),false);expect(calls.last.queryParameters.containsKey('governorate'),false);
   expect(t.takeException(),isNull);
  });
@@ -94,6 +94,7 @@ void main(){
    });
    const boundary=Key('directory.review');
    await t.pumpWidget(RepaintBoundary(key:boundary,child:host(DirectoryScreen(api:api),language:language,fontFamily:reviewFont)));await t.pumpAndSettle();
+   expect(t.getTopLeft(find.byType(BranchTile).first).dy,lessThan(210),reason:'The directory toolbar must leave room for gym results.');
    await capture(t,boundary,'directory-$language-${defaultTargetPlatform.name}');
    await t.pumpWidget(RepaintBoundary(key:boundary,child:host(BranchDetail(api:api,id:'b1'),language:language,fontFamily:reviewFont)));await t.pump();await t.pump(const Duration(milliseconds:300));
    await capture(t,boundary,'gym-detail-$language-${defaultTargetPlatform.name}');
