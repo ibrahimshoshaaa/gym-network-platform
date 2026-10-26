@@ -49,6 +49,14 @@ jobs:
           python3 tool/generate_translations.py --check
           flutter analyze lib test --no-fatal-infos
           flutter test
+      - name: Retain trainee gym design review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trainee-gym-design-review
+          path: apps/mobile/build/verification/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Build optimized Android APKs
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         working-directory: apps/mobile
