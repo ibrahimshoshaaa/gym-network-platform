@@ -1,3 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,8 +17,25 @@ import 'package:gym_network/screens/bookings.dart';
 import 'operations_test.dart' show client,reply;
 
 final gym=<String,dynamic>{'id':'b1','name':'فرع أشمون','gym':{'name':'جيم تجربة','description':'تفاصيل الجيم الحقيقية'},'governorate':'المنوفية','city':'أشمون','address':'عنوان الفرع الحقيقي','latitude':30.4,'longitude':31.1,'visitPricePoints':25,'sessionMinutes':90,'pricingVersion':1,'ratingAverage':4.8,'ratingCount':12,'openingHours':'من ٨ صباحًا إلى ١٢ مساءً','images':<dynamic>[]};
-Widget host(Widget child,{String language='ar',double scale=1})=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(theme:appTheme(),locale:Locale(language),supportedLocales:const[Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:MediaQuery(data:MediaQueryData(textScaler:TextScaler.linear(scale)),child:Scaffold(body:child))));
+Widget host(Widget child,{String language='ar',double scale=1,String? fontFamily})=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(theme:fontFamily==null?appTheme():appTheme().copyWith(textTheme:appTheme().textTheme.apply(fontFamily:fontFamily)),locale:Locale(language),supportedLocales:const[Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:MediaQuery(data:MediaQueryData(textScaler:TextScaler.linear(scale)),child:Scaffold(body:child))));
+Future<void> capture(WidgetTester t,Key key,String name)async{
+ await t.runAsync(()async{
+  final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));
+  final picture=await boundary.toImage(pixelRatio:1);
+  final bytes=await picture.toByteData(format:ui.ImageByteFormat.png);
+  final directory=Directory('build/verification');await directory.create(recursive:true);
+  await File('${directory.path}/$name.png').writeAsBytes(bytes!.buffer.asUint8List());picture.dispose();
+ });
+}
 void main(){
+ String? reviewFont;
+ setUpAll(()async{
+  final file=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+  if(await file.exists()){
+   final loader=FontLoader('GymReviewSans')..addFont(Future.value(ByteData.sublistView(await file.readAsBytes())));
+   await loader.load();reviewFont='GymReviewSans';
+  }
+ });
  test('gallery prefers covers and real photos, filters unsafe URLs, and retains a logo fallback',(){
   expect(gymGallery({'images':[{'url':'https://test.invalid/logo','purpose':'LOGO'},{'url':'http://test.invalid/no','purpose':'COVER'},{'url':'https://test.invalid/photo','purpose':'PHOTO'},{'url':'https://test.invalid/cover','purpose':'COVER'},{'url':'https://test.invalid/photo','purpose':'PHOTO'}]}).map((p)=>p['url']),['https://test.invalid/cover','https://test.invalid/photo']);
   expect(gymGallery({'images':[{'url':'https://test.invalid/logo','purpose':'LOGO'}]}).length,1);
@@ -54,6 +77,20 @@ void main(){
  });
  final platforms=TargetPlatformVariant({TargetPlatform.android,TargetPlatform.iOS});
  for(final language in ['ar','en']){
+  testWidgets('retain directory and detail review screenshots in $language',(t)async{
+   t.view.physicalSize=const Size(393,851);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);AppLanguage.instance.use(language);
+   final api=client('TRAINEE',(r)async{
+    if(r.url.path.endsWith('/b1'))return reply({'branch':gym});
+    if(r.url.path.contains('/directory/'))return reply({'items':[gym,{...gym,'id':'b2','gym':{'name':'Titan Fitness'},'name':'فرع شبين','visitPricePoints':45,'ratingAverage':4.6},{...gym,'id':'b3','gym':{'name':'Iron Club'},'name':'فرع الباجور','visitPricePoints':30,'ratingAverage':4.9}]});
+    return reply({'items':[]});
+   });
+   const boundary=Key('directory.review');
+   await t.pumpWidget(host(RepaintBoundary(key:boundary,child:DirectoryScreen(api:api)),language:language,fontFamily:reviewFont));await t.pumpAndSettle();
+   await capture(t,boundary,'directory-$language-${defaultTargetPlatform.name}');
+   await t.pumpWidget(host(RepaintBoundary(key:boundary,child:BranchDetail(api:api,id:'b1')),language:language,fontFamily:reviewFont));await t.pump();await t.pump(const Duration(milliseconds:300));
+   await capture(t,boundary,'gym-detail-$language-${defaultTargetPlatform.name}');
+   await t.pumpWidget(const SizedBox());await t.pump();
+  },variant:platforms);
   testWidgets('compact gym cards fit $language and enlarged text on a narrow phone',(t)async{
    t.view.physicalSize=const Size(320,812);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);AppLanguage.instance.use(language);
    var opened=false;await t.pumpWidget(host(ListView(padding:const EdgeInsets.all(16),children:[BranchTile(branch:{...gym,'gym':{'name':'جيم باسم طويل جدًا لاختبار عرض بطاقة الفرع'}},onTap:()=>opened=true)]),language:language,scale:1.8));await t.pumpAndSettle();
