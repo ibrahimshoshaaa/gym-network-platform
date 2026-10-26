@@ -36,6 +36,8 @@ The merged `204762b` revision passed [API/ledger CI](https://github.com/ibrahims
 
 Public store release still needs Apple signing/TestFlight and real-device acceptance, store listings/privacy declarations, and the owner's approved privacy/retention/support details. Confirm carrier delivery and operational settlement/deletion review procedures before public rollout. Implemented features and passing CI do not establish store approval or full production acceptance.
 
+See the [inactive WhatsApp verification foundation](docs/whatsapp-verification-foundation.md) for the prepared screens and webhook contract. Live verification remains SMS-only until the documented integration is completed.
+
 ## Current business rules and guides
 
 The [25 October platform-only points decision](docs/2026-10-25-platform-only-points.md) supersedes earlier gym stock/resale/transfer specifications. The [TextBee guide](docs/2026-10-25-textbee-otp.md) supersedes earlier fixed-code-only authentication notes. Some older feature documents describe historical behavior; use these decisions and the current implementation when they conflict.

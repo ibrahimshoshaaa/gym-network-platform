@@ -2037,3 +2037,12 @@ fieldset:disabled .location-map-shell { pointer-events:none; opacity:.65; }
  .work-home .portal-primary-tasks .work-task > strong { align-self:center; }
 }
 
+
+/* Phone verification method selection and reusable WhatsApp flow states. */
+.phone-verification-methods { display: grid; gap: 10px; margin-block: 12px 24px; padding: 18px; border: 1px solid #d9e6df; border-radius: 16px; background: #f4faf6; }
+.phone-verification-methods span { color: #006b52; }
+.whatsapp-verification { display: grid; gap: 16px; padding: 20px; border: 1px solid #d9e6df; border-radius: 20px; background: #f4faf6; }
+.whatsapp-verification h3, .whatsapp-verification p { margin: 0; }
+.whatsapp-verification-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: #dff6e9; color: #006b52; font-size: 30px; }
+.whatsapp-verification-phone { text-align: center; font-weight: 700; overflow-wrap: anywhere; }
+.whatsapp-verification ol { padding-inline-start: 22px; line-height: 1.9; }

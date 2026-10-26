@@ -84,6 +84,7 @@ void main() {
     expect(find.byKey(const ValueKey('phone.reset.password')), findsNothing);
     await t.enterText(find.byKey(const ValueKey('phone.reset.phone')), '01055550123');
     await t.tap(find.text('متابعة للكود')); await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('phone.method.sms'))); await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('phone.otp.code')), findsOneWidget);
     expect(find.byKey(const ValueKey('phone.reset.password')), findsNothing);
     await t.ensureVisible(find.text('متابعة')); await t.tap(find.text('متابعة')); await t.pumpAndSettle();

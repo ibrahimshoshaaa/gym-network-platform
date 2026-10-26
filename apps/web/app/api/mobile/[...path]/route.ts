@@ -4,7 +4,7 @@ import {trustedClientAddress} from '../../../../lib/client-address';
 import {allowedPath,boundedBody,checkOrigin,GatewayError} from '../../../../lib/security';
 import {failure,json,upstream} from '../../../../lib/gateway';
 export const runtime='nodejs';
-const publicRoutes=new Set(['auth/account-deletion','auth/account-deletion/status','auth/signin','auth/register','auth/owners/register','auth/invitations/accept','auth/phone/challenge','auth/phone/register','auth/phone/reset','auth/phone/reset/verify']);
+const publicRoutes=new Set(['auth/account-deletion','auth/account-deletion/status','auth/signin','auth/register','auth/owners/register','auth/invitations/accept','auth/whatsapp/challenge','auth/phone/challenge','auth/phone/register','auth/phone/reset','auth/phone/reset/verify']);
 export async function GET(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function POST(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function PUT(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
@@ -13,7 +13,7 @@ async function proxy(r:Request,c:{params:Promise<{path:string[]}>}){try{
  const {path:segments}=await c.params,path=segments.join('/'),method=r.method;
  // Native clients send Bearer credentials. Cookies never authorize this bridge.
  if(r.headers.has('origin'))checkOrigin(r);
- const isPublic=(method==='POST'&&publicRoutes.has(path))||(method==='GET'&&path==='auth/phone/status');
+ const isPublic=(method==='POST'&&publicRoutes.has(path))||(method==='GET'&&['auth/phone/status','auth/whatsapp/status'].includes(path));
  const custom=(method==='GET'&&['me','me/access','me/gym-application'].includes(path))||(method==='POST'&&['auth/logout','me/gym-application/resubmit'].includes(path));
  const bookingAdmin=(method==='GET'&&['admin/booking-policy','admin/bookings/review'].includes(path))||(method==='POST'&&(path==='admin/booking-policy'||path==='admin/bookings/process-due'||/^admin\/bookings\/[0-9a-f-]{36}\/decision$/i.test(path)));
  if(!isPublic&&!custom&&(!allowedPath(method,path)||((path.startsWith('admin/')&&!bookingAdmin)||path==='reports/export')))throw new GatewayError('NOT_FOUND',404);

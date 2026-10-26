@@ -1,3 +1,4 @@
+import {registerWhatsappRoutes} from './auth/whatsapp.js';
 import {registerDeletionRoutes} from './accounts/deletion-routes.js';
 import { registerServiceRoutes } from './services/routes.js';
 import { registerReservationRoutes } from './bookings/reservations.js';
@@ -55,6 +56,8 @@ export function buildApp(db?: PrismaClient, options: { receiptStorage?: ReceiptS
     service: 'gym-network-api',
     version: '0.1.0',
   }));
+
+  registerWhatsappRoutes(app);
 
   if (db) {
     registerServiceRoutes(app, db);
