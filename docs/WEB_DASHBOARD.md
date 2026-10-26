@@ -56,35 +56,17 @@ or backend credentials are exposed to the client. Cookie renewal is server-side.
 Security headers deny framing, objects and external form destinations. Receipt
 URLs are requested on demand, use no-referrer and expire after 60 seconds.
 
-Do not log request cookies, sign-in bodies, image evidence or signed receipt URLs.
-API rate limiting sees the gateway's network address because this PR does not
-trust forwarded IP headers. Its identity/user limits still apply; the IP limit
-is therefore shared by clients behind the gateway. Before broader deployment,
-configure a trusted ingress/rate-limit design for the actual hosting topology,
-rather than trusting arbitrary `X-Forwarded-For` values.
-
 ## Validation
 
-CI builds/typechecks API and web, runs API unit and restricted PostgreSQL tests,
-web origin/allowlist/body-bound/exact-money tests, and a live HTTP test:
-web cookie login → gateway → Fastify → PostgreSQL → owner quote/topup → admin
-review → branch balance → gym creation → owner invitation reissue/acceptance →
-branch pricing/activation → staff invitation revoke/reissue/acceptance → scoped
-assignment disable → password rotation → revoked sessions → logout.
-The live test uses synthetic identities and pre-seeded evidence; provider upload
-normalization/access is separately tested with an injected storage adapter.
-Real Cloudinary connectivity still needs the owner's server credentials.
+CI builds and typechecks both applications, then runs API unit tests, restricted-role PostgreSQL regressions and the web security/money tests. The current HTTP/browser integration covers:
 
-The managed workspace has no supported browser-control skill, so visual browser
-QA is not performed here. No preview server or browser was installed as a
-substitute. TypeScript/build, HTTP flows and static accessibility review are
-covered; mobile/desktop visual inspection remains before client handover.
+- Platform-admin login and logout, secure HttpOnly sessions and origin checks.
+- Refusal of other roles at browser login, and refusal of their valid native tokens replayed as old browser cookies.
+- Native trainee, owner, manager and cashier login, native registration and verification discovery.
+- Mobile maintenance/support requests opened and answered in the administrator workspace.
+- Independent pricing, welcome points, payment-account, booking-policy and support-contact saves, including stale-version rejection.
+- Desktop and narrow-phone navigation, reloadable section URLs, content separation and horizontal-overflow checks.
 
+CI retains screenshots of the settings workspace for inspection. Tests require a disposable loopback PostgreSQL database and use synthetic identities; they do not access production data. Cloudinary upload normalization remains covered by injected storage-adapter tests.
 
-Management controls mirror the API status transitions: an owner must accept before
-admin activation; branch activation also requires active gym, approved price and
-complete location metadata. Owner metadata forms cannot set status or prices.
-A pending pricing request does not replace the current approved price. Suspended
-or rejected gyms stay readable by their accepted owner but cannot be edited;
-unused staff invitations may still be revoked. Price review and branch activation
-are separate operations. No destructive delete controls are introduced.
+Gym activation still requires accepted ownership. Branch activation requires an active gym, approved pricing and complete location metadata. Administrative UI separation does not change the shared API's financial or resource permissions.

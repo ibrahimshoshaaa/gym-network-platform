@@ -76,10 +76,13 @@ test('platform-only browser administration and independent native workflows',{ti
    const {chromium}=await import('@playwright/test');const browser=await chromium.launch({headless:true});
    try{
     const anonymous=await browser.newPage({viewport:{width:393,height:851}});await anonymous.goto(origin);await anonymous.getByRole('button',{name:'دخول لوحة الإدارة',exact:true}).waitFor();
-    assert.equal(await anonymous.getByText('إنشاء حساب',{exact:true}).count(),0);await anonymous.close();
-    for(const width of [1440,393]){
-     const context=await browser.newContext({viewport:{width,height:900}});await context.addCookies([{name:'__Host-gym_session',value:cookie.split('=')[1],url:origin,httpOnly:true,secure:true,sameSite:'Strict'}]);const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+    assert.equal(await anonymous.getByText('إنشاء حساب',{exact:true}).count(),0);
+    await anonymous.getByLabel('البريد الإلكتروني أو رقم الموبايل',{exact:true}).fill(actors.PLATFORM_ADMIN.email);await anonymous.getByLabel('كلمة المرور',{exact:true}).fill(password);await anonymous.getByRole('button',{name:'دخول لوحة الإدارة',exact:true}).click();await anonymous.getByRole('heading',{name:'يومك في المنصة',exact:true}).waitFor();await anonymous.close();
+    for(const width of [1440,393,320]){
+     const context=await browser.newContext({viewport:{width,height:900}});await context.addCookies([{name:'__Host-gym_session',value:cookie.split('=')[1],domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
      await page.goto(origin+'/?section=settings');await page.getByRole('heading',{name:'إعدادات المنصة',exact:true}).waitFor();
+     await page.evaluate(()=>document.fonts.ready);
+     await mkdir(new URL('../build-verification/',import.meta.url),{recursive:true});await page.screenshot({path:fileURLToPath(new URL(`../build-verification/admin-settings-${width}.png`,import.meta.url)),fullPage:true});
      assert.equal(await page.locator('.admin-destination-grid .admin-destination').count(),6);
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2),false);
      await page.getByRole('button',{name:/النقاط الترحيبية.*هدية التسجيل/}).click();await page.getByRole('button',{name:'حفظ النقاط الترحيبية',exact:true}).waitFor();
