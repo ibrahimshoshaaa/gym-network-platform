@@ -6,7 +6,7 @@ Multi-gym visits, trainee points and gym settlements. ShoTech Solutions.
 
 **Implemented MVP in testing:** the web/API is deployed and signed Android APKs are available. Flutter screens serve trainees, gym owners, branch managers and cashiers. iOS simulator builds, unsigned device Release compilation and simulator startup checks pass; signed iPhone distribution and store publication remain separate release steps.
 
-The latest merged application changes are [#93](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/93) (platform-only points and TextBee), [#94](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/94) (short Arabic OTP messages), [#95](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/95) (staff password recovery) and [#96](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/96) (transparent raised-QR navigation).
+The latest merged application changes are [#93](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/93) (platform-only points and TextBee), [#94](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/94) (short Arabic OTP messages), [#95](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/95) (staff password recovery) [#96](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/96) (transparent raised-QR navigation), and [#97](https://github.com/ibrahimshoshaaa/gym-network-platform/pull/97) (complete removal of retired gym point commerce from API, web, mobile and the current database schema).
 
 | Area | Current implementation |
 | --- | --- |
@@ -23,14 +23,16 @@ The latest merged application changes are [#93](https://github.com/ibrahimshosha
 
 - Web/API: https://gym-network-platform.vercel.app
 - [Android release downloads](https://github.com/ibrahimshoshaaa/gym-network-platform/releases/tag/mobile-v0.2.7): choose `app-arm64-v8a-release.apk` for most current Android phones. APKs use the permanent GymBank signer and increasing version codes. The release tag is reused; asset timestamps identify the latest upload.
-- The APK built from `18dd769` includes the QR transparency fix. Updating the server does not update an installed Flutter app; install the newer APK for mobile UI changes.
+- The signed APKs built from `204762b` include the QR transparency fix and removal of retired gym point-commerce screens and report fields. Updating the server does not update an installed Flutter app; install the newer APK for mobile UI changes.
 - iOS: [build and signing instructions](docs/codemagic-ios.md). A simulator ZIP or unsigned Release cannot be installed on a physical iPhone.
 
 See [removal of the former gym point-commerce implementation](docs/2026-10-26-remove-gym-point-commerce.md) for schema cleanup and financial-record preservation.
 
+**Production rollout complete:** PR #97 is merged, the Vercel production deployment succeeded, and migration `202610260001_remove_gym_point_commerce` was applied to the live database. Post-migration checks confirmed the retired table, scope fields, inventory account types and transfer permission are absent. All point/money balances and point postings were preserved, as were receipt-usage claims. Historic financial records remain in a sealed archive with read-only runtime access; archived point accounts cannot receive new postings. Production health and real-OTP configuration checks returned successfully; no live SMS was sent by this rollout verification.
+
 ### Verification and remaining release work
 
-The latest application revision passed 120 Flutter tests, Android analysis, iOS simulator/device compilation and simulator startup, plus API, PostgreSQL ledger/permissions/session tests and web integration checks in GitHub Actions. Automated SMS tests use a synthetic transport; handset receipt has also been tested manually, but delivery still depends on the sending phone, SIM and carrier.
+The merged `204762b` revision passed [API/ledger CI](https://github.com/ibrahimshoshaaa/gym-network-platform/actions/runs/40246711699) and [mobile CI](https://github.com/ibrahimshoshaaa/gym-network-platform/actions/runs/40246711664): 63 API unit tests, 185 PostgreSQL regressions, 78 web tests, the complete browser → gateway → API → restricted PostgreSQL flow, 119 Flutter tests, Android analysis and signed APK builds, plus iOS simulator/device compilation and simulator startup. Automated SMS tests use a synthetic transport; handset receipt has also been tested manually, but delivery still depends on the sending phone, SIM and carrier.
 
 Public store release still needs Apple signing/TestFlight and real-device acceptance, store listings/privacy declarations, and the owner's approved privacy/retention/support details. Confirm carrier delivery and operational settlement/deletion review procedures before public rollout. Implemented features and passing CI do not establish store approval or full production acceptance.
 
