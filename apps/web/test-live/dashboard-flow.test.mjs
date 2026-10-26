@@ -82,8 +82,14 @@ test('platform-only browser administration and independent native workflows',{ti
      const context=await browser.newContext({viewport:{width,height:900}});await context.addCookies([{name:'__Host-gym_session',value:cookie.split('=')[1],domain:'127.0.0.1',path:'/',httpOnly:true,secure:true,sameSite:'Strict'}]);const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
      await page.goto(origin+'/?section=settings');await page.getByRole('heading',{name:'إعدادات المنصة',exact:true}).waitFor();
      await page.evaluate(()=>document.fonts.ready);
-     await mkdir(new URL('../build-verification/',import.meta.url),{recursive:true});await page.screenshot({path:fileURLToPath(new URL(`../build-verification/admin-settings-${width}.png`,import.meta.url)),fullPage:true});
+     await mkdir(new URL('../build-verification/',import.meta.url),{recursive:true});await page.screenshot({path:fileURLToPath(new URL(`../build-verification/admin-settings-${width}.png`,import.meta.url)),fullPage:true,animations:'disabled'});
      assert.equal(await page.locator('.admin-destination-grid .admin-destination').count(),6);
+     if(width<=800){
+      await page.locator('aside.sidebar').waitFor({state:'hidden'});
+      await page.getByRole('button',{name:'فتح القائمة',exact:true}).click();await page.locator('aside.sidebar').waitFor({state:'visible'});
+      await page.getByRole('button',{name:'إغلاق القائمة',exact:true}).click();await page.locator('aside.sidebar').waitFor({state:'hidden'});
+     }
+
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2),false);
      await page.getByRole('button',{name:/النقاط الترحيبية.*هدية التسجيل/}).click();await page.getByRole('button',{name:'حفظ النقاط الترحيبية',exact:true}).waitFor();
      assert.equal(await page.getByRole('button',{name:'حفظ التسعير',exact:true}).count(),0);
@@ -98,7 +104,7 @@ test('platform-only browser administration and independent native workflows',{ti
      await page.goto(origin+'/?section=users');await page.getByRole('heading',{name:'المستخدمون والوصول للحسابات',exact:true}).waitFor();assert.equal(errors.length,0,errors.join('\n'));
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2),false);
      await page.goto(origin+'/?section=settings');await page.getByRole('heading',{name:'إعدادات المنصة',exact:true}).waitFor();
-     await mkdir(new URL('../build-verification/',import.meta.url),{recursive:true});await page.screenshot({path:fileURLToPath(new URL(`../build-verification/admin-settings-${width}.png`,import.meta.url)),fullPage:true});
+     await mkdir(new URL('../build-verification/',import.meta.url),{recursive:true});await page.screenshot({path:fileURLToPath(new URL(`../build-verification/admin-settings-${width}.png`,import.meta.url)),fullPage:true,animations:'disabled'});
      await context.close();
     }
    }finally{await browser.close();}

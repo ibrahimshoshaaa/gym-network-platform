@@ -403,3 +403,7 @@ dialog::backdrop { background:#10221a75; backdrop-filter:blur(5px); }
 
 .admin-workspace .sidebar .brand>img{filter:url(#gymbank-on-dark);object-fit:contain}
 .withdrawal-fact{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-bottom:1px solid var(--line)}
+@media(max-width:800px){
+ .admin-workspace .sidebar{display:none}
+ .admin-workspace .sidebar.mobile-open{display:flex}
+}
