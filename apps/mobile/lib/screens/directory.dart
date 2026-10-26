@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../l10n/language.dart';
 import 'campaigns.dart';
 import 'bookings.dart';
@@ -9,7 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api.dart';
 import '../core/ui.dart';
-import '../core/portal_ui.dart';
+
+part 'directory_presentation.dart';
 
 Future<Position> currentPosition() async {
   if (!await Geolocator.isLocationServiceEnabled())
@@ -49,236 +51,103 @@ LatLng pointOf(Json b) =>
 
 class DirectoryScreen extends StatefulWidget {
   final ApiClient api;
-  const DirectoryScreen({super.key, required this.api});
-  @override
-  State<DirectoryScreen> createState() => _DirectoryScreenState();
+  final Future<Position> Function()? locate;
+  const DirectoryScreen({super.key, required this.api, this.locate});
+  @override State<DirectoryScreen> createState() => _DirectoryScreenState();
 }
-
 class _DirectoryScreenState extends State<DirectoryScreen> {
-  final search = TextEditingController(), maxPrice = TextEditingController();
-  List<Json> branches = [];
-  String? cursor;
-  Position? location;
-  bool busy = false, map = false;
-  Object? error;
-  @override
-  void initState() {
-    super.initState();
-    load();
-  }
-
-  @override
-  void dispose() {
-    search.dispose();
-    maxPrice.dispose();
-    super.dispose();
-  }
-
-  Future<void> load({bool more = false}) async {
-    if (busy) return;
-    setState(() => busy = true);
-    try {
-      final query = {
-        'limit': '25',
-        if (search.text.trim().isNotEmpty) 'q': search.text.trim(),
-        if (maxPrice.text.isNotEmpty) 'maxPrice': digits(maxPrice.text),
-        if (location != null) ...{
-          'latitude': '${location!.latitude}',
-          'longitude': '${location!.longitude}',
-        },
-        if (more && cursor != null) 'cursor': cursor!,
-      };
-      final d = await widget.api.request(
-        'directory/branches?${Uri(queryParameters: query).query}',
-      );
-      if (mounted)
-        setState(() {
-          branches = more ? [...branches, ...rows(d)] : rows(d);
-          cursor = d['nextCursor'];
-          error = null;
-        });
-    } catch (e) {
-      if (mounted) setState(() => error = e);
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  Future<void> nearby() async {
-    if (busy) return;
-    setState(() => busy = true);
-    try {
-      location = await currentPosition();
-    } catch (e) {
-      if (mounted) setState(() => error = e);
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-    if (location != null) await load();
-  }
-
-  void clearFilters() {
-    if (busy) return;
-    search.clear();
-    maxPrice.clear();
-    setState(() => location = null);
-    load();
-  }
-
-  @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  RefreshIndicator(
-    onRefresh: () => load(),
-    child: ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-      children: [
-        TraineeSectionHeader(appText('s609'), subtitle: appText('s610')),
-        TextField(
-          controller: search,
-          onSubmitted: (_) => load(),
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: appText('s611'),
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: IconButton(
-              tooltip: appText('s612'),
-              onPressed: busy ? null : () => load(),
-              icon: const Icon(Icons.arrow_forward_rounded),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: busy ? null : nearby,
-                icon: const Icon(Icons.near_me_rounded, size: 18),
-                label: Text(location == null ? appText('s613') : appText('s614')),
-              ),
-            ),
-            const SizedBox(width: 10),
-            IconButton.filledTonal(
-              tooltip: map ? appText('s615') : appText('s616'),
-              onPressed: () => setState(() => map = !map),
-              icon: Icon(map ? Icons.view_list_rounded : Icons.map_outlined),
-            ),
-          ],
-        ),
-        if (location != null)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton(
-              onPressed: () {
-                setState(() => location = null);
-                load();
-              },
-              child: Text(appText('s617')),
-            ),
-          ),
-        ExpansionTile(
-          dense: true,
-          visualDensity: VisualDensity.compact,
-          tilePadding: EdgeInsets.zero,
-          title: Text(
-            appText('s618'),
-            style: TextStyle(fontSize: 13),
-          ),
-          children: [
-            TextField(
-              controller: maxPrice,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: appText('s619'),
-              ),
-            ),
-            TextButton(
-              onPressed: busy ? null : () => load(),
-              child: Text(appText('s620')),
-            ),
-          ],
-        ),
-        CampaignBanner(api:widget.api,placement:'GYMS'),
-        ErrorNote(error, retry: () => load()),
-        if (search.text.isNotEmpty ||
-            maxPrice.text.isNotEmpty ||
-            location != null)
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: busy ? null : clearFilters,
-              icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-              label: Text(appText('s621')),
-            ),
-          ),
-        if (busy && branches.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(40),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        if (!busy && branches.isEmpty && error == null)
-          EmptyState(
-            appText('s622'),
-            detail: appText('s623'),
-            action: OutlinedButton(
-              onPressed: clearFilters,
-              child: Text(appText('s624')),
-            ),
-          ),
-        if (map && branches.isNotEmpty)
-          SizedBox(
-            height: 330,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: FlutterMap(
-                key: ValueKey(branches.first['id']),
-                options: MapOptions(
-                  initialCenter: pointOf(branches.first),
-                  initialZoom: 12,
-                ),
-                children: [
-                  mapTiles(),
-                  MarkerLayer(
-                    markers: branches
-                        .map(
-                          (b) => Marker(
-                            point: pointOf(b),
-                            width: 124,
-                            height: 148,
-                            alignment: Alignment.topCenter,
-                            child: GymMapMarker(
-                              branch: b,
-                              onTap: () => open(context,
-                                BranchDetail(api: widget.api, id: b['id'])),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  attribution(),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: 14),
-        ...branches.map(
-          (b) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: BranchTile(
-              branch: b,
-              onTap: () =>
-                  open(context, BranchDetail(api: widget.api, id: b['id'])),
-            ),
-          ),
-        ),
-        if (cursor != null)
-          OutlinedButton(
-            onPressed: busy ? null : () => load(more: true),
-            child: Text(busy ? '…' : appText('s104')),
-          ),
-      ],
-    ),
-  ); }
+ final search=TextEditingController();
+ List<Json> branches=[];
+ final Set<String> regions={};
+ String? cursor,governorate;
+ String maxPrice='',city='';
+ Position? location;
+ bool busy=false,map=false;
+ Object? error;
+ Timer? debounce;
+ int generation=0, locationGeneration=0;
+ @override void initState(){super.initState();unawaited(load());}
+ @override void dispose(){generation++;locationGeneration++;debounce?.cancel();search.dispose();super.dispose();}
+ Future<void> load({bool more=false})async{
+  if(more&&(busy||cursor==null))return;
+  final request=++generation;
+  setState((){busy=true;error=null;});
+  try{
+   final query={'limit':'25',if(search.text.trim().isNotEmpty)'q':search.text.trim(),
+    if(maxPrice.isNotEmpty)'maxPrice':maxPrice,if(governorate!=null)'governorate':governorate!,if(city.isNotEmpty)'city':city,
+    if(location!=null)...{'latitude':'${location!.latitude}','longitude':'${location!.longitude}'},
+    if(more&&cursor!=null)'cursor':cursor!};
+   final d=await widget.api.request('directory/branches?${Uri(queryParameters:query).query}');
+   if(!mounted||request!=generation)return;
+   final received=rows(d);
+   setState((){
+    branches=more?{for(final b in [...branches,...received])'${b['id']}':b}.values.toList():received;
+    regions.addAll(received.map((b)=>'${b['governorate']??''}').where((s)=>s.isNotEmpty));
+    cursor=d['nextCursor'];
+   });
+  }catch(e){if(mounted&&request==generation)setState(()=>error=e);}
+  finally{if(mounted&&request==generation)setState(()=>busy=false);}
+ }
+ Future<void> nearby()async{
+  if(busy)return;
+  final request=++locationGeneration;
+  setState((){busy=true;error=null;});
+  try{
+   final result=await (widget.locate??currentPosition)();
+   if(!mounted||request!=locationGeneration)return;
+   setState(()=>location=result);
+   await load();
+  }catch(e){if(mounted&&request==locationGeneration)setState(()=>error=e);}
+  finally{if(mounted&&request==locationGeneration)setState(()=>busy=false);}
+ }
+ void clearFilters(){locationGeneration++;debounce?.cancel();search.clear();setState((){maxPrice='';city='';governorate=null;location=null;});unawaited(load());}
+ Future<void> filters()async{
+  final result=await showModalBottomSheet<Map<String,String>>(context:context,isScrollControlled:true,useSafeArea:true,
+   builder:(_)=>_DirectoryFilters(price:maxPrice,region:governorate??'',city:city));
+  if(!mounted||result==null)return;
+  debounce?.cancel();setState((){maxPrice=result['price']!;governorate=result['region']!.isEmpty?null:result['region'];city=result['city']!;if(governorate!=null)regions.add(governorate!);});await load();
+ }
+ @override Widget build(BuildContext context){AppLanguage.watch(context);
+  final filtered=maxPrice.isNotEmpty||city.isNotEmpty||governorate!=null||search.text.isNotEmpty||location!=null;
+  return RefreshIndicator(onRefresh:()=>load(),child:ListView(
+   key:const PageStorageKey('trainee.directory'),physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,8,16,28),children:[
+    Wrap(alignment:WrapAlignment.spaceBetween,crossAxisAlignment:WrapCrossAlignment.center,spacing:12,runSpacing:8,children:[
+     Text(appText('s609'),style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800)),
+     OutlinedButton.icon(key:const Key('directory.map'),onPressed:()=>setState(()=>map=!map),icon:Icon(map?Icons.view_list_outlined:Icons.map_outlined,size:17),label:Text(map?appText('s615'):appText('s616'),style:OutlinedButton.styleFrom(minimumSize:const Size(0,42),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
+    ]),
+    const SizedBox(height:14),
+    Row(children:[Expanded(child:TextField(key:const Key('directory.search'),controller:search,maxLength:80,
+     onChanged:(_){setState((){});debounce?.cancel();debounce=Timer(const Duration(milliseconds:400),()=>load());},
+     onSubmitted:(_){debounce?.cancel();unawaited(load());},textInputAction:TextInputAction.search,
+     decoration:InputDecoration(counterText:'',hintText:appText('s611'),prefixIcon:const Icon(Icons.search_rounded),
+      suffixIcon:search.text.isEmpty?null:IconButton(tooltip:appText('s1047'),onPressed:(){search.clear();debounce?.cancel();unawaited(load());},icon:const Icon(Icons.close_rounded,size:18))))),
+     const SizedBox(width:8),IconButton.filledTonal(key:const Key('directory.filters'),tooltip:appText('s618'),onPressed:filters,icon:Badge(isLabelVisible:maxPrice.isNotEmpty||city.isNotEmpty||governorate!=null,child:const Icon(Icons.tune_rounded))),
+    ]),
+    const SizedBox(height:10),
+    SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+     ChoiceChip(label:Text(appText('s1038')),selected:governorate==null,onSelected:(_){debounce?.cancel();setState(()=>governorate=null);unawaited(load());}),
+     for(final region in regions)...[const SizedBox(width:7),ChoiceChip(label:Text(region),selected:governorate==region,onSelected:(_){debounce?.cancel();setState(()=>governorate=region);unawaited(load());})],
+    ])),
+    const SizedBox(height:10),
+    Wrap(spacing:8,runSpacing:6,crossAxisAlignment:WrapCrossAlignment.center,children:[
+     OutlinedButton.icon(key:const Key('directory.nearby'),onPressed:busy?null:nearby,icon:Icon(location==null?Icons.near_me_outlined:Icons.my_location_rounded,size:17),label:Text(location==null?appText('s613'):appText('s614')),style:OutlinedButton.styleFrom(textStyle:const TextStyle(fontSize:12),foregroundColor:green)),
+     if(filtered)TextButton.icon(onPressed:clearFilters,icon:const Icon(Icons.filter_alt_off_outlined,size:16),label:Text(appText('s621'),style:const TextStyle(fontSize:12))),
+    ]),
+    if(maxPrice.isNotEmpty||city.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Wrap(spacing:6,runSpacing:6,children:[if(maxPrice.isNotEmpty)_DirectoryChip(appText('s1048',[maxPrice]),Icons.toll_outlined),if(city.isNotEmpty)_DirectoryChip(city,Icons.place_outlined)])),
+    CampaignBanner(api:widget.api,placement:'GYMS'),
+    ErrorNote(error,retry:()=>load()),
+    const SizedBox(height:8),
+    Text(appText('s1039',[branches.length]),style:const TextStyle(color:muted,fontSize:12)),
+    const SizedBox(height:10),
+    if(busy)const LinearProgressIndicator(minHeight:2),
+    if(!busy&&branches.isEmpty&&error==null)EmptyState(appText('s622'),detail:appText('s623'),action:OutlinedButton(onPressed:clearFilters,child:Text(appText('s624')))),
+    if(map&&branches.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:14),child:SizedBox(height:350,child:ClipRRect(borderRadius:BorderRadius.circular(22),child:FlutterMap(
+     key:ValueKey(branches.first['id']),options:MapOptions(initialCenter:pointOf(branches.first),initialZoom:12),children:[mapTiles(),MarkerLayer(markers:branches.map((b)=>Marker(point:pointOf(b),width:124,height:148,alignment:Alignment.topCenter,child:GymMapMarker(branch:b,onTap:()=>open(context,BranchDetail(api:widget.api,id:b['id']))))).toList()),attribution()],
+    )))),
+    ...branches.map((b)=>Padding(padding:const EdgeInsets.only(bottom:12),child:BranchTile(branch:b,onTap:()=>open(context,BranchDetail(api:widget.api,id:b['id']))))),
+    if(cursor!=null)OutlinedButton(onPressed:busy?null:()=>load(more:true),child:Text(busy?'…':appText('s104'))),
+   ]));
+ }
 }
 
 /// Prefer the gym identity image, then a branch photo. Invalid/missing images
@@ -347,157 +216,13 @@ class GymMapMarker extends StatelessWidget {
   }
 }
 
-class BranchTile extends StatelessWidget {
-  final Json branch;
-  final VoidCallback onTap;
-  const BranchTile({super.key,required this.branch,required this.onTap});
-  @override
-  Widget build(BuildContext context){ AppLanguage.watch(context); return Material(
-    color:Colors.white,borderRadius:BorderRadius.circular(22),clipBehavior:Clip.antiAlias,
-    child:InkWell(onTap:onTap,child:Padding(
-      padding:const EdgeInsets.all(16),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          GymThumbnail(branch:branch,size:62),
-          const SizedBox(width:12),
-          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text('${branch['gym']?['name'] ?? branch['name']}',
-              style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
-            const SizedBox(height:3),
-            Text('${branch['name']}',style:const TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w600)),
-            const SizedBox(height:3),
-            Text('${branch['city']} · ${branch['governorate']}',
-              style:const TextStyle(color:muted,fontSize:11)),
-          ])),
-        ]),
-        const SizedBox(height:14),
-        Wrap(spacing:8,runSpacing:8,children:[
-          if(branch['ratingAverage']!=null)_DirectoryChip(appText('s626', [(branch['ratingAverage'] as num).toStringAsFixed(1), branch['ratingCount']]),Icons.star_rounded),
-          _DirectoryChip(branch['serviceBooking']==true?(branch['minimumServicePoints']==null?appText('s268'):appText('s269', [branch['minimumServicePoints']])):appText('s627', [branch['visitPricePoints']]),Icons.toll_rounded,primary:true),
-          _DirectoryChip(branch['serviceBooking']==true?appText('s628'):appText('s184', [branch['sessionMinutes']]),Icons.schedule_rounded),
-          if(branch['distanceKm']!=null)
-            _DirectoryChip(appText('s629', [(branch['distanceKm'] as num).toStringAsFixed(1)]),Icons.near_me_outlined),
-        ]),
-        const SizedBox(height:12),
-        Row(children:[
-          Expanded(child:Text(appText('s630'),
-            style:TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w700))),
-          Icon(Icons.arrow_forward_rounded,size:17,color:green),
-        ]),
-      ]),
-    )),
-  ); }
-}
-class _DirectoryChip extends StatelessWidget {
- final String text;
- final IconData icon;
- final bool primary;
- const _DirectoryChip(this.text,this.icon,{this.primary=false});
- @override Widget build(BuildContext context){ AppLanguage.watch(context); return Container(
-  padding:const EdgeInsets.symmetric(horizontal:10,vertical:7),
-  decoration:BoxDecoration(color:primary?const Color(0xffe3fbf3):canvas,
-    borderRadius:BorderRadius.circular(10)),
-  child:Row(mainAxisSize:MainAxisSize.min,children:[
-    Icon(icon,size:14,color:green),const SizedBox(width:5),
-    Flexible(child:Text(text,style:TextStyle(fontSize:11,color:primary?green:ink,fontWeight:FontWeight.w600))),
-  ])); }
-}
-
 class BranchDetail extends StatelessWidget {
-  final ApiClient api;
-  final String id;
-  const BranchDetail({super.key, required this.api, required this.id});
-  @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
-    title: appText('s631'),
-    child: DataView(
-      load: () => api.request('directory/branches/$id'),
-      builder: (d, reload) {
-        final b = Map<String, dynamic>.from(d['branch']), p = pointOf(b);
-        return ListView(
-          padding: const EdgeInsets.all(22),
-          children: [
-            BranchTile(branch: b, onTap: () {}),
-            const SizedBox(height: 18),
-            ActionButton(
-              appText('s632'),
-              icon: Icons.directions_outlined,
-              onPressed: () => launchUrl(
-                Uri.https('www.google.com', '/maps/dir/', {
-                  'api': '1',
-                  'destination': '${p.latitude},${p.longitude}',
-                }),
-                mode: LaunchMode.externalApplication,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ActionButton(appText('s181'),icon:Icons.calendar_month_outlined,onPressed:()=>open(context,CreateBookingScreen(api:api,branch:b))),
-            SectionTitle(appText('s633')),
-            Panel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${b['gym']?['description'] ?? ''}'),
-                  Fact(appText('s327'), '${b['address']}'),
-                  if (b['openingHours'] != null)
-                    Fact(appText('s585'), '${b['openingHours']}'),
-                  if (b['contactPhone'] != null)
-                    TextButton.icon(
-                      onPressed: () => launchUrl(
-                        Uri(scheme: 'tel', path: '${b['contactPhone']}'),
-                      ),
-                      icon: const Icon(Icons.call_outlined),
-                      label: Text(
-                        '${b['contactPhone']}',
-                        textDirection: TextDirection.ltr,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            SectionTitle(appText('s634')),
-            SizedBox(
-              height: 230,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: FlutterMap(
-                  options: MapOptions(initialCenter: p, initialZoom: 15),
-                  children: [
-                    mapTiles(),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: p, width:124, height:148,
-                          alignment:Alignment.topCenter,
-                          child:GymMapMarker(branch:b),
-                        ),
-                      ],
-                    ),
-                    attribution(),
-                  ],
-                ),
-              ),
-            ),
-            ...((b['images'] as List? ?? [])
-                .skip(1)
-                .map(
-                  (p) => Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Image.network(
-                        p['url'],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, e, s) => const SizedBox.shrink(),
-                      ),
-                    ),
-                  ),
-                )),
-          ],
-        );
-      },
-    ),
-  ); }
+ final ApiClient api;
+ final String id;
+ const BranchDetail({super.key,required this.api,required this.id});
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return Screen(title:appText('s631'),child:DataView(
+  load:()=>api.request('directory/branches/$id'),builder:(d,reload)=>_BranchDetailBody(api:api,branch:Map<String,dynamic>.from(d['branch'])),
+ ));}
 }
 
 class LocationPicker extends StatefulWidget {
