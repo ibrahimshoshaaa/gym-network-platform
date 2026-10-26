@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -52,28 +53,28 @@ class _BranchCheckInScreenState extends State<BranchCheckInScreen> {
     final raw=await Navigator.push<String>(context,MaterialPageRoute(builder:(_)=>const _BranchCamera()));
     if(raw!=null&&mounted)await submit(raw);
   }
-  @override Widget build(BuildContext context)=>Screen(title:'تأكيد حضوري في الفرع',child:ListView(padding:const EdgeInsets.all(20),children:[
+  @override Widget build(BuildContext context){ AppLanguage.watch(context); return Screen(title:appText('s586'),child:ListView(padding:const EdgeInsets.all(20),children:[
     Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      Text('${widget.booking['branch']?['name']??'الفرع المحجوز'}',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),
-      const Text('عند وصولك امسح كود الفرع الموجود في الاستقبال. لازم يكون موقعك قريب من الفرع، والموقع متاح بدقة مناسبة.'),
-      const Text('مدة الجلسة تبدأ من تأكيد حضورك وتنتهي بحد أقصى عند الإغلاق.'),
+      Text('${widget.booking['branch']?['name']??appText('s1006')}',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),
+      Text(appText('s587')),
+      Text(appText('s588')),
       ErrorNote(error),
       if(result!=null)...[
-        const EmptyState('تم تأكيد حضورك',icon:Icons.check_circle_rounded),
-        Fact('النقاط المحولة للجيم','${result!['points']} نقطة'),
-        ActionButton('رجوع للحجوزات',onPressed:()=>Navigator.pop(context)),
+        EmptyState(appText('s589'),icon:Icons.check_circle_rounded),
+        Fact(appText('s240'),appText('s120', [result!['points']])),
+        ActionButton(appText('s590'),onPressed:()=>Navigator.pop(context)),
       ]else...[
-        if(busy)const Text('جاري التحقق من الموقع والحضور…'),
-        ActionButton('امسح كود الفرع',busy:busy,icon:Icons.qr_code_scanner_rounded,onPressed:scan),
-        if(error!=null)const Text('لو الاتصال انقطع، أعد المحاولة؛ نفس الحجز لا يتحول مرتين.'),
-        ExpansionTile(title:const Text('لصق كود الفرع بدل الكاميرا'),children:[
-          TextField(controller:text,enabled:!busy,textDirection:TextDirection.ltr,decoration:const InputDecoration(labelText:'كود الفرع')),
-          const Text('لصق الكود يحتاج نفس التحقق من موقعك داخل الفرع.'),
-          ActionButton('تأكيد حضوري',busy:busy,onPressed:()=>submit(text.text)),
+        if(busy)Text(appText('s591')),
+        ActionButton(appText('s592'),busy:busy,icon:Icons.qr_code_scanner_rounded,onPressed:scan),
+        if(error!=null)Text(appText('s593')),
+        ExpansionTile(title:Text(appText('s594')),children:[
+          TextField(controller:text,enabled:!busy,textDirection:TextDirection.ltr,decoration:InputDecoration(labelText:appText('s595'))),
+          Text(appText('s596')),
+          ActionButton(appText('s597'),busy:busy,onPressed:()=>submit(text.text)),
         ]),
       ],
     ])),
-  ]));
+  ])); }
 }
 class _BranchCamera extends StatefulWidget {
   const _BranchCamera();
@@ -81,13 +82,13 @@ class _BranchCamera extends StatefulWidget {
 }
 class _BranchCameraState extends State<_BranchCamera> {
   bool done=false;
-  @override Widget build(BuildContext context)=>Screen(title:'مسح كود الفرع',child:Column(children:[
-    const Padding(padding:EdgeInsets.all(20),child:Text('امسح كود الفرع الثابت عند الاستقبال.')),
+  @override Widget build(BuildContext context){ AppLanguage.watch(context); return Screen(title:appText('s598'),child:Column(children:[
+    Padding(padding:EdgeInsets.all(20),child:Text(appText('s599'))),
     Expanded(child:MobileScanner(onDetect:(capture){
       if(done)return;
       for(final code in capture.barcodes){final raw=code.rawValue;if(raw!=null&&parseBranchQr(raw)!=null){done=true;Navigator.pop(context,raw);break;}}
     })),
-  ]));
+  ])); }
 }
 
 class BranchEntryQrScreen extends StatefulWidget {
@@ -111,23 +112,23 @@ class _BranchEntryQrScreenState extends State<BranchEntryQrScreen> {
     finally{if(mounted)setState(()=>busy=false);}
   }
   Future<void> rotate() async {
-    final confirmed=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('تغيير كود الفرع؟'),content:const Text('الكود القديم هيتوقف. اعرض أو اطبع الكود الجديد في الاستقبال.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('رجوع')),TextButton(onPressed:()=>Navigator.pop(c,true),child:const Text('تغيير الكود'))]));
+    final confirmed=await showDialog<bool>(context:context,builder:(c){ AppLanguage.watch(c); return AlertDialog(title:Text(appText('s600')),content:Text(appText('s601')),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:Text(appText('s217'))),TextButton(onPressed:()=>Navigator.pop(c,true),child:Text(appText('s602')))]); });
     if(confirmed==true&&mounted)await load(rotate:true);
   }
-  @override Widget build(BuildContext context)=>Screen(title:'كود حضور الفرع',child:ListView(padding:const EdgeInsets.all(20),children:[
+  @override Widget build(BuildContext context){ AppLanguage.watch(context); return Screen(title:appText('s370'),child:ListView(padding:const EdgeInsets.all(20),children:[
     Panel(child:Column(children:[
       Text('${widget.branch['name']}',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800)),
-      const Text('كود ثابت للاستقبال؛ المتدرب يمسحه من حجزه بعد وصوله للفرع.'),
+      Text(appText('s603')),
       ErrorNote(error),
       if(busy)const CircularProgressIndicator()
       else if(qr!=null)...[
         Container(color:Colors.white,padding:const EdgeInsets.all(16),child:QrImageView(data:qr!['payload'] as String,size:240,backgroundColor:Colors.white)),
-        const Text('تقدر تحفظ لقطة شاشة للكود وتطبعه عند الاستقبال. لا ينتهي إلا عند تغييره.'),
-        TextButton(onPressed:()async{await Clipboard.setData(ClipboardData(text:qr!['payload'] as String));},child:const Text('نسخ كود الفرع')),
+        Text(appText('s604')),
+        TextButton(onPressed:()async{await Clipboard.setData(ClipboardData(text:qr!['payload'] as String));},child:Text(appText('s605'))),
         if(widget.api.user?['role']=='GYM_OWNER'||widget.api.user?['role']=='BRANCH_MANAGER'||widget.branch['canCancel']==true)
-          TextButton(onPressed:rotate,child:const Text('تغيير كود الفرع')),
+          TextButton(onPressed:rotate,child:Text(appText('s606'))),
       ],
-      if(error!=null)TextButton(onPressed:()=>load(),child:const Text('إعادة المحاولة')),
+      if(error!=null)TextButton(onPressed:()=>load(),child:Text(appText('s98'))),
     ])),
-  ]));
+  ])); }
 }

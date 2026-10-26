@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
@@ -57,43 +58,44 @@ class _BranchFinanceState extends State<BranchFinance> {
   }
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     if (!allowed) return const SizedBox.shrink();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [const Expanded(child: SectionTitle('مستحقات الفرع')), TextButton(onPressed: load, child: const Text('تحديث'))]),
+      Row(children: [Expanded(child: SectionTitle(appText('s569'))), TextButton(onPressed: load, child: Text(appText('s450')))]),
       Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (finance == null && financeError == null) const LinearProgressIndicator(minHeight: 2),
         if (financeError != null) ErrorNote(financeError, retry: load),
         if (finance != null) ...[
-          Fact('متاح للسحب من الفرع', '${money(finance!['available'])} ج.م', strong: true),
-          Fact('إجمالي عائد الزيارات المؤكدة', '${money(finance!['earned'])} ج.م'),
-          Fact('مسحوب أو مرتبط بطلبات سحب', '${money(finance!['committed'])} ج.م'),
-          Fact('محجوز للمراجعة', '${money(finance!['disputed'])} ج.م'),
-          if (finance!['legacyReviewRequired'] == true) const PortalNote('فيه سحوبات قديمة غير موزعة على الفروع؛ المتاح محسوب بتحفّظ لحين مراجعتها.'),
+          Fact(appText('s570'), appText('s122', [money(finance!['available'])]), strong: true),
+          Fact(appText('s571'), appText('s122', [money(finance!['earned'])])),
+          Fact(appText('s572'), appText('s122', [money(finance!['committed'])])),
+          Fact(appText('s573'), appText('s122', [money(finance!['disputed'])])),
+          if (finance!['legacyReviewRequired'] == true) PortalNote(appText('s574')),
         ],
-        const Text('مستحقات الفرع الحالية من كل الفترات. المتاح للسحب يخضع لرصيد الجيم.', style: TextStyle(color: muted, fontSize: 11)),
+        Text(appText('s575'), style: TextStyle(color: muted, fontSize: 11)),
       ])),
-      const SectionTitle('ملخص الزيارات'),
-      DropdownButton<int>(value: days, isExpanded: true, items: const [DropdownMenuItem(value: 1, child: Text('اليوم')), DropdownMenuItem(value: 30, child: Text('آخر ٣٠ يوم'))], onChanged: (value) {if(value != null) {setState(() => days = value); loadReport();}}),
+      SectionTitle(appText('s576')),
+      DropdownButton<int>(value: days, isExpanded: true, items: [DropdownMenuItem(value: 1, child: Text(appText('s577'))), DropdownMenuItem(value: 30, child: Text(appText('s578')))], onChanged: (value) {if(value != null) {setState(() => days = value); loadReport();}}),
       Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (report == null && reportError == null) const LinearProgressIndicator(minHeight: 2),
         if (reportError != null) ErrorNote(reportError, retry: loadReport),
         if (report != null) ...[
-          Fact('زيارات مسجلة', '${report!['visits']?['count'] ?? '—'}'),
-          Fact('زيارات ملغاة خلال الفترة', '${report!['cancellations']?['count'] ?? '—'}'),
-          Fact('صافي نقاط الزيارات', '${report!['netVisitPoints']} نقطة'),
-          Fact('صافي عائد الزيارات خلال الفترة', '${money(report!['netVisitReceivablesPiasters'])} ج.م'),
+          Fact(appText('s373'), '${report!['visits']?['count'] ?? '—'}'),
+          Fact(appText('s579'), '${report!['cancellations']?['count'] ?? '—'}'),
+          Fact(appText('s580'), appText('s120', [report!['netVisitPoints']])),
+          Fact(appText('s581'), appText('s122', [money(report!['netVisitReceivablesPiasters'])])),
         ],
-        const Text('الصافي = الزيارات المسجلة خلال الفترة ناقص الإلغاءات المنفذة خلالها.', style: TextStyle(color: muted, fontSize: 11)),
+        Text(appText('s582'), style: TextStyle(color: muted, fontSize: 11)),
       ])),
-      const SectionTitle('بيانات الفرع'),
+      SectionTitle(appText('s376')),
       Panel(child: Column(children: [
         if (details == null && detailsError == null) const LinearProgressIndicator(minHeight: 2),
         if (detailsError != null) ErrorNote(detailsError, retry: load),
         if (details != null) ...[
-          Fact('العنوان', '${details!['address']}'),
-          Fact('المنطقة', '${details!['city']} · ${details!['governorate']}'),
-          Fact('الهاتف', '${details!['contactPhone'] ?? 'غير محدد'}'),
-          Fact('مواعيد العمل', '${details!['openingHours'] ?? 'غير محددة'}'),
+          Fact(appText('s327'), '${details!['address']}'),
+          Fact(appText('s583'), '${details!['city']} · ${details!['governorate']}'),
+          Fact(appText('s584'), '${details!['contactPhone'] ?? appText('s918')}'),
+          Fact(appText('s585'), '${details!['openingHours'] ?? appText('s1005')}'),
         ],
       ])),
       const SizedBox(height: 16),

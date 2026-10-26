@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'account_deletion.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -19,7 +20,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   bool register = false, owner = false, busy = false, hidden = true;
   bool rememberMe = true;
-  bool english = false, languageChosen = false, savingLanguage = false;
+  bool english = AppLanguage.instance.english, languageChosen = false, savingLanguage = false;
   Object? error;
   final form = GlobalKey<FormState>();
   final fields = <String, TextEditingController>{
@@ -47,7 +48,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> restoreLanguage() async {
     try {
-      final value = await widget.api.storage.read('auth.language');
+      await AppLanguage.instance.restore(widget.api.storage.read, widget.api.storage.write);
+      final value = AppLanguage.instance.code;
       if (mounted && !languageChosen) setState(() => english = value == 'en');
     } catch (_) {
       /* The form remains usable if preference storage is unavailable. */
@@ -62,7 +64,7 @@ class _AuthScreenState extends State<AuthScreen> {
       savingLanguage = true;
     });
     try {
-      await widget.api.storage.write('auth.language', english ? 'en' : 'ar');
+      await AppLanguage.instance.select(english ? 'en' : 'ar');
     } catch (_) {
       // The current screen still switches even if this preference cannot be saved.
     } finally {
@@ -195,10 +197,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 ? [AutofillHints.name]
                 : null,
             decoration: InputDecoration(
-              hintText: tr('اكتب $ar', 'Enter ${en.toLowerCase()}'),
+              hintText: tr(appText('s274', [ar]), 'Enter ${en.toLowerCase()}'),
               helperText: password && register
                   ? tr(
-                      '15 حرفًا على الأقل؛ جرّب جملة سهلة تحفظها.',
+                      appText('s275'),
                       'At least 15 characters. Try a memorable phrase.',
                     )
                   : null,
@@ -222,8 +224,8 @@ class _AuthScreenState extends State<AuthScreen> {
               suffixIcon: password
                   ? IconButton(
                       tooltip: hidden
-                          ? tr('إظهار كلمة السر', 'Show password')
-                          : tr('إخفاء كلمة السر', 'Hide password'),
+                          ? tr(appText('s276'), 'Show password')
+                          : tr(appText('s277'), 'Hide password'),
                       onPressed: busy
                           ? null
                           : () => setState(() => hidden = !hidden),
@@ -239,14 +241,14 @@ class _AuthScreenState extends State<AuthScreen> {
             validator: (v) {
               if (optional) return null;
               if (v == null || v.trim().isEmpty)
-                return tr('اكتب $ar', '$en is required');
+                return tr(appText('s274', [ar]), '$en is required');
               if (password && register && v.runes.length < 15)
                 return tr(
-                  'كلمة السر 15 حرفًا على الأقل',
+                  appText('s278'),
                   'Use at least 15 characters',
                 );
               if (k == 'email' && !RegExp(r'^\S+@\S+\.\S+$').hasMatch(v.trim()))
-                return tr('اكتب إيميل صحيح', 'Enter a valid email address');
+                return tr(appText('s279'), 'Enter a valid email address');
               return null;
             },
           ),
@@ -269,11 +271,11 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Localizations.override(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Localizations.override(
     context: context,
     locale: Locale(english ? 'en' : 'ar'),
     child: Builder(
-      builder: (context) => Directionality(
+      builder: (context) { AppLanguage.watch(context); return  Directionality(
         textDirection: english ? TextDirection.ltr : TextDirection.rtl,
         child: Theme(
           data: Theme.of(context).copyWith(
@@ -354,7 +356,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                             size: 17,
                                           ),
                                           label: Text(
-                                            english ? 'العربية' : 'English',
+                                            english ? appText('s280') : 'English',
                                             style: const TextStyle(
                                               fontSize: 12,
                                             ),
@@ -379,11 +381,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                     Text(
                                       register
                                           ? tr(
-                                              'ابدأ رحلتك معانا',
+                                              appText('s281'),
                                               'Your next chapter',
                                             )
                                           : tr(
-                                              'أهلًا بيك من جديد',
+                                              appText('s282'),
                                               'Welcome back',
                                             ),
                                       textAlign: TextAlign.center,
@@ -398,11 +400,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                     Text(
                                       register
                                           ? tr(
-                                              'حساب واحد يفتح لك عالم الجيمات.',
+                                              appText('s283'),
                                               'One account. A world of gyms.',
                                             )
                                           : tr(
-                                              'جيمك، رصيدك، وتمرينتك… في مكان واحد.',
+                                              appText('s284'),
                                               'Your gyms, your wallet, your next workout.',
                                             ),
                                       textAlign: TextAlign.center,
@@ -479,8 +481,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                               ),
                                               child: Text(
                                                 value
-                                                    ? tr('حساب جديد', 'Sign up')
-                                                    : tr('دخول', 'Log in'),
+                                                    ? tr(appText('s285'), 'Sign up')
+                                                    : tr(appText('s286'), 'Log in'),
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: register == value
@@ -496,7 +498,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                                 const SizedBox(height: 24),
                                 if(phoneOtpPreview)...[
-                                  Text(tr('سجّل برقم موبايلك، وأكّد رقمك بكود التحقق.','Register with your mobile number and confirm it with a verification code.'),style:TextStyle(color:muted,fontSize:12)),
+                                  Text(tr(appText('s287'),'Register with your mobile number and confirm it with a verification code.'),style:TextStyle(color:muted,fontSize:12)),
                                   const SizedBox(height:12),
                                 ],
                                 if (register) ...[
@@ -511,15 +513,15 @@ class _AuthScreenState extends State<AuthScreen> {
                                             child: _RoleChoice(
                                               selected: owner == value,
                                               title: value
-                                                  ? tr('صاحب جيم', 'Gym owner')
-                                                  : tr('متدرب', 'Trainee'),
+                                                  ? tr(appText('s288'), 'Gym owner')
+                                                  : tr(appText('s289'), 'Trainee'),
                                               detail: value
                                                   ? tr(
-                                                      'إدارة جيمك وفروعك',
+                                                      appText('s290'),
                                                       'Manage your gyms',
                                                     )
                                                   : tr(
-                                                      'اختار جيمك واتمرّن',
+                                                      appText('s291'),
                                                       'Find your next workout',
                                                     ),
                                               icon: value
@@ -549,37 +551,37 @@ class _AuthScreenState extends State<AuthScreen> {
                                         if (register) ...[
                                           field(
                                             'displayName',
-                                            'الاسم بالكامل',
+                                            appText('s292'),
                                             'Full name',
                                           ),
                                           if (!phoneOtpPreview) field(
                                             'email',
-                                            'الإيميل',
+                                            appText('s293'),
                                             'Email address',
                                             keyboard:
                                                 TextInputType.emailAddress,
                                           ),
                                           field(
                                             'phone',
-                                            'رقم الموبايل',
+                                            appText('s294'),
                                             'Mobile number',
                                             keyboard: TextInputType.phone,
                                           ),
                                         ] else
                                           field(
                                             'identifier',
-                                            'رقم الموبايل',
+                                            appText('s294'),
                                             'Mobile number',
                                             keyboard: TextInputType.phone,
                                           ),
                                         field(
                                           'password',
-                                          'كلمة السر',
+                                          appText('s295'),
                                           'Password',
                                         ),
                                         if (register && owner) ...[
                                           Text(
-                                            tr('بيانات الجيم', 'Gym details'),
+                                            tr(appText('s296'), 'Gym details'),
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w800,
                                               fontSize: 17,
@@ -588,33 +590,33 @@ class _AuthScreenState extends State<AuthScreen> {
                                           const SizedBox(height: 16),
                                           field(
                                             'gymName',
-                                            'اسم الجيم',
+                                            appText('s297'),
                                             'Gym name',
                                           ),
                                           field(
                                             'governorate',
-                                            'المحافظة',
+                                            appText('s298'),
                                             'Governorate',
                                           ),
                                           field(
                                             'city',
-                                            'المدينة أو المنطقة',
+                                            appText('s299'),
                                             'City or area',
                                           ),
                                           field(
                                             'address',
-                                            'العنوان بالتفصيل',
+                                            appText('s300'),
                                             'Full address',
                                           ),
                                           field(
                                             'description',
-                                            'نبذة عن الجيم',
+                                            appText('s301'),
                                             'About your gym',
                                             optional: true,
                                           ),
                                           Text(
                                             tr(
-                                              'طلبك هيوصل للإدارة للمراجعة. تقدر تتابع حالته بعد التسجيل.',
+                                              appText('s302'),
                                               'Your application goes to the platform team for review. Track its status after signing up.',
                                             ),
                                             style: const TextStyle(
@@ -640,7 +642,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                                   visualDensity: VisualDensity.compact,
                                                   activeColor: _authTeal,
                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                  title: Text(tr('تذكّرني', 'Remember me'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                                  title: Text(tr(appText('s303'), 'Remember me'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                                                 )),
                                                 if (phoneOtpPreview) Expanded(child: Align(
                                                   alignment: AlignmentDirectional.centerEnd,
@@ -648,7 +650,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                                     key: const Key('auth.forgotPassword'),
                                                     onPressed: busy ? null : () => open(context, PhonePasswordReset(api: widget.api, english: english)),
                                                     style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12), textStyle: const TextStyle(fontSize: 13)),
-                                                    child: Text(tr('نسيت كلمة السر؟', 'Forgot password?'), textAlign: TextAlign.center),
+                                                    child: Text(tr(appText('s304'), 'Forgot password?'), textAlign: TextAlign.center),
                                                   ),
                                                 )),
                                               ],
@@ -683,7 +685,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                           child: busy
                                               ? Semantics(
                                                   label: tr(
-                                                    'جاري التنفيذ',
+                                                    appText('s305'),
                                                     'Please wait',
                                                   ),
                                                   child: const SizedBox(
@@ -700,15 +702,15 @@ class _AuthScreenState extends State<AuthScreen> {
                                                   register
                                                       ? (owner
                                                             ? tr(
-                                                                'إنشاء حساب وإرسال الطلب',
+                                                                appText('s306'),
                                                                 'Create account & apply',
                                                               )
                                                             : tr(
-                                                                'إنشاء حساب متدرب',
+                                                                appText('s307'),
                                                                 'Create trainee account',
                                                               ))
                                                       : tr(
-                                                          'تسجيل الدخول',
+                                                          appText('s308'),
                                                           'Log in',
                                                         ),
                                                 ),
@@ -725,11 +727,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                     Text(
                                       register
                                           ? tr(
-                                              'عندك حساب بالفعل؟',
+                                              appText('s309'),
                                               'Already a member?',
                                             )
                                           : tr(
-                                              'لسه معندكش حساب؟',
+                                              appText('s310'),
                                               "Don't have an account?",
                                             ),
                                       style: const TextStyle(
@@ -750,9 +752,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                       ),
                                       child: Text(
                                         register
-                                            ? tr('سجّل دخولك', 'Log in')
+                                            ? tr(appText('s311'), 'Log in')
                                             : tr(
-                                                'إنشاء حساب',
+                                                appText('s312'),
                                                 'Create account',
                                               ),
                                         style: const TextStyle(
@@ -791,7 +793,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                   label: Text(
                                     tr(
-                                      'وصلك دعوة؟ قبول الدعوة',
+                                      appText('s313'),
                                       'Got an invitation? Accept invite',
                                     ),
                                     textAlign: TextAlign.center,
@@ -825,9 +827,9 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
-      ),
+      ); },
     ),
-  );
+  ); }
 }
 
 class _RoleChoice extends StatelessWidget {
@@ -843,7 +845,7 @@ class _RoleChoice extends StatelessWidget {
     required this.onPressed,
   });
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Semantics(
     button: true,
     selected: selected,
     child: Material(
@@ -883,7 +885,7 @@ class _RoleChoice extends StatelessWidget {
         ),
       ),
     ),
-  );
+  ); }
 }
 
 class _AuthBackdrop extends CustomPainter {
@@ -950,12 +952,13 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
   Object? error;
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     final a = widget.application, rejected = a['status'] == 'REJECTED';
     return Screen(
-      title: 'طلب انضمامك',
+      title: appText('s314'),
       actions: [
         IconButton(
-          tooltip: 'تسجيل الخروج',
+          tooltip: appText('s5'),
           onPressed: busy
               ? null
               : () async {
@@ -976,13 +979,13 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
         children: [
           const SizedBox(height: 30),
           EmptyState(
-            rejected ? 'طلبك محتاج تعديل' : 'طلبك وصلنا',
+            rejected ? appText('s315') : appText('s316'),
             icon: rejected
                 ? Icons.edit_note_rounded
                 : Icons.hourglass_bottom_rounded,
             detail: rejected
-                ? 'راجع سبب الرفض وعدّل البيانات وأعد إرسالها.'
-                : 'بنراجع بيانات ${a['gymName']}. هتقدر تدير جيمك بمجرد الموافقة.',
+                ? appText('s317')
+                : appText('s318', [a['gymName']]),
           ),
           const SizedBox(height: 20),
           Panel(
@@ -990,8 +993,8 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 StatusPill(a['status']),
-                Fact('الجيم', '${a['gymName']}'),
-                Fact('المكان', '${a['governorate']} · ${a['city']}'),
+                Fact(appText('s319'), '${a['gymName']}'),
+                Fact(appText('s320'), '${a['governorate']} · ${a['city']}'),
                 Text('${a['address']}'),
                 if (a['reviewReason'] != null) ...[
                   const Divider(),
@@ -1003,11 +1006,11 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
           ErrorNote(error),
           const SizedBox(height: 20),
           ActionButton(
-            'تحديث حالة الطلب',
+            appText('s321'),
             onPressed: widget.refresh,
             icon: Icons.refresh_rounded,
           ),
-          TextButton(onPressed:busy?null:()=>open(context,AccountDeletionScreen(api:widget.api)),style:TextButton.styleFrom(foregroundColor:const Color(0xffba1a1a)),child:const Text('حذف حسابي')),
+          TextButton(onPressed:busy?null:()=>open(context,AccountDeletionScreen(api:widget.api)),style:TextButton.styleFrom(foregroundColor:const Color(0xffba1a1a)),child:Text(appText('s322'))),
           if (rejected)
             TextButton(
               onPressed: () async {
@@ -1017,7 +1020,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                 );
                 if (changed == true) widget.refresh();
               },
-              child: const Text('تعديل البيانات وإعادة التقديم'),
+              child: Text(appText('s323')),
             ),
         ],
       ),
@@ -1058,8 +1061,8 @@ class _ResubmitApplicationState extends State<ResubmitApplication> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'تعديل طلب الانضمام',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s324'),
     child: Form(
       key: form,
       child: ListView(
@@ -1073,22 +1076,22 @@ class _ResubmitApplicationState extends State<ResubmitApplication> {
                 enabled: !busy,
                 decoration: InputDecoration(
                   labelText: {
-                    'gymName': 'اسم الجيم',
-                    'description': 'نبذة',
-                    'governorate': 'المحافظة',
-                    'city': 'المدينة',
-                    'address': 'العنوان',
+                    'gymName': appText('s297'),
+                    'description': appText('s325'),
+                    'governorate': appText('s298'),
+                    'city': appText('s326'),
+                    'address': appText('s327'),
                   }[entry.key],
                 ),
                 validator: (s) =>
                     entry.key != 'description' && (s ?? '').trim().length < 2
-                    ? 'كمّل البيانات'
+                    ? appText('s328')
                     : null,
               ),
             ),
           ErrorNote(error),
           ActionButton(
-            'إعادة إرسال الطلب',
+            appText('s329'),
             busy: busy,
             onPressed: () async {
               if (busy || !form.currentState!.validate()) return;
@@ -1113,7 +1116,7 @@ class _ResubmitApplicationState extends State<ResubmitApplication> {
         ],
       ),
     ),
-  );
+  ); }
 }
 
 class AcceptInviteScreen extends StatefulWidget {
@@ -1135,32 +1138,32 @@ class _AcceptInviteScreenState extends State<AcceptInviteScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'قبول دعوة',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s330'),
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text(
-          'الصق رابط الدعوة اللي وصلك من الأدمن أو صاحب الجيم. اختار كلمة سر جديدة، أو اكتب الحالية لو عندك حساب.',
+        Text(
+          appText('s331'),
         ),
         const SizedBox(height: 22),
         TextField(
           controller: link,
           enabled: !busy,
           textDirection: TextDirection.ltr,
-          decoration: const InputDecoration(labelText: 'رابط أو رمز الدعوة'),
+          decoration: InputDecoration(labelText: appText('s332')),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: password,
           enabled: !busy,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'كلمة السر'),
+          decoration: InputDecoration(labelText: appText('s295')),
         ),
         ErrorNote(error),
         const SizedBox(height: 20),
         ActionButton(
-          'قبول الدعوة والدخول',
+          appText('s333'),
           busy: busy,
           onPressed: () async {
             if (busy) return;
@@ -1186,6 +1189,6 @@ class _AcceptInviteScreenState extends State<AcceptInviteScreen> {
         ),
       ],
     ),
-  );
+  ); }
 }
 

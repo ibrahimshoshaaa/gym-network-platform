@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -80,13 +81,13 @@ class Brand extends StatelessWidget {
   final bool large;
   const Brand({super.key, this.large = false});
   @override
-  Widget build(BuildContext context) => Image.asset(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Image.asset(
     'assets/brand/gymbank-wordmark.png',
     width: large ? 224 : 152,
     height: large ? 56 : 38,
     fit: BoxFit.contain,
     semanticLabel: 'GymBank',
-  );
+  ); }
 }
 
 class Panel extends StatelessWidget {
@@ -100,7 +101,7 @@ class Panel extends StatelessWidget {
     this.padding = const EdgeInsets.all(22),
   });
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  SizedBox(
     width: double.infinity,
     child: Material(
       color: color ?? Colors.white,
@@ -110,7 +111,7 @@ class Panel extends StatelessWidget {
       ),
       child: Padding(padding: padding, child: child),
     ),
-  );
+  ); }
 }
 
 class ActionButton extends StatelessWidget {
@@ -126,7 +127,7 @@ class ActionButton extends StatelessWidget {
     this.icon,
   });
   @override
-  Widget build(BuildContext context) => FilledButton(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  FilledButton(
     onPressed: busy ? null : onPressed,
     child: busy
         ? const SizedBox(
@@ -144,7 +145,7 @@ class ActionButton extends StatelessWidget {
               Flexible(child: Text(label, textAlign: TextAlign.center)),
             ],
           ),
-  );
+  ); }
 }
 
 class ErrorNote extends StatelessWidget {
@@ -152,7 +153,7 @@ class ErrorNote extends StatelessWidget {
   final VoidCallback? retry;
   const ErrorNote(this.error, {super.key, this.retry});
   @override
-  Widget build(BuildContext context) => error == null
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  error == null
       ? const SizedBox.shrink()
       : Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -172,12 +173,12 @@ class ErrorNote extends StatelessWidget {
                 if (retry != null)
                   TextButton(
                     onPressed: retry,
-                    child: const Text('إعادة المحاولة'),
+                    child: Text(appText('s98')),
                   ),
               ],
             ),
           ),
-        );
+        ); }
 }
 
 class EmptyState extends StatelessWidget {
@@ -192,7 +193,7 @@ class EmptyState extends StatelessWidget {
     this.action,
   });
   @override
-  Widget build(BuildContext context) => Panel(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Panel(
     child: Column(
       children: [
         Container(
@@ -220,7 +221,7 @@ class EmptyState extends StatelessWidget {
         if (action != null) ...[const SizedBox(height: 18), action!],
       ],
     ),
-  );
+  ); }
 }
 
 class Screen extends StatelessWidget {
@@ -234,10 +235,10 @@ class Screen extends StatelessWidget {
     this.actions,
   });
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Scaffold(
     appBar: AppBar(title: Text(title), actions: actions),
     body: SafeArea(child: child),
-  );
+  ); }
 }
 
 Future<T?> open<T>(BuildContext context, Widget page) =>
@@ -280,7 +281,7 @@ class _DataViewState extends State<DataView> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Stack(
     children: [
       RefreshIndicator(
         onRefresh: load,
@@ -301,17 +302,17 @@ class _DataViewState extends State<DataView> {
             : widget.builder(data, load),
       ),
       if (loading && data != null)
-        const Positioned(
+        Positioned(
           top: 0,
           left: 0,
           right: 0,
           child: LinearProgressIndicator(
             minHeight: 3,
-            semanticsLabel: 'جاري تحديث البيانات',
+            semanticsLabel: appText('s99'),
           ),
         ),
     ],
-  );
+  ); }
 }
 
 class SectionTitle extends StatelessWidget {
@@ -319,7 +320,7 @@ class SectionTitle extends StatelessWidget {
   final Widget? trailing;
   const SectionTitle(this.title, {super.key, this.trailing});
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Padding(
     padding: const EdgeInsets.only(top: 24, bottom: 14),
     child: Row(
       children: [
@@ -329,7 +330,7 @@ class SectionTitle extends StatelessWidget {
         if (trailing != null) trailing!,
       ],
     ),
-  );
+  ); }
 }
 
 class Fact extends StatelessWidget {
@@ -337,7 +338,7 @@ class Fact extends StatelessWidget {
   final bool strong;
   const Fact(this.label, this.value, {super.key, this.strong = false});
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Padding(
     padding: const EdgeInsets.symmetric(vertical: 9),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,17 +359,17 @@ class Fact extends StatelessWidget {
         ),
       ],
     ),
-  );
+  ); }
 }
 
 class Reference extends StatelessWidget {
   final String value;
   const Reference(this.value, {super.key});
   @override
-  Widget build(BuildContext context) => ExpansionTile(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  ExpansionTile(
     tilePadding: EdgeInsets.zero,
-    title: const Text(
-      'مرجع العملية',
+    title: Text(
+      appText('s100'),
       style: TextStyle(fontSize: 12, color: muted),
     ),
     children: [
@@ -382,27 +383,27 @@ class Reference extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'نسخ المرجع',
+            tooltip: appText('s101'),
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: value));
               if (context.mounted)
                 ScaffoldMessenger.of(
                   context,
-                ).showSnackBar(const SnackBar(content: Text('تم نسخ المرجع')));
+                ).showSnackBar(SnackBar(content: Text(appText('s102'))));
             },
             icon: const Icon(Icons.copy_rounded, size: 18),
           ),
         ],
       ),
     ],
-  );
+  ); }
 }
 
 class StatusPill extends StatelessWidget {
   final String status;
   const StatusPill(this.status, {super.key});
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
     decoration: BoxDecoration(
       color: ['REJECTED', 'DISPUTED', 'SUSPENDED'].contains(status)
@@ -416,14 +417,14 @@ class StatusPill extends StatelessWidget {
       statusName(status),
       style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
     ),
-  );
+  ); }
 }
 
 class PagedRecords extends StatefulWidget {
   final ApiClient api;
   final String path;
   final Widget Function(Json) item;
-  final String empty;
+  final String? empty;
   final String emptyDetail;
   final Widget? header, emptyAction;
   const PagedRecords({
@@ -431,7 +432,7 @@ class PagedRecords extends StatefulWidget {
     required this.api,
     required this.path,
     required this.item,
-    this.empty = 'لسه مفيش عمليات',
+    this.empty,
     this.emptyDetail = '',
     this.header,
     this.emptyAction,
@@ -474,7 +475,7 @@ class _PagedRecordsState extends State<PagedRecords> {
   }
 
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  RefreshIndicator(
     onRefresh: () => load(),
     child: ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -484,7 +485,7 @@ class _PagedRecordsState extends State<PagedRecords> {
         ErrorNote(error, retry: () => load()),
         if (items.isEmpty && !busy && error == null)
           EmptyState(
-            widget.empty,
+            widget.empty ?? appText('s103'),
             detail: widget.emptyDetail,
             action: widget.emptyAction,
           ),
@@ -504,9 +505,9 @@ class _PagedRecordsState extends State<PagedRecords> {
         if (cursor != null && !busy)
           OutlinedButton(
             onPressed: () => load(more: true),
-            child: const Text('تحميل المزيد'),
+            child: Text(appText('s104')),
           ),
       ],
     ),
-  );
+  ); }
 }

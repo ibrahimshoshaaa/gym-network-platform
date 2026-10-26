@@ -1,3 +1,4 @@
+import 'l10n/language.dart';
 import 'screens/account_deletion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -38,6 +39,7 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
   void initState() {
     super.initState();
     actor = widget.api.user?['id'];
+    AppLanguage.instance.addListener(changed);
     widget.api.addListener(changed);
     restore();
   }
@@ -48,6 +50,7 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
       error = null;
     });
     try {
+      await AppLanguage.instance.restore(widget.api.storage.read, widget.api.storage.write);
       if (!widget.api.restored ||
           (widget.api.token != null && widget.api.user == null)) {
         // A startup retry must restore both identity and its saved financial envelope.
@@ -74,17 +77,18 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
 
   @override
   void dispose() {
+    AppLanguage.instance.removeListener(changed);
     widget.api.removeListener(changed);
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return LanguageScope(language: AppLanguage.instance, child: MaterialApp(
     navigatorKey: navigator,
     title: 'GymBank',
     debugShowCheckedModeBanner: false,
     theme: appTheme(),
-    locale: const Locale('ar'),
+    locale: AppLanguage.instance.locale,
     supportedLocales: const [Locale('ar'), Locale('en')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     home: loading
@@ -105,7 +109,7 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
           ? AccountDeletionReceipt(api:widget.api)
           : AuthScreen(api: widget.api)
         : SessionGate(key: ValueKey(widget.api.user!['id']), api: widget.api),
-  );
+  )); }
 }
 
 class SessionGate extends StatefulWidget {
@@ -162,11 +166,12 @@ class _SessionGateState extends State<SessionGate> {
 
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     if (loading)
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (error != null)
       return Screen(
-        title: 'حسابك',
+        title: appText('s0'),
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [ErrorNote(error, retry: load)],
@@ -196,23 +201,23 @@ class _SessionGateState extends State<SessionGate> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const EmptyState(
-            'مساحة الإدارة على الويب',
+          EmptyState(
+            appText('s1'),
             detail:
-                'إدارة المنصة متاحة من لوحة الويب. لو حسابك تابع لجيم، راجع تفعيل الجيم وتعيينات الفروع.',
+                appText('s2'),
           ),
           const SizedBox(height: 20),
           ActionButton(
-            'افتح لوحة الويب',
+            appText('s3'),
             onPressed: () => launchUrl(
               Uri.parse('https://gym-network-platform.vercel.app/'),
               mode: LaunchMode.externalApplication,
             ),
           ),
-          if(role!='PLATFORM_ADMIN')TextButton(onPressed:()=>open(context,AccountDeletionScreen(api:widget.api)),child:const Text('حذف الحساب')),
+          if(role!='PLATFORM_ADMIN')TextButton(onPressed:()=>open(context,AccountDeletionScreen(api:widget.api)),child:Text(appText('s4'))),
           TextButton(
             onPressed: () => widget.api.logout(),
-            child: const Text('تسجيل الخروج'),
+            child: Text(appText('s5')),
           ),
         ],
       ),
@@ -250,29 +255,30 @@ class _NativeShellState extends State<NativeShell> {
   bool get staff => workMode && !owner;
   @override
   Widget build(BuildContext context) {
+    AppLanguage.watch(context);
     final gym = owner ? widget.gyms[gymIndex] : null;
     final tabs = owner
-        ? const [
-            (Icons.dashboard_outlined, 'الرئيسية'),
-            (Icons.storefront_outlined, 'الفروع'),
-            (Icons.qr_code_scanner_rounded, 'التشغيل'),
-            (Icons.shopping_bag_outlined, 'الماركت'),
-            (Icons.person_outline_rounded, 'حسابي'),
+        ? [
+            (Icons.dashboard_outlined, appText('s6')),
+            (Icons.storefront_outlined, appText('s7')),
+            (Icons.qr_code_scanner_rounded, appText('s8')),
+            (Icons.shopping_bag_outlined, appText('s9')),
+            (Icons.person_outline_rounded, appText('s10')),
           ]
         : staff
-        ? const [
-            (Icons.dashboard_outlined, 'الرئيسية'),
-            (Icons.directions_run_rounded, 'الزيارات'),
-            (Icons.qr_code_scanner_rounded, 'التشغيل'),
-            (Icons.shopping_bag_outlined, 'الماركت'),
-            (Icons.person_outline_rounded, 'حسابي'),
+        ? [
+            (Icons.dashboard_outlined, appText('s6')),
+            (Icons.directions_run_rounded, appText('s11')),
+            (Icons.qr_code_scanner_rounded, appText('s8')),
+            (Icons.shopping_bag_outlined, appText('s9')),
+            (Icons.person_outline_rounded, appText('s10')),
           ]
-        : const [
-            (Icons.home_outlined, 'الرئيسية'),
-            (Icons.near_me_outlined, 'الجيمات'),
-            (Icons.qr_code_2_rounded, 'رمز الدخول'),
-            (Icons.shopping_bag_outlined, 'الماركت'),
-            (Icons.person_outline_rounded, 'حسابي'),
+        : [
+            (Icons.home_outlined, appText('s6')),
+            (Icons.near_me_outlined, appText('s12')),
+            (Icons.qr_code_2_rounded, appText('s13')),
+            (Icons.shopping_bag_outlined, appText('s9')),
+            (Icons.person_outline_rounded, appText('s10')),
           ];
     final workHomeTools=Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             if (owner && index != 3 && widget.gyms.length > 1)
@@ -288,7 +294,7 @@ class _NativeShellState extends State<NativeShell> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Semantics(
-                        label: 'الجيم الحالي',
+                        label: appText('s14'),
                         child: DropdownButton<int>(
                           value: gymIndex,
                           isExpanded: true,
@@ -318,7 +324,7 @@ class _NativeShellState extends State<NativeShell> {
                 ),
               ),
      Wrap(alignment:WrapAlignment.end,spacing:8,children:[
-      if(widget.api.user?['role']=='TRAINEE'&&widget.assignedWork)TextButton(onPressed:widget.api.pending!=null?null:()=>setState((){workMode=false;index=0;version++;}),child:const Text('حساب المتدرب')),
+      if(widget.api.user?['role']=='TRAINEE'&&widget.assignedWork)TextButton(onPressed:widget.api.pending!=null?null:()=>setState((){workMode=false;index=0;version++;}),child:Text(appText('s15'))),
      ]),
     ]);
     Widget content;
@@ -374,7 +380,7 @@ class _NativeShellState extends State<NativeShell> {
                       index = 0;
                       version++;
                     }),
-              child: Text(workMode ? 'حساب المتدرب' : 'عملي في الجيم'),
+              child: Text(workMode ? appText('s15') : appText('s16')),
             ),
         ],
       ),
@@ -401,7 +407,7 @@ class _NativeShellState extends State<NativeShell> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Semantics(
-                        label: 'الجيم الحالي',
+                        label: appText('s14'),
                         child: DropdownButton<int>(
                           value: gymIndex,
                           isExpanded: true,
@@ -440,8 +446,8 @@ class _NativeShellState extends State<NativeShell> {
                 ),
                 child: Column(
                   children: [
-                    const Text(
-                      'فيه عملية محفوظة لسه نتيجتها غير مؤكدة. اتأكد منها قبل أي تحويل جديد.',
+                    Text(
+                      appText('s17'),
                       style: TextStyle(fontSize: 12),
                     ),
                     TextButton(
@@ -458,16 +464,16 @@ class _NativeShellState extends State<NativeShell> {
                                   setState(() => version++);
                                   await showDialog<void>(
                                     context: context,
-                                    builder: (c) => AlertDialog(
-                                      title: const Text('تم تأكيد العملية'),
-                                      content: Text('المرجع: ${r['id']}'),
+                                    builder: (c) { AppLanguage.watch(c); return  AlertDialog(
+                                      title: Text(appText('s18')),
+                                      content: Text(appText('s19', [r['id']])),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.pop(c),
-                                          child: const Text('تم'),
+                                          child: Text(appText('s20')),
                                         ),
                                       ],
-                                    ),
+                                    ); },
                                   );
                                 }
                               } catch (e) {
@@ -478,8 +484,8 @@ class _NativeShellState extends State<NativeShell> {
                             },
                       child: Text(
                         retrying
-                            ? 'بنتحقق من العملية…'
-                            : 'إعادة نفس العملية بأمان',
+                            ? appText('s21')
+                            : appText('s22'),
                       ),
                     ),
                     if (error != null) ErrorNote(error),
@@ -546,7 +552,7 @@ class _FloatingQrButton extends StatelessWidget {
   final VoidCallback onPressed;
   const _FloatingQrButton({super.key, required this.icon, required this.onPressed});
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(child: SizedBox(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  ExcludeSemantics(child: SizedBox(
     width: 48, height: 48,
     child: Material(
       color: lime,
@@ -560,7 +566,7 @@ class _FloatingQrButton extends StatelessWidget {
         child: Icon(icon, color: ink, size: 26),
       ),
     ),
-  ));
+  )); }
 }
 
 class GymEntryScreen extends StatefulWidget {
@@ -570,17 +576,17 @@ class GymEntryScreen extends StatefulWidget {
 }
 class _GymEntryScreenState extends State<GymEntryScreen>{
  bool bookings=false;
- @override Widget build(BuildContext context)=>Column(children:[
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Column(children:[
   Padding(padding:const EdgeInsets.fromLTRB(20,8,20,8),child:Row(children:[
-   Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=false),child:const Text('دخول بدون حجز'))),
+   Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=false),child:Text(appText('s23')))),
    const SizedBox(width:10),
-   Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=true),child:const Text('حجوزاتي'))),
+   Expanded(child:OutlinedButton(onPressed:()=>setState(()=>bookings=true),child:Text(appText('s24')))),
   ])),
-  TextButton.icon(onPressed:()=>open(context,Screen(title:'سجل زياراتي',child:VisitsScreen(api:widget.api,showQr:()=>Navigator.pop(context)))),icon:const Icon(Icons.history_rounded),label:const Text('سجل زياراتي')),
+  TextButton.icon(onPressed:()=>open(context,Screen(title:appText('s25'),child:VisitsScreen(api:widget.api,showQr:()=>Navigator.pop(context)))),icon:const Icon(Icons.history_rounded),label:Text(appText('s25'))),
   if(!bookings)...[
-   const Padding(padding:EdgeInsets.symmetric(horizontal:20),child:Text('وصلت من غير حجز؟ اختار الفرع والخدمات واضغط «احجز الآن»، وبعدها امسح كود الفرع من حجزك. رمزك الشخصي متاح لعمليات النقاط.',style:TextStyle(color:muted,fontSize:12))),
-   TextButton.icon(onPressed:()=>open(context,Screen(title:'اختار الفرع',child:DirectoryScreen(api:widget.api))),icon:const Icon(Icons.place_outlined),label:const Text('اختار الفرع واحجز الآن')),
+   Padding(padding:EdgeInsets.symmetric(horizontal:20),child:Text(appText('s26'),style:TextStyle(color:muted,fontSize:12))),
+   TextButton.icon(onPressed:()=>open(context,Screen(title:appText('s27'),child:DirectoryScreen(api:widget.api))),icon:const Icon(Icons.place_outlined),label:Text(appText('s28'))),
   ],
   Expanded(child:bookings?BookingsScreen(api:widget.api,embedded:true):QrScreen(api:widget.api)),
- ]);
+ ]); }
 }

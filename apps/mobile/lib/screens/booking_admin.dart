@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/api.dart';
@@ -19,18 +20,18 @@ class _SplitFields extends StatelessWidget {
  final TextEditingController percent;
  final bool disabled;
  const _SplitFields({super.key,required this.kind,required this.onKind,required this.percent,required this.disabled});
- @override Widget build(BuildContext context)=>Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-  DropdownButtonFormField<String>(isExpanded:true,initialValue:kind,decoration:const InputDecoration(labelText:'مصير النقاط'),items:const [
-   DropdownMenuItem(value:'TRAINEE',child:Text('إرجاع بالكامل للمتدرب')),
-   DropdownMenuItem(value:'GYM',child:Text('بالكامل للجيم')),
-   DropdownMenuItem(value:'TRAINEE_GYM',child:Text('المتدرب والجيم')),
-   DropdownMenuItem(value:'GYM_PLATFORM',child:Text('الجيم والمنصة')),
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  DropdownButtonFormField<String>(isExpanded:true,initialValue:kind,decoration:InputDecoration(labelText:appText('s334')),items:[
+   DropdownMenuItem(value:'TRAINEE',child:Text(appText('s335'))),
+   DropdownMenuItem(value:'GYM',child:Text(appText('s336'))),
+   DropdownMenuItem(value:'TRAINEE_GYM',child:Text(appText('s337'))),
+   DropdownMenuItem(value:'GYM_PLATFORM',child:Text(appText('s338'))),
   ],onChanged:disabled?null:(v){if(v!=null)onKind(v);}),
   if(kind.contains('_'))...[
    const SizedBox(height:12),
-   TextField(controller:percent,enabled:!disabled,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:kind=='TRAINEE_GYM'?'نسبة المتدرب %':'نسبة الجيم %',helperText:kind=='TRAINEE_GYM'?'الباقي للجيم':'الباقي للمنصة')),
+   TextField(controller:percent,enabled:!disabled,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:kind=='TRAINEE_GYM'?appText('s339'):appText('s340'),helperText:kind=='TRAINEE_GYM'?appText('s341'):appText('s342'))),
   ],
- ]);
+ ]); }
 }
 class BookingAdminScreen extends StatefulWidget {
  final ApiClient api;
@@ -78,48 +79,48 @@ class _BookingAdminScreenState extends State<BookingAdminScreen>{
    if(minutes==null||minutes<0||minutes>10080||mode=='AUTOMATIC'&&kind.contains('_')&&(ratio==null||ratio!=ratio.round()||ratio<0||ratio>100))throw const ApiFailure('INVALID_INPUT');
    final policy=<String,dynamic>{'mode':mode,'graceMinutes':minutes,if(mode=='AUTOMATIC')'allocation':bookingAllocation(kind,ratio?.toInt()??50)};
    await widget.api.request('admin/booking-policy',method:'POST',body:{'expectedVersion':current?['version']??0,'policy':policy});
-   await load();if(mounted){setState(()=>success='تم حفظ سياسة الحجز للحجوزات الجديدة.');ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(success)));}
+   await load();if(mounted){setState(()=>success=appText('s343'));ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(success)));}
   }catch(e){if(mounted)setState(()=>error=e);}
   finally{if(mounted)setState(()=>busy=false);}
  }
- @override Widget build(BuildContext context)=>Scaffold(
-  appBar:AppBar(title:const Text('الحجوزات وسياسة الحضور'),actions:[
-   IconButton(tooltip:'لوحة الويب',onPressed:()=>launchUrl(Uri.parse('https://gym-network-platform.vercel.app/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_browser_rounded)),
-   IconButton(tooltip:'تسجيل الخروج',onPressed:busy?null:()=>widget.api.logout(),icon:const Icon(Icons.logout_rounded)),
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Scaffold(
+  appBar:AppBar(title:Text(appText('s344')),actions:[
+   IconButton(tooltip:appText('s345'),onPressed:()=>launchUrl(Uri.parse('https://gym-network-platform.vercel.app/'),mode:LaunchMode.externalApplication),icon:const Icon(Icons.open_in_browser_rounded)),
+   IconButton(tooltip:appText('s5'),onPressed:busy?null:()=>widget.api.logout(),icon:const Icon(Icons.logout_rounded)),
   ]),
   body:SafeArea(child:RefreshIndicator(onRefresh:load,child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.all(20),children:[
-   const Text('السياسة للحجوزات الجديدة؛ كل حجز يحتفظ بسياسته.',style:TextStyle(color:muted)),
+   Text(appText('s346'),style:TextStyle(color:muted)),
    ErrorNote(error,retry:load),
    if(success.isNotEmpty)Padding(padding:const EdgeInsets.all(12),child:Text(success,style:const TextStyle(color:green))),
    if(loading)const LinearProgressIndicator(),
    if(loaded)...[
-    const SectionTitle('سياسة الحجز وعدم الحضور'),
+    SectionTitle(appText('s347')),
     Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-     TextField(controller:grace,enabled:!busy&&!loading,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'مهلة السماح بعد الموعد — بالدقائق')),
+     TextField(controller:grace,enabled:!busy&&!loading,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:appText('s348'))),
      const SizedBox(height:12),
-     const Text('الإلغاء خلال المهلة يرجّع النقاط بالكامل. بعد المهلة:'),
+     Text(appText('s349')),
      const SizedBox(height:12),
-     DropdownButtonFormField<String>(isExpanded:true,key:ValueKey(mode),initialValue:mode,decoration:const InputDecoration(labelText:'طريقة اتخاذ القرار'),items:const [
-      DropdownMenuItem(value:'MANUAL',child:Text('مراجعة يدوية من صاحب المنصة')),
-      DropdownMenuItem(value:'AUTOMATIC',child:Text('توزيع تلقائي بنسب ثابتة')),
+     DropdownButtonFormField<String>(isExpanded:true,key:ValueKey(mode),initialValue:mode,decoration:InputDecoration(labelText:appText('s350')),items:[
+      DropdownMenuItem(value:'MANUAL',child:Text(appText('s351'))),
+      DropdownMenuItem(value:'AUTOMATIC',child:Text(appText('s352'))),
      ],onChanged:busy||loading?null:(v){if(v!=null)setState(()=>mode=v);}),
      const SizedBox(height:12),
      if(mode=='AUTOMATIC')_SplitFields(key:ValueKey(kind),kind:kind,onKind:(v)=>setState(()=>kind=v),percent:percent,disabled:busy||loading)
-     else const Text('النقاط تفضل معلقة حتى تراجع سبب عدم الحضور وتقرر توزيعها.'),
-     const SizedBox(height:16),ActionButton('حفظ سياسة الحجز',busy:busy,onPressed:loading?null:save),
+     else Text(appText('s353')),
+     const SizedBox(height:16),ActionButton(appText('s354'),busy:busy,onPressed:loading?null:save),
     ])),
-    const SectionTitle('حجوزات بانتظار القرار'),
-    if(items.isEmpty)const EmptyState('مفيش حجوزات محتاجة قرار'),
+    SectionTitle(appText('s355')),
+    if(items.isEmpty)EmptyState(appText('s356')),
     for(final b in items)Padding(padding:const EdgeInsets.only(bottom:14),child:Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-     Text('${b['traineeName']??'متدرب'} · ${b['branch']?['gym']?['name']??'زيارة'}',style:const TextStyle(fontWeight:FontWeight.w800)),
+     Text('${b['traineeName']??appText('s289')} · ${b['branch']?['gym']?['name']??appText('s1003')}',style:const TextStyle(fontWeight:FontWeight.w800)),
      Text('${b['branch']?['name']??''}'),
-     Fact('موعد الزيارة',shortDate(b['scheduledAt'])),Fact('النقاط المعلقة','${b['points']} نقطة'),
-     Text('سبب عدم الحضور: ${b['absenceReason']??'لم يُرسل سبب بعد.'}'),
-     const SizedBox(height:12),ActionButton('مراجعة واتخاذ قرار',onPressed:busy?null:()async{await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>BookingDecisionScreen(api:widget.api,booking:b)));if(mounted)await load();}),
+     Fact(appText('s187'),shortDate(b['scheduledAt'])),Fact(appText('s357'),appText('s120', [b['points']])),
+     Text(appText('s223', [b['absenceReason']??appText('s1004')])),
+     const SizedBox(height:12),ActionButton(appText('s358'),onPressed:busy?null:()async{await Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>BookingDecisionScreen(api:widget.api,booking:b)));if(mounted)await load();}),
     ]))),
    ],
   ]))),
- );
+ ); }
 }
 class BookingDecisionScreen extends StatefulWidget {
  final ApiClient api;
@@ -144,14 +145,14 @@ class _BookingDecisionScreenState extends State<BookingDecisionScreen>{
   }catch(e){if(mounted)setState(()=>error=e);}
   finally{if(mounted)setState(()=>busy=false);}
  }
- @override Widget build(BuildContext context)=>Screen(title:'قرار عدم الحضور',child:ListView(padding:const EdgeInsets.all(20),children:[
+ @override Widget build(BuildContext context){ AppLanguage.watch(context); return Screen(title:appText('s359'),child:ListView(padding:const EdgeInsets.all(20),children:[
   Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-   Text('${widget.booking['traineeName']??'متدرب'} · ${widget.booking['points']} نقطة'),
-   Text('السبب: ${widget.booking['absenceReason']??'لم يُرسل سبب بعد.'}'),
+   Text(appText('s360', [widget.booking['traineeName']??appText('s289'), widget.booking['points']])),
+   Text(appText('s361', [widget.booking['absenceReason']??appText('s1004')])),
    const SizedBox(height:12),Text(policySummary(Map<String,dynamic>.from(widget.booking['policySnapshot']))),
    const SizedBox(height:16),_SplitFields(kind:kind,onKind:(v)=>setState(()=>kind=v),percent:percent,disabled:busy),
-   const SizedBox(height:12),TextField(controller:reason,enabled:!busy,maxLength:1000,decoration:const InputDecoration(labelText:'سبب القرار')),
-   ErrorNote(error),ActionButton('تأكيد القرار وتوزيع النقاط',busy:busy,onPressed:decide),
+   const SizedBox(height:12),TextField(controller:reason,enabled:!busy,maxLength:1000,decoration:InputDecoration(labelText:appText('s362'))),
+   ErrorNote(error),ActionButton(appText('s363'),busy:busy,onPressed:decide),
   ])),
- ]));
+ ])); }
 }

@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'account_deletion.dart';
 import 'campaigns.dart';
 import 'maintenance.dart';
@@ -41,18 +42,18 @@ class _AccountScreenState extends State<AccountScreen> {
     final user=widget.api.user!;
     final name='${user['displayName']}';
     return ListView(padding:const EdgeInsets.fromLTRB(20,8,20,28),children:[
-      const TraineeSectionHeader('حسابك',subtitle:'بياناتك ونشاطك، في مكان واحد.'),
+      TraineeSectionHeader(appText('s0'),subtitle:appText('s966')),
       Panel(color:ink,padding:const EdgeInsets.all(20),child:Column(
         crossAxisAlignment:CrossAxisAlignment.start,children:[
           Row(children:[
             CircleAvatar(radius:25,backgroundColor:lime,
-              child:Text(name.trim().isEmpty?'؟':name.characters.first,
+              child:Text(name.trim().isEmpty?appText('s963'):name.characters.first,
                 style:const TextStyle(fontSize:23,fontWeight:FontWeight.w800,color:ink))),
             const SizedBox(width:12),
             Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(name,style:const TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.w800)),
               const SizedBox(height:4),
-              const Text('حساب المتدرب',style:TextStyle(color:lime,fontSize:11)),
+              Text(appText('s15'),style:TextStyle(color:lime,fontSize:11)),
             ])),
           ]),
           const SizedBox(height:16),
@@ -62,31 +63,32 @@ class _AccountScreenState extends State<AccountScreen> {
           if ('${user['phone'] ?? ''}'.trim().isNotEmpty) Text('${user['phone']}',textDirection:TextDirection.ltr,
             style:const TextStyle(color:Colors.white70,fontSize:12)),
         ])),
-      const SectionTitle('بياناتك والأمان'),
+      SectionTitle(appText('s967')),
       Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
-        _item('تعديل الاسم',Icons.person_outline_rounded,()async{
+        _item(appText('s968'),Icons.person_outline_rounded,()async{
           await open(context,ProfileEdit(api:widget.api));
           if(mounted)setState((){});
         }),
         const Divider(height:1),
-        _item('كلمة السر والأمان',Icons.lock_outline_rounded,
+        _item(appText('s969'),Icons.lock_outline_rounded,
           ()=>open(context,PasswordScreen(api:widget.api))),
       ])),
-      const SectionTitle('نشاطك والمساعدة'),
+      SectionTitle(appText('s970')),
       Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
-        _item('طلبات الشحن',Icons.receipt_long_rounded,
+        _item(appText('s162'),Icons.receipt_long_rounded,
           ()=>open(context,TopupHistory(api:widget.api))),
         const Divider(height:1),
-        _item('الإشعارات',Icons.notifications_none_rounded,
+        _item(appText('s368'),Icons.notifications_none_rounded,
           ()=>open(context,NotificationsScreen(api:widget.api))),
         const Divider(height:1),
-        _item('الدعم والمساعدة',Icons.support_agent_rounded,
+        _item(appText('s971'),Icons.support_agent_rounded,
           ()=>open(context,SupportScreen(api:widget.api))),
       ])),
       ErrorNote(error),
       const SizedBox(height:20),
       _deleteAccountButton(context),
       const SizedBox(height: 8),
+      const LanguageSelector(),
       _logoutButton(),
       const SizedBox(height:18),
       const Text('GYMBANK · 0.2.7\nShoTech Solutions',
@@ -95,14 +97,14 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => !widget.workplace
-    ? traineeAccount(context) : workAccount(context);
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  !widget.workplace
+    ? traineeAccount(context) : workAccount(context); }
 
   Widget _deleteAccountButton(BuildContext context) => OutlinedButton.icon(
     key: const Key('account.delete'),
     onPressed: busy ? null : () => open(context, AccountDeletionScreen(api: widget.api)),
     icon: const Icon(Icons.delete_forever_outlined),
-    label: const Text('حذف حسابي'),
+    label: Text(appText('s322')),
     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffba1a1a),
       side: const BorderSide(color: Color(0xffba1a1a)),
       minimumSize: const Size(double.infinity, 48)),
@@ -112,7 +114,7 @@ class _AccountScreenState extends State<AccountScreen> {
     onPressed: busy ? null : logout,
     icon: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
       : const Icon(Icons.logout_rounded, size: 19),
-    label: Text(busy ? 'جاري تسجيل الخروج…' : 'تسجيل الخروج'),
+    label: Text(busy ? appText('s972') : appText('s5')),
     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffa33740),
       minimumSize: const Size(double.infinity, 48)),
   );
@@ -120,9 +122,9 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget workAccount(BuildContext context) => ListView(
     padding: const EdgeInsets.all(22),
     children: [
-      const PortalIntro(
-        'حسابك',
-        detail: 'بياناتك والأمان والدعم في مكان واحد.',
+      PortalIntro(
+        appText('s0'),
+        detail: appText('s973'),
       ),
       Panel(
         child: Column(
@@ -142,16 +144,16 @@ class _AccountScreenState extends State<AccountScreen> {
             const SizedBox(height: 14),
             Text(
               widget.ownerView
-                  ? 'صاحب جيم'
+                  ? appText('s288')
                   : widget.workplace && widget.api.user!['role'] == 'TRAINEE'
-                  ? 'موظف جيم'
+                  ? appText('s974')
                   : {
-                          'TRAINEE': 'متدرب',
-                          'GYM_OWNER': 'صاحب جيم',
-                          'BRANCH_MANAGER': 'مدير فرع',
-                          'CASHIER': 'كاشير',
+                          'TRAINEE': appText('s289'),
+                          'GYM_OWNER': appText('s288'),
+                          'BRANCH_MANAGER': appText('s778'),
+                          'CASHIER': appText('s779'),
                         }[widget.api.user!['role']] ??
-                        'حساب GymBank',
+                        appText('s975'),
               style: const TextStyle(color: green, fontWeight: FontWeight.w700),
             ),
             Text(
@@ -176,31 +178,31 @@ class _AccountScreenState extends State<AccountScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         child: Column(
           children: [
-            if(widget.ownerView||canPromote)_item('إعلانات الفروع', Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
-            _item('الصيانة', Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
+            if(widget.ownerView||canPromote)_item(appText('s449'), Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
+            _item(appText('s681'), Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
                 _item(
-              'تعديل الاسم',
+              appText('s968'),
               Icons.person_outline_rounded,
               () => open(context, ProfileEdit(api: widget.api)),
             ),
             _item(
-              'كلمة السر والأمان',
+              appText('s969'),
               Icons.lock_outline_rounded,
               () => open(context, PasswordScreen(api: widget.api)),
             ),
             if (!widget.workplace)
               _item(
-                'طلبات الشحن',
+                appText('s162'),
                 Icons.receipt_long_rounded,
                 () => open(context, TopupHistory(api: widget.api)),
               ),
             _item(
-              'الإشعارات',
+              appText('s368'),
               Icons.notifications_none_rounded,
               () => open(context, NotificationsScreen(api: widget.api)),
             ),
             _item(
-              'الدعم والمساعدة',
+              appText('s971'),
               Icons.support_agent_rounded,
               () => open(context, SupportScreen(api: widget.api)),
             ),
@@ -211,10 +213,11 @@ class _AccountScreenState extends State<AccountScreen> {
       const SizedBox(height: 22),
       _deleteAccountButton(context),
       const SizedBox(height: 8),
+      const LanguageSelector(),
       _logoutButton(),
       const SizedBox(height: 26),
-      const Text(
-        'GYMBANK\nنسخة 0.2.7 · ShoTech Solutions',
+      Text(
+        appText('s976'),
         textAlign: TextAlign.center,
         style: TextStyle(color: muted, fontSize: 11),
       ),
@@ -253,20 +256,20 @@ class _ProfileEditState extends State<ProfileEdit> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'تعديل اسمك',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s977'),
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
         TextField(
           controller: name,
           enabled: !busy,
-          decoration: const InputDecoration(labelText: 'الاسم بالكامل'),
+          decoration: InputDecoration(labelText: appText('s292')),
         ),
         ErrorNote(error),
         const SizedBox(height: 20),
         ActionButton(
-          'حفظ التعديل',
+          appText('s978'),
           busy: busy,
           onPressed: () async {
             if (busy) return;
@@ -288,7 +291,7 @@ class _ProfileEditState extends State<ProfileEdit> {
         ),
       ],
     ),
-  );
+  ); }
 }
 
 class PasswordScreen extends StatefulWidget {
@@ -310,32 +313,32 @@ class _PasswordScreenState extends State<PasswordScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'تغيير كلمة السر',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s979'),
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        const Text(
-          'اختار جملة سرية 15 حرفًا على الأقل. تغييرها بينهي جلساتك القديمة.',
+        Text(
+          appText('s980'),
         ),
         const SizedBox(height: 22),
         TextField(
           controller: old,
           enabled: !busy,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'كلمة السر الحالية'),
+          decoration: InputDecoration(labelText: appText('s981')),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: next,
           enabled: !busy,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'كلمة السر الجديدة'),
+          decoration: InputDecoration(labelText: appText('s956')),
         ),
         ErrorNote(error),
         const SizedBox(height: 20),
         ActionButton(
-          'حفظ كلمة السر',
+          appText('s960'),
           busy: busy,
           onPressed: () async {
             if (busy) return;
@@ -347,8 +350,8 @@ class _PasswordScreenState extends State<PasswordScreen> {
               });
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('تم تغيير كلمة السر وتأمين حسابك'),
+                  SnackBar(
+                    content: Text(appText('s982')),
                   ),
                 );
                 Navigator.pop(context);
@@ -362,15 +365,15 @@ class _PasswordScreenState extends State<PasswordScreen> {
         ),
       ],
     ),
-  );
+  ); }
 }
 
 class NotificationsScreen extends StatelessWidget {
   final ApiClient api;
   const NotificationsScreen({super.key, required this.api});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'الإشعارات',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s368'),
     child: DataView(
       load: () => api.request('notifications'),
       builder: (d, reload) {
@@ -378,14 +381,14 @@ class NotificationsScreen extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(22),
           children: [
-            const Text(
-              'تنبيهات حسابك داخل التطبيق',
+            Text(
+              appText('s983'),
               style: TextStyle(color: muted),
             ),
             const SizedBox(height: 14),
             if (items.isEmpty)
-              const EmptyState(
-                'كله هادي دلوقتي',
+              EmptyState(
+                appText('s984'),
                 icon: Icons.notifications_none_rounded,
               ),
             ...items.map(
@@ -408,7 +411,7 @@ class NotificationsScreen extends StatelessWidget {
                     trailing: n['read'] == true
                         ? null
                         : IconButton(
-                            tooltip: 'تحديد كمقروء',
+                            tooltip: appText('s985'),
                             onPressed: () async {
                               await api.request(
                                 'notifications/read',
@@ -429,31 +432,31 @@ class NotificationsScreen extends StatelessWidget {
         );
       },
     ),
-  );
+  ); }
 }
 
 class SupportScreen extends StatelessWidget {
   final ApiClient api;
   const SupportScreen({super.key, required this.api});
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'الدعم والمساعدة',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s971'),
     child: DataView(
       load: () => Future.wait([
         api.request('support/tickets?limit=50'),
         api.request('support/contact'),
       ]),
-      builder: (d, reload) => ListView(
+      builder: (d, reload) { return  ListView(
         padding: const EdgeInsets.all(22),
         children: [
-          const EmptyState(
-            'إحنا معاك',
-            detail: 'اسأل عن حسابك أو الشحن أو الزيارات. فريق الإدارة هيرد عليك هنا.',
+          EmptyState(
+            appText('s986'),
+            detail: appText('s987'),
             icon: Icons.support_agent_rounded,
           ),
           const SizedBox(height: 20),
           ActionButton(
-            'طلب مساعدة جديد',
+            appText('s988'),
             onPressed: () async {
               await open(context, NewTicket(api: api));
               await reload();
@@ -470,9 +473,9 @@ class SupportScreen extends StatelessWidget {
                 mode: LaunchMode.externalApplication,
               ),
               icon: const Icon(Icons.chat_outlined),
-              label: const Text('تواصل على واتساب'),
+              label: Text(appText('s989')),
             ),
-          const SectionTitle('طلباتك'),
+          SectionTitle(appText('s990')),
           ...rows(d[0]).map(
             (t) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -488,9 +491,9 @@ class SupportScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
+      ); },
     ),
-  );
+  ); }
 }
 
 class NewTicket extends StatefulWidget {
@@ -513,8 +516,8 @@ class _NewTicketState extends State<NewTicket> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'طلب مساعدة',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s991'),
     child: ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -522,7 +525,7 @@ class _NewTicketState extends State<NewTicket> {
           controller: subject,
           enabled: !busy,
           maxLength: 150,
-          decoration: const InputDecoration(labelText: 'عنوان مختصر'),
+          decoration: InputDecoration(labelText: appText('s992')),
         ),
         const SizedBox(height: 16),
         TextField(
@@ -531,12 +534,12 @@ class _NewTicketState extends State<NewTicket> {
           minLines: 4,
           maxLines: 8,
           maxLength: 3000,
-          decoration: const InputDecoration(labelText: 'اشرح المشكلة'),
+          decoration: InputDecoration(labelText: appText('s993')),
         ),
         ErrorNote(error),
         const SizedBox(height: 18),
         ActionButton(
-          'إرسال الطلب',
+          appText('s994'),
           busy: busy,
           onPressed: () async {
             if (busy) return;
@@ -568,7 +571,7 @@ class _NewTicketState extends State<NewTicket> {
         ),
       ],
     ),
-  );
+  ); }
 }
 
 class TicketChat extends StatefulWidget {
@@ -591,11 +594,11 @@ class _TicketChatState extends State<TicketChat> {
   }
 
   @override
-  Widget build(BuildContext context) => Screen(
-    title: 'متابعة طلب المساعدة',
+  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
+    title: appText('s995'),
     child: DataView(
       load: () => widget.api.request('support/tickets/${widget.id}'),
-      builder: (d, reload) => ListView(
+      builder: (d, reload) { return  ListView(
         padding: const EdgeInsets.all(22),
         children: [
           Text(
@@ -633,8 +636,8 @@ class _TicketChatState extends State<TicketChat> {
               ),
             ),
           if (d['nextCursor'] != null)
-            const Text(
-              'المعروض آخر 50 رسالة. تواصل مع الإدارة لو محتاج تفاصيل أقدم.',
+            Text(
+              appText('s996'),
               style: TextStyle(color: muted, fontSize: 11),
             ),
           if (d['ticket']['status'] != 'CLOSED') ...[
@@ -645,11 +648,11 @@ class _TicketChatState extends State<TicketChat> {
               minLines: 2,
               maxLines: 5,
               maxLength: 3000,
-              decoration: const InputDecoration(labelText: 'اكتب ردك'),
+              decoration: InputDecoration(labelText: appText('s997')),
             ),
             ErrorNote(error),
             ActionButton(
-              'إرسال الرد',
+              appText('s998'),
               busy: busy,
               onPressed: () async {
                 if (busy) return;
@@ -672,7 +675,7 @@ class _TicketChatState extends State<TicketChat> {
             ),
           ],
         ],
-      ),
+      ); },
     ),
-  );
+  ); }
 }

@@ -1,3 +1,4 @@
+import '../l10n/language.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -96,11 +97,11 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
       if (mounted && phase != WhatsappPhase.error && !verified) timer = Timer.periodic(const Duration(seconds: 5), (_) { if (foreground) unawaited(check()); });
     } else { await start(); }
   }
-  @override Widget build(BuildContext context) => PopScope(canPop: !completing, child:
-    loading || completing ? Screen(title: widget.english ? 'WhatsApp verification' : 'التحقق عبر واتساب', child: const Center(child: CircularProgressIndicator())) :
+  @override Widget build(BuildContext context) { AppLanguage.watch(context); return  PopScope(canPop: !completing, child:
+    loading || completing ? Screen(title: widget.english ? 'WhatsApp verification' : appText('s558'), child: const Center(child: CircularProgressIndicator())) :
     Column(children: [if (error != null) Padding(padding: const EdgeInsets.all(16), child: ErrorNote(error)),
       Expanded(child: WhatsappVerificationScreen(phone: '${challenge?['phone'] ?? widget.phone}', english: widget.english, phase: phase,
         onOpen: () => unawaited(openWhatsapp()), onRetry: () => unawaited(retry()),
         onSms: () => Navigator.pop(context, <String,dynamic>{'useSms': true}))),
-    ]));
+    ])); }
 }
