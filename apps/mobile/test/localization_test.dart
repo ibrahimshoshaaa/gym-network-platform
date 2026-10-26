@@ -52,8 +52,9 @@ void main() {
     await t.scrollUntilVisible(find.byKey(const ValueKey('language.choice')),200);
     await t.tap(find.byKey(const ValueKey('language.choice')));await t.pumpAndSettle();
     await t.tap(find.text('English').last);await t.pumpAndSettle();
-    expect(find.text('Your details and security'),findsOneWidget);
     expect(Directionality.of(t.element(find.byKey(const ValueKey('language.choice')))),TextDirection.ltr);
+    await t.scrollUntilVisible(find.text('Your details and security'),-400);
+    expect(find.text('Your details and security'),findsOneWidget);
     expect(api.user!['displayName'],'محمد شوشه');
     expect(find.byType(AccountScreen),findsOneWidget);
   });

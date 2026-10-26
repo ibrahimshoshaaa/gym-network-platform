@@ -153,13 +153,13 @@ class _BranchDashboardState extends State<BranchDashboard> {
             for(final item in [
               ('MANAGE_CASHIERS','staff',appText('s375')),('EDIT_BRANCH','edit',appText('s376')),
               ('REQUEST_PRICING','price',appText('s377')),('REQUEST_WITHDRAWAL','withdraw',appText('s378')),
-            ])if((branch['permissions'] as List).contains(item.$1))ListTile(contentPadding:EdgeInsets.zero,title:Text(item.$3),trailing:const Icon(Icons.chevron_left_rounded),onTap:locked?null:()=>action(ManagedBranch(api:widget.api,branch:branch,task:item.$2))),
+            ])if((branch['permissions'] as List).contains(item.$1))ListTile(contentPadding:EdgeInsets.zero,title:Text(item.$3),trailing:const Icon(Icons.chevron_right_rounded),onTap:locked?null:()=>action(ManagedBranch(api:widget.api,branch:branch,task:item.$2))),
           ])),
         ],
         SectionTitle(appText('s379')),
         Panel(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4), child: Column(children: [
           ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.directions_run_rounded, color: green),
-            title: Text(appText('s110')), trailing: const Icon(Icons.chevron_left_rounded), onTap: () => records('visits')),
+            title: Text(appText('s110')), trailing: const Icon(Icons.chevron_right_rounded), onTap: () => records('visits')),
           if (branch['canCancel'] == true) ...[
             const Divider(height: 1),
             Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text(appText('s380'), style: TextStyle(color: muted, fontSize: 12))),

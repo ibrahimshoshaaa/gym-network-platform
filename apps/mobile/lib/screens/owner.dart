@@ -53,7 +53,7 @@ Widget _ownerTask(String title,String detail,IconData icon,VoidCallback? tap)=>L
  leading:Icon(icon,color:tap==null?muted:green,size:23),
  title:Text(title,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w700)),
  subtitle:Text(detail,style:const TextStyle(fontSize:11,color:muted)),
- trailing:const Icon(Icons.chevron_left_rounded,size:20,color:muted),onTap:tap,
+ trailing:const Icon(Icons.chevron_right_rounded,size:20,color:muted),onTap:tap,
 );
 
 

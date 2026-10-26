@@ -24,7 +24,7 @@ class _StaffDelegationState extends State<StaffDelegation>{
  Text(appText('s252')),const SizedBox(height:20),ErrorNote(error,retry:load),
  if(grants==null&&error==null)const Center(child:CircularProgressIndicator()),
  if(grants!=null)...[
- DropdownButtonFormField<bool>(initialValue:gymScope,decoration:InputDecoration(labelText:appText('s253')),items:const[DropdownMenuItem(value:false,child:Text(appText('s254'))),DropdownMenuItem(value:true,child:Text(appText('s255')))],onChanged:busy?null:(v)=>setState((){gymScope=v!;select();})),
+ DropdownButtonFormField<bool>(initialValue:gymScope,decoration:InputDecoration(labelText:appText('s253')),items:[DropdownMenuItem(value:false,child:Text(appText('s254'))),DropdownMenuItem(value:true,child:Text(appText('s255')))],onChanged:busy?null:(v)=>setState((){gymScope=v!;select();})),
  SwitchListTile(title:Text(appText('s256')),value:active,onChanged:busy?null:(v)=>setState(()=>active=v)),
  CheckboxListTile(title:Text(gymScope?appText('s257'):appText('s258')),value:full,onChanged:busy?null:(v)=>setState(()=>full=v==true)),
  if(!full)for(final r in delegationRights.entries)CheckboxListTile(title:Text(r.value),value:rights.contains(r.key),onChanged:busy?null:(v)=>setState((){if(v==true){rights.add(r.key);}else{rights.remove(r.key);}})),

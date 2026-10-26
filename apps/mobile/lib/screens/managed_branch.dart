@@ -36,7 +36,7 @@ class _ManagedBranchState extends State<ManagedBranch>{
  if(widget.task=='price')...[field(points,appText('s490'),numeric:true),field(minutes,appText('s491'),numeric:true),field(reason,appText('s492'))],
  if(widget.task=='withdraw')...[
  Panel(child:Column(children:[Text(appText('s493')),Text(entitlement==null?'—':appText('s122', [money(entitlement!['available'])]),style:const TextStyle(fontSize:28,fontWeight:FontWeight.w800)),if(entitlement?['legacyReviewRequired']==true)Text(appText('s494'))])),const SizedBox(height:16),
- field(amount,appText('s136'),numeric:true),DropdownButtonFormField<String>(initialValue:method,items:const[DropdownMenuItem(value:'INSTAPAY',child:Text(appText('s145'))),DropdownMenuItem(value:'WALLET',child:Text(appText('s146')))],onChanged:locked?null:(v)=>setState((){method=v!;confirmed=false;})),const SizedBox(height:16),field(name,appText('s495')),field(account,appText('s496')),
+ field(amount,appText('s136'),numeric:true),DropdownButtonFormField<String>(initialValue:method,items:[DropdownMenuItem(value:'INSTAPAY',child:Text(appText('s145'))),DropdownMenuItem(value:'WALLET',child:Text(appText('s146')))],onChanged:locked?null:(v)=>setState((){method=v!;confirmed=false;})),const SizedBox(height:16),field(name,appText('s495')),field(account,appText('s496')),
  ],
  CheckboxListTile(value:confirmed,onChanged:locked?null:(v)=>setState(()=>confirmed=v==true),title:Text(appText('s497'))),
  ActionButton(widget.task=='withdraw'?appText('s498'):appText('s499'),busy:busy,onPressed:locked||!confirmed||(widget.task=='withdraw'&&(entitlement==null||entitlement!['available']=='0'))?null:submit),

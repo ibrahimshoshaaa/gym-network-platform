@@ -63,7 +63,7 @@ class _AccountDeletionScreenState extends State<AccountDeletionScreen>{
     return PopScope(canPop:!busy,child:Screen(title:appText('s4'),child:ListView(
       padding:const EdgeInsets.all(24),children:[
         const Icon(Icons.delete_forever_outlined,size:42,color:Colors.redAccent),
-        const SizedBox(height:16),const Text(deletionNotice),
+        const SizedBox(height:16),Text(deletionNotice),
         const SizedBox(height:16),
         Text(appText('s528')),
         if(loading)const Padding(padding:EdgeInsets.all(24),child:Center(child:CircularProgressIndicator())),

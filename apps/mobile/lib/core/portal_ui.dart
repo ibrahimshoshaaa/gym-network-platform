@@ -115,7 +115,7 @@ class PortalTask extends StatelessWidget {
                   ),
                   const Spacer(),
                   Icon(
-                    Icons.arrow_back_rounded,
+                    Icons.arrow_forward_rounded,
                     size: 17,
                     color: primary ? Colors.white70 : muted,
                   ),

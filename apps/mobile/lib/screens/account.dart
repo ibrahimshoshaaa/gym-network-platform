@@ -232,7 +232,7 @@ Widget _item(String text, IconData icon, VoidCallback tap) => ListTile(
     text,
     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
   ),
-  trailing: const Icon(Icons.chevron_left_rounded, size: 21, color: muted),
+  trailing: const Icon(Icons.chevron_right_rounded, size: 21, color: muted),
   onTap: tap,
 );
 
@@ -484,7 +484,7 @@ class SupportScreen extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                   title: Text('${t['subject']}'),
                   subtitle: Text(statusName(t['status'])),
-                  trailing: const Icon(Icons.chevron_left_rounded),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => open(context, TicketChat(api: api, id: t['id'])),
                 ),
               ),

@@ -143,7 +143,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             suffixIcon: IconButton(
               tooltip: appText('s612'),
               onPressed: busy ? null : () => load(),
-              icon: const Icon(Icons.arrow_back_rounded),
+              icon: const Icon(Icons.arrow_forward_rounded),
             ),
           ),
         ),
@@ -382,7 +382,7 @@ class BranchTile extends StatelessWidget {
         Row(children:[
           Expanded(child:Text(appText('s630'),
             style:TextStyle(color:green,fontSize:12,fontWeight:FontWeight.w700))),
-          Icon(Icons.arrow_back_rounded,size:17,color:green),
+          Icon(Icons.arrow_forward_rounded,size:17,color:green),
         ]),
       ]),
     )),
