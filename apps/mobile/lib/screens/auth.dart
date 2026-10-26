@@ -977,6 +977,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          const LanguageSelector(),
           const SizedBox(height: 30),
           EmptyState(
             rejected ? appText('s315') : appText('s316'),

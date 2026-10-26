@@ -62,12 +62,13 @@ void main() {
     t.view.physicalSize=const Size(375,812);t.view.devicePixelRatio=1;
     addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);
     final api=client('TRAINEE', (_) async => reply({}));
-    await t.pumpWidget(MaterialApp(home:AuthScreen(api:api)));await t.pumpAndSettle();
+    await t.pumpWidget(MaterialApp(supportedLocales:const [Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:AuthScreen(api:api)));await t.pumpAndSettle();
     final field=find.byKey(const ValueKey('auth.identifier'));
-    if(field.evaluate().isNotEmpty) await t.enterText(field,'01012345678');
+    await t.enterText(field,'01012345678');
     await t.ensureVisible(find.byKey(const ValueKey('auth.language')));
     await t.tap(find.byKey(const ValueKey('auth.language')));await t.pumpAndSettle();
     expect(find.text('Welcome back'),findsOneWidget);
+    expect(t.widget<TextFormField>(field).controller!.text,'01012345678');
     expect(t.takeException(),isNull);
   });
 }

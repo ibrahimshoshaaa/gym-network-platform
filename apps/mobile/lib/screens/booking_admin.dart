@@ -89,6 +89,7 @@ class _BookingAdminScreenState extends State<BookingAdminScreen>{
    IconButton(tooltip:appText('s5'),onPressed:busy?null:()=>widget.api.logout(),icon:const Icon(Icons.logout_rounded)),
   ]),
   body:SafeArea(child:RefreshIndicator(onRefresh:load,child:ListView(physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.all(20),children:[
+   const LanguageSelector(),
    Text(appText('s346'),style:TextStyle(color:muted)),
    ErrorNote(error,retry:load),
    if(success.isNotEmpty)Padding(padding:const EdgeInsets.all(12),child:Text(success,style:const TextStyle(color:green))),

@@ -58,7 +58,7 @@ class LanguageSelector extends StatelessWidget {
   @override Widget build(BuildContext context) {
     AppLanguage.watch(context);
     final language = AppLanguage.instance;
-    return ListTile(
+    return Material(color: Colors.transparent, child: ListTile(
       key: const ValueKey('account.language'),
       leading: const Icon(Icons.language_rounded),
       title: Text(appText('s1012')),
@@ -68,6 +68,6 @@ class LanguageSelector extends StatelessWidget {
         items: const [DropdownMenuItem(value: 'ar', child: Text('العربية')), DropdownMenuItem(value: 'en', child: Text('English'))],
         onChanged: (value) async { if (value != null) await language.select(value); },
       ),
-    );
+    ));
   }
 }

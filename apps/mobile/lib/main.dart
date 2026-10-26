@@ -214,6 +214,7 @@ class _SessionGateState extends State<SessionGate> {
               mode: LaunchMode.externalApplication,
             ),
           ),
+          const LanguageSelector(),
           if(role!='PLATFORM_ADMIN')TextButton(onPressed:()=>open(context,AccountDeletionScreen(api:widget.api)),child:Text(appText('s4'))),
           TextButton(
             onPressed: () => widget.api.logout(),
