@@ -73,6 +73,7 @@ void main() {
     addTearDown(t.view.resetPhysicalSize); addTearDown(t.view.resetDevicePixelRatio);
     final calls = <String>[];
     final api = client('TRAINEE', (r) async {
+      if (r.url.path.endsWith('/status')) return reply({'smsEnabled':true,'whatsappEnabled':false});
       calls.add(r.url.path);
       if (r.url.path.endsWith('/challenge')) return reply({'challengeId': 'reset-proof', 'testMode': true});
       final body = jsonDecode(r.body);
@@ -84,6 +85,7 @@ void main() {
     expect(find.byKey(const ValueKey('phone.reset.password')), findsNothing);
     await t.enterText(find.byKey(const ValueKey('phone.reset.phone')), '01055550123');
     await t.tap(find.text('متابعة للكود')); await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('phone.method.sms'))); await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('phone.otp.code')), findsOneWidget);
     expect(find.byKey(const ValueKey('phone.reset.password')), findsNothing);
     await t.ensureVisible(find.text('متابعة')); await t.tap(find.text('متابعة')); await t.pumpAndSettle();

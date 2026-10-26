@@ -17,7 +17,7 @@ export async function POST(r:Request,c:{params:Promise<{action:string}>}){
   if(action==='register'){
    if(!result.accessToken||!result.user||!result.expiresAt)throw new GatewayError('ACCESS_DENIED',403);
    await setWebSession(result.accessToken,result.expiresAt,true);
-   return json({user:result.user,testMode:true});
+   return json({user:result.user,testMode:result.testMode===true});
   }
   return json(result,response.status);
  }catch(e){return failure(e);}

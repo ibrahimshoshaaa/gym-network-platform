@@ -37,6 +37,7 @@ String? piasters(String value) {
 }
 
 const messages = {
+  'WHATSAPP_UNAVAILABLE': 'التحقق عبر واتساب غير متاح حاليًا. استخدم رسالة SMS.',
   'PHONE_OTP_DISABLED': 'خدمة التحقق بالموبايل غير مفعلة حاليًا.',
   'PHONE_OTP_SEND_FAILED': 'تعذر طلب رسالة التحقق. حاول لاحقًا.',
   'PHONE_OTP_WAIT': 'انتظر دقيقة قبل طلب كود جديد.',

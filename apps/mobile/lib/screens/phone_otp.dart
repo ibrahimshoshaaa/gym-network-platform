@@ -1,3 +1,5 @@
+import 'whatsapp_phone_flow.dart';
+import 'whatsapp_verification.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,6 +13,20 @@ Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone
   final challenge = Map<String, dynamic>.from(await api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': phone, 'purpose': purpose}));
   if (!context.mounted) return null;
   return open<Json>(context, _PhoneCodeScreen(api: api, phone: phone, purpose: purpose, challenge: challenge, onConfirm: onConfirm, english: english));
+}
+
+Future<Json?> choosePhoneVerification(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm, bool english = false}) async {
+  Json status = {};
+  try { status = Map<String,dynamic>.from(await api.request('auth/phone/status', auth: false)); } catch (_) { /* SMS remains a fallback if discovery is temporarily unavailable. */ }
+  if (!context.mounted) return null;
+  final method = await open<String>(context, PhoneVerificationMethodScreen(phone: phone, english: english,
+    smsEnabled: status['smsEnabled'] != false, whatsappEnabled: status['whatsappEnabled'] == true));
+  if (!context.mounted || method == null) return null;
+  if (method == 'whatsapp') {
+    final result = await open<Json>(context, WhatsappPhoneFlow(api: api, phone: phone, purpose: purpose, english: english, onConfirm: onConfirm));
+    if (!context.mounted || result?['useSms'] != true) return result;
+  }
+  return requestPhoneCode(context, api, phone, purpose, onConfirm: onConfirm, english: english);
 }
 
 class _FlowHeading extends StatelessWidget {
@@ -140,7 +156,7 @@ class _PhonePasswordResetState extends State<PhonePasswordReset> {
     FocusScope.of(context).unfocus();
     setState(() { busy = true; error = null; });
     try {
-      final result = await requestPhoneCode(context, widget.api, phone.text, 'RESET', english: widget.english, onConfirm: (value) async {
+      final result = await choosePhoneVerification(context, widget.api, phone.text, 'RESET', english: widget.english, onConfirm: (value) async {
         await widget.api.request('auth/phone/reset/verify', method: 'POST', auth: false, body: {'phone': phone.text, ...value});
       });
       if (mounted && result != null) setState(() => proof = result);

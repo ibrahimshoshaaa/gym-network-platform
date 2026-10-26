@@ -18,7 +18,7 @@ test('TextBee refuses incomplete config and accepts only an explicit device and 
 test('live OTP sends only to the selected device, uses keyed proofs and never returns provider errors',async()=>{
  const previous={...process.env};Object.assign(process.env,env);
  try{
-  assert.deepEqual(phonePreviewStatus(),{enabled:true,testMode:false});
+  assert.deepEqual(phonePreviewStatus(),{enabled:true,testMode:false,smsEnabled:true,whatsappEnabled:false});
   let calls=0;
   const transport:typeof fetch=async(url,options)=>{
    calls++;assert.equal(url,'https://api.textbee.dev/api/v1/gateway/send-sms');

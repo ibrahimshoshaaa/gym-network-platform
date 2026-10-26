@@ -1140,6 +1140,10 @@ model PhoneOtpChallenge {
  purpose String
  mode String
  codeHash String
+ whatsappMessageHash String? @unique
+ whatsappMessageId String? @unique
+ whatsappDestinationId String?
+ verifiedAt DateTime?
  attempts Int @default(0)
  expiresAt DateTime
  consumedAt DateTime?

@@ -1,3 +1,4 @@
+import {whatsappConfig,requireWhatsapp,whatsappSecretSchema,whatsappProofHash} from './whatsapp-service.js';
 import {grantWelcomePoints} from '../points/welcome.js';
 import {randomUUID,timingSafeEqual} from 'node:crypto';
 import {Prisma,type PrismaClient} from '@prisma/client';
@@ -22,13 +23,14 @@ export function phoneOtpMode(): 'test'|'textbee'|null {
  if(process.env.GYMBANK_OTP_MODE==='textbee')return textbeeConfig()?'textbee':null;
  return phonePreviewEnabled()?'test':null;
 }
-export function phonePreviewStatus(){const mode=phoneOtpMode();return {enabled:mode!==null,testMode:mode==='test'};}
+export function phonePreviewStatus(){const mode=phoneOtpMode();return {enabled:mode!==null||whatsappConfig()!==null,testMode:mode==='test',smsEnabled:mode!==null,whatsappEnabled:whatsappConfig()!==null};}
 function requirePreview(){const mode=phoneOtpMode();if(!mode)throw new DomainError('PHONE_OTP_DISABLED');return mode;}
 
 const challengeInput=z.object({phone:phoneSchema,purpose:z.enum(['REGISTER','RESET'])}).strict();
-const proof={phone:phoneSchema,challengeId:z.string().uuid(),code:phoneCodeSchema};
-const registerInput=z.object({...proof,displayName:z.string().trim().min(2).max(100),password:newPasswordSchema,accountType:z.enum(['trainee','owner']).default('trainee'),gym:applicationFields.optional()}).strict().refine(v=>v.accountType!=='owner'||v.gym!==undefined);
-const resetInput=z.object({...proof,newPassword:newPasswordSchema}).strict();
+const proof={phone:phoneSchema,challengeId:z.string().uuid(),code:phoneCodeSchema.optional(),whatsappToken:whatsappSecretSchema.optional()};
+const oneProof=(v:{code?:string;whatsappToken?:string})=>Boolean(v.code)!==Boolean(v.whatsappToken);
+const registerInput=z.object({...proof,displayName:z.string().trim().min(2).max(100),password:newPasswordSchema,accountType:z.enum(['trainee','owner']).default('trainee'),gym:applicationFields.optional()}).strict().refine(oneProof).refine(v=>v.accountType!=='owner'||v.gym!==undefined);
+const resetInput=z.object({...proof,newPassword:newPasswordSchema}).strict().refine(oneProof);
 function parse<S extends z.ZodType>(schema:S,input:unknown):z.infer<S>{const r=schema.safeParse(input);if(!r.success)throw new DomainError('INVALID_INPUT');return r.data;}
 
 export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
@@ -44,7 +46,7 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
  const challenge=await serializable(db,async tx=>{
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`phone-otp:${data.phone}`},0))`;
   if(data.purpose==='REGISTER'&&await tx.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
-  const previous=await tx.phoneOtpChallenge.findFirst({where:{phone:data.phone,...(mode==='test'?{purpose:data.purpose}:{})},orderBy:{createdAt:'desc'}});
+  const previous=await tx.phoneOtpChallenge.findFirst({where:{phone:data.phone,mode:{not:'whatsapp'},...(mode==='test'?{purpose:data.purpose}:{})},orderBy:{createdAt:'desc'}});
   if(previous&&Date.now()-previous.createdAt.getTime()<60000)throw new DomainError('PHONE_OTP_WAIT');
   await tx.phoneOtpChallenge.updateMany({where:{phone:data.phone,purpose:data.purpose,consumedAt:null},data:{consumedAt:new Date()}});
   const id=randomUUID(),expiresAt=new Date(Date.now()+5*60000);
@@ -60,13 +62,15 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
  return challenge;
 }
 
-async function withChallenge<T>(db:PrismaClient,data:{phone:string;challengeId:string;code:string},purpose:'REGISTER'|'RESET',run:(tx:Prisma.TransactionClient,mode:'test'|'textbee')=>Promise<T>,consume=true):Promise<T>{
- const mode=requirePreview();
+async function withChallenge<T>(db:PrismaClient,data:{phone:string;challengeId:string;code?:string;whatsappToken?:string},purpose:'REGISTER'|'RESET',run:(tx:Prisma.TransactionClient,mode:'test'|'textbee'|'whatsapp')=>Promise<T>,consume=true):Promise<T>{
+ const mode=data.whatsappToken?'whatsapp':requirePreview();
+ const whatsapp=mode==='whatsapp'?requireWhatsapp():null;
  const result=await serializable(db,async tx=>{
   await tx.$queryRaw`SELECT id FROM "PhoneOtpChallenge" WHERE id=${data.challengeId}::uuid FOR UPDATE`;
   const c=await tx.phoneOtpChallenge.findUnique({where:{id:data.challengeId}});
   if(!c||c.phone!==data.phone||c.purpose!==purpose||c.mode!==mode||c.consumedAt||c.expiresAt<=new Date()||c.attempts>=5)return {ok:false as const};
-  const actual=mode==='test'?hashToken(`${c.id}:${c.phone}:${purpose}:${data.code}`):smsCodeHash(c.id,c.phone,purpose,data.code);
+  if(mode==='whatsapp'&&(!c.verifiedAt||c.whatsappDestinationId!==whatsapp?.phoneNumberId))return {ok:false as const};
+  const actual=mode==='whatsapp'?whatsappProofHash(c.id,c.phone,purpose,data.whatsappToken!):mode==='test'?hashToken(`${c.id}:${c.phone}:${purpose}:${data.code}`):smsCodeHash(c.id,c.phone,purpose,data.code!);
   if(!timingSafeEqual(Buffer.from(actual,'hex'),Buffer.from(c.codeHash,'hex'))){await tx.phoneOtpChallenge.update({where:{id:c.id},data:{attempts:{increment:1}}});return {ok:false as const};}
   const value=await run(tx,mode);
   if(consume)await tx.phoneOtpChallenge.update({where:{id:c.id},data:{consumedAt:new Date()}});
@@ -77,24 +81,24 @@ async function withChallenge<T>(db:PrismaClient,data:{phone:string;challengeId:s
 }
 
 export async function registerPhonePreview(db:PrismaClient,input:unknown){
- const data=parse(registerInput,input);requirePreview();
+ const data=parse(registerInput,input);if(data.whatsappToken)requireWhatsapp();else requirePreview();
  const passwordHash=await hashPassword(data.password);
  try{return await withChallenge(db,data,'REGISTER',async (tx,mode)=>{
-  const user=await tx.user.create({data:{phoneE164:data.phone,displayName:data.displayName,role:data.accountType==='owner'?'GYM_OWNER':'TRAINEE',...(mode==='textbee'?{phoneVerifiedAt:new Date()}:{}),password:{create:{passwordHash}},...(data.accountType==='trainee'?{pointAccounts:{create:{type:'TRAINEE_WALLET' as const}}}:{})}});
+  const user=await tx.user.create({data:{phoneE164:data.phone,displayName:data.displayName,role:data.accountType==='owner'?'GYM_OWNER':'TRAINEE',...(mode!=='test'?{phoneVerifiedAt:new Date()}:{}),password:{create:{passwordHash}},...(data.accountType==='trainee'?{pointAccounts:{create:{type:'TRAINEE_WALLET' as const}}}:{})}});
   await grantWelcomePoints(tx,user.id);
   if(mode==='test')await tx.phoneTestIdentity.create({data:{userId:user.id,phone:data.phone}});
   if(data.accountType==='owner')await tx.gymApplication.create({data:{ownerId:user.id,...data.gym!}});
-  await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:mode==='test'?'PHONE_OTP_TEST_REGISTERED':'PHONE_OTP_REGISTERED',reason:mode==='test'?'Explicitly enabled simulated OTP; no SMS delivered and phone ownership is not verified':'Phone ownership verified by one-time SMS code'}});
+  await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:mode==='test'?'PHONE_OTP_TEST_REGISTERED':'PHONE_OTP_REGISTERED',reason:mode==='test'?'Explicitly enabled simulated OTP; no SMS delivered and phone ownership is not verified':mode==='whatsapp'?'Phone ownership verified by signed inbound WhatsApp message':'Phone ownership verified by one-time SMS code'}});
   // A fixed test code must never mark phone ownership as verified.
   return {...await sessionResult(tx,user),testMode:mode==='test'};
  });}catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002')throw new DomainError('ACCOUNT_UNAVAILABLE');throw e;}
 }
 
-async function resetUser(tx:Prisma.TransactionClient,phone:string,mode:'test'|'textbee'){
+async function resetUser(tx:Prisma.TransactionClient,phone:string,mode:'test'|'textbee'|'whatsapp'){
  const user=await tx.user.findUnique({where:{phoneE164:phone},include:{password:true}});
  // Staff can recover an established password after real SMS verification.
  // Fixed test codes never recover staff or platform administrator accounts.
- const allowedRoles=mode==='textbee'?['TRAINEE','GYM_OWNER','BRANCH_MANAGER','CASHIER']:['TRAINEE','GYM_OWNER'];
+ const allowedRoles=mode!=='test'?['TRAINEE','GYM_OWNER','BRANCH_MANAGER','CASHIER']:['TRAINEE','GYM_OWNER'];
  if(!user?.isActive||!user.password||!allowedRoles.includes(user.role))throw new DomainError('PHONE_OTP_INVALID');
  if(mode==='test'){
   const identity=await tx.phoneTestIdentity.findUnique({where:{phone}});
@@ -104,7 +108,7 @@ async function resetUser(tx:Prisma.TransactionClient,phone:string,mode:'test'|'t
  return user;
 }
 export async function verifyPhoneResetCode(db:PrismaClient,input:unknown){
- const data=parse(z.object(proof).strict(),input);
+ const data=parse(z.object(proof).strict().refine(oneProof),input);
  return withChallenge(db,data,'RESET',async (tx,mode)=>{
   await resetUser(tx,data.phone,mode);
   return {ok:true,testMode:mode==='test'};
@@ -112,17 +116,17 @@ export async function verifyPhoneResetCode(db:PrismaClient,input:unknown){
 }
 
 export async function resetPhonePreviewPassword(db:PrismaClient,input:unknown){
- const data=parse(resetInput,input);requirePreview();
+ const data=parse(resetInput,input);if(data.whatsappToken)requireWhatsapp();else requirePreview();
  const passwordHash=await hashPassword(data.newPassword);
  return withChallenge(db,data,'RESET',async (tx,mode)=>{
   const found=await resetUser(tx,data.phone,mode);
   await tx.$queryRaw`SELECT id FROM "User" WHERE id=${found.id}::uuid FOR UPDATE`;
   const user=await resetUser(tx,data.phone,mode);
   await tx.userPassword.update({where:{userId:user.id},data:{passwordHash,changedAt:new Date()}});
-  if(mode==='textbee')await tx.user.update({where:{id:user.id},data:{phoneVerifiedAt:new Date()}});
+  if(mode!=='test')await tx.user.update({where:{id:user.id},data:{phoneVerifiedAt:new Date()}});
   await tx.authSession.updateMany({where:{userId:user.id,revokedAt:null},data:{revokedAt:new Date()}});
   await tx.qrTicket.deleteMany({where:{userId:user.id}});
-  await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:mode==='test'?'PHONE_OTP_TEST_PASSWORD_RESET':'PHONE_OTP_PASSWORD_RESET',reason:mode==='test'?'Simulated OTP for a dedicated test identity; all previous sessions revoked':'Password reset after SMS phone verification; all previous sessions revoked'}});
+  await tx.auditLog.create({data:{actorId:user.id,entityId:user.id,action:mode==='test'?'PHONE_OTP_TEST_PASSWORD_RESET':'PHONE_OTP_PASSWORD_RESET',reason:mode==='test'?'Simulated OTP for a dedicated test identity; all previous sessions revoked':mode==='whatsapp'?'Password reset after inbound WhatsApp phone verification; all previous sessions revoked':'Password reset after SMS phone verification; all previous sessions revoked'}});
   return {ok:true,testMode:mode==='test'};
  });
 }

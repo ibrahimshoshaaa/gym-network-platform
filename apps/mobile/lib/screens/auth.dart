@@ -118,7 +118,7 @@ class _AuthScreenState extends State<AuthScreen> {
               'password': fields['password']!.text,
             };
       if(register&&phoneOtpPreview){
-        await requestPhoneCode(context,widget.api,fields['phone']!.text,'REGISTER',english:english,onConfirm:(proof)async{
+        await choosePhoneVerification(context,widget.api,fields['phone']!.text,'REGISTER',english:english,onConfirm:(proof)async{
           await widget.api.authenticate('auth/phone/register',<String,dynamic>{
             'displayName':body['displayName'],'phone':body['phone'],'password':body['password'],...proof,
             'accountType':owner?'owner':'trainee',
