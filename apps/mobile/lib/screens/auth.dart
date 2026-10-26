@@ -673,6 +673,15 @@ class _AuthScreenState extends State<AuthScreen> {
                                               ),
                                             ),
                                           ),
+                                        if (register && error is ApiFailure && (error as ApiFailure).code == 'ACCOUNT_UNAVAILABLE')
+                                          TextButton(
+                                            key: const ValueKey('auth.existingAccount'),
+                                            onPressed: busy ? null : () {
+                                              fields['identifier']!.text = fields['phone']!.text;
+                                              changeMode(false);
+                                            },
+                                            child: Text(tr(appText('s308'), 'Log in')),
+                                          ),
                                         FilledButton(
                                           onPressed: busy ? null : submit,
                                           style: FilledButton.styleFrom(

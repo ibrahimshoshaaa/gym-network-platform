@@ -168,7 +168,9 @@ class ErrorNote extends StatelessWidget {
               children: [
                 Text(
                   '$error',
-                  style: const TextStyle(color: Color(0xff954a39)),
+                  style: const TextStyle(inherit: false, color: Color(0xff954a39),
+                    fontSize: 14, height: 1.5, fontWeight: FontWeight.w400,
+                    decoration: TextDecoration.none),
                 ),
                 if (retry != null)
                   TextButton(

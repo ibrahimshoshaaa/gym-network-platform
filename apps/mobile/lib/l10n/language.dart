@@ -60,11 +60,13 @@ class LanguageSelector extends StatelessWidget {
     final language = AppLanguage.instance;
     return Material(color: Colors.transparent, child: ListTile(
       key: const ValueKey('account.language'),
-      leading: const Icon(Icons.language_rounded),
-      title: Text(appText('s1012')),
-      subtitle: Text(language.english ? 'English' : 'العربية'),
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(Icons.language_rounded, color: Theme.of(context).colorScheme.primary, size: 23),
+      title: Text(appText('s1012'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
       trailing: DropdownButton<String>(
         key: const ValueKey('language.choice'), value: language.code,
+        underline: const SizedBox.shrink(),
+        style: Theme.of(context).textTheme.bodyMedium,
         items: const [DropdownMenuItem(value: 'ar', child: Text('العربية')), DropdownMenuItem(value: 'en', child: Text('English'))],
         onChanged: (value) async { if (value != null) await language.select(value); },
       ),
