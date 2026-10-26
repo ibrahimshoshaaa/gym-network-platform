@@ -14,7 +14,7 @@ Map<String, String> get repairStatuses => {
 String repairDate(dynamic value) {
   final date = DateTime.tryParse('$value')?.toLocal();
   if (date == null) return appText('s679');
-  return '${date.day}/${date.month}/${date.year} · ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  return shortDate(value);
 }
 String repairAmount(dynamic value) => value == null ? appText('s680') : appText('s122', [money(value)]);
 

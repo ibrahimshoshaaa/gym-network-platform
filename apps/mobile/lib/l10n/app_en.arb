@@ -1595,5 +1595,134 @@
   "s1009": "Gym visit",
   "s1010": "Available",
   "s1011": "Disabled",
-  "s1012": "Language"
+  "s1012": "Language",
+  "s1013": "Maintenance · {p0}",
+  "@s1013": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1014": "Branch ad · {p0}",
+  "@s1014": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1015": "Marketplace · {p0}",
+  "@s1015": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1016": "Recharge {p0} points · {p1}",
+  "@s1016": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s1017": "Withdrawal request · {p0}",
+  "@s1017": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1018": "Transaction review · {p0}",
+  "@s1018": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1019": "Price for {p0} · {p1}",
+  "@s1019": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      },
+      "p1": {
+        "type": "String"
+      }
+    }
+  },
+  "s1020": "Visit funds held for review",
+  "s1021": "Visit funds released",
+  "s1022": "Direct recharge · {p0} points",
+  "@s1022": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1023": "Support · {p0}",
+  "@s1023": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1024": "Cancelled visit at {p0}",
+  "@s1024": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1025": "Visit at {p0}",
+  "@s1025": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1026": "Your points expire in {p0} days",
+  "@s1026": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1027": "Your expired balance needs review",
+  "s1028": "Request status: {p0}",
+  "@s1028": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1029": "Track ad status and cost",
+  "s1030": "Listing status: {p0}",
+  "@s1030": {
+    "placeholders": {
+      "p0": {
+        "type": "String"
+      }
+    }
+  },
+  "s1031": "A recharge request needs your decision",
+  "s1032": "Track request status",
+  "s1033": "Past the execution date; follow-up required",
+  "s1034": "Track request details and receivables",
+  "s1035": "Review request recorded",
+  "s1036": "Points added to your wallet",
+  "s1037": "Review your wallet. This alert does not remove points or change the balance policy."
 }

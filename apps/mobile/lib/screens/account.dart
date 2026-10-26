@@ -1,3 +1,4 @@
+import '../l10n/notification_copy.dart';
 import '../l10n/language.dart';
 import 'account_deletion.dart';
 import 'campaigns.dart';
@@ -402,11 +403,11 @@ class NotificationsScreen extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     onTap:n['destination']==null?null:()async{await openCampaign(context,api,'${n['destination']}');},
                     title: Text(
-                      '${n['title']}',
+                      notificationTitle(n),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(
-                      '${n['description']}\n${shortDate(n['at'])}',
+                      '${notificationDescription(n)}\n${shortDate(n['at'])}',
                     ),
                     trailing: n['read'] == true
                         ? null

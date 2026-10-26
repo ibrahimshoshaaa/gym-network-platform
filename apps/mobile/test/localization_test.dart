@@ -1,3 +1,4 @@
+import 'package:gym_network/l10n/notification_copy.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,6 +41,14 @@ void main() {
     AppLanguage.instance.use('ar');
     await AppLanguage.instance.restore((key) async => storage[key], (k,v) async {storage[k]=v;});
     expect(AppLanguage.instance.code,'en');
+  });
+  test('system notifications translate only their templates and preserve campaign/user content', () {
+    AppLanguage.instance.use('en');
+    expect(notificationTitle({'id':'maintenance:id:2','title':'الصيانة · جهاز محمد'}),'Maintenance · جهاز محمد');
+    expect(notificationTitle({'id':'topup:id:APPROVED','title':'شحن 50 نقطة · مقبول'}),'Recharge 50 points · Approved');
+    expect(notificationTitle({'id':'campaign:id:2','title':'عرض عربي من صاحب الجيم'}),'عرض عربي من صاحب الجيم');
+    expect(notificationDescription({'id':'support:id:OPEN','description':'رسالة كتبها العميل'}),'رسالة كتبها العميل');
+    expect(notificationDescription({'id':'maintenance:id:2','description':'حالة الطلب: NEW'}),'Request status: New request');
   });
   testWidgets('account switches language and direction without replacing user data', (t) async {
     final api=client('TRAINEE', (_) async => reply({'items':[]}));
