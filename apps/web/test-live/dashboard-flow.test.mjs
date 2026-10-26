@@ -37,10 +37,11 @@ test('platform-only browser administration and independent native workflows',{ti
   const admin=await ok(login),cookie=sessionCookie(login);assert.ok(cookie);assert.equal(admin.user.role,'PLATFORM_ADMIN');
   assert.match(login.headers.getSetCookie().find(h=>h.startsWith('__Host-gym_session=')),/HttpOnly.*Secure|Secure.*HttpOnly/i);
   const session=await ok(await request('/api/session',{cookie}));assert.equal(session.user.id,actors.PLATFORM_ADMIN.id);
+  const nativeActors={};
   // A valid native session cannot be replayed as a browser role session.
   for(const role of ['GYM_OWNER','TRAINEE','BRANCH_MANAGER','CASHIER']){
    const denied=await request('/api/session',{method:'POST',body:{mode:'admin',identifier:actors[role].email,password}});assert.equal(denied.status,401);assert.equal(sessionCookie(denied),undefined);
-   const native=await ok(await request('/api/mobile/auth/signin',{method:'POST',body:{identifier:actors[role].email,password}}));assert.equal(native.user.role,role);
+   const native=await ok(await request('/api/mobile/auth/signin',{method:'POST',body:{identifier:actors[role].email,password}}));assert.equal(native.user.role,role);nativeActors[role]=native.accessToken;
    const stale='__Host-gym_session='+native.accessToken;
    assert.equal((await request('/api/session',{cookie:stale})).status,403);
    assert.equal((await request('/api/backend/admin/topup-settings',{cookie:stale})).status,403);
@@ -49,6 +50,12 @@ test('platform-only browser administration and independent native workflows',{ti
    if(role==='GYM_OWNER')assert.equal((await request('/api/mobile/gyms',{headers})).status,200);
    if(role==='TRAINEE')assert.equal((await request('/api/mobile/trainee/wallet',{headers})).status,200);
   }
+  const maintenance=await ok(await request('/api/mobile/maintenance/requests',{method:'POST',headers:{authorization:'Bearer '+nativeActors.GYM_OWNER},body:{branchId:branch.id,clientKey:randomUUID(),equipment:'Synthetic platform review equipment',description:'Synthetic maintenance request for admin detail test',contactPhone:'+201555550003',imageIds:[]}}));
+  assert.equal((await ok(await request('/api/backend/maintenance/requests/'+maintenance.id,{cookie}))).id,maintenance.id);
+  assert.equal((await request('/api/backend/market/options',{cookie})).status,200);
+  const support=await ok(await request('/api/mobile/support/tickets',{method:'POST',headers:{authorization:'Bearer '+nativeActors.TRAINEE},body:{subject:'Synthetic platform support',category:'HELP',body:'Synthetic native message for platform admin review',clientKey:randomUUID()}}));
+  assert.equal((await request('/api/backend/support/tickets/'+support.id,{cookie})).status,200);
+  await ok(await request('/api/backend/support/tickets/'+support.id+'/messages',{cookie,method:'POST',body:{body:'Synthetic platform administrator answer',clientKey:randomUUID()}}));
   for(const path of ['/api/register','/api/phone-auth/status','/api/whatsapp/status','/api/recover','/api/account-deletion/request','/delete-account']){
    const response=await request(path,{...(path.includes('/status')||path==='/delete-account'?{}:{method:'POST',body:{}})});assert.equal(response.status,404,path);
   }

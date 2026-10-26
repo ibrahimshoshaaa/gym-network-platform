@@ -17,7 +17,7 @@ test('browser and native scopes are separate without breaking native workflows',
  for(const [method,path] of [['GET','trainee/wallet'],['GET','gyms'],['POST','trainee/bookings'],['POST','topups'],['POST',`cashier/branches/${id}/visits`],['POST','me/account-deletion']]){
   assert.equal(allowedPath(method!,path!),true);assert.equal(allowedAdminPath(method!,path!),false);
  }
- for(const [method,path] of [['GET','admin/topup-settings'],['POST','admin/pricing-policies'],['PUT','admin/welcome-points'],['GET','admin/bookings/review'],['GET','support/contact'],['GET','reports/summary'],['POST',`support/tickets/${id}/messages`],['PATCH',`gyms/${id}/branches/${id}`]])assert.equal(allowedAdminPath(method!,path!),true,path);
+ for(const [method,path] of [['GET',`maintenance/requests/${id}`],['GET',`market/listings/${id}`],['GET','market/mine'],['GET','market/options'],['POST','market/assets'],['POST','market/listings'],['PATCH',`market/listings/${id}`],['GET','admin/topup-settings'],['POST','admin/pricing-policies'],['PUT','admin/welcome-points'],['GET','admin/bookings/review'],['GET','support/contact'],['GET','reports/summary'],['POST',`support/tickets/${id}/messages`],['PATCH',`gyms/${id}/branches/${id}`]])assert.equal(allowedAdminPath(method!,path!),true,path);
  for(const path of ['admin/unknown','admin/users/delete','../admin/users','auth/signin','gyms/not-a-uuid/branches'])assert.equal(allowedAdminPath('POST',path),false,path);
 });
 test('platform login has one sign-in form and no registration, invitation or phone proof UI',()=>{
