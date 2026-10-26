@@ -62,7 +62,7 @@ class _MarketScreenState extends State<MarketScreen>{
  ])); }
  Widget _tab(bool value,String label)=>Expanded(child:Semantics(selected:mine==value,child:Padding(
   padding:const EdgeInsets.symmetric(horizontal:1),child:Material(color:mine==value?Colors.white:Colors.transparent,
-   elevation:mine==value?1:0,borderRadius:BorderRadius.circular(12),child:InkWell(
+   elevation:mine==value?1:0,shadowColor:const Color(0x14000000),borderRadius:BorderRadius.circular(12),child:InkWell(
     key:ValueKey('market.tab.$value'),borderRadius:BorderRadius.circular(12),onTap:(){if(mine==value)return;setState(()=>mine=value);load();},
     child:Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:11),child:Text(label,textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w700,color:mine==value?ink:muted))),
   )),
@@ -137,10 +137,10 @@ class _MarketEditorState extends State<MarketEditor>{
   OutlinedButton(onPressed:busy||images.length>=6?null:upload,child:Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.add_photo_alternate_outlined),const SizedBox(width:8),Flexible(child:Text(busy&&progress.isNotEmpty?progress:appText('s897', [images.length]),textAlign:TextAlign.center))])),
   if(images.isNotEmpty)SizedBox(height:120,child:ListView.separated(scrollDirection:Axis.horizontal,itemCount:images.length,separatorBuilder:(_,_)=>const SizedBox(width:8),itemBuilder:(_,i)=>SizedBox(width:104,child:Stack(fit:StackFit.expand,children:[ClipRRect(borderRadius:BorderRadius.circular(14),child:marketImage(images[i]['publicUrl'])),PositionedDirectional(top:2,end:2,child:IconButton.filledTonal(tooltip:appText('s898'),onPressed:busy?null:()=>setState(()=>images.removeAt(i)),icon:const Icon(Icons.close_rounded,size:16)))])))),const SizedBox(height:20),
   field(title,appText('s899'),minimum:3,maximum:100),
-  DropdownButtonFormField<String>(initialValue:category,decoration:InputDecoration(labelText:appText('s900')),items:marketCategories.entries.map((e)=>DropdownMenuItem(value:e.key,child:Text(e.value))).toList(),onChanged:busy?null:(v)=>setState(()=>category=v!)),const SizedBox(height:16),
-  DropdownButtonFormField<String>(initialValue:condition,decoration:InputDecoration(labelText:appText('s847')),items:[DropdownMenuItem(value:'NEW',child:Text(appText('s267'))),DropdownMenuItem(value:'USED',child:Text(appText('s849')))],onChanged:busy?null:(v)=>setState(()=>condition=v!)),const SizedBox(height:16),
+  DropdownButtonFormField<String>(isExpanded:true,initialValue:category,decoration:InputDecoration(labelText:appText('s900')),items:marketCategories.entries.map((e)=>DropdownMenuItem(value:e.key,child:Text(e.value))).toList(),onChanged:busy?null:(v)=>setState(()=>category=v!)),const SizedBox(height:16),
+  DropdownButtonFormField<String>(isExpanded:true,initialValue:condition,decoration:InputDecoration(labelText:appText('s847')),items:[DropdownMenuItem(value:'NEW',child:Text(appText('s267'))),DropdownMenuItem(value:'USED',child:Text(appText('s849')))],onChanged:busy?null:(v)=>setState(()=>condition=v!)),const SizedBox(height:16),
   field(price,appText('s901'),type:const TextInputType.numberWithOptions(decimal:true),maximum:15),
-  if(places.isEmpty)TextButton(onPressed:options,child:Text(appText('s902'))) else DropdownButtonFormField<String>(initialValue:governorate,decoration:InputDecoration(labelText:appText('s298')),items:places.map((p)=>DropdownMenuItem(value:p,child:Text(p))).toList(),onChanged:busy?null:(v)=>setState(()=>governorate=v),validator:(v)=>v==null?appText('s890'):null),const SizedBox(height:16),
+  if(places.isEmpty)TextButton(onPressed:options,child:Text(appText('s902'))) else DropdownButtonFormField<String>(isExpanded:true,initialValue:governorate,decoration:InputDecoration(labelText:appText('s298')),items:places.map((p)=>DropdownMenuItem(value:p,child:Text(p))).toList(),onChanged:busy?null:(v)=>setState(()=>governorate=v),validator:(v)=>v==null?appText('s890'):null),const SizedBox(height:16),
   field(city,appText('s326'),minimum:2,maximum:80),field(phone,appText('s706'),type:TextInputType.phone,maximum:20),field(description,appText('s903'),lines:5,minimum:10,maximum:3000),
   ErrorNote(error),ActionButton(widget.initial==null?appText('s904'):appText('s905'),busy:busy,onPressed:busy||places.isEmpty?null:submit),const SizedBox(height:12),Text(appText('s906'),style:TextStyle(color:muted,fontSize:11)),
  ]))); }
