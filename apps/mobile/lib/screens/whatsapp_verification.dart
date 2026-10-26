@@ -69,8 +69,8 @@ class WhatsappVerificationScreen extends StatelessWidget {
 /// The details screen remains reachable for reviewing the new flow.
 class PhoneVerificationMethodScreen extends StatelessWidget {
   final String phone;
-  final bool english;
-  const PhoneVerificationMethodScreen({super.key, required this.phone, this.english = false});
+  final bool english, whatsappEnabled, smsEnabled;
+  const PhoneVerificationMethodScreen({super.key, required this.phone, this.english = false, this.whatsappEnabled = false, this.smsEnabled = true});
   @override
   Widget build(BuildContext context) {
     String tr(String ar, String en) => english ? en : ar;
@@ -83,17 +83,18 @@ class PhoneVerificationMethodScreen extends StatelessWidget {
               const SizedBox(height: 12), Text(phone, textDirection: TextDirection.ltr, textAlign: TextAlign.center),
               const SizedBox(height: 24),
               FilledButton.icon(key: const ValueKey('phone.method.sms'), icon: const Icon(Icons.sms_outlined),
-                onPressed: () => Navigator.pop(context, true), label: Text(tr('التحقق برسالة SMS', 'Verify with SMS'))),
+                onPressed: smsEnabled ? () => Navigator.pop(context, 'sms') : null, label: Text(tr('التحقق برسالة SMS', 'Verify with SMS'))),
               const SizedBox(height: 12),
               OutlinedButton.icon(key: const ValueKey('phone.method.whatsapp'), icon: const Icon(Icons.chat_outlined),
                 onPressed: () async {
+                  if (whatsappEnabled) { Navigator.pop(context, 'whatsapp'); return; }
                   final useSms = await Navigator.push<bool>(context, MaterialPageRoute(builder: (routeContext) =>
                     WhatsappVerificationScreen(phone: phone, english: english,
-                      onSms: () => Navigator.pop(routeContext, true))));
-                  if (context.mounted && useSms == true) Navigator.pop(context, true);
-                }, label: Text(tr('واتساب · غير متاح حاليًا', 'WhatsApp · currently unavailable'))),
+                      onSms: smsEnabled ? () => Navigator.pop(routeContext, true) : null)));
+                  if (context.mounted && useSms == true) Navigator.pop(context, 'sms');
+                }, label: Text(whatsappEnabled ? tr('التحقق عبر واتساب', 'Verify with WhatsApp') : tr('واتساب · غير متاح حاليًا', 'WhatsApp · currently unavailable'))),
               const SizedBox(height: 12),
-              Text(tr('في واتساب هتبعت إنت رسالة التحقق من نفس الرقم. الطريقة دي هتتوفر قريبًا.', 'With WhatsApp, you send the verification message from this number. Coming soon.'), style: const TextStyle(color: muted)),
+              Text(whatsappEnabled ? tr('هتبعت إنت رسالة التحقق من نفس الرقم، وبعدها ترجع هنا.', 'Send the verification message from this number, then return here.') : tr('في واتساب هتبعت إنت رسالة التحقق من نفس الرقم. الطريقة دي هتتوفر قريبًا.', 'With WhatsApp, you send the verification message from this number. Coming soon.'), style: const TextStyle(color: muted)),
             ]),
           )),
         )),

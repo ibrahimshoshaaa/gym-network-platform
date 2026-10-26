@@ -1,9 +1,12 @@
 import {createHmac, timingSafeEqual} from 'node:crypto';
 import type {FastifyInstance} from 'fastify';
+import type {PrismaClient} from '@prisma/client';
+import {whatsappConfig, requestWhatsappChallenge, checkWhatsappChallenge, receiveWhatsappMessages} from './whatsapp-service.js';
+import {consumeAuthLimit} from './throttle.js';
 
-// Foundation only: configuration must never enable an unfinished identity proof.
 export function whatsappStatus() {
-  return {enabled: false, reason: 'SETUP_REQUIRED', method: 'whatsapp'} as const;
+  const enabled=whatsappConfig()!==null;
+  return {enabled, reason:enabled?null:'SETUP_REQUIRED', method:'whatsapp'} as const;
 }
 
 export function validWhatsappSignature(body: Buffer, signature: unknown, secret: string) {
@@ -12,11 +15,14 @@ export function validWhatsappSignature(body: Buffer, signature: unknown, secret:
   return timingSafeEqual(expected, Buffer.from(signature.slice(7), 'hex'));
 }
 
-export function registerWhatsappRoutes(app: FastifyInstance) {
-  app.get('/auth/whatsapp/status', async () => whatsappStatus());
-  // Reserved contract. No challenges, SMS, users or sessions are created here.
-  app.post('/auth/whatsapp/challenge', async (_r, reply) =>
-    reply.code(503).send({code: 'WHATSAPP_UNAVAILABLE'}));
+export function registerWhatsappRoutes(app: FastifyInstance, db?: PrismaClient) {
+  app.get('/auth/whatsapp/status', async () => ({...whatsappStatus(),enabled:!!db&&whatsappStatus().enabled}));
+  for(const action of ['challenge','check','cancel'] as const)app.post('/auth/whatsapp/'+action, {
+    onRequest:async r=>{if(db&&whatsappConfig())await consumeAuthLimit(db,'whatsapp-'+action+'-ip',r.ip,action==='challenge'?20:300,900);},
+  },async (r,reply)=>{
+    if(!db||!whatsappConfig())return reply.code(503).send({code:'WHATSAPP_UNAVAILABLE'});
+    return action==='challenge'?requestWhatsappChallenge(db,r.body):checkWhatsappChallenge(db,r.body,action==='cancel');
+  });
 
   app.register(async hook => {
     hook.removeContentTypeParser('application/json');
@@ -43,9 +49,10 @@ export function registerWhatsappRoutes(app: FastifyInstance) {
       if (!Buffer.isBuffer(r.body) || !validWhatsappSignature(r.body, r.headers['x-hub-signature-256'], secret)) {
         return reply.code(403).send({code: 'ACCESS_DENIED'});
       }
-      // Deliberately not acknowledged: durable ingestion/identity binding are not
-      // implemented yet. Never silently drop an event or mark a phone verified.
-      return reply.code(503).send({code: 'WHATSAPP_UNAVAILABLE'});
+      if(!db||!whatsappConfig())return reply.code(503).send({code:'WHATSAPP_UNAVAILABLE'});
+      let payload:unknown;
+      try {payload=JSON.parse(r.body.toString('utf8'));} catch {return reply.code(400).send({code:'INVALID_INPUT'});}
+      return receiveWhatsappMessages(db,payload);
     });
   });
 }

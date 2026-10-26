@@ -36,7 +36,7 @@ The merged `204762b` revision passed [API/ledger CI](https://github.com/ibrahims
 
 Public store release still needs Apple signing/TestFlight and real-device acceptance, store listings/privacy declarations, and the owner's approved privacy/retention/support details. Confirm carrier delivery and operational settlement/deletion review procedures before public rollout. Implemented features and passing CI do not establish store approval or full production acceptance.
 
-See the [inactive WhatsApp verification foundation](docs/whatsapp-verification-foundation.md) for the prepared screens and webhook contract. Live verification remains SMS-only until the documented integration is completed.
+Optional [WhatsApp reverse verification](docs/whatsapp-verification-foundation.md) includes server challenges, signed inbound verification and mobile/web flows. It remains disabled until the migration, server configuration and handset acceptance steps are completed.
 
 ## Current business rules and guides
 

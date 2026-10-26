@@ -38,3 +38,14 @@ test('webhook signatures require the exact bytes, a secret, and well-formed SHA2
  assert.equal(validWhatsappSignature(body,signature,''),false);
  assert.equal(validWhatsappSignature(body,signature,'other-secret'),false);
 });
+
+test('WhatsApp opt-in requires complete configuration and messages expose neither poll secrets nor other senders', async () => {
+ const {whatsappConfig,whatsappMessages}=await import('../src/auth/whatsapp-service.js');
+ const env={GYMBANK_WHATSAPP_ENABLED:'true',GYMBANK_WHATSAPP_PHONE:'+201214829716',GYMBANK_WHATSAPP_PHONE_NUMBER_ID:'123456789',GYMBANK_WHATSAPP_APP_SECRET:'test-secret-with-length',GYMBANK_WHATSAPP_VERIFY_TOKEN:'test-verify-token-with-more-than-32-characters'};
+ assert.ok(whatsappConfig(env));assert.equal(whatsappConfig({...env,GYMBANK_WHATSAPP_ENABLED:'false'}),null);
+ assert.equal(whatsappConfig({...env,GYMBANK_WHATSAPP_PHONE_NUMBER_ID:''}),null);
+ const payload={object:'whatsapp_business_account',entry:[{changes:[{field:'messages',value:{metadata:{phone_number_id:'123456789'},messages:[{id:'message-1',from:'201055549901',timestamp:'1792979000',type:'text',text:{body:'تأكيد رقم الموبايل في GymBank\nGBVERIFY '+'x'.repeat(43)}}]}}]}]};
+ assert.equal(whatsappMessages(payload,'123456789')[0]?.phone,'+201055549901');
+ assert.equal(whatsappMessages(payload,'other').length,0);
+ assert.throws(()=>whatsappMessages({},'123456789'),/INVALID_INPUT/);
+});

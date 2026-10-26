@@ -4,7 +4,7 @@ import {trustedClientAddress} from '../../../../lib/client-address';
 import {allowedPath,boundedBody,checkOrigin,GatewayError} from '../../../../lib/security';
 import {failure,json,upstream} from '../../../../lib/gateway';
 export const runtime='nodejs';
-const publicRoutes=new Set(['auth/account-deletion','auth/account-deletion/status','auth/signin','auth/register','auth/owners/register','auth/invitations/accept','auth/whatsapp/challenge','auth/phone/challenge','auth/phone/register','auth/phone/reset','auth/phone/reset/verify']);
+const publicRoutes=new Set(['auth/account-deletion','auth/account-deletion/status','auth/signin','auth/register','auth/owners/register','auth/invitations/accept','auth/whatsapp/challenge','auth/whatsapp/check','auth/whatsapp/cancel','auth/phone/challenge','auth/phone/register','auth/phone/reset','auth/phone/reset/verify']);
 export async function GET(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function POST(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}
 export async function PUT(r:Request,c:{params:Promise<{path:string[]}>}){return proxy(r,c);}

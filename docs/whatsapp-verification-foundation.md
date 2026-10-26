@@ -1,33 +1,31 @@
-# WhatsApp reverse verification foundation
+# WhatsApp reverse verification
 
-Scope: prepare screens and webhook plumbing only. SMS through TextBee remains the working proof. No migration, credentials, production configuration or deployment is included.
+WhatsApp is an optional alternative to the existing TextBee SMS flow. Configuration is off by default. PR #98 includes the implementation; applying configuration alone to an older deployment cannot enable it.
 
-## Shipped UI
+## Flow and security
 
-Mobile registration (trainee and owner) and password recovery now open a method chooser before requesting an SMS. WhatsApp details are reachable and explicitly unavailable. Choosing SMS continues the existing flow; opening details, cancelling or going back sends nothing. Web registration/recovery keep SMS as the default and expose the same unavailable details without clearing form values.
+The client requests a five-minute challenge for a normalized phone and REGISTER/RESET purpose. The server returns a `wa.me` link with a cryptographically random message token and a separate random `whatsappToken` retained in client memory. Only hashes are stored. The poll/consumption token is never included in the WhatsApp message.
 
-Reusable Arabic web and Arabic/English Flutter components cover unavailable, ready, waiting, expired, verified and error states. The ready/waiting/success states are presentation components for the later integration, not live verification. They do not poll, launch a chat or produce a proof. Their action callbacks are supplied by a future host; omitted callbacks disable the relevant buttons. There is no demo code, fabricated success, client-side proof or automatic account creation.
+Signed inbound messages must match the configured destination Phone Number ID, challenge destination, sender phone, exact message format, purpose and creation/expiry times. Missing sender phone fails closed. Message IDs are unique and accepted updates are transactional/idempotent. A webhook does not create users or change passwords: existing registration/recovery consumes the verified challenge once under the existing row lock and transaction. Staff recovery requires active established passwords and excludes platform admins. All prior sessions are revoked on password reset. SMS/test behavior stays independent.
 
-## Reserved server endpoints
+Start and polling requests have shared database rate limits. A new challenge invalidates older challenges for the same phone/purpose, across methods. Cancelling invalidates its proof; expiry also bounds abandoned attempts. UI states include unavailable, instructions, waiting, verified, expired and retry. WhatsApp is opened via a fixed HTTPS `wa.me` host, and opening a link alone cannot verify a phone. Tokens are sent in bounded POST bodies, never polling query strings, localStorage or URL fragments. No outgoing WhatsApp messages or authentication templates are used.
 
-- `GET /auth/whatsapp/status`: always `{enabled:false, reason:"SETUP_REQUIRED", method:"whatsapp"}` even if secrets exist.
-- `POST /auth/whatsapp/challenge`: always HTTP 503 `WHATSAPP_UNAVAILABLE`; creates no challenge, SMS, session or account.
-- Native bridge exposes the above at `/api/mobile/auth/whatsapp/...`.
-- Meta callback route: `/api/whatsapp/webhook` on the web deployment, forwarding to `/webhooks/whatsapp` on the backend.
-- GET implements Meta's subscribe/challenge handshake with an independently configured server-only `GYMBANK_WHATSAPP_VERIFY_TOKEN` of at least 32 characters. Do not paste an Access Token into this field.
-- POST checks `x-hub-signature-256` against the exact raw bytes using server-only `GYMBANK_WHATSAPP_APP_SECRET`, with a 64 KiB body limit. No session cookie or browser Origin is required on the dedicated Meta callback. Webhook request logging is disabled so verification query tokens are not logged by Fastify.
-- Missing configuration returns 503; invalid handshake/signature returns 403. Authenticated inbound events still return 503 until durable ingestion exists. This is intentional: do not configure production message subscriptions yet; events must not be silently acknowledged and discarded.
+## Deployment order
 
-For an embedded API, secrets belong in the Vercel server environment. For a standalone API they belong on that API server. No `NEXT_PUBLIC_` variables, Flutter defines or committed secrets are needed. Configuration alone cannot enable WhatsApp verification.
+1. Review/merge the change and apply migration `202610260002_whatsapp_reverse_verification` using the migration role. Builds do not migrate the live database. Existing runtime table privileges cover the added columns.
+2. Deploy with `GYMBANK_WHATSAPP_ENABLED=false` first.
+3. Configure server secrets: `GYMBANK_WHATSAPP_VERIFY_TOKEN` (independent random value, at least 32 characters), `GYMBANK_WHATSAPP_APP_SECRET` (Meta app secret), `GYMBANK_WHATSAPP_PHONE=+201214829716`, and `GYMBANK_WHATSAPP_PHONE_NUMBER_ID` (the ID belonging to that exact number in the selected WhatsApp account, not the App ID or WABA ID). With an embedded API these live in Vercel; standalone mode uses the API server environment. Never use NEXT_PUBLIC variables, Flutter defines or committed secrets. An Access Token is not required for this inbound-only verification flow.
+4. Set Meta callback to `https://gym-network-platform.vercel.app/api/whatsapp/webhook`, and enter the exact verify token from the server environment. GET performs the subscribe/challenge handshake even while verification is disabled. Subscribe the app to the correct account's `messages` events. With verification disabled, POST returns 503 rather than silently dropping signed events.
+5. Enable `GYMBANK_WHATSAPP_ENABLED=true` only after migration and complete configuration. Run a controlled registration and recovery test from a separate WhatsApp number. Verify sender mismatch, expiry and SMS fallback. Connected/linked status in Meta alone does not prove inbound event delivery.
+6. Install a new mobile build for the new UI. Server configuration is discovered when choosing a verification method. Disable the flag to hide the option and reject further WhatsApp proofs without changing SMS configuration.
 
-## Work required before activation
+## Endpoints
 
-1. Durable one-time challenges bound to normalized phone, purpose (registration/recovery), request session and expiry; only store hashes of unpredictable proof secrets.
-2. Signed webhook ingestion with destination-number validation, sender-number matching, message-ID deduplication and transaction-safe proof updates. A missing sender number must fail closed.
-3. Rate-limited, possession-protected polling and one-time server consumption integrated into registration/recovery, including staff recovery rules and session revocation. Opening a link, receiving a client flag or knowing a challenge ID must never verify a phone.
-4. Start/expiry/cancel/retry/resume state handling and safe `wa.me` launching, driven by real server responses. Keep SMS available independently.
-5. Configure the real business number and Meta subscriptions, test actual inbound delivery end to end, then explicitly enable the method. This PR contains no enable flag and makes no live API calls to Meta.
+- `GET /auth/phone/status`: includes independent `smsEnabled` and `whatsappEnabled` flags.
+- `GET /auth/whatsapp/status` and `POST /auth/whatsapp/{challenge,check,cancel}`.
+- Check/cancel body: `{phone,purpose,challengeId,whatsappToken}`. Check returns pending/verified/expired/cancelled, never a reusable session token.
+- Existing phone register/reset/reset-verify endpoints accept exactly one of `code` (SMS) or `whatsappToken`, bound to `challengeId` and phone.
+- Web gateway: `/api/whatsapp/{status,challenge,check,cancel}`. Native gateway: `/api/mobile/auth/whatsapp/...`.
+- Meta callback `/api/whatsapp/webhook` preserves raw request bytes for HMAC-SHA256. Bodies are bounded to 64 KiB, malformed signatures are rejected and disabled configuration returns 503. No browser Origin/session is needed on this dedicated callback. Webhook request logging is disabled; challenge proof fields are redacted.
 
-## Validation
-
-API tests check disabled behavior, handshake, exact-byte signatures, tampering, missing configuration and body bounds. Web tests cover all presentational states and disabled actions. Flutter tests cover narrow layouts and navigating from unavailable WhatsApp details back to the real SMS challenge. Existing SMS recovery coverage includes the method chooser.
+Tests include signature/transport integrity, config opt-in, disposable PostgreSQL registration/recovery, replay/sender/destination/purpose/expiry/cancellation checks, and Flutter polling/navigation. Live delivery requires Meta configuration and a real handset acceptance test; automated tests use synthetic payloads only.

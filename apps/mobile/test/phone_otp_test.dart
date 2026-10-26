@@ -73,6 +73,7 @@ void main() {
     addTearDown(t.view.resetPhysicalSize); addTearDown(t.view.resetDevicePixelRatio);
     final calls = <String>[];
     final api = client('TRAINEE', (r) async {
+      if (r.url.path.endsWith('/status')) return reply({'smsEnabled':true,'whatsappEnabled':false});
       calls.add(r.url.path);
       if (r.url.path.endsWith('/challenge')) return reply({'challengeId': 'reset-proof', 'testMode': true});
       final body = jsonDecode(r.body);

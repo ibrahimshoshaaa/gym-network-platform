@@ -1,3 +1,4 @@
+import 'whatsapp_phone_flow.dart';
 import 'whatsapp_verification.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -15,8 +16,16 @@ Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone
 }
 
 Future<Json?> choosePhoneVerification(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm, bool english = false}) async {
-  final sms = await open<bool>(context, PhoneVerificationMethodScreen(phone: phone, english: english));
-  if (!context.mounted || sms != true) return null;
+  Json status = {};
+  try { status = Map<String,dynamic>.from(await api.request('auth/phone/status', auth: false)); } catch (_) { /* SMS remains a fallback if discovery is temporarily unavailable. */ }
+  if (!context.mounted) return null;
+  final method = await open<String>(context, PhoneVerificationMethodScreen(phone: phone, english: english,
+    smsEnabled: status['smsEnabled'] != false, whatsappEnabled: status['whatsappEnabled'] == true));
+  if (!context.mounted || method == null) return null;
+  if (method == 'whatsapp') {
+    final result = await open<Json>(context, WhatsappPhoneFlow(api: api, phone: phone, purpose: purpose, english: english, onConfirm: onConfirm));
+    if (!context.mounted || result?['useSms'] != true) return result;
+  }
   return requestPhoneCode(context, api, phone, purpose, onConfirm: onConfirm, english: english);
 }
 
