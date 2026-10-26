@@ -1,413 +1,116 @@
 "use client";
-import {BookingAdmin} from "./booking-admin";
-import {StaffPortal} from "./staff-portal";
+import {useEffect,useState,type FormEvent} from "react";
+import {Building2,ClipboardCheck,Coins,CreditCard,FileCheck2,House,KeyRound,LogOut,Menu,MessageCircle,Package,Send,Settings,ShieldCheck,Sparkles,Wallet,Wrench,ChevronLeft,ArrowLeft, type LucideIcon} from "lucide-react";
+import {request,api,send,message,type Identity,ApiError} from "../lib/client";
+import {adminSections,adminSectionFor,isAdminDestination,roleQuickTabs,type AdminDestination} from "../lib/navigation";
 import {AdminSideNav} from "./admin-side-nav";
+import {AdminHome} from "./admin-home";
+import {AdminFinance} from "./platform-finance";
+import {NetworkMark} from "./platform-identity";
+import {Login} from "./login";
+import {AccountTools} from "./updates";
+import {SettingsPanel} from "./settings";
+import {SupportSettings} from "./support-settings";
+import {BookingAdmin} from "./booking-admin";
+import {ServicePriceReview} from "./service-price-review";
+import {GymApplications} from "./gym-applications";
+import {GymManagement} from "./gyms/management";
+import {PriceReviews} from "./gyms/pricing";
+import {Reviews} from "./reviews";
+import {PointWallet} from "./point-wallet";
+import {Withdrawals} from "./withdrawals";
+import {Disputes} from "./disputes";
+import {Reports} from "./reports";
+import {OperationReviews} from "./operation-reviews";
 import {PromotionAdmin} from "./promotion-admin";
 import {MaintenanceAdmin} from "./maintenance-admin";
 import {MarketAdmin} from "./market-admin";
 import {Campaigns} from "./campaigns";
-import { NetworkMark } from "./platform-identity";
-import { useEffect, useState, type FormEvent } from "react";
-import {
-  Wrench,
-  FileCheck2,
-  Coins,
-  CreditCard,
-  Package,
-  Menu,
-  LogOut,
-  ShieldCheck,
-  ChevronLeft,
-  KeyRound,
-  Building2,
-  MapPin,
-  ClipboardCheck,
-  House,
-  Send,
-  Wallet,
-  MoreHorizontal,
-} from "lucide-react";
-import {
-  request,
-  api,
-  send,
-  message,
-  type Identity,
-  ApiError,
-} from "../lib/client";
-import { roleTabs, roleQuickTabs, roleName, adminSections, adminSectionFor } from "../lib/navigation";
-import { WorkHome, type CashierTask } from "./work-home";
-import { invitationToken } from "../lib/invitation-link";
-import { AdminFinance } from "./platform-finance";
-import { AdminHome } from "./admin-home";
-import { OwnerJoinAccess } from "./owner-join-access";
-import { Login } from "./login";
-import { OwnerPortal } from "./owner-portal";
-import { TraineePortal } from "./trainee-portal";
-import { SettingsPanel } from "./settings";
-import { Cashier, TraineeQr } from "./operations";
-import { OperationReviews } from "./operation-reviews";
-import { Withdrawals } from "./withdrawals";
-import { Reports } from "./reports";
-import { BranchDirectory } from "./branch-directory";
-import { Reviews } from "./reviews";
-import { GymManagement } from "./gyms/management";
-import { PriceReviews } from "./gyms/pricing";
-import { Purchases } from "./purchases";
-import { Busy, Field, Modal, Notice } from "./ui";
-import { Disputes } from "./disputes";
-import { Support } from "./support";
-import { Users, AuditLog } from "./users";
-import { AccountTools } from "./updates";
-import { AccountRecovery, recoveryToken } from "./account-recovery";
-import { PointWallet } from "./point-wallet";
-import { GymApplications } from "./gym-applications";
-type Tab =
-  | "promotion-requests"
-  | "maintenance"
-  | "market"
-  | "booking-policy"
-  | "campaigns"
-  | "requests" | "finance" | "more"
-  | "gym-applications"
-  | "direct-topup"
-  | "support" | "users" | "audit" | "disputes"
-  | "home"
-  | "directory"
-  | "reports"
-  | "withdrawals"
-  | "operation-reviews"
-  | "cashier"
-  | "trainee"
-  | "gyms"
-  | "branch-prices"
-  | "reviews"
-  | "pricing"
-  | "payments"
-  | "packages"
-  | "purchases";
-const allTabs = [
-  {id:"promotion-requests" as const,label:"إعلانات الفروع",icon:FileCheck2,description:"مراجعة عروض الفروع وتحديد تكلفتها"},
-  {id:"maintenance" as const,label:"الصيانة",icon:Wrench,description:"أعطال الفروع وعروض الصيانة والمتابعة"},
-  {id:"market" as const,label:"الماركت",icon:Coins,description:"مراجعة المعروض والبلاغات وإعلانات المنصة"},
-  {id:"booking-policy" as const,label:"الحجوزات وسياسة الحضور",icon:ClipboardCheck,description:"مهلة السماح ومراجعة أسباب عدم الحضور وتوزيع النقاط"},
-  {id:"campaigns" as const,label:"الإعلانات والإشعارات",icon:Send,description:"الجمهور ومواعيد الظهور والحملات"},
-  {id:"requests" as const,label:"الطلبات",icon:FileCheck2,description:"طلبات الشحن والانضمام والأسعار والإلغاء والسحب"},
-  {id:"finance" as const,label:"المالية",icon:Wallet,description:"التحصيلات والمستحقات وحركة النقاط"},
-  {id:"more" as const,label:"المزيد",icon:MoreHorizontal,description:"الدعم والمستخدمون وإعدادات المنصة"},
-  {id:"gym-applications" as const,label:"طلبات الانضمام",icon:Building2,description:"مراجعة بيانات أصحاب الجيمات المسجلين من التطبيق وقبول أو رفض انضمامهم"},
-  {id:"direct-topup" as const,label:"شحن مباشر بالرقم",icon:Send,description:"شحن المتدرب برقم الموبايل بعد تأكيد التحصيل"},
-  {id:"disputes" as const,label:"حجوزات النزاعات",icon:ShieldCheck,description:"حجز المبلغ محل المراجعة وفكّه مع الحفاظ على باقي المستحقات"},
-  {id:"support" as const,label:"الدعم والشكاوى",icon:FileCheck2,description:"طلبات المساعدة والاعتراضات والردود ومرفقاتها"},
-  {id:"users" as const,label:"المستخدمون والحسابات",icon:ShieldCheck,description:"البحث وتعطيل الوصول واستعادة الحسابات"},
-  {id:"audit" as const,label:"سجل التغييرات",icon:ClipboardCheck,description:"القرارات ومن نفذها وتوقيتها ومرجعها"},
-  { id: "home" as const, label: "الرئيسية", icon: House, description: "اختار مهمتك وابدأ من هنا" },
-  {
-    id: "directory" as const,
-    label: "دليل الجيمات",
-    icon: MapPin,
-    description: "الفروع المشاركة والأسعار والمواقع ومواعيد العمل",
-  },
-  {
-    id: "reports" as const,
-    label: "التقارير والمتابعة",
-    icon: ClipboardCheck,
-    description: "حركة الفترة والأرصدة الحالية وتنبيهات الطلبات",
-  },
-  {
-    id: "withdrawals" as const,
-    label: "السحب والتسويات",
-    icon: CreditCard,
-    description: "طلبات السحب اليدوي والإثبات وتأكيد الاستلام والاعتراض",
-  },
-  {
-    id: "operation-reviews" as const,
-    label: "طلبات الإلغاء والتصحيح",
-    icon: ClipboardCheck,
-    description: "طلبات مراجعة الزيارات وتصحيح مبيعات النقاط",
-  },
-  {
-    id: "cashier" as const,
-    label: "الكاشير والزيارات",
-    icon: Building2,
-    description: "تأكيد حضور المتدربين بالـQR ومتابعة الزيارات",
-  },
-  {
-    id: "trainee" as const,
-    label: "محفظتي ورمز الدخول",
-    icon: ShieldCheck,
-    description: "رصيد المحفظة ورمز QR قصير الصلاحية وسجل الزيارات",
-  },
-  {
-    id: "gyms" as const,
-    label: "الجيمات والفروع",
-    icon: MapPin,
-    description: "إدارة الجيمات والفروع والدعوات والموظفين",
-  },
-  {
-    id: "branch-prices" as const,
-    label: "اعتماد أسعار الزيارات",
-    icon: ClipboardCheck,
-    description: "مراجعة أسعار الزيارة ومدد الجلسات المقترحة",
-  },
-  {
-    id: "reviews" as const,
-    label: "طلبات الشحن",
-    icon: FileCheck2,
-    description: "طلبات التحويل التي تحتاج قرارك",
-  },
-  {
-    id: "pricing" as const,
-    label: "الأسعار والنسب",
-    icon: Coins,
-    description: "إدارة سعر النقطة ونسبة تسوية الزيارة والنقاط الترحيبية",
-  },
-  {
-    id: "payments" as const,
-    label: "حسابات استقبال التحويل",
-    icon: CreditCard,
-    description: "إدارة بيانات إنستا باي والمحفظة الإلكترونية",
-  },
-  {
-    id: "packages" as const,
-    label: "باقات النقاط",
-    icon: Package,
-    description: "كميات نقاط مناسبة للمتدربين",
-  },
-  {
-    id: "purchases" as const,
-    label: "شحن رصيد المتدرب",
-    icon: Building2,
-    description: "طلبات شحن محفظة المتدرب ومتابعة مراجعتها",
-  },
-];
-const tabs=allTabs;
-export function Dashboard() {
-  const [user, setUser] = useState<Identity | null>(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [tab, setTab] = useState<Tab>("home"),
-    [mobile, setMobile] = useState(false),
-    [loggingOut, setLoggingOut] = useState(false),
-    [password, setPassword] = useState(false),
-    [reviewGym,setReviewGym]=useState<string|null>(null),
-    [cashierTask, setCashierTask] = useState<CashierTask>("visit"),
-    [recovery, setRecovery] = useState<string|null>(null);
-  const [delegatedFull,setDelegatedFull]=useState(false);
-  useEffect(()=>{let live=true;setDelegatedFull(false);if(user&&user.role!=='GYM_OWNER'&&user.role!=='PLATFORM_ADMIN')api<{items:unknown[]}>('gyms?limit=1').then(r=>{if(live)setDelegatedFull(r.items.length>0);}).catch(()=>{});return()=>{live=false;};},[user?.id,user?.role]);
-  function loggedIn(person: Identity) {
-    setReviewGym(null);
-    setUser(person);
-    setTab(person.role === "TRAINEE" ? "trainee" : "home");
-    setCashierTask("visit");
-    setError("");
-  }
-  async function check() {
-    setLoading(true);
-    setError("");
-    const restore=recoveryToken(window.location.hash);
-    if(restore){setRecovery(restore);window.history.replaceState(window.history.state,"",window.location.pathname+window.location.search);setLoading(false);return;}
-    if (invitationToken(window.location.hash)) { setUser(null); setLoading(false); return; }
-    try {
-      const result = await request<{ user: Identity }>("/api/session");
-      loggedIn(result.user);
-    } catch (e) {
-      if (!(e instanceof ApiError && e.status === 401)) setError(message(e));
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void check();
-    const expire = () => {
-      setUser(null);
-      setPassword(false);
-      setError("");
-    };
-    window.addEventListener("session-expired", expire);
-    return () => window.removeEventListener("session-expired", expire);
-  }, []);
-  async function logout() {
-    if (loggingOut) return;
-    setLoggingOut(true);
-    setError("");
-    try {
-      await request("/api/logout", { method: "POST" });
-      setUser(null);
-      setMobile(false);
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setLoggingOut(false);
-    }
-  }
-  if (loading)
-    return (
-      <main className="startup">
-        <span className="brand-icon">
-          <NetworkMark />
-        </span>
-        <Busy>بنجهز حسابك</Busy>
-      </main>
-    );
-  if(recovery)return <AccountRecovery token={recovery} onBack={()=>{setRecovery(null);setUser(null);}}/>;
-  if (!user)
-    return error ? (
-      <main className="startup">
-        <Notice text={error} />
-        <button className="primary" onClick={() => void check()}>
-          إعادة المحاولة
-        </button>
-      </main>
-    ) : (
-      <Login onLogin={loggedIn} />
-    );
-  if (user.role === "TRAINEE") return <>
-    <TraineePortal user={user} logout={logout} loggingOut={loggingOut} onPassword={() => setPassword(true)} error={error} />
-    {password && <div className="mobile-mirror native-modal-host"><PasswordChange onClose={() => setPassword(false)} /></div>}
-  </>;
-  if(user.role === "GYM_OWNER"||delegatedFull)return <OwnerJoinAccess key={user.id} enabled={user.role==="GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><OwnerPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<div className="mobile-mirror native-modal-host"><PasswordChange onClose={()=>setPassword(false)}/></div>}</OwnerJoinAccess>;
-  if(user.role==="BRANCH_MANAGER"||user.role==="CASHIER")return <><StaffPortal user={user} logout={logout} loggingOut={loggingOut} onPassword={()=>setPassword(true)} error={error}/>{password&&<div className="mobile-mirror native-modal-host"><PasswordChange onClose={()=>setPassword(false)}/></div>}</>;
-  const admin = user.role === "PLATFORM_ADMIN",
-    available = tabs.filter(t => roleTabs[user.role]?.includes(t.id)&&(t.id!=='purchases'||user.role==='TRAINEE')),
-    current = available.find((t) => t.id === tab) ?? available[0]!;
-  function navigate(next: Tab, task?: CashierTask) { if(next!=="gyms")setReviewGym(null); if (task) setCashierTask(task); setTab(next); setMobile(false); window.scrollTo({ top: 0, behavior: "auto" }); }
-  const adminSection = adminSectionFor(current.id);
-  const contentTab = current.id === "requests" ? "reviews" : current.id === "more" ? "support" : current.id;
-  const quick = (roleQuickTabs[user.role] ?? []).map(id => available.find(t => t.id === id)).filter((item): item is typeof available[number] => Boolean(item));
-  return (
-    <OwnerJoinAccess key={user.id} enabled={user.role === "GYM_OWNER"} onLogout={logout} loggingOut={loggingOut}><div className={`app-shell ${admin ? "admin-workspace" : ""}`}>
-      {mobile && (
-        <button
-          className="nav-backdrop"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobile(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
-        <div className="brand">
-          <span className="brand-icon">
-            <NetworkMark />
-          </span>
-          <span>
-            GYM<span className="brand-light">BANK</span>
-          </span>
-        </div>
-        <div className="workspace">
-          <span className="workspace-mark">
-            <ShieldCheck size={22} />
-          </span>
-          <div>
-            <strong>{admin ? "إدارة المنصة" : "مساحة الجيم"}</strong>
-            <small>لوحة التحكم</small>
-          </div>
-          <span className="online-dot" />
-        </div>
-        <span className="nav-label">مساحة العمل</span>
-        <nav aria-label="القائمة الرئيسية">
-          {admin ? <AdminSideNav items={available} current={contentTab} onNavigate={id=>navigate(id as Tab)}/> : [{label:"التشغيل",ids:["home","cashier","reviews","branch-prices","gyms"]},{label:"الأرصدة والمتابعة",ids:["purchases","withdrawals","reports","operation-reviews","support"]},{label:"إعدادات المنصة",ids:["pricing","payments","packages","users","audit"]}].map(group => ({...group,items:available.filter(item=>group.ids.includes(item.id))})).filter(group=>group.items.length>0).map(group=><div className="navigation-group" key={group.label}><span className="nav-label">{group.label}</span>
-          {group.items.map((item) => (
-            <button
-              key={item.id}
-              aria-current={current.id === item.id ? "page" : undefined}
-              className={current.id === item.id ? "active" : ""}
-              onClick={() => navigate(item.id)}
-            >
-              <item.icon size={20} />
-              <span>{item.label}</span>
-              {current.id === item.id && <ChevronLeft size={16} />}
-            </button>
-          ))}
-          </div>)}
-        </nav>
-        <div className="sidebar-bottom">
-          <button onClick={() => setPassword(true)}>
-            <KeyRound size={18} />
-            تغيير كلمة المرور
-          </button>
-          <button onClick={() => void logout()} disabled={loggingOut}>
-            {loggingOut ? (
-              <Busy>جاري تسجيل الخروج</Busy>
-            ) : (
-              <>
-                <LogOut size={18} />
-                تسجيل الخروج
-              </>
-            )}
-          </button>
-          <div className="sidebar-credit">
-            Powered by <strong>ShoTech</strong>
-          </div>
-        </div>
-      </aside>
-      <div className="main-area">
-        <header className="topbar">
-          <div className="topbar-start">
-            <button
-              className="icon-button mobile-menu"
-              aria-label="فتح القائمة"
-              onClick={() => setMobile(true)}
-            >
-              <Menu size={24} />
-            </button>
-            <span className="breadcrumb">
-              لوحة التحكم <ChevronLeft size={14} />
-              <strong>{admin ? adminSection.label : current.label}</strong>
-            </span>
-          </div>
-          <AccountTools user={user} onNavigate={next=>{const item=available.find(t=>t.id===next);if(item)navigate(item.id);}}/>
-          <div className="profile">
-            <div>
-              <strong>{user.displayName}</strong>
-              <small>{roleName(user.role)}</small>
-            </div>
-            <span className="avatar">{user.displayName.slice(0, 1)}</span>
-          </div>
-        </header>
-        <main className="workspace-content">
-          {current.id !== "home" && <div className="page-heading">
-            <h1>{admin ? adminSection.label : current.label}</h1>
-            <p>{admin ? adminSection.description : current.description}</p>
-          </div>}
-          {admin && adminSection.items.length>0 ? <nav className="admin-section-tabs" aria-label={`أقسام ${adminSection.label}`}>
-            {adminSection.id==="finance"?<button aria-current={current.id==="finance"?"page":undefined} className={current.id==="finance"?"active":""} onClick={()=>navigate("finance")}>نظرة عامة</button>:null}
-            {adminSection.items.map(id=>{const item=available.find(t=>t.id===id)!;return <button key={id} aria-current={contentTab===id?"page":undefined} className={contentTab===id?"active":""} onClick={()=>navigate(id)}>{item.label}</button>;})}
-          </nav>:null}
-          <Notice text={error} />
-          {contentTab === "promotion-requests" ? <PromotionAdmin/> : contentTab === "maintenance" ? <MaintenanceAdmin/> : contentTab === "market" ? <MarketAdmin/> : contentTab === "campaigns" ? <Campaigns/> : contentTab === "finance" ? <AdminFinance/> : contentTab === "gym-applications" ? <GymApplications/> : contentTab === "direct-topup" ? <PointWallet admin={admin}/> : contentTab === "disputes" ? <Disputes admin={admin}/> : contentTab === "support" ? <Support admin={admin}/> : contentTab === "users" ? <Users/> : contentTab === "audit" ? <AuditLog/> : contentTab === "home" ? (
-            admin ? <AdminHome onNavigate={navigate} /> : <WorkHome role={user.role} name={user.displayName} onNavigate={navigate} />
-          ) : contentTab === "directory" ? (
-            <BranchDirectory />
-          ) : contentTab === "reports" ? (
-            <Reports admin={admin} />
-          ) : contentTab === "withdrawals" ? (
-            <Withdrawals admin={admin} />
-          ) : contentTab === "operation-reviews" ? (
-            <OperationReviews admin={admin} />
-          ) : contentTab === "cashier" ? (
-            <Cashier initialTask={cashierTask} />
-          ) : contentTab === "trainee" ? (
-            <TraineeQr />
-          ) : contentTab === "gyms" ? (
-            <GymManagement admin={admin} initialGym={reviewGym} />
-          ) : contentTab === "branch-prices" ? (
-            <PriceReviews onOpenGym={gymId=>{setReviewGym(gymId);navigate("gyms");}} />
-          ) : contentTab === "reviews" ? (
-            <Reviews />
-          ) : contentTab === "purchases" ? (
-            <Purchases />
-          ) : (
-            contentTab === "booking-policy" ? <BookingAdmin/> : <SettingsPanel key={contentTab} section={contentTab} />
-          )}
-          <footer className="page-footer">
-            GymBank <span>•</span> ShoTech Solutions
-          </footer>
-        </main>
-      </div>
-      <nav className="role-quick-nav" aria-label="وصول سريع">{quick.map(item => <button key={item.id} aria-current={(admin?adminSection.id===item.id:current.id===item.id)?"page":undefined} className={(admin?adminSection.id===item.id:current.id===item.id)?"active":""} onClick={() => navigate(item.id)}><item.icon size={21}/><span>{admin?(adminSections.find(section=>section.id===item.id)?.label??item.label):item.label}</span></button>)}<button className={admin&&adminSection.id==="more"?"active":""} aria-current={admin&&adminSection.id==="more"?"page":undefined} onClick={() => admin?navigate("more"):setMobile(true)} aria-label={admin?"المزيد":"كل الأقسام"}>{admin?<MoreHorizontal size={21}/>:<Menu size={21}/>}<span>المزيد</span></button></nav>
-      {password && <PasswordChange onClose={() => setPassword(false)} />}
-    </div></OwnerJoinAccess>
-  );
+import {Support} from "./support";
+import {Users,AuditLog,ExpiredWallets} from "./users";
+import {AccountDeletions} from "./account-deletion";
+import {Busy,Field,Modal,Notice} from "./ui";
+type Destination={id:AdminDestination;label:string;description:string;icon:LucideIcon};
+const descriptions:Partial<Record<AdminDestination,[string,string,LucideIcon]>>={
+ reviews:["طلبات الشحن","مطابقة التحويلات والموافقة على إضافة النقاط",FileCheck2],
+ "gym-applications":["طلبات انضمام الجيمات","مراجعة طلبات الانضمام وقبولها أو رفضها",Building2],
+ "branch-prices":["أسعار الزيارات","اعتماد أسعار الزيارة ومددها المقترحة",Coins],
+ "service-prices":["أسعار الخدمات","مراجعة أسعار الخدمات التي تقدمها الفروع",Coins],
+ "booking-reviews":["مراجعة عدم الحضور","البت في الحجوزات المعلقة وتوزيع نقاطها",ClipboardCheck],
+ "operation-reviews":["الإلغاء والتصحيح","مراجعة طلبات تصحيح العمليات",ClipboardCheck],
+ "direct-topup":["شحن مباشر بالرقم","شحن محفظة المتدرب بعد تأكيد التحصيل",Send],
+ withdrawals:["السحب والتسويات","مراجعة السحب وتسجيل التحويل وإثباته",Wallet],
+ disputes:["مبالغ محل المراجعة","حجز وفك المبالغ المرتبطة بنزاع",ShieldCheck],
+ reports:["التقارير","حركة العمليات والأرصدة وتصدير التقارير",ClipboardCheck],
+ maintenance:["طلبات الصيانة","متابعة الأعطال والعروض والتنفيذ",Wrench],
+ "promotion-requests":["إعلانات الفروع","مراجعة العروض وتحديد تكلفة الإعلان",FileCheck2],
+ market:["إدارة الماركت","مراجعة المعروض والبلاغات",Package],
+ support:["الدعم والشكاوى","الرد على رسائل العملاء ومتابعتها",MessageCircle],
+ campaigns:["الحملات والإشعارات","إدارة الجمهور ومواعيد الظهور والمحتوى",Send],
+ users:["المستخدمون والحسابات","البحث وإدارة إتاحة الحسابات",ShieldCheck],
+ "account-deletions":["طلبات حذف الحساب","مراجعة طلبات الحذف وعوائق التسوية",ShieldCheck],
+ "wallet-expiry":["أرصدة تحتاج مراجعة","المحافظ المنتهية وحالة النقاط غير المتاحة",Wallet],
+ audit:["سجل التغييرات","من نفذ القرار وسببه وتوقيته",ClipboardCheck],
+ pricing:["التسعير ومستحقات الجيم","سعر النقطة ونسبة مستحقات الجيم من الزيارة",Coins],
+ welcome:["النقاط الترحيبية","هدية التسجيل للحسابات الجديدة",Sparkles],
+ payments:["حسابات استقبال التحويل","إنستا باي والمحفظة الإلكترونية",CreditCard],
+ packages:["باقات النقاط","الكميات المتاحة للشحن وحالة كل باقة",Package],
+ "booking-policy":["سياسة الحجز والحضور","مهلة السماح وطريقة توزيع نقاط عدم الحضور",ClipboardCheck],
+ "support-contact":["بيانات التواصل","رقم واتساب الذي يظهر لعملاء المنصة",MessageCircle],
+};
+const sectionIcons:Record<string,LucideIcon>={home:House,requests:FileCheck2,gyms:Building2,finance:Wallet,services:Wrench,communication:MessageCircle,oversight:ShieldCheck,settings:Settings};
+export const adminItems:Destination[]=adminSections.flatMap(section=>[
+ {id:section.id,label:section.label,description:section.description,icon:sectionIcons[section.id]!},
+ ...section.items.map(id=>({id,label:descriptions[id]![0],description:descriptions[id]![1],icon:descriptions[id]![2]})),
+]);
+export function Dashboard(){
+ const [user,setUser]=useState<Identity|null>(null),[loading,setLoading]=useState(true),[error,setError]=useState(""),[tab,setTab]=useState<AdminDestination>("home"),[mobile,setMobile]=useState(false),[loggingOut,setLoggingOut]=useState(false),[password,setPassword]=useState(false),[reviewGym,setReviewGym]=useState<string|null>(null);
+ function loggedIn(person:Identity){if(person.role!=="PLATFORM_ADMIN"){setError("الدخول إلى الويب متاح لصاحب المنصة فقط.");return;}setUser(person);setError("");}
+ async function check(){setLoading(true);setError("");try{loggedIn((await request<{user:Identity}>("/api/session")).user);}catch(e){if(!(e instanceof ApiError&&[401,403].includes(e.status)))setError(message(e));}finally{setLoading(false);}}
+ useEffect(()=>{const restore=()=>{const value=new URL(window.location.href).searchParams.get("section");setTab(isAdminDestination(value)?value:"home");};restore();void check();const expire=()=>{setUser(null);setPassword(false);setError("");};window.addEventListener("popstate",restore);window.addEventListener("session-expired",expire);return()=>{window.removeEventListener("popstate",restore);window.removeEventListener("session-expired",expire);};},[]);
+ async function logout(){if(loggingOut)return;setLoggingOut(true);setError("");try{await request("/api/logout",{method:"POST"});setUser(null);setMobile(false);}catch(e){setError(message(e));}finally{setLoggingOut(false);}}
+ function navigate(next:AdminDestination){if(next!=="gyms")setReviewGym(null);setTab(next);setMobile(false);const url=new URL(window.location.href);url.searchParams.set("section",next);window.history.pushState(null,"",url.pathname+url.search);window.scrollTo({top:0,behavior:"auto"});}
+ if(loading)return <main className="startup"><span className="brand-icon"><NetworkMark/></span><Busy>بنجهز لوحة إدارة المنصة</Busy></main>;
+ if(!user)return <><Login onLogin={loggedIn}/>{error&&<div className="admin-access-error"><Notice text={error}/><button className="secondary" onClick={()=>void check()}>إعادة المحاولة</button></div>}</>;
+ const current=adminItems.find(item=>item.id===tab)!,section=adminSectionFor(tab);
+ function content(){switch(tab){
+ case "home":return <AdminHome onNavigate={navigate}/>;
+ case "finance":return <AdminFinance/>;
+ case "gyms":return <GymManagement admin initialGym={reviewGym}/>;
+ case "reviews":return <Reviews/>;
+ case "gym-applications":return <GymApplications/>;
+ case "branch-prices":return <PriceReviews onOpenGym={id=>{setReviewGym(id);navigate("gyms");}}/>;
+ case "service-prices":return <ServicePriceReview/>;
+ case "booking-reviews":return <BookingAdmin section="reviews"/>;
+ case "booking-policy":return <BookingAdmin section="policy"/>;
+ case "direct-topup":return <PointWallet admin/>;
+ case "withdrawals":return <Withdrawals admin/>;
+ case "disputes":return <Disputes admin/>;
+ case "reports":return <Reports admin/>;
+ case "operation-reviews":return <OperationReviews admin/>;
+ case "maintenance":return <MaintenanceAdmin/>;
+ case "promotion-requests":return <PromotionAdmin/>;
+ case "market":return <MarketAdmin/>;
+ case "campaigns":return <Campaigns/>;
+ case "support":return <Support/>;
+ case "users":return <Users/>;
+ case "account-deletions":return <AccountDeletions/>;
+ case "wallet-expiry":return <ExpiredWallets/>;
+ case "audit":return <AuditLog/>;
+ case "pricing":case "welcome":case "payments":case "packages":return <SettingsPanel key={tab} section={tab}/>;
+ case "support-contact":return <SupportSettings/>;
+ default:return <section className="admin-destination-grid" aria-label={section.label}>{section.items.map(id=>{const item=adminItems.find(item=>item.id===id)!;return <button className="card admin-destination" key={id} onClick={()=>navigate(id)}><item.icon size={25}/><strong>{item.label}</strong><span>{item.description}</span><ArrowLeft size={18}/></button>;})}</section>;
+ }}
+ return <div className="app-shell admin-workspace">
+ {mobile&&<button className="nav-backdrop" aria-label="إغلاق القائمة" onClick={()=>setMobile(false)}/>}
+ <aside className={`sidebar ${mobile?"mobile-open":""}`}><div className="brand"><img src="/brand/gymbank-wordmark.png" width="170" height="42" alt="GymBank"/></div><div className="workspace"><span className="workspace-mark"><ShieldCheck size={22}/></span><div><strong>إدارة المنصة</strong><small>صاحب المنصة فقط</small></div></div>
+ <nav aria-label="القائمة الرئيسية"><AdminSideNav items={adminItems} current={tab} onNavigate={id=>{if(isAdminDestination(id))navigate(id);}}/></nav>
+ <div className="sidebar-bottom"><button onClick={()=>setPassword(true)}><KeyRound size={18}/>تغيير كلمة المرور</button><button onClick={()=>void logout()} disabled={loggingOut}><LogOut size={18}/>{loggingOut?"جاري تسجيل الخروج":"تسجيل الخروج"}</button><div className="sidebar-credit">ShoTech Solutions</div></div></aside>
+ <div className="main-area"><header className="topbar"><div className="topbar-start"><button className="icon-button mobile-menu" aria-label="فتح القائمة" onClick={()=>setMobile(true)}><Menu size={24}/></button><span className="breadcrumb">إدارة المنصة<ChevronLeft size={14}/><strong>{section.label}</strong></span></div><AccountTools user={user} onNavigate={id=>{if(isAdminDestination(id))navigate(id);}}/><div className="profile"><div><strong>{user.displayName}</strong><small>صاحب المنصة</small></div><span className="avatar">{user.displayName.slice(0,1)}</span></div></header>
+ <main className="workspace-content">{tab!=="home"&&<div className="page-heading">{section.id!==tab&&<button className="text-button" onClick={()=>navigate(section.id)}>العودة إلى {section.label}</button>}<h1>{current.label}</h1><p>{current.description}</p></div>}<Notice text={error}/>{content()}<footer className="page-footer">GymBank · ShoTech Solutions</footer></main></div>
+ <nav className="role-quick-nav" aria-label="وصول سريع">{roleQuickTabs.PLATFORM_ADMIN.map(id=>{const item=adminItems.find(item=>item.id===id)!;return <button key={id} className={section.id===id?"active":""} aria-current={section.id===id?"page":undefined} onClick={()=>navigate(id)}><item.icon size={21}/><span>{id==="requests"?"الطلبات":id==="finance"?"المالية":id==="settings"?"الإعدادات":item.label}</span></button>;})}</nav>
+ {password&&<PasswordChange onClose={()=>setPassword(false)}/>}
+ </div>;
 }
 function PasswordChange({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false),

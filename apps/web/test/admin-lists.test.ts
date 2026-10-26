@@ -23,16 +23,16 @@ test("admin home starts with the decision queue, not a financial report or secti
  assert.match(html,/راجع طلبات الشحن/);
  assert.doesNotMatch(html,/الصورة المالية|باقي مهام الإدارة|حسابات استقبال التحويل|0 طلب|مفيش طلبات منتظرة/);
 });
-test("every admin destination belongs to exactly one of five sections and mobile tabs remain authorized",()=>{
- assert.equal(adminSections.length,5);
+test("every admin destination belongs to exactly one task-oriented section and mobile tabs remain authorized",()=>{
+ assert.equal(adminSections.length,8);
  const destinations=adminSections.flatMap(section=>[section.id,...section.items]);
  assert.equal(new Set(destinations).size,destinations.length);
  assert.deepEqual([...destinations].sort(),[...roleTabs.PLATFORM_ADMIN!].sort());
- assert.equal(adminSectionFor("withdrawals").id,"requests");
- assert.equal(adminSectionFor("pricing").id,"more");
+ assert.equal(adminSectionFor("withdrawals").id,"finance");
+ assert.equal(adminSectionFor("pricing").id,"settings");
  assert.equal(adminSectionFor("direct-topup").id,"finance");
  for(const id of roleQuickTabs.PLATFORM_ADMIN!) assert.ok(roleTabs.PLATFORM_ADMIN!.includes(id));
- for(const role of ["GYM_OWNER","CASHIER","BRANCH_MANAGER"])for(const id of ["requests","finance","more"])assert.ok(!roleTabs[role]!.includes(id));
+ assert.deepEqual(Object.keys(roleTabs),["PLATFORM_ADMIN"]);
 });
 test("approved payouts remain actionable even when no new withdrawal needs review",()=>{
  const html=renderToStaticMarkup(createElement(AdminOverview,{data:summary({"تحويلات تنتظر التنفيذ":"3","تحويلات متأخرة":"1"}),onNavigate:()=>{}}));

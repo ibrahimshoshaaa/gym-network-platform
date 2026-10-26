@@ -7,5 +7,5 @@ test('promotion review and verified-visit ratings use explicit scoped routes',()
  for(const p of ['promotions/branches','promotions/requests',`promotions/requests/${id}`,'admin/promotions/requests','trainee/nearby-promotions'])assert.equal(allowedPath('GET',p),true,p);
  for(const p of ['promotions/requests',`promotions/requests/${id}/action`,`promotions/branches/${id}/assets`,`admin/promotions/requests/${id}/review`,`trainee/visits/${id}/rating`])assert.equal(allowedPath('POST',p),true,p);
  for(const p of ['trainee/visits/all/rating',`trainee/branches/${id}/rating`,`promotions/requests/${id}/publish`])assert.equal(allowedPath('POST',p),false,p);
- assert.equal(roleTabs.PLATFORM_ADMIN?.includes('promotion-requests'),true);assert.equal(adminSectionFor('promotion-requests').id,'requests');
+ assert.equal(roleTabs.PLATFORM_ADMIN?.includes('promotion-requests'),true);assert.equal(adminSectionFor('promotion-requests').id,'services');
 });

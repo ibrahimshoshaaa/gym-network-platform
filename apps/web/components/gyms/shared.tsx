@@ -1,6 +1,5 @@
 "use client";
 import { pagePath } from "../../lib/page-path";
-import { invitationLink } from "../../lib/invitation-link";
 import { LocationPicker } from "./location-picker";
 import { requiredLocation } from "../../lib/location-point";
 import {
@@ -295,14 +294,14 @@ export function Invitation({
   const [copied, setCopied] = useState(false),
     [link, setLink] = useState(""),
     [error, setError] = useState("");
-  useEffect(() => { setLink(invitationLink(window.location.origin, data.token)); }, [data.token]);
+  useEffect(() => { setLink(data.token); }, [data.token]);
   return (
     <Modal title="دعوة تفعيل الحساب" onClose={onClose}>
       <p className="muted">
-        انسخ الرابط وابعته لصاحب الحساب بشكل خاص. هيفتح على شاشة التفعيل مباشرة، وبعدها يدخل على مهامه.
+        انسخ رمز الدعوة وأرسله لصاحب الحساب بشكل خاص. من تطبيق GymBank يختار «قبول الدعوة» ويلصق الرمز لتفعيل حسابه.
       </p>
       <div className="field invite-secret">
-        <label htmlFor="invite-secret">رابط الدعوة</label>
+        <label htmlFor="invite-secret">رمز الدعوة</label>
         <textarea
           id="invite-secret"
           value={link}
@@ -323,7 +322,7 @@ export function Invitation({
             await navigator.clipboard.writeText(link);
             setCopied(true);
           } catch {
-            setError("تعذر النسخ تلقائيًا؛ حدد الرابط وانسخه من الحقل.");
+            setError("تعذر النسخ تلقائيًا؛ حدد الرمز وانسخه من الحقل.");
           }
         }}
       >
@@ -335,7 +334,7 @@ export function Invitation({
         ) : (
           <>
             <Copy size={17} />
-            نسخ رابط الدعوة
+            نسخ رمز الدعوة
           </>
         )}
       </button>

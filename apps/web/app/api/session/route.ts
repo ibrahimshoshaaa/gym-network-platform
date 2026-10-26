@@ -1,3 +1,4 @@
+import { requirePlatformAdmin } from "../../../lib/admin-access";
 import { trustedClientAddress } from "../../../lib/client-address";
 import { rememberChoice } from "../../../lib/session-policy";
 import { boundedBody, checkOrigin, GatewayError } from "../../../lib/security";
@@ -35,22 +36,12 @@ export async function POST(request: Request) {
       !input ||
       typeof input !== "object" ||
       Array.isArray(input) ||
-      (input.mode !== undefined && !["auto", "admin", "staff", "invite", "trainee"].includes(String(input.mode)))
+      (input.mode !== undefined && input.mode !== "admin")
     )
       throw new GatewayError("INVALID_INPUT", 400);
     const remember = rememberChoice(input.remember);
-    const route =
-      input.mode === undefined || input.mode === "auto"
-        ? "auth/signin"
-        : input.mode === "invite"
-        ? "auth/invitations/accept"
-        : input.mode === "trainee"
-          ? "auth/login"
-          : `auth/${input.mode}/login`;
-    const body =
-      input.mode === "invite"
-        ? { token: input.token, password: input.password }
-        : { identifier: input.identifier, password: input.password };
+    const route = "auth/admin/login";
+    const body = { identifier: input.identifier, password: input.password };
     const response = await upstream(route, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -64,6 +55,7 @@ export async function POST(request: Request) {
       );
     if (!result.accessToken || !result.user)
       throw new GatewayError("ACCESS_DENIED", 403);
+    requirePlatformAdmin(result.user);
     await setWebSession(result.accessToken, result.expiresAt, remember);
     return json({ user: result.user });
   } catch (e) {

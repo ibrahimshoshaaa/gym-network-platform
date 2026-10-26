@@ -9,6 +9,6 @@ test('maintenance has bounded branch/request routes and only the platform web da
  for(const path of ['maintenance/requests/all','maintenance/branches/not-an-id/assets',`maintenance/requests/${id}/complete`])assert.equal(allowedPath('POST',path),false);
  assert.equal(allowedPath('PATCH',`maintenance/requests/${id}`),false);
  assert.equal(roleTabs.PLATFORM_ADMIN?.includes('maintenance'),true);
- for(const role of ['GYM_OWNER','BRANCH_MANAGER','CASHIER','TRAINEE'])assert.equal(roleTabs[role]?.includes('maintenance'),false);
- assert.equal(adminSectionFor('maintenance').id,'requests');
+ for(const role of ['GYM_OWNER','BRANCH_MANAGER','CASHIER','TRAINEE'])assert.equal(Object.hasOwn(roleTabs,role),false);
+ assert.equal(adminSectionFor('maintenance').id,'services');
 });

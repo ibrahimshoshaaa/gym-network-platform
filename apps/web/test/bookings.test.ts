@@ -3,7 +3,6 @@ import test from 'node:test';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {bookingToken,bookingWindow,policySummary} from '../lib/bookings';
-import {BookingScanner} from '../components/bookings';
 import {allowedPath} from '../lib/security';
 test('booking QR cannot be mistaken for a personal walk-in QR or external URL',()=>{
  const token='a'.repeat(43);
@@ -28,8 +27,4 @@ test('gateway exposes exact booking methods without broadening other paths',()=>
  for(const [method,path] of [['GET','booking-policy'],['POST','trainee/bookings'],['GET','trainee/bookings'],['POST','trainee/bookings/'+id+'/qr'],['POST','trainee/bookings/'+id+'/cancel'],['GET','admin/bookings/review'],['POST','admin/bookings/'+id+'/decision'],['POST','operations/branches/'+id+'/bookings/scan']])assert.equal(allowedPath(method!,path!),true);
  assert.equal(allowedPath('DELETE','trainee/bookings/'+id),false);
  assert.equal(allowedPath('POST','operations/branches/not-a-uuid/bookings/scan'),false);
-});
-test('gym attendance UI explains immediate settlement and provides camera fallback',()=>{
- const html=renderToStaticMarkup(createElement(BookingScanner,{branchId:'test'}));
- assert.match(html,/تأكيد حضور حجز/);assert.match(html,/امسح QR الحجز/);assert.match(html,/لصق رمز الحجز بدل الكاميرا/);assert.match(html,/تحويل النقاط المحجوزة/);
 });
