@@ -368,7 +368,7 @@ class _NativeShellState extends State<NativeShell> {
     return AnnotatedRegion<SystemUiOverlayStyle>(value: index == 0 ? SystemUiOverlayStyle.light.copyWith(statusBarColor: ink) : SystemUiOverlayStyle.dark, child: Scaffold(
       backgroundColor: index == 0 ? ink : canvas,
       extendBody: !staff,
-      appBar: index == 0 ? null : AppBar(
+      appBar: index == 0 || (!workMode && index == 1) ? null : AppBar(
         title: const Brand(),
         centerTitle: !workMode,
         actions: [

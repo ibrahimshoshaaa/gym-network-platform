@@ -14,6 +14,7 @@ import 'package:gym_network/core/ui.dart';
 import 'package:gym_network/l10n/language.dart';
 import 'package:gym_network/screens/directory.dart';
 import 'package:gym_network/screens/bookings.dart';
+import 'package:gym_network/main.dart' show NativeShell;
 import 'operations_test.dart' show client,reply;
 
 final gym=<String,dynamic>{'id':'b1','name':'فرع أشمون','gym':{'name':'جيم تجربة','description':'تفاصيل الجيم الحقيقية'},'governorate':'المنوفية','city':'أشمون','address':'عنوان الفرع الحقيقي','latitude':30.4,'longitude':31.1,'visitPricePoints':25,'sessionMinutes':90,'pricingVersion':1,'ratingAverage':4.8,'ratingCount':12,'openingHours':'من ٨ صباحًا إلى ١٢ مساءً','images':<dynamic>[]};
@@ -93,8 +94,10 @@ void main(){
     return reply({'items':[]});
    });
    const boundary=Key('directory.review');
-   await t.pumpWidget(RepaintBoundary(key:boundary,child:host(DirectoryScreen(api:api),language:language,fontFamily:reviewFont)));await t.pumpAndSettle();
-   expect(t.getTopLeft(find.byType(BranchTile).first).dy,lessThan(210),reason:'The directory toolbar must leave room for gym results.');
+   await t.pumpWidget(RepaintBoundary(key:boundary,child:host(NativeShell(api:api,gyms:const []),language:language,fontFamily:reviewFont)));await t.pumpAndSettle();
+   await t.tap(find.byType(NavigationDestination).at(1));await t.pumpAndSettle();
+   expect(find.byType(AppBar),findsNothing,reason:'Discovery has its own heading instead of a second logo toolbar.');
+   expect(t.getTopLeft(find.byType(BranchTile).first).dy,lessThan(185),reason:'Check the actual native shell so extra toolbar space cannot go unnoticed.');
    await capture(t,boundary,'directory-$language-${defaultTargetPlatform.name}');
    await t.pumpWidget(RepaintBoundary(key:boundary,child:host(BranchDetail(api:api,id:'b1'),language:language,fontFamily:reviewFont)));await t.pump();await t.pump(const Duration(milliseconds:300));
    await capture(t,boundary,'gym-detail-$language-${defaultTargetPlatform.name}');
