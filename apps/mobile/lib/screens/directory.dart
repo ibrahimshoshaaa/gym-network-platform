@@ -112,33 +112,34 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   return RefreshIndicator(onRefresh:()=>load(),child:ListView(
    key:const PageStorageKey('trainee.directory'),physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(16,8,16,28),children:[
     Wrap(alignment:WrapAlignment.spaceBetween,crossAxisAlignment:WrapCrossAlignment.center,spacing:12,runSpacing:8,children:[
-     Text(appText('s609'),style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800)),
+     Text(appText('s609'),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800)),
      OutlinedButton.icon(key:const Key('directory.map'),onPressed:()=>setState(()=>map=!map),icon:Icon(map?Icons.view_list_outlined:Icons.map_outlined,size:17),label:Text(map?appText('s615'):appText('s616')),style:OutlinedButton.styleFrom(minimumSize:const Size(0,42),padding:const EdgeInsets.symmetric(horizontal:12),textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontSize:12,fontWeight:FontWeight.w600))),
     ]),
-    const SizedBox(height:14),
+    const SizedBox(height:6),
     Row(children:[Expanded(child:TextField(key:const Key('directory.search'),controller:search,maxLength:80,
      onChanged:(_){setState((){});debounce?.cancel();debounce=Timer(const Duration(milliseconds:400),()=>load());},
      onSubmitted:(_){debounce?.cancel();unawaited(load());},textInputAction:TextInputAction.search,
-     decoration:InputDecoration(counterText:'',hintText:appText('s611'),prefixIcon:const Icon(Icons.search_rounded),
+     style:const TextStyle(fontSize:14),
+     decoration:InputDecoration(isDense:true,contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),counterText:'',hintText:appText('s611'),prefixIcon:const Icon(Icons.search_rounded,size:21),
       suffixIcon:search.text.isEmpty?null:IconButton(tooltip:appText('s1047'),onPressed:(){search.clear();debounce?.cancel();unawaited(load());},icon:const Icon(Icons.close_rounded,size:18))))),
      const SizedBox(width:8),IconButton.filledTonal(key:const Key('directory.filters'),tooltip:appText('s618'),onPressed:filters,icon:Badge(isLabelVisible:maxPrice.isNotEmpty||city.isNotEmpty||governorate!=null,child:const Icon(Icons.tune_rounded))),
     ]),
-    const SizedBox(height:10),
-    SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-     ChoiceChip(label:Text(appText('s1038')),selected:governorate==null,onSelected:(_){debounce?.cancel();setState(()=>governorate=null);unawaited(load());}),
-     for(final region in regions)...[const SizedBox(width:7),ChoiceChip(label:Text(region),selected:governorate==region,onSelected:(_){debounce?.cancel();setState(()=>governorate=region);unawaited(load());})],
-    ])),
-    const SizedBox(height:10),
-    Wrap(spacing:8,runSpacing:6,crossAxisAlignment:WrapCrossAlignment.center,children:[
-     OutlinedButton.icon(key:const Key('directory.nearby'),onPressed:busy?null:nearby,icon:Icon(location==null?Icons.near_me_outlined:Icons.my_location_rounded,size:17),label:Text(location==null?appText('s613'):appText('s614')),style:OutlinedButton.styleFrom(textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontSize:12),foregroundColor:green)),
-     if(filtered)TextButton.icon(onPressed:clearFilters,icon:const Icon(Icons.filter_alt_off_outlined,size:16),label:Text(appText('s621'),style:const TextStyle(fontSize:12))),
+    const SizedBox(height:4),
+    Row(children:[
+     Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+      OutlinedButton.icon(key:const Key('directory.nearby'),onPressed:busy?null:nearby,icon:Icon(location==null?Icons.near_me_outlined:Icons.my_location_rounded,size:16),label:Text(location==null?appText('s613'):appText('s614')),style:OutlinedButton.styleFrom(minimumSize:const Size(0,36),padding:const EdgeInsets.symmetric(horizontal:10),textStyle:Theme.of(context).textTheme.labelLarge?.copyWith(fontSize:12),foregroundColor:green)),
+      const SizedBox(width:8),
+      ChoiceChip(label:Text(appText('s1038')),selected:governorate==null,onSelected:(_){debounce?.cancel();setState(()=>governorate=null);unawaited(load());}),
+      for(final region in regions)...[const SizedBox(width:7),ChoiceChip(label:Text(region),selected:governorate==region,onSelected:(_){debounce?.cancel();setState(()=>governorate=region);unawaited(load());})],
+     ]))),
+     if(filtered)IconButton(key:const Key('directory.clear'),tooltip:appText('s621'),onPressed:clearFilters,icon:const Icon(Icons.filter_alt_off_outlined,size:20)),
     ]),
     if(maxPrice.isNotEmpty||city.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Wrap(spacing:6,runSpacing:6,children:[if(maxPrice.isNotEmpty)_DirectoryChip(appText('s1048',[maxPrice]),Icons.toll_outlined),if(city.isNotEmpty)_DirectoryChip(city,Icons.place_outlined)])),
     CampaignBanner(api:widget.api,placement:'GYMS'),
     ErrorNote(error,retry:()=>load()),
-    const SizedBox(height:8),
+    const SizedBox(height:2),
     Text(appText('s1039',[branches.length]),style:const TextStyle(color:muted,fontSize:12)),
-    const SizedBox(height:10),
+    const SizedBox(height:6),
     if(busy)const LinearProgressIndicator(minHeight:2),
     if(!busy&&branches.isEmpty&&error==null)EmptyState(appText('s622'),detail:appText('s623'),action:OutlinedButton(onPressed:clearFilters,child:Text(appText('s624')))),
     if(map&&branches.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:14),child:SizedBox(height:350,child:ClipRRect(borderRadius:BorderRadius.circular(22),child:FlutterMap(
