@@ -32,7 +32,8 @@ String notificationDescription(Map<String,dynamic> item) {
  if(kind=='maintenance'&&raw.startsWith('حالة الطلب: '))return appText('s1028',[_status(raw.substring('حالة الطلب: '.length))]);
  if(kind=='market'&&raw.startsWith('حالة الإعلان: ')){
   const statuses={'بانتظار المراجعة':'PENDING','مقبول':'APPROVED','مرفوض':'REJECTED','مخفي':'HIDDEN','تم البيع':'SOLD'};
-  final value=statuses[raw.substring('حالة الإعلان: '.length)];
+  final rawStatus=raw.substring('حالة الإعلان: '.length);
+  final value=statuses[rawStatus] ?? (RegExp(r'^[A-Z_]+$').hasMatch(rawStatus)?rawStatus:null);
   if(value!=null)return appText('s1030',[_status(value)]);
  }
  // Only documented default descriptions for each event type are translated.

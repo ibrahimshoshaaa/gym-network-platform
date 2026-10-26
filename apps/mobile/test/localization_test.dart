@@ -49,6 +49,7 @@ void main() {
     expect(notificationTitle({'id':'campaign:id:2','title':'عرض عربي من صاحب الجيم'}),'عرض عربي من صاحب الجيم');
     expect(notificationDescription({'id':'support:id:OPEN','description':'رسالة كتبها العميل'}),'رسالة كتبها العميل');
     expect(notificationDescription({'id':'maintenance:id:2','description':'حالة الطلب: NEW'}),'Request status: New request');
+    expect(notificationDescription({'id':'market:id:2','description':'حالة الإعلان: HIDDEN'}),'Listing status: Hidden');
   });
   testWidgets('account switches language and direction without replacing user data', (t) async {
     final api=client('TRAINEE', (_) async => reply({'items':[]}));
