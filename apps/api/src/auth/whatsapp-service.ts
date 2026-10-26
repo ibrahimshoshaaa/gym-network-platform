@@ -31,7 +31,7 @@ function parse<S extends z.ZodType>(schema:S, input:unknown):z.infer<S> {
 }
 
 export async function requestWhatsappChallenge(db:PrismaClient,input:unknown) {
- const config=requireWhatsapp(), data=parse(challengeSchema,input);
+ const config=requireWhatsapp(), {language,...data}=parse(challengeSchema.extend({language:z.enum(['ar','en']).default('ar')}),input);
  if(data.purpose==='REGISTER'&&await db.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
  await consumeAuthLimit(db,'whatsapp-phone-hour',data.phone,5,3600);
  const id=randomUUID(), token=randomBytes(32).toString('base64url'), messageToken=randomBytes(32).toString('base64url');
@@ -46,7 +46,7 @@ export async function requestWhatsappChallenge(db:PrismaClient,input:unknown) {
    codeHash:whatsappProofHash(id,data.phone,data.purpose,token),
    whatsappMessageHash:hashToken(messageToken),whatsappDestinationId:config.phoneNumberId}});
  });
- const message=(data.purpose==='RESET'?'تأكيد استرجاع كلمة السر في GymBank':'تأكيد رقم الموبايل في GymBank')+`\nGBVERIFY ${messageToken}`;
+ const message=(language==='en'?(data.purpose==='RESET'?'Verify password recovery in GymBank':'Verify mobile number in GymBank'):(data.purpose==='RESET'?'تأكيد استرجاع كلمة السر في GymBank':'تأكيد رقم الموبايل في GymBank'))+`\nGBVERIFY ${messageToken}`;
  return {challengeId:id,whatsappToken:token,expiresAt:expiresAt.toISOString(),retryAfterSeconds:60,
   whatsappUrl:`https://wa.me/${config.phone.slice(1)}?text=${encodeURIComponent(message)}`,phone:data.phone,businessPhone:config.phone};
 }
@@ -73,9 +73,9 @@ export function whatsappMessages(input:unknown,destination:string) {
   if(change.field!=='messages'||change.value.metadata?.phone_number_id!==destination)return [];
   return (change.value.messages??[]).flatMap(raw=>{
    const m=messageSchema.safeParse(raw);if(!m.success||m.data.type!=='text')return [];
-   const match=/^(تأكيد رقم الموبايل في GymBank|تأكيد استرجاع كلمة السر في GymBank)\nGBVERIFY ([A-Za-z0-9_-]{43})$/.exec(m.data.text?.body?.trim()??'');
+   const match=/^(تأكيد رقم الموبايل في GymBank|تأكيد استرجاع كلمة السر في GymBank|Verify mobile number in GymBank|Verify password recovery in GymBank)\nGBVERIFY ([A-Za-z0-9_-]{43})$/.exec(m.data.text?.body?.trim()??'');
    return match?[{id:m.data.id,phone:'+'+m.data.from,time:new Date(Number(m.data.timestamp)*1000),
-    purpose:match[1]==='تأكيد رقم الموبايل في GymBank'?'REGISTER':'RESET',hash:hashToken(match[2]!)}]:[];
+    purpose:['تأكيد رقم الموبايل في GymBank','Verify mobile number in GymBank'].includes(match[1]!)?'REGISTER':'RESET',hash:hashToken(match[2]!)}]:[];
   });
  }));
 }

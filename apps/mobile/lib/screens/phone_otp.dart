@@ -12,7 +12,7 @@ const phoneOtpPreview = bool.fromEnvironment('GYM_PHONE_OTP_PREVIEW', defaultVal
 
 Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm, bool? english}) async {
   english ??= AppLanguage.instance.english;
-  final challenge = Map<String, dynamic>.from(await api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': phone, 'purpose': purpose}));
+  final challenge = Map<String, dynamic>.from(await api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': phone, 'purpose': purpose, 'language': english ? 'en' : 'ar'}));
   if (!context.mounted) return null;
   return open<Json>(context, _PhoneCodeScreen(api: api, phone: phone, purpose: purpose, challenge: challenge, onConfirm: onConfirm, english: english));
 }
@@ -106,7 +106,7 @@ class _PhoneCodeScreenState extends State<_PhoneCodeScreen> {
     if (busy || wait > 0) return;
     setState(() { busy = true; error = null; });
     try {
-      final result = await widget.api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': widget.phone, 'purpose': widget.purpose});
+      final result = await widget.api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': widget.phone, 'purpose': widget.purpose, 'language': widget.english ? 'en' : 'ar'});
       if (mounted) setState(() { challenge = Map<String, dynamic>.from(result); fillTestCode(); countdown(); });
     } catch (e) { if (mounted) setState(() => error = e); }
     finally { if (mounted) setState(() => busy = false); }

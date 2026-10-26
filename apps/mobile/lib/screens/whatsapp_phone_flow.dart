@@ -42,7 +42,7 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
     setState(() { loading = true; error = null; });
     try {
       final result = Map<String,dynamic>.from(await widget.api.request('auth/whatsapp/challenge', method: 'POST', auth: false,
-        body: {'phone': widget.phone, 'purpose': widget.purpose}));
+        body: {'phone': widget.phone, 'purpose': widget.purpose, 'language': widget.english ? 'en' : 'ar'}));
       if (!mounted) { await cancel(result); return; }
       setState(() { challenge = result; verified = false; phase = WhatsappPhase.ready; });
       timer = Timer.periodic(const Duration(seconds: 5), (_) { if (foreground) unawaited(check()); });

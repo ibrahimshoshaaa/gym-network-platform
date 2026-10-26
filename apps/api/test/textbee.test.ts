@@ -56,3 +56,9 @@ test('registered phones are rejected before any challenge, send budget or extern
   await assert.rejects(requestPhoneChallenge(db,{phone:'01055550987',purpose:'REGISTER'}),/ACCOUNT_UNAVAILABLE/);
  }finally{for(const key of Object.keys(env)){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
 });
+
+test('English SMS copy spells digits in English and preserves leading zeros',()=>{
+ assert.equal(phoneCodeMessage('012345','en'),'GymBank code: zero one two three four five. Do not share.');
+ assert.doesNotMatch(phoneCodeMessage('000009','en'),/[\u0600-\u06ff]|\d/);
+ assert.ok(phoneCodeMessage('777777','en').length<160);
+});
