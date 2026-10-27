@@ -15,6 +15,7 @@ import 'package:gym_network/l10n/language.dart';
 import 'package:gym_network/screens/directory.dart';
 import 'package:gym_network/screens/bookings.dart';
 import 'package:gym_network/main.dart' show NativeShell;
+import 'package:gym_network/screens/whatsapp_verification.dart';
 import 'operations_test.dart' show client,reply;
 
 final gym=<String,dynamic>{'id':'b1','name':'فرع أشمون','gym':{'name':'جيم تجربة','description':'تفاصيل الجيم الحقيقية'},'governorate':'المنوفية','city':'أشمون','address':'عنوان الفرع الحقيقي','latitude':30.4,'longitude':31.1,'visitPricePoints':25,'sessionMinutes':90,'pricingVersion':1,'ratingAverage':4.8,'ratingCount':12,'openingHours':'من ٨ صباحًا إلى ١٢ مساءً','images':<dynamic>[]};
@@ -110,6 +111,10 @@ void main(){
    await capture(t,boundary,'market-$language-${defaultTargetPlatform.name}');
    await t.pumpWidget(RepaintBoundary(key:boundary,child:host(BranchDetail(api:api,id:'b1'),language:language,fontFamily:reviewFont)));await t.pump();await t.pump(const Duration(milliseconds:300));
    await capture(t,boundary,'gym-detail-$language-${defaultTargetPlatform.name}');
+   for(final phase in [WhatsappPhase.ready,WhatsappPhase.waiting,WhatsappPhase.verified]){
+    await t.pumpWidget(RepaintBoundary(key:boundary,child:host(WhatsappVerificationScreen(phone:'+201055550123',english:language=='en',phase:phase,onOpen:(){},onSms:(){},onContinue:(){}),language:language,fontFamily:reviewFont)));await t.pumpAndSettle();
+    await capture(t,boundary,'whatsapp-${phase.name}-$language-${defaultTargetPlatform.name}');
+   }
    await t.pumpWidget(const SizedBox());await t.pump();
   },variant:platforms);
   testWidgets('compact gym cards fit $language and enlarged text on a narrow phone',(t)async{
