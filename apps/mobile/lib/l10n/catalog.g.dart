@@ -1062,6 +1062,7 @@ const arCatalog = <String, String>{
   "s1061": "ابعت الرسالة الجاهزة في واتساب، وارجع هنا. هنتأكد تلقائيًا أول ما السيرفر يستقبلها.",
   "s1062": "السيرفر أكد رقمك بنجاح. اضغط متابعة لإكمال الخطوة التالية.",
   "s1063": "الرسالة فيها رمز تحقق مؤقت. ابعتها زي ما هي من غير تعديل.",
+  "s1064": "لا يوجد حساب مسجل بهذا الرقم. راجع الرقم أو أنشئ حسابًا جديدًا.",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2126,4 +2127,5 @@ const enCatalog = <String, String>{
   "s1061": "Send the prepared message in WhatsApp, then return here. We will confirm automatically when the server receives it.",
   "s1062": "The server has confirmed your number. Tap Continue to finish.",
   "s1063": "The message contains a temporary verification code. Send it without editing.",
+  "s1064": "No account is registered with this number. Check the number or create a new account.",
 };

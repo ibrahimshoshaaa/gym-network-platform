@@ -116,4 +116,20 @@ void main() {
     expect(launches,2);expect(checks,1);expect(find.byKey(const ValueKey('whatsapp.waiting')),findsOneWidget);
     await t.pumpWidget(const SizedBox());await t.pump();
   });
+  testWidgets('a verified number with no account returns an account error instead of trapping recovery on the check mark',(t)async{
+    Json? result;var cancellations=0;
+    final api=client('TRAINEE',(r)async{
+      if(r.url.path.endsWith('/challenge'))return reply({'challengeId':'missing','whatsappToken':'secret','expiresAt':DateTime.now().add(const Duration(minutes:5)).toIso8601String(),'whatsappUrl':'https://wa.me/201214829716?text=test'});
+      if(r.url.path.endsWith('/cancel'))cancellations++;
+      return reply({'status':'verified'});
+    });
+    await t.pumpWidget(page(Builder(builder:(context)=>TextButton(onPressed:()async{
+      result=await Navigator.push<Json>(context,MaterialPageRoute(builder:(_)=>WhatsappPhoneFlow(api:api,phone:'01055550123',purpose:'RESET',launchWhatsapp:(_)async=>true,onConfirm:(_)async=>throw const ApiFailure('PHONE_ACCOUNT_NOT_FOUND'))));
+    },child:const Text('recover')))));
+    await t.tap(find.text('recover'));await t.pumpAndSettle();expect(find.byKey(const ValueKey('whatsapp.verified')),findsOneWidget);
+    await t.ensureVisible(find.byKey(const Key('whatsapp.continue')));await t.tap(find.byKey(const Key('whatsapp.continue')));await t.pumpAndSettle();
+    expect(find.byType(WhatsappPhoneFlow),findsNothing);
+    expect(result?['failure'],isA<ApiFailure>().having((e)=>e.code,'code','PHONE_ACCOUNT_NOT_FOUND'));
+    expect(result?['whatsappToken'],isNull);expect(cancellations,1);expect(t.takeException(),isNull);
+  });
 }

@@ -96,6 +96,8 @@ export async function registerPhonePreview(db:PrismaClient,input:unknown){
 
 async function resetUser(tx:Prisma.TransactionClient,phone:string,mode:'test'|'textbee'|'whatsapp'){
  const user=await tx.user.findUnique({where:{phoneE164:phone},include:{password:true}});
+ // Only disclose a missing account after a real ownership proof was checked.
+ if(!user&&mode!=='test')throw new DomainError('PHONE_ACCOUNT_NOT_FOUND');
  // Staff can recover an established password after real SMS verification.
  // Fixed test codes never recover staff or platform administrator accounts.
  const allowedRoles=mode!=='test'?['TRAINEE','GYM_OWNER','BRANCH_MANAGER','CASHIER']:['TRAINEE','GYM_OWNER'];
