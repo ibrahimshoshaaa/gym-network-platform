@@ -876,7 +876,7 @@ class _RoleChoice extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -888,6 +888,7 @@ class _RoleChoice extends StatelessWidget {
                 style: TextStyle(
                   color: selected ? _authTeal : ink,
                   fontSize: 12,
+                  height: 1.2,
                   fontWeight: FontWeight.w800,
                 ),
               )),
