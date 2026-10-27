@@ -496,21 +496,23 @@ class _AuthScreenState extends State<AuthScreen> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 24),
+                                SizedBox(height: register ? 16 : 24),
                                 if(phoneOtpPreview)...[
                                   Text(tr(appText('s287'),'Register with your mobile number and confirm it with a verification code.'),style:TextStyle(color:muted,fontSize:12)),
                                   const SizedBox(height:12),
                                 ],
                                 if (register) ...[
                                   IntrinsicHeight(
+                                    key: const Key('auth.roles'),
                                     child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
                                       children: [
                                         for (final value in [false, true]) ...[
-                                          if (value) const SizedBox(width: 12),
+                                          if (value) const SizedBox(width: 8),
                                           Expanded(
                                             child: _RoleChoice(
+                                              key: ValueKey('auth.role.$value'),
                                               selected: owner == value,
                                               title: value
                                                   ? tr(appText('s288'), 'Gym owner')
@@ -539,7 +541,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 22),
+                                  const SizedBox(height: 14),
                                 ],
                                 AutofillGroup(
                                   child: Form(
@@ -847,6 +849,7 @@ class _RoleChoice extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onPressed;
   const _RoleChoice({
+    super.key,
     required this.selected,
     required this.title,
     required this.detail,
@@ -857,10 +860,11 @@ class _RoleChoice extends StatelessWidget {
   Widget build(BuildContext context) { AppLanguage.watch(context); return  Semantics(
     button: true,
     selected: selected,
+    hint: detail,
     child: Material(
       color: selected ? const Color(0xffedf6f8) : const Color(0xfffafbfc),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: selected ? _authTeal : const Color(0xffe2e8eb),
           width: selected ? 1.5 : 1,
@@ -868,28 +872,27 @@ class _RoleChoice extends StatelessWidget {
       ),
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(17),
-        child: Padding(
-          padding: const EdgeInsets.all(13),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: selected ? _authTeal : muted, size: 23),
-              const SizedBox(height: 10),
-              Text(
+              Icon(icon, color: selected ? _authTeal : muted, size: 18),
+              const SizedBox(width: 6),
+              Flexible(child: Text(
                 title,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: selected ? _authTeal : ink,
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                detail,
-                style: const TextStyle(color: muted, fontSize: 10, height: 1.5),
-              ),
+              )),
             ],
+          ),
           ),
         ),
       ),

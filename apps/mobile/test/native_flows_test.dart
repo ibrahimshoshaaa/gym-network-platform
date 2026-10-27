@@ -91,6 +91,7 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('الإيميل'), findsNothing);
       expect(find.byKey(const ValueKey('auth.phone')), findsOneWidget);
+      expect(t.getSize(find.byKey(const Key('auth.roles'))).height, lessThanOrEqualTo(56));
       final password = t.widget<TextFormField>(find.byKey(const ValueKey('auth.password')));
       expect(password.validator!('1234567'), isNotNull);
       expect(password.validator!('12345678'), isNull);
