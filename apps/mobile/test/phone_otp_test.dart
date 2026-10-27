@@ -79,7 +79,7 @@ void main() {
       final body = jsonDecode(r.body);
       expect(body['challengeId'], 'reset-proof'); expect(body['code'], '123456');
       if (r.url.path.endsWith('/verify')) { expect(body.containsKey('newPassword'), false); return reply({'ok': true}); }
-      expect(body['newPassword'], 'A memorable new password'); return reply({'ok': true});
+      expect(body['newPassword'], '87654321'); return reply({'ok': true});
     });
     await t.pumpWidget(page(PhonePasswordReset(api: api)));
     expect(find.byKey(const ValueKey('phone.reset.password')), findsNothing);
@@ -90,11 +90,11 @@ void main() {
     expect(find.byKey(const ValueKey('phone.reset.password')), findsNothing);
     await t.ensureVisible(find.text('متابعة')); await t.tap(find.text('متابعة')); await t.pumpAndSettle();
     expect(calls.last, endsWith('/auth/phone/reset/verify'));
-    await t.enterText(find.byKey(const ValueKey('phone.reset.password')), 'A memorable new password');
+    await t.enterText(find.byKey(const ValueKey('phone.reset.password')), '87654321');
     await t.enterText(find.byKey(const ValueKey('phone.reset.confirmation')), 'wrong');
     await t.ensureVisible(find.text('حفظ كلمة السر')); await t.tap(find.text('حفظ كلمة السر')); await t.pumpAndSettle();
     expect(calls.where((p) => p.endsWith('/reset')), isEmpty);
-    await t.enterText(find.byKey(const ValueKey('phone.reset.confirmation')), 'A memorable new password');
+    await t.enterText(find.byKey(const ValueKey('phone.reset.confirmation')), '87654321');
     FocusManager.instance.primaryFocus?.unfocus(); await t.pumpAndSettle();
     await t.ensureVisible(find.text('حفظ كلمة السر')); await t.tap(find.text('حفظ كلمة السر')); await t.pumpAndSettle();
     expect(calls.last, endsWith('/auth/phone/reset'));

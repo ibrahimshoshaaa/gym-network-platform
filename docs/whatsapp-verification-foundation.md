@@ -29,3 +29,7 @@ Start and polling requests have shared database rate limits. A new challenge inv
 - Meta callback `/api/whatsapp/webhook` preserves raw request bytes for HMAC-SHA256. Bodies are bounded to 64 KiB, malformed signatures are rejected and disabled configuration returns 503. No browser Origin/session is needed on this dedicated callback. Webhook request logging is disabled; challenge proof fields are redacted.
 
 Tests include signature/transport integrity, config opt-in, disposable PostgreSQL registration/recovery, replay/sender/destination/purpose/expiry/cancellation checks, and Flutter polling/navigation. Live delivery requires Meta configuration and a real handset acceptance test; automated tests use synthetic payloads only.
+
+## Message code format
+
+New WhatsApp messages use a random eight-digit code, including possible leading zeroes, under a localized Verification code label. Its stored hash is bound to the sender phone and REGISTER/RESET purpose. Codes are not reused for the same phone and purpose, expire after five minutes, and verify only through a signed Meta webhook from the matching number. The app polling secret remains a separate 256-bit token. Legacy GBVERIFY messages remain accepted for outstanding challenges during rollout.

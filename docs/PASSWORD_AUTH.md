@@ -24,7 +24,7 @@ use HTTPS and secure platform storage. Web cookie/BFF integration is a later tas
 Email is trimmed/lowercased. Egyptian local mobile numbers, `+20`/`0020` formats,
 and Arabic digits normalize to the same E.164 number. Other international numbers
 must use `+` E.164 syntax. Validation checks number format, not ownership.
-Passwords preserve exact spaces and Unicode, with 15–128 code points. Register,
+Passwords preserve exact spaces and Unicode, with 8–128 code points; numbers-only passwords are allowed. Register,
 login and change-password bodies reject unknown fields and are limited to 8 KiB.
 
 ## Storage and consistency

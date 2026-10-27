@@ -17,6 +17,11 @@ test('registration rejects role/verification injection and validates contact/pas
   for (const phone of ['abc', '010123', '+2001012345678', '+201912345678']) assert.equal(registrationSchema.safeParse({ ...input, phone }).success, false);
   assert.equal(registrationSchema.safeParse({ ...input, email: 'invalid-email' }).success, false);
   assert.equal(newPasswordSchema.safeParse('short').success, false);
+  assert.equal(newPasswordSchema.safeParse('1234567').success, false);
+  for(const password of ['12345678','abcdefgh','١٢٣٤٥٦٧٨','😀'.repeat(8)]){
+    assert.equal(newPasswordSchema.parse(password),password);
+    assert.equal(registrationSchema.safeParse({...input,password}).success,true);
+  }
   assert.equal(newPasswordSchema.safeParse('a'.repeat(129)).success, false);
 });
 

@@ -91,6 +91,9 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('الإيميل'), findsNothing);
       expect(find.byKey(const ValueKey('auth.phone')), findsOneWidget);
+      final password = t.widget<TextFormField>(find.byKey(const ValueKey('auth.password')));
+      expect(password.validator!('1234567'), isNotNull);
+      expect(password.validator!('12345678'), isNull);
       expect(t.widget<TextFormField>(find.byKey(const ValueKey('auth.phone'))).controller!.text, isEmpty);
       await t.drag(find.byType(CustomScrollView).first, const Offset(0, 900));
       await t.pumpAndSettle();
