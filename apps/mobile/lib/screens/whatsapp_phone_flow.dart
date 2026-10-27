@@ -38,8 +38,8 @@ class _WhatsappPhoneFlowState extends State<WhatsappPhoneFlow> with WidgetsBindi
     if (foreground && opened && challenge != null && !verified) unawaited(check());
   }
   void fail(Object failure) {
-    // A registered number is an account error, not a WhatsApp transport failure.
-    if (failure is ApiFailure && failure.code == 'ACCOUNT_UNAVAILABLE') {
+    // Account failures return to the form instead of retrying a verified proof.
+    if (failure is ApiFailure && ['ACCOUNT_UNAVAILABLE','PHONE_ACCOUNT_NOT_FOUND'].contains(failure.code)) {
       timer?.cancel();
       Navigator.pop(context, <String, dynamic>{'failure': failure});
       return;

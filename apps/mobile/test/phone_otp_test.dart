@@ -6,6 +6,18 @@ import 'package:gym_network/screens/phone_otp.dart';
 import 'operations_test.dart' show client, page, reply;
 
 void main() {
+  testWidgets('SMS recovery returns a missing account failure to the phone form',(t)async{
+    Object? failure;
+    final api=client('TRAINEE',(_)async=>reply({'challengeId':'sms-reset','retryAfterSeconds':60,'testMode':true}));
+    await t.pumpWidget(page(Builder(builder:(context)=>TextButton(onPressed:()async{
+      try{await requestPhoneCode(context,api,'01055550123','RESET',onConfirm:(_)async=>throw const ApiFailure('PHONE_ACCOUNT_NOT_FOUND'));}catch(e){failure=e;}
+    },child:const Text('recover')))));
+    await t.tap(find.text('recover'));await t.pumpAndSettle();
+    await t.ensureVisible(find.text('متابعة'));await t.tap(find.text('متابعة'));await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('phone.otp.code')),findsNothing);
+    expect(failure,isA<ApiFailure>().having((e)=>e.code,'code','PHONE_ACCOUNT_NOT_FOUND'));
+    expect('$failure',contains('لا يوجد حساب'));expect(t.takeException(),isNull);
+  });
   for (final input in ['٠١٢٣٤٥', '۰۱۲۳۴۵']) {
     testWidgets('live code input $input submits ASCII and preserves its leading zero', (t) async {
       Json? proof;

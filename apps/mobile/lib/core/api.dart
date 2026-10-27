@@ -44,6 +44,7 @@ Map<String, String> get messages => {
   'PHONE_OTP_SEND_FAILED': appText('s32'),
   'PHONE_OTP_WAIT': appText('s33'),
   'PHONE_OTP_INVALID': appText('s34'),
+  'PHONE_ACCOUNT_NOT_FOUND': appText('s1064'),
   'BRANCH_QR_REQUIRED': appText('s35'),
   'QR_WRONG_BRANCH': appText('s36'),
   'BRANCH_LOCATION_REQUIRED': appText('s37'),

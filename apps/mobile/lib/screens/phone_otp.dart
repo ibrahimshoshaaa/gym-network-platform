@@ -14,7 +14,9 @@ Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone
   english ??= AppLanguage.instance.english;
   final challenge = Map<String, dynamic>.from(await api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': phone, 'purpose': purpose, 'language': english ? 'en' : 'ar'}));
   if (!context.mounted) return null;
-  return open<Json>(context, _PhoneCodeScreen(api: api, phone: phone, purpose: purpose, challenge: challenge, onConfirm: onConfirm, english: english));
+  final result = await open<Json>(context, _PhoneCodeScreen(api: api, phone: phone, purpose: purpose, challenge: challenge, onConfirm: onConfirm, english: english));
+  if (result?['failure'] is ApiFailure) throw result!['failure'] as ApiFailure;
+  return result;
 }
 
 Future<Json?> choosePhoneVerification(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm, bool? english}) async {
@@ -100,7 +102,12 @@ class _PhoneCodeScreenState extends State<_PhoneCodeScreen> {
     try {
       await widget.onConfirm?.call(proof);
       if (mounted) Navigator.pop(context, proof);
-    } catch (e) { if (mounted) setState(() => error = e); }
+    } catch (e) {
+      if(mounted){
+        if(e is ApiFailure&&e.code=='PHONE_ACCOUNT_NOT_FOUND')Navigator.pop(context,<String,dynamic>{'failure':e});
+        else setState(() => error = e);
+      }
+    }
     finally { if (mounted) setState(() => busy = false); }
   }
   Future<void> resend() async {
