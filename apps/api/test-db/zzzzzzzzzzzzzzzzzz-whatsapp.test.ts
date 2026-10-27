@@ -13,13 +13,14 @@ test('signed reverse verification binds sender, destination, purpose, expiry and
  const previous={...process.env};const db=new PrismaClient();const app=buildApp(db);
  Object.assign(process.env,{GYMBANK_WHATSAPP_ENABLED:'true',GYMBANK_WHATSAPP_PHONE:'+201214829716',GYMBANK_WHATSAPP_PHONE_NUMBER_ID:'123456789',GYMBANK_WHATSAPP_APP_SECRET:'synthetic-meta-app-secret',GYMBANK_WHATSAPP_VERIFY_TOKEN:'synthetic-webhook-verify-token-32-chars'});
  delete process.env.GYMBANK_OTP_MODE;
- const phone='+201055549901',password='Synthetic initial WhatsApp password';
+ const phone='+201055549901',password='12345678';
  try {
   const c=await requestWhatsappChallenge(db,{phone,purpose:'REGISTER'});
   const proof={phone,challengeId:c.challengeId,whatsappToken:c.whatsappToken};
   const poll={...proof,purpose:'REGISTER'};
   const registration={...proof,displayName:'Synthetic WhatsApp trainee',password};
   const message=new URL(c.whatsappUrl).searchParams.get('text')!;
+  assert.match(message,/\nرمز التحقق: [0-9]{8}$/);
   assert.ok(!message.includes(c.whatsappToken));assert.equal(new URL(c.whatsappUrl).pathname,'/201214829716');
   assert.equal((await checkWhatsappChallenge(db,poll)).status,'pending');
   await assert.rejects(registerPhonePreview(db,registration),/PHONE_OTP_INVALID/);
@@ -30,6 +31,7 @@ test('signed reverse verification binds sender, destination, purpose, expiry and
   await receiveWhatsappMessages(db,envelope(message,'201055549902'));
   await receiveWhatsappMessages(db,envelope(message,phone.slice(1),'987654321'));
   await receiveWhatsappMessages(db,envelope(message.replace('تأكيد رقم الموبايل','تأكيد استرجاع كلمة السر')));
+  await receiveWhatsappMessages(db,envelope(message.replace(/([0-9]{7})([0-9])$/,(_,prefix,last)=>prefix+String((Number(last)+1)%10))));
   assert.equal((await checkWhatsappChallenge(db,poll)).status,'pending');
   const raw=JSON.stringify(envelope());const signature='sha256='+createHmac('sha256',process.env.GYMBANK_WHATSAPP_APP_SECRET!).update(raw).digest('hex');
   assert.equal((await app.inject({method:'POST',url:'/webhooks/whatsapp',headers:{'content-type':'application/json','x-hub-signature-256':signature},payload:raw+' '})).statusCode,403);
@@ -40,11 +42,12 @@ test('signed reverse verification binds sender, destination, purpose, expiry and
   const user=await registerPhonePreview(db,registration);assert.equal(user.user.phoneVerified,true);assert.equal(user.testMode,false);
   await assert.rejects(registerPhonePreview(db,registration),/PHONE_OTP_INVALID/);
   await assert.rejects(requestWhatsappChallenge(db,{phone,purpose:'REGISTER'}),/ACCOUNT_UNAVAILABLE/);
-  const reset=await requestWhatsappChallenge(db,{phone,purpose:'RESET'});
+  const reset=await requestWhatsappChallenge(db,{phone,purpose:'RESET',language:'en'});
   const resetProof={phone,challengeId:reset.challengeId,whatsappToken:reset.whatsappToken};
   const resetMessage=new URL(reset.whatsappUrl).searchParams.get('text')!;
+  assert.match(resetMessage,/\nVerification code: [0-9]{8}$/);
   await receiveWhatsappMessages(db,envelope(resetMessage,phone.slice(1),'123456789','wamid.synthetic-wa-2'));
-  await resetPhonePreviewPassword(db,{...resetProof,newPassword:'Synthetic changed WhatsApp password'});
+  await resetPhonePreviewPassword(db,{...resetProof,newPassword:'87654321'});
   assert.equal(await authenticate(db,'Bearer '+user.accessToken),null);
   await assert.rejects(resetPhonePreviewPassword(db,{...resetProof,newPassword:password}),/PHONE_OTP_INVALID/);
   await db.phoneOtpChallenge.update({where:{id:reset.challengeId},data:{createdAt:new Date(Date.now()-61000)}});

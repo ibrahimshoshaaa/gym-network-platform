@@ -169,8 +169,8 @@ class _PhonePasswordResetState extends State<PhonePasswordReset> {
   }
   Future<void> save() async {
     if (busy || proof == null) return;
-    if (password.text.runes.length < 15 || password.text.runes.length > 128) {
-      setState(() => error = tr(appText('s945'), 'Use 15 to 128 characters.')); return;
+    if (password.text.runes.length < 8 || password.text.runes.length > 128) {
+      setState(() => error = tr(appText('s945'), 'Use 8 to 128 characters.')); return;
     }
     if (password.text != confirmation.text) { setState(() => error = tr(appText('s946'), 'Passwords do not match.')); return; }
     FocusScope.of(context).unfocus();
@@ -199,7 +199,7 @@ class _PhonePasswordResetState extends State<PhonePasswordReset> {
         ] else ...[
           TextField(key: const ValueKey('phone.reset.password'), controller: password, enabled: !busy, obscureText: hidden,
             textDirection: TextDirection.ltr, autocorrect: false, enableSuggestions: false, autofillHints: const [AutofillHints.newPassword],
-            decoration: InputDecoration(labelText: tr(appText('s956'), 'New password'), helperText: tr(appText('s957'), 'At least 15 characters'),
+            decoration: InputDecoration(labelText: tr(appText('s956'), 'New password'), helperText: tr(appText('s957'), 'At least 8 characters; numbers only are allowed'),
               suffixIcon: IconButton(tooltip: tr(appText('s958'), 'Show or hide password'), onPressed: () => setState(() => hidden = !hidden), icon: Icon(hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined)))),
           const SizedBox(height: 20),
           TextField(key: const ValueKey('phone.reset.confirmation'), controller: confirmation, enabled: !busy, obscureText: hidden,

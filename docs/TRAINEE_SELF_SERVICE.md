@@ -1,7 +1,6 @@
 # Trainee self-service
 The public login page defaults to trainee access and offers account creation.
-Registration collects name, phone, email, password and confirmation. Existing
-password policy remains unchanged (15 characters minimum for new passwords).
+Registration collects name, phone, email, password and confirmation. New passwords accept 8–128 characters, including numbers-only passwords.
 An email/phone already used by an administrator cannot register a second role.
 
 The same-origin POST /api/register checks the browser origin, limits JSON bodies,

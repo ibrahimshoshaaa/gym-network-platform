@@ -201,7 +201,7 @@ class _AuthScreenState extends State<AuthScreen> {
               helperText: password && register
                   ? tr(
                       appText('s275'),
-                      'At least 15 characters. Try a memorable phrase.',
+                      'At least 8 characters. Numbers only are allowed.',
                     )
                   : null,
               helperMaxLines: 2,
@@ -242,10 +242,10 @@ class _AuthScreenState extends State<AuthScreen> {
               if (optional) return null;
               if (v == null || v.trim().isEmpty)
                 return tr(appText('s274', [ar]), '$en is required');
-              if (password && register && v.runes.length < 15)
+              if (password && register && v.runes.length < 8)
                 return tr(
                   appText('s278'),
-                  'Use at least 15 characters',
+                  'Use at least 8 characters',
                 );
               if (k == 'email' && !RegExp(r'^\S+@\S+\.\S+$').hasMatch(v.trim()))
                 return tr(appText('s279'), 'Enter a valid email address');

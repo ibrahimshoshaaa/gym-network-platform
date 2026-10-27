@@ -10,7 +10,7 @@ The platform workspace has dedicated groups for daily reviews, gym management, f
    credentials must be server-side on the API; see [TOPUPS.md](TOPUPS.md).
 2. Provision the **first** platform admin with `pnpm --filter @gym/api admin:provision`.
    It reads a JSON object from stdin: `displayName`, `email`, `phone`, `password`
-   (15–128 code points). Feed it from a protected input source; do not put secrets
+   (8–128 code points). Feed it from a protected input source; do not put secrets
    in command arguments, shell history or Git. There is no default password,
    admin public-signup endpoint, token-paste UI or automatic test account.
    The command refuses any existing platform admin and cannot replace a password.

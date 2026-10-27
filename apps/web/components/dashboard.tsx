@@ -168,9 +168,9 @@ function PasswordChange({ onClose }: { onClose: () => void }) {
               name="new"
               autoComplete="new-password"
               required
-              minLength={15}
+              minLength={8}
               maxLength={128}
-              hint="15 حرفًا على الأقل."
+              hint="8 خانات على الأقل."
             />
             <Field
               label="تأكيد الكلمة الجديدة"
@@ -178,7 +178,7 @@ function PasswordChange({ onClose }: { onClose: () => void }) {
               name="confirm"
               autoComplete="new-password"
               required
-              minLength={15}
+              minLength={8}
               maxLength={128}
             />
             <Notice text={error} />

@@ -2,7 +2,7 @@
 
 The owner requested phone/password registration on the main website and ordinary Android build, using an autofilled fixed code until the SMS provider is connected.
 
-- Register any valid mobile number, name and password (15+ characters). Owners also enter gym details and remain pending approval.
+- Register any valid mobile number, name and password (8–128 characters; numbers-only passwords are allowed). Owners also enter gym details and remain pending approval.
 - The code `123456` autofills; the tester presses confirmation. No SMS is sent and phone ownership remains unverified.
 - Sign in using the phone and password. Recovery uses the same phone, new password and code, and revokes previous sessions.
 - Recovery only works for identities created through this simulated flow. Legacy accounts, staff and administrators are excluded.

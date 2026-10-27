@@ -23,7 +23,7 @@ export const phoneSchema = z.string().max(40).transform(normalizePhone)
 // Passwords are preserved exactly, including Unicode and spaces.
 export const newPasswordSchema = z.string().max(256).refine(value => {
   const count = Array.from(value).length;
-  return count >= 15 && count <= 128;
+  return count >= 8 && count <= 128;
 });
 export const registrationSchema = z.object({
   displayName: z.string().trim().min(2).max(100),

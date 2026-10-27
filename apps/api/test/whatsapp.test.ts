@@ -57,3 +57,20 @@ test('English inbound WhatsApp verification preserves purpose and the same signe
   assert.equal(whatsappMessages(payload,'123456789')[0]?.purpose,purpose);
  }
 });
+
+test('eight-digit WhatsApp codes bind the signed sender and purpose and retain leading zeroes',async()=>{
+ const {whatsappMessages}=await import('../src/auth/whatsapp-service.js');
+ const {hashToken}=await import('../src/auth/sessions.js');
+ const payload=(body:string,from='201055549901')=>({object:'whatsapp_business_account',entry:[{changes:[{field:'messages',value:{metadata:{phone_number_id:'123456789'},messages:[{id:'short-code',from,timestamp:'1792979000',type:'text',text:{body}}]}}]}]});
+ for(const [header,purpose,label] of [
+  ['تأكيد رقم الموبايل في GymBank','REGISTER','رمز التحقق:'],['تأكيد استرجاع كلمة السر في GymBank','RESET','رمز التحقق:'],
+  ['Verify mobile number in GymBank','REGISTER','Verification code:'],['Verify password recovery in GymBank','RESET','Verification code:'],
+ ]){
+  const text=header+'\n'+label+' 00123456';
+  const result=whatsappMessages(payload(text),'123456789');
+  assert.equal(result[0]?.purpose,purpose);
+  assert.equal(result[0]?.hash,hashToken(`whatsapp-message:+201055549901:${purpose}:00123456`));
+  assert.notEqual(whatsappMessages(payload(text,'201055549902'),'123456789')[0]?.hash,result[0]?.hash);
+  for(const bad of ['1234567','123456789','1234abcd','x'.repeat(43),'00123456\nextra'])assert.equal(whatsappMessages(payload(header+'\n'+label+' '+bad),'123456789').length,0);
+ }
+});
