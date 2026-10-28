@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import '../l10n/language.dart';
 
 const _background = Color(0xfff7f9f8);
-const _brandGreen = Color(0xff03d9ab);
+const _brandGreen = Color(0xff006b52);
 const _wordmark = 'assets/brand/gymbank-wordmark.png';
 const _wordmarkWidth = 280.0;
 const _wordmarkHeight = _wordmarkWidth * 267 / 800;
@@ -109,19 +109,20 @@ class _StartupSplashState extends State<StartupSplash>
         );
         final foregroundOpacity = 1 -
             Curves.easeIn.transform(
-              const Interval(.35, .78).transform(_reveal.value),
+              const Interval(.55, .90).transform(_reveal.value),
             );
         final overlayOpacity = 1 -
             Curves.easeOut.transform(
               const Interval(.72, 1).transform(_reveal.value),
             );
+        final darkReveal = fill > .90;
         return AbsorbPointer(
           absorbing: true,
           child: AnnotatedRegion<SystemUiOverlayStyle>(
-            value: SystemUiOverlayStyle.dark.copyWith(
+            value: (darkReveal ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(
               statusBarColor: Colors.transparent,
-              systemNavigationBarColor: _background,
-              systemNavigationBarIconBrightness: Brightness.dark,
+              systemNavigationBarColor: darkReveal ? _brandGreen : _background,
+              systemNavigationBarIconBrightness: darkReveal ? Brightness.light : Brightness.dark,
             ),
             child: Opacity(
               opacity: overlayOpacity,
@@ -154,7 +155,7 @@ class _StartupSplashState extends State<StartupSplash>
                                     ),
                                   ),
                                   Transform.scale(
-                                    scale: 1 + 4 * fill,
+                                    scale: 1 + 8 * fill,
                                     child: const _LogoPiece(
                                       key: ValueKey('startup.logo.center'),
                                       start: .45,
