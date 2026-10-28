@@ -156,10 +156,13 @@ class _StartupSplashState extends State<StartupSplash>
                                   ),
                                   Transform.scale(
                                     scale: 1 + 8 * fill,
-                                    child: const _LogoPiece(
-                                      key: ValueKey('startup.logo.center'),
-                                      start: .45,
-                                      end: .5825,
+                                    child: ClipPath(
+                                      clipper: _BClipper(isolate: _reveal.value > 0),
+                                      child: const _LogoPiece(
+                                        key: ValueKey('startup.logo.center'),
+                                        start: .45,
+                                        end: .5825,
+                                      ),
                                     ),
                                   ),
                                   Opacity(
@@ -257,4 +260,27 @@ class _RevealPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RevealPainter oldDelegate) =>
       oldDelegate.progress != progress;
+}
+
+/// The adjacent A slightly overlaps the B in the original wordmark. During the
+/// zoom, mask that small corner so only the B grows; the full logo stays intact.
+class _BClipper extends CustomClipper<Path> {
+  const _BClipper({required this.isolate});
+  final bool isolate;
+
+  @override
+  Path getClip(Size size) {
+    if (!isolate) return Path()..addRect(Offset.zero & size);
+    return Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width, size.height * 163 / 267)
+      ..lineTo(size.width * 102 / 106, size.height * 174 / 267)
+      ..lineTo(size.width * 102 / 106, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant _BClipper oldClipper) => oldClipper.isolate != isolate;
 }
