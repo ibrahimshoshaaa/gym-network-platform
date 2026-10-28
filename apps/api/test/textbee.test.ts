@@ -57,6 +57,23 @@ test('registered phones are rejected before any challenge, send budget or extern
  }finally{for(const key of Object.keys(env)){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
 });
 
+test('unknown recovery phones receive a generic challenge without sending SMS or consuming device budget',async()=>{
+ const previous={...process.env},oldFetch=globalThis.fetch;Object.assign(process.env,env);
+ let sends=0;globalThis.fetch=async()=>{sends++;throw Error('SMS should not be sent');};
+ const limits:string[]=[];
+ const db:any={
+  user:{findUnique:async()=>null},
+  $queryRaw:async(_parts:TemplateStringsArray,...values:any[])=>{limits.push(values[0]);return [{attempts:1,expiresAt:new Date(Date.now()+3600000)}];},
+  $executeRaw:async()=>0,
+  phoneOtpChallenge:{findFirst:async()=>null,updateMany:async()=>({count:0}),create:async()=>({})},
+  $transaction:async(fn:(tx:any)=>Promise<unknown>)=>fn(db),
+ };
+ try{
+  const result=await requestPhoneChallenge(db,{phone:'+201055550987',purpose:'RESET'});
+  assert.equal(result.testMode,false);assert.ok(result.challengeId);assert.equal(sends,0);assert.equal(limits.length,2);
+ }finally{globalThis.fetch=oldFetch;for(const key of Object.keys(env)){if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];}}
+});
+
 test('English SMS copy spells digits in English and preserves leading zeros',()=>{
  assert.equal(phoneCodeMessage('012345','en'),'GymBank code: zero one two three four five. Do not share.');
  assert.doesNotMatch(phoneCodeMessage('000009','en'),/[\u0600-\u06ff]|\d/);

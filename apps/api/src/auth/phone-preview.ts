@@ -13,11 +13,11 @@ import {textbeeConfig,newPhoneCode,smsCodeHash,sendTextbeeCode} from './textbee.
 import {sessionResult} from './trainees.js';
 import {newPasswordSchema,phoneSchema,phoneCodeSchema} from './validation.js';
 
-// Simulated OTP accepts valid phone numbers only when explicitly enabled.
-// Fixed-code recovery is restricted to unverified test identities. SMS proofs use a separate mode.
+// A known code is allowed only in local disposable test databases, never in
+// a deployed preview or production environment.
 export function phonePreviewEnabled(env:NodeJS.ProcessEnv=process.env){
- const production=env.VERCEL_ENV==='production'||(env.NODE_ENV==='production'&&env.VERCEL_ENV!=='preview');
- return env.GYMBANK_OTP_MODE==='test' && (!production||env.GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION==='true');
+ if(env.GYMBANK_OTP_MODE!=='test'||env.NODE_ENV!=='test'||env.VERCEL_ENV)return false;
+ try{const db=new URL(env.DATABASE_URL??'');return ['localhost','127.0.0.1'].includes(db.hostname)&&['/gym_ci','/gym_test'].includes(db.pathname);}catch{return false;}
 }
 export function phoneOtpMode(): 'test'|'textbee'|null {
  if(process.env.GYMBANK_OTP_MODE==='textbee')return textbeeConfig()?'textbee':null;
@@ -37,10 +37,14 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
  const {language,...data}=parse(challengeInput,input),mode=requirePreview();
  // Avoid billing an SMS for an already registered number, before consuming send limits.
  if(data.purpose==='REGISTER'&&await db.user.findUnique({where:{phoneE164:data.phone},select:{id:true}}))throw new DomainError('ACCOUNT_UNAVAILABLE');
+ let sendSms=mode==='textbee';
  if(mode==='textbee'){
   await consumeAuthLimit(db,'sms-phone-hour',data.phone,5,3600);
   await consumeAuthLimit(db,'sms-phone-day',data.phone,10,86400);
-  await consumeAuthLimit(db,'sms-device-day',textbeeConfig()!.deviceId,100,86400);
+  if(data.purpose==='RESET'){
+   const user=await db.user.findUnique({where:{phoneE164:data.phone},select:{isActive:true,role:true,password:{select:{userId:true}}}});
+   sendSms=Boolean(user?.isActive&&user.password&&['TRAINEE','GYM_OWNER','BRANCH_MANAGER','CASHIER'].includes(user.role));
+  }
  }
  const code=mode==='test'?'123456':newPhoneCode();
  const challenge=await serializable(db,async tx=>{
@@ -55,7 +59,10 @@ export async function requestPhoneChallenge(db:PrismaClient,input:unknown){
   return {challengeId:id,expiresAt:expiresAt.toISOString(),retryAfterSeconds:60,testMode:mode==='test'};
  });
  // Send only after commit: serializable retries must never send duplicate messages.
- if(mode==='textbee')try{await sendTextbeeCode(data.phone,code,data.purpose,undefined,language);}catch(error){
+ if(sendSms)try{
+  await consumeAuthLimit(db,'sms-device-day',textbeeConfig()!.deviceId,100,86400);
+  await sendTextbeeCode(data.phone,code,data.purpose,undefined,language);
+ }catch(error){
   await db.phoneOtpChallenge.updateMany({where:{id:challenge.challengeId,consumedAt:null},data:{consumedAt:new Date()}});
   throw error;
  }

@@ -70,14 +70,7 @@ test('phone OTP preview signs up, logs in and resets only dedicated test identit
   assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,false);
   assert.equal((await app.inject({method:'POST',url:'/auth/phone/reset',payload:{phone,challengeId:expired.challengeId,code:'123456',newPassword}})).statusCode,503);
   process.env.GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION='true';
-  assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,true);
-  const mainPhone='01255550125';
-  const mainChallenge=await requestPhoneChallenge(db,{phone:mainPhone,purpose:'REGISTER'});
-  const mainUser=await registerPhonePreview(db,{phone:mainPhone,challengeId:mainChallenge.challengeId,code:'123456',displayName:'Main phone registration',password});
-  assert.equal(mainUser.user.phone,'+201255550125');assert.equal(mainUser.user.phoneVerified,false);
-  const mainLogin=await loginTrainee(db,{identifier:mainPhone,password});assert.equal(mainLogin.user.id,mainUser.user.id);
-  const mainReset=await requestPhoneChallenge(db,{phone:mainPhone,purpose:'RESET'});
-  await resetPhonePreviewPassword(db,{phone:mainPhone,challengeId:mainReset.challengeId,code:'123456',newPassword});
-  assert.equal(await authenticate(db,'Bearer '+mainLogin.accessToken),null);
+  assert.equal((await app.inject({method:'GET',url:'/auth/phone/status'})).json().enabled,false);
+  await assert.rejects(requestPhoneChallenge(db,{phone:'01255550125',purpose:'REGISTER'}),/PHONE_OTP_DISABLED/);
  }finally{set('GYMBANK_ALLOW_TEST_OTP_IN_PRODUCTION',previous.productionOptIn);set('GYMBANK_OTP_MODE',previous.mode);set('VERCEL_ENV',previous.vercel);set('NODE_ENV',previous.node);await app.close();}
 });

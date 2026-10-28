@@ -55,11 +55,10 @@ that IPA alone does not install it directly on an arbitrary iPhone.
   WhatsApp/telephone links. Simulator compilation does not validate device
   permissions, Keychain persistence, camera, GPS or signing.
 
-The current production API intentionally uses simulated OTP `123456`. It does
-not verify ownership of a phone. Public launch needs real SMS verification,
-privacy policy/support links, App Store privacy/export declarations, account
-lifecycle review and store screenshots. Those release tasks are not completed by
-this build foundation.
+Hosted deployments require real SMS or WhatsApp verification. The known-code
+OTP simulation is restricted to disposable local test databases. Public launch
+also needs privacy policy/support links, App Store privacy/export declarations,
+account lifecycle review and store screenshots.
 
 References:
 - https://docs.flutter.dev/deployment/ios

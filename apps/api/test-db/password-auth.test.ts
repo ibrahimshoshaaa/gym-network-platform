@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { buildApp } from '../src/app.js';
 import { hashToken } from '../src/auth/sessions.js';
 import { consumeAuthLimit, throttleKey } from '../src/auth/throttle.js';
+import { registerTrainee } from '../src/auth/trainees.js';
 
 const url = new URL(process.env.DATABASE_URL ?? '');
 if (!['localhost', '127.0.0.1'].includes(url.hostname) || !/^\/(gym_ci|gym_test)$/.test(url.pathname)) throw new Error('Disposable local gym_ci or gym_test required');
@@ -14,16 +15,32 @@ const password = 'Synthetic test passphrase 123!';
 let phoneCounter = randomInt(10000000, 80000000);
 let ipCounter = 1;
 const newIp = () => `198.51.100.${ipCounter++}`;
+// Private fixture route exists only in this disposable test process.
+function addFixtureRegistration(app:ReturnType<typeof buildApp>){
+  app.post('/auth/test-register',{onRequest:async request=>consumeAuthLimit(db,'register-ip',request.ip,5,3600)},async(request,reply)=>reply.code(201).send(await registerTrainee(db,request.body)));
+}
 const payload = () => ({ displayName: 'Synthetic Trainee', phone: `010${++phoneCounter}`, email: `auth-${randomUUID()}@example.test`, password });
 function fixture() {
-  const app = buildApp(db); const ip = newIp(); const data = payload();
-  const register = (body: unknown = data) => app.inject({ method: 'POST', url: '/auth/register', remoteAddress: ip, payload: body as Record<string, unknown> });
+  const app = buildApp(db); addFixtureRegistration(app); const ip = newIp(); const data = payload();
+  const register = (body: unknown = data) => app.inject({ method: 'POST', url: '/auth/test-register', remoteAddress: ip, payload: body as Record<string, unknown> });
   const login = (identifier = data.email, suppliedPassword = password, remoteAddress = ip) => app.inject({ method: 'POST', url: '/auth/login', remoteAddress, payload: { identifier, password: suppliedPassword } });
   const me = (token: string) => app.inject({ method: 'GET', url: '/me', headers: { authorization: `Bearer ${token}` } });
   return { app, data, ip, register, login, me };
 }
 
-test('registration creates exactly one unverified trainee, credential, empty wallet, session and audit', async () => {
+test('legacy public registration cannot bypass phone verification',async()=>{
+  const app=buildApp(db),data=payload();
+  try{
+    for(const url of ['/auth/register','/auth/owners/register']){
+      const response=await app.inject({method:'POST',url,remoteAddress:newIp(),payload:data});
+      assert.equal(response.statusCode,409,response.body);
+      assert.equal(response.json().code,'PHONE_VERIFICATION_REQUIRED');
+    }
+    assert.equal(await db.user.count({where:{phoneE164:`+20${data.phone.slice(1)}`}}),0);
+  }finally{await app.close();}
+});
+
+test('internal account fixture creates an unverified trainee, credential, empty wallet, session and audit', async () => {
   const f = fixture();
   try {
     const response = await f.register({ ...f.data, email: f.data.email.toUpperCase() });
@@ -120,11 +137,11 @@ test('registration cannot inject roles, verification, active state or weak crede
 });
 
 test('registration IP rate limit is shared by two app instances and ignores spoofed proxy headers', async () => {
-  const f = fixture(); const second = buildApp(db);
+  const f = fixture(); const second = buildApp(db); addFixtureRegistration(second);
   try {
     for (let n = 0; n < 5; n++) {
       const app = n % 2 ? second : f.app;
-      const response = await app.inject({ method: 'POST', url: '/auth/register', remoteAddress: f.ip, headers: { 'x-forwarded-for': newIp() }, payload: { password: 'invalid' } });
+      const response = await app.inject({ method: 'POST', url: '/auth/test-register', remoteAddress: f.ip, headers: { 'x-forwarded-for': newIp() }, payload: { password: 'invalid' } });
       assert.equal(response.statusCode, 400, response.body);
     }
     const limited = await f.register();
@@ -135,7 +152,7 @@ test('registration IP rate limit is shared by two app instances and ignores spoo
   } finally { await f.app.close(); await second.close(); }
 });
 
-test('normalized login identity limit applies across IPs and worker instances', async () => {
+test('failed login from other IPs cannot lock the real account', async () => {
   const f = fixture(); const second = buildApp(db);
   try {
     await f.register();
@@ -144,7 +161,7 @@ test('normalized login identity limit applies across IPs and worker instances', 
       assert.equal(response.statusCode, 401, response.body);
     }
     const limited = await f.login(f.data.email, password, newIp());
-    assert.equal(limited.statusCode, 429, limited.body);
+    assert.equal(limited.statusCode, 200, limited.body);
   } finally { await f.app.close(); await second.close(); }
 });
 

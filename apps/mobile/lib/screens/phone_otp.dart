@@ -8,8 +8,6 @@ import 'package:flutter/services.dart';
 import '../core/api.dart';
 import '../core/ui.dart';
 
-const phoneOtpPreview = bool.fromEnvironment('GYM_PHONE_OTP_PREVIEW', defaultValue: true);
-
 Future<Json?> requestPhoneCode(BuildContext context, ApiClient api, String phone, String purpose, {Future<void> Function(Json)? onConfirm, bool? english}) async {
   english ??= AppLanguage.instance.english;
   final challenge = Map<String, dynamic>.from(await api.request('auth/phone/challenge', method: 'POST', auth: false, body: {'phone': phone, 'purpose': purpose, 'language': english ? 'en' : 'ar'}));

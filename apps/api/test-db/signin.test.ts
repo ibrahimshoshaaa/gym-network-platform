@@ -31,11 +31,12 @@ test("one sign-in route resolves all roles without changing verification or sess
  assert.equal((await app.inject({remoteAddress:"198.51.100.217",method:"POST",url:"/auth/signin",payload:{identifier:users.cashier.email,password}})).statusCode,401);
  assert.equal((await app.inject({remoteAddress:"198.51.100.217",method:"POST",url:"/auth/signin",payload:{identifier:randomUUID()+"@example.test",password}})).statusCode,401);
 });
-test("automatic admin sign-in shares the existing stricter identity throttle",async t=>{
+test("admin login failures are isolated by IP and successful logins do not lock the account",async t=>{
  const users=await fixture(),app=buildApp(db);t.after(async()=>app.close());
  for(let n=0;n<5;n++){
   const result=await app.inject({remoteAddress:"198.51.100.217",method:"POST",url:n===0?"/auth/admin/login":"/auth/signin",payload:{identifier:users.admin.email,password:"incorrect"}});
   assert.equal(result.statusCode,401);
  }
  assert.equal((await app.inject({remoteAddress:"198.51.100.217",method:"POST",url:"/auth/signin",payload:{identifier:users.admin.email,password}})).statusCode,429);
+ for(let n=0;n<6;n++)assert.equal((await app.inject({remoteAddress:"198.51.100.218",method:"POST",url:"/auth/signin",payload:{identifier:users.admin.email,password}})).statusCode,200);
 });

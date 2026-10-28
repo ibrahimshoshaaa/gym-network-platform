@@ -97,7 +97,8 @@ test('SMS recovery supports staff without granting assignments, while admins, in
   for(const [index,fixture] of blocked.entries()){
    const phone=`+20105555982${index}`;
    const user=await db.user.create({data:{phoneE164:phone,displayName:'Synthetic blocked recovery',role:fixture.role,isActive:fixture.active,...(fixture.password?{password:{create:{passwordHash}}}:{})}});
-   const challenge=await requestPhoneChallenge(db,{phone,purpose:'RESET'}),proof={phone,challengeId:challenge.challengeId,code:codes.get(phone)!};
+   const challenge=await requestPhoneChallenge(db,{phone,purpose:'RESET'}),proof={phone,challengeId:challenge.challengeId,code:'000000'};
+   assert.equal(codes.has(phone),false);
    await assert.rejects(verifyPhoneResetCode(db,proof),/PHONE_OTP_INVALID/);
    await assert.rejects(resetPhonePreviewPassword(db,{...proof,newPassword:replacement}),/PHONE_OTP_INVALID/);
    const current=await db.user.findUniqueOrThrow({where:{id:user.id},include:{password:true}});

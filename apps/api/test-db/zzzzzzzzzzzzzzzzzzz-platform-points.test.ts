@@ -14,6 +14,9 @@ test('welcome points apply once on signup, never login, and disabling affects on
  try{
   const input=registration(),signed=await registerTrainee(db,input),userId=signed.user.id;
   const account=()=>db.pointAccount.findUniqueOrThrow({where:{type_ownerUserId:{type:'TRAINEE_WALLET',ownerUserId:userId}}});
+  assert.equal((await account()).balance,0);
+  await db.user.update({where:{id:userId},data:{phoneVerifiedAt:new Date()}});
+  await db.$transaction(tx=>grantWelcomePoints(tx,userId));
   assert.equal((await account()).balance,15);assert.ok((await account()).expiresAt!>new Date());
   await loginTrainee(db,{identifier:input.phone,password:input.password});
   await Promise.all([1,2,3].map(()=>db.$transaction(tx=>grantWelcomePoints(tx,userId))));

@@ -2,11 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import type { PrismaClient } from '@prisma/client';
 import { DomainError } from '../domain/errors.js';
 import { authenticate } from './sessions.js';
-import { consumeAuthLimit } from './throttle.js';
+import { consumeAuthLimit, withFailedLoginLimit } from './throttle.js';
 import { signIn } from './signin.js';
 import { loginAdmin } from './admin.js';
 import { loginSchema } from './validation.js';
-import { changeTraineePassword, loginTrainee, registerTrainee } from './trainees.js';
+import { changeTraineePassword, loginTrainee } from './trainees.js';
 import { acceptInvitation, invitationAcceptSchema, loginStaff } from './staff.js';
 import {phonePreviewStatus,requestPhoneChallenge,registerPhonePreview,resetPhonePreviewPassword,verifyPhoneResetCode} from './phone-preview.js';
 
@@ -16,7 +16,10 @@ export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
     ['challenge',requestPhoneChallenge],['register',registerPhonePreview],['reset',resetPhonePreviewPassword],['reset/verify',verifyPhoneResetCode],
   ] as const)app.post(`/auth/phone/${path}`,{
     bodyLimit:8192,
-    onRequest:async r=>{await consumeAuthLimit(db,'phone-otp-ip',r.ip,20,900);},
+    onRequest:async r=>{
+      await consumeAuthLimit(db,'phone-otp-ip',r.ip,20,900);
+      if(path==='challenge')await consumeAuthLimit(db,'phone-challenge-ip-day',r.ip,30,86400);
+    },
   },async r=>{
     // The backend validates and normalizes the phone before issuing any proof.
     return run(db,r.body);
@@ -31,8 +34,7 @@ export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
   }, async request => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) throw new DomainError('INVALID_INPUT');
-    await consumeAuthLimit(db, 'admin-login-identity', parsed.data.identifier, 5, 900);
-    return loginAdmin(db, parsed.data);
+    return withFailedLoginLimit(db,parsed.data.identifier,request.ip,5,()=>loginAdmin(db,parsed.data));
   });
   app.post('/auth/staff/login', {
     bodyLimit: 8192,
@@ -40,8 +42,7 @@ export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
   }, async request => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) throw new DomainError('INVALID_INPUT');
-    await consumeAuthLimit(db, 'login-identity', parsed.data.identifier, 10, 900);
-    return loginStaff(db, parsed.data);
+    return withFailedLoginLimit(db,parsed.data.identifier,request.ip,10,()=>loginStaff(db,parsed.data));
   });
   app.post('/auth/invitations/accept', {
     bodyLimit: 8192,
@@ -55,7 +56,7 @@ export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
   app.post('/auth/register', {
     bodyLimit: 8192,
     onRequest: async request => { await consumeAuthLimit(db, 'register-ip', request.ip, 5, 3600); },
-  }, async (request, reply) => reply.code(201).send(await registerTrainee(db, request.body)));
+  }, async () => { throw new DomainError('PHONE_VERIFICATION_REQUIRED'); });
 
   app.post('/auth/login', {
     bodyLimit: 8192,
@@ -63,8 +64,7 @@ export function registerTraineeRoutes(app: FastifyInstance, db: PrismaClient) {
   }, async request => {
     const parsed = loginSchema.safeParse(request.body);
     if (!parsed.success) throw new DomainError('INVALID_INPUT');
-    await consumeAuthLimit(db, 'login-identity', parsed.data.identifier, 10, 900);
-    return loginTrainee(db, parsed.data);
+    return withFailedLoginLimit(db,parsed.data.identifier,request.ip,10,()=>loginTrainee(db,parsed.data));
   });
 
   app.post('/auth/password/change', {
