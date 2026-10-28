@@ -63,7 +63,7 @@ class _StartupSplashState extends State<StartupSplash>
     if (_reducedMotion) {
       _intro.value = 1;
       _finishWhenReady();
-    } else {
+    } else if (widget.ready) {
       _intro.forward();
     }
   }
@@ -71,7 +71,13 @@ class _StartupSplashState extends State<StartupSplash>
   @override
   void didUpdateWidget(covariant StartupSplash oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.ready && !oldWidget.ready) _finishWhenReady();
+    if (widget.ready && !oldWidget.ready) {
+      if (_reducedMotion) {
+        _finishWhenReady();
+      } else {
+        _intro.forward();
+      }
+    }
   }
 
   void _finishWhenReady() {
@@ -181,7 +187,7 @@ class _StartupSplashState extends State<StartupSplash>
                         ),
                       ),
                     ),
-                    if (!widget.ready && _intro.isCompleted)
+                    if (!widget.ready)
                       Positioned(
                         bottom: 64,
                         left: 24,
