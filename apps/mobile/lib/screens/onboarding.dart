@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../core/ui.dart';
@@ -209,80 +207,87 @@ class _PageBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Keep the text scrollable on short screens and with large system text.
-        final imageHeight = math.max(180.0, constraints.maxHeight - 160);
+        // Fill the available height while keeping the page scrollable on short
+        // screens or with large text.
         return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(30, 18, 30, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(appText(page.eyebrow), style: const TextStyle(color: _accent, fontSize: 13, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    Text(
-                      appText(page.title),
-                      key: ValueKey('onboarding.title.${page.title}'),
-                      style: const TextStyle(color: _headline, fontSize: 29, height: 1.25, fontWeight: FontWeight.w900),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(30, 18, 30, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(appText(page.eyebrow), style: const TextStyle(color: _accent, fontSize: 13, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 8),
+                        Text(
+                          appText(page.title),
+                          key: ValueKey('onboarding.title.${page.title}'),
+                          style: const TextStyle(color: _headline, fontSize: 29, height: 1.25, fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(appText(page.description), style: const TextStyle(color: _secondary, fontSize: 15, height: 1.65)),
+                      ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(appText(page.description), style: const TextStyle(color: _secondary, fontSize: 15, height: 1.65)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: imageHeight,
-                child: ClipRect(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.asset(
-                        page.image,
-                        key: ValueKey('onboarding.image.${page.title}'),
-                        fit: BoxFit.cover,
-                        alignment: page.alignment,
-                        excludeFromSemantics: true,
-                      ),
-                      const DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [_background, Colors.transparent, Colors.transparent, _background],
-                            stops: [0, .14, .72, 1],
-                          ),
-                        ),
-                      ),
-                      PositionedDirectional(
-                        top: 28,
-                        end: 24,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: const [BoxShadow(color: Color(0x220a3522), blurRadius: 20, offset: Offset(0, 5))],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(page.icon, size: 16, color: _accent),
-                                const SizedBox(width: 5),
-                                Text(appText(page.badge), style: const TextStyle(color: _accent, fontSize: 12, fontWeight: FontWeight.w800)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 160,
+                      child: ClipRect(
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Image.asset(
+                              page.image,
+                              key: ValueKey('onboarding.image.${page.title}'),
+                              fit: BoxFit.cover,
+                              alignment: page.alignment,
+                              excludeFromSemantics: true,
+                            ),
+                            const DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [_background, Colors.transparent, Colors.transparent, _background],
+                                  stops: [0, .14, .72, 1],
+                                ),
+                              ),
+                            ),
+                            PositionedDirectional(
+                              top: 28,
+                              end: 24,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: const [BoxShadow(color: Color(0x220a3522), blurRadius: 20, offset: Offset(0, 5))],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(page.icon, size: 16, color: _accent),
+                                      const SizedBox(width: 5),
+                                      Text(appText(page.badge), style: const TextStyle(color: _accent, fontSize: 12, fontWeight: FontWeight.w800)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },

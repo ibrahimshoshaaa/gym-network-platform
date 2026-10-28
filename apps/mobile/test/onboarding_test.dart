@@ -32,6 +32,20 @@ class _UnwritablePreferenceStore extends MemoryStore {
 }
 
 void main() {
+  testWidgets('the full image treatment fits on a short phone', (t) async {
+    t.view.physicalSize = const Size(375, 667);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final api = _client(MemoryStore());
+    await t.pumpWidget(GymNetworkApp(api: api));
+    await t.pumpAndSettle();
+    final page = t.getRect(find.byKey(const ValueKey('onboarding.pages')));
+    final image = t.getRect(find.byKey(const ValueKey('onboarding.image.s1072')));
+    expect(image.bottom, lessThanOrEqualTo(page.bottom + 1));
+    expect(t.takeException(), isNull);
+  });
+
   testWidgets('first run can swipe, change language and start registration', (t) async {
     _phoneViewport(t);
     final store = MemoryStore();
