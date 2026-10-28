@@ -9,9 +9,9 @@ from pathlib import Path
 def sim(*args, check=True):
     print('Simulator step: ' + args[0], flush=True)
     try:
-        # A fresh hosted simulator can finish booting before its installer is ready.
-        # Keep installation bounded, while allowing the same cold-start budget as boot.
-        timeout = 300 if args[0] in {'bootstatus', 'install'} else 90
+        # A fresh hosted simulator can finish booting before installation or
+        # launch services are ready. Keep each cold-start step bounded.
+        timeout = 300 if args[0] in {'bootstatus', 'install', 'launch'} else 90
         result = subprocess.run(['xcrun', 'simctl', *args], timeout=timeout,
                                 capture_output=True, text=True)
     except subprocess.TimeoutExpired as error:
@@ -39,7 +39,20 @@ def main():
         sim('boot', device)
         sim('bootstatus', device, '-b')
         sim('install', device, 'build/ios/iphonesimulator/Runner.app')
-        launch = sim('launch', device, 'net.shotech.gymbank')
+        try:
+            launch = sim('launch', device, 'net.shotech.gymbank')
+        except RuntimeError as error:
+            # Preserve evidence instead of treating a launch timeout as success.
+            (output / 'launch-error.txt').write_text(str(error))
+            try:
+                processes = sim('spawn', device, 'launchctl', 'list', check=False)
+                matching = [line for line in processes.stdout.splitlines()
+                            if 'net.shotech.gymbank' in line]
+                (output / 'launch-process.txt').write_text('\n'.join(matching))
+                sim('io', device, 'screenshot', str(output / 'launch-failure.png'))
+            except RuntimeError as diagnostic_error:
+                (output / 'launch-diagnostics-error.txt').write_text(str(diagnostic_error))
+            raise
         (output / 'launch.txt').write_text(launch.stdout + launch.stderr)
         match = re.search(r'net\.shotech\.gymbank:\s*(\d+)', launch.stdout)
         if not match:
