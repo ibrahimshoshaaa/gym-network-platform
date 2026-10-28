@@ -12,7 +12,8 @@ const _authTeal = Color(0xff101719);
 
 class AuthScreen extends StatefulWidget {
   final ApiClient api;
-  const AuthScreen({super.key, required this.api});
+  final bool initialRegister;
+  const AuthScreen({super.key, required this.api, this.initialRegister = false});
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
@@ -43,6 +44,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void initState() {
     super.initState();
+    register = widget.initialRegister;
     restoreLanguage();
   }
 

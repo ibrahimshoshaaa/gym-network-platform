@@ -29,4 +29,7 @@ flutter:
     - assets/brand/google-g.png
     - assets/brand/gymbank-wordmark.png
     - assets/brand/gymbank-icon.png
+    - assets/onboarding/discover.jpg
+    - assets/onboarding/balance.jpg
+    - assets/onboarding/entry.jpg
 

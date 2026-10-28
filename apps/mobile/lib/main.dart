@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'core/api.dart';
 import 'core/ui.dart';
 import 'screens/auth.dart';
+import 'screens/onboarding.dart';
 import 'screens/trainee.dart';
 import 'screens/bookings.dart';
 import 'screens/market.dart';
@@ -34,6 +35,8 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
   final navigator = GlobalKey<NavigatorState>();
   Object? error;
   bool loading = true;
+  bool onboardingComplete = false;
+  bool initialRegister = false;
   String? actor;
   @override
   void initState() {
@@ -56,6 +59,18 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
         // A startup retry must restore both identity and its saved financial envelope.
         await widget.api.restore();
       }
+      // An existing signed-in user should never see onboarding after upgrading,
+      // including when they later sign out.
+      try {
+        onboardingComplete = await widget.api.storage.read(onboardingStorageKey) == '1';
+        if (widget.api.user != null && !onboardingComplete) {
+          onboardingComplete = true;
+          await widget.api.storage.write(onboardingStorageKey, '1');
+        }
+      } catch (_) {
+        // The intro and authentication remain usable if preferences fail.
+        if (widget.api.user != null) onboardingComplete = true;
+      }
     } catch (e) {
       error = const ApiFailure('SERVICE_UNAVAILABLE');
     } finally {
@@ -63,11 +78,21 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
     }
   }
 
+  void finishOnboarding(bool register) {
+    setState(() {
+      initialRegister = register;
+      onboardingComplete = true;
+    });
+    // A failed preference write must not prevent the user from signing in.
+    widget.api.storage.write(onboardingStorageKey, '1').catchError((_) {});
+  }
+
   void changed() {
     if (!mounted) return;
     final next = widget.api.user?['id'] as String?;
     if (actor != next) {
       actor = next;
+      if (next != null) initialRegister = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         navigator.currentState?.popUntil((r) => r.isFirst);
       });
@@ -107,7 +132,9 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
         : widget.api.user == null
         ? widget.api.deletionReceipt != null
           ? AccountDeletionReceipt(api:widget.api)
-          : AuthScreen(api: widget.api)
+          : !onboardingComplete
+            ? OnboardingScreen(onFinish: finishOnboarding)
+            : AuthScreen(api: widget.api, initialRegister: initialRegister)
         : SessionGate(key: ValueKey(widget.api.user!['id']), api: widget.api),
   )); }
 }

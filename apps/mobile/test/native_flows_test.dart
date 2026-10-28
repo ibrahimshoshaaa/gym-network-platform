@@ -12,7 +12,10 @@ import 'api_test.dart' show MemoryStore;
 ApiClient fake(
   Future<http.Response> Function(http.Request) handler, {
   Json? user,
-}) => ApiClient(storage: MemoryStore(), transport: MockClient(handler))
+}) => ApiClient(
+  storage: MemoryStore()..values['app.onboarding.complete'] = '1',
+  transport: MockClient(handler),
+)
   ..restored = true
   ..user = user
   ..token = user == null ? null : 'synthetic';
