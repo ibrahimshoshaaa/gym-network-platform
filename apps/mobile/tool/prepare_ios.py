@@ -12,12 +12,12 @@ LAUNCH_STORYBOARD = '''<?xml version="1.0" encoding="UTF-8"?>
   <scenes><scene sceneID="GBScene"><objects>
     <viewController id="GBLaunch" sceneMemberID="viewController"><view key="view" contentMode="scaleToFill" id="GBView">
       <rect key="frame" x="0.0" y="0.0" width="393" height="852"/><autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-      <subviews><imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchImage" translatesAutoresizingMaskIntoConstraints="NO" id="GBLogo"><rect key="frame" x="148.5" y="378" width="96" height="96"/><constraints><constraint firstAttribute="width" constant="96" id="GBWidth"/><constraint firstAttribute="height" constant="96" id="GBHeight"/></constraints></imageView></subviews>
-      <viewLayoutGuide key="safeArea" id="GBSafe"/><color key="backgroundColor" red="0.062745098" green="0.090196078" blue="0.098039216" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+      <subviews><imageView userInteractionEnabled="NO" contentMode="scaleAspectFit" image="LaunchImage" translatesAutoresizingMaskIntoConstraints="NO" id="GBLogo"><rect key="frame" x="56.5" y="379" width="280" height="94"/><constraints><constraint firstAttribute="width" constant="280" id="GBWidth"/><constraint firstAttribute="height" constant="94" id="GBHeight"/></constraints></imageView></subviews>
+      <viewLayoutGuide key="safeArea" id="GBSafe"/><color key="backgroundColor" red="0.968627451" green="0.976470588" blue="0.972549020" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
       <constraints><constraint firstItem="GBLogo" firstAttribute="centerX" secondItem="GBView" secondAttribute="centerX" id="GBCenterX"/><constraint firstItem="GBLogo" firstAttribute="centerY" secondItem="GBView" secondAttribute="centerY" id="GBCenterY"/></constraints>
     </view></viewController><placeholder placeholderIdentifier="IBFirstResponder" id="GBResponder" userLabel="First Responder" sceneMemberID="firstResponder"/>
   </objects><point key="canvasLocation" x="53" y="375"/></scene></scenes>
-  <resources><image name="LaunchImage" width="96" height="96"/></resources>
+  <resources><image name="LaunchImage" width="280" height="94"/></resources>
 </document>
 '''
 
@@ -145,7 +145,8 @@ end
     images = []
     for scale in [1, 2, 3]:
         name = f'GymBankLaunch@{scale}x.png'
-        subprocess.run(['sips', '-z', str(96 * scale), str(96 * scale), str(source),
+        launch_source = root / 'assets/brand/gymbank-wordmark.png'
+        subprocess.run(['sips', '-z', str(94 * scale), str(280 * scale), str(launch_source),
                         '--out', str(launch / name)], check=True, stdout=subprocess.DEVNULL)
         images.append({'idiom': 'universal', 'filename': name, 'scale': f'{scale}x'})
     (launch / 'Contents.json').write_text(json.dumps({'images': images, 'info': {'version': 1, 'author': 'xcode'}}))

@@ -9,6 +9,7 @@ import 'core/api.dart';
 import 'core/ui.dart';
 import 'screens/auth.dart';
 import 'screens/onboarding.dart';
+import 'screens/startup_splash.dart';
 import 'screens/trainee.dart';
 import 'screens/bookings.dart';
 import 'screens/market.dart';
@@ -35,6 +36,7 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
   final navigator = GlobalKey<NavigatorState>();
   Object? error;
   bool loading = true;
+  bool showStartupSplash = true;
   bool onboardingComplete = false;
   bool initialRegister = false;
   String? actor;
@@ -108,15 +110,9 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
   }
 
   @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return LanguageScope(language: AppLanguage.instance, child: MaterialApp(
-    navigatorKey: navigator,
-    title: 'GymBank',
-    debugShowCheckedModeBanner: false,
-    theme: appTheme(),
-    locale: AppLanguage.instance.locale,
-    supportedLocales: const [Locale('ar'), Locale('en')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    home: loading
+  Widget build(BuildContext context) {
+    AppLanguage.watch(context);
+    final destination = loading
         ? const Scaffold(body: Center(child: Brand(large: true)))
         : error != null
         ? Scaffold(
@@ -135,8 +131,33 @@ class _GymNetworkAppState extends State<GymNetworkApp> {
           : !onboardingComplete
             ? OnboardingScreen(onFinish: finishOnboarding)
             : AuthScreen(api: widget.api, initialRegister: initialRegister)
-        : SessionGate(key: ValueKey(widget.api.user!['id']), api: widget.api),
-  )); }
+        : SessionGate(key: ValueKey(widget.api.user!['id']), api: widget.api);
+    return LanguageScope(
+      language: AppLanguage.instance,
+      child: MaterialApp(
+        navigatorKey: navigator,
+        title: 'GymBank',
+        debugShowCheckedModeBanner: false,
+        theme: appTheme(),
+        locale: AppLanguage.instance.locale,
+        supportedLocales: const [Locale('ar'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: Stack(
+          fit: StackFit.expand,
+          children: [
+            destination,
+            if (showStartupSplash)
+              StartupSplash(
+                ready: !loading,
+                onComplete: () {
+                  if (mounted) setState(() => showStartupSplash = false);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class SessionGate extends StatefulWidget {

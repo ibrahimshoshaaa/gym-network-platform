@@ -32,7 +32,20 @@ res=Path('android/app/src/main/res')
 (res/'values').mkdir(parents=True,exist_ok=True)
 (res/'drawable-nodpi').mkdir(parents=True,exist_ok=True)
 copyfile(Path('assets/brand/gymbank-icon.png'),res/'drawable-nodpi/gymbank_foreground.png')
+copyfile(Path('assets/brand/gymbank-wordmark.png'),res/'drawable-nodpi/gymbank_launch_wordmark.png')
 (res/'values/gymbank_launcher.xml').write_text('<resources><color name="gymbank_launcher_background">#101719</color></resources>')
+(res/'values/gymbank_splash.xml').write_text('<resources><color name="gymbank_splash_background">#F7F9F8</color></resources>')
+launch_background = '''<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/gymbank_splash_background" />
+    <item android:width="280dp" android:height="94dp" android:gravity="center">
+        <bitmap android:gravity="fill" android:src="@drawable/gymbank_launch_wordmark" />
+    </item>
+</layer-list>
+'''
+for directory in ['drawable', 'drawable-v21']:
+    (res/directory).mkdir(parents=True, exist_ok=True)
+    (res/directory/'launch_background.xml').write_text(launch_background)
 (res/'mipmap-anydpi-v26/ic_launcher.xml').write_text('''<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
 <background android:drawable="@color/gymbank_launcher_background"/>
 <foreground android:drawable="@drawable/gymbank_foreground"/>
