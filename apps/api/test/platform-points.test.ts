@@ -17,7 +17,7 @@ function fixture(enabled=true){
  const admin='10000000-0000-4000-8000-000000000003',wallet='10000000-0000-4000-8000-000000000004',issuance='10000000-0000-4000-8000-000000000005';
  let grant:any=null,header:any=null,config={id:'default',version:1,enabled,points:25,createdById:admin};const postings:any[]=[],audits:any[]=[],balances=new Map([[wallet,{balance:0,type:'TRAINEE_WALLET'}],[issuance,{balance:0,type:'ISSUANCE'}]]);let expiry:Date|undefined;
  const tx:any={
-  user:{findUnique:async({where}:any)=>({id:where.id,isActive:true,role:where.id===admin?'PLATFORM_ADMIN':'TRAINEE'})},
+  user:{findUnique:async({where}:any)=>({id:where.id,isActive:true,role:where.id===admin?'PLATFORM_ADMIN':'TRAINEE',phoneVerifiedAt:new Date()})},
   welcomePointsPolicy:{findUnique:async()=>config,upsert:async({update}:any)=>{config={...config,...update};}},
   pricingPolicy:{findFirst:async()=>({id})},
   welcomePointsGrant:{findUnique:async()=>grant,create:async({data}:any)=>{assert.equal(grant,null);grant=data;return data;}},
@@ -36,6 +36,10 @@ test('welcome award is balanced issuance, renews expiry, and is only applied onc
 });
 test('disabled welcome campaign issues no points or financial records',async()=>{
  const f=fixture(false);await grantWelcomePoints(f.tx,id);assert.equal(f.grant,null);assert.equal(f.postings.length,0);assert.equal(f.expiry,undefined);
+});
+test('unverified accounts cannot receive welcome points',async()=>{
+ const f=fixture();(f.tx.user as any).findUnique=async()=>({id,isActive:true,role:'TRAINEE',phoneVerifiedAt:null});
+ await grantWelcomePoints(f.tx,id);assert.equal(f.grant,null);assert.equal(f.postings.length,0);
 });
 test('welcome configuration is admin-only, version checked, and can be disabled without removing awarded points',async()=>{
  const f=fixture();await assert.rejects(saveWelcomeSettings(f.db,id,{expectedVersion:1,enabled:true,points:10}),{code:'ACCESS_DENIED'});

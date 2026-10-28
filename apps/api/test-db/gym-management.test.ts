@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { buildApp } from '../src/app.js';
 import { createSession, hashToken } from '../src/auth/sessions.js';
 import { requireBranchAccess } from '../src/auth/authorization.js';
+import { registerTrainee } from '../src/auth/trainees.js';
 
 const url = new URL(process.env.DATABASE_URL ?? '');
 if (!['localhost', '127.0.0.1'].includes(url.hostname) || !/^\/(gym_ci|gym_test)$/.test(url.pathname)) throw new Error('Disposable local test database required');
@@ -180,8 +181,7 @@ test('existing trainee invitation requires their current password and cannot ove
   const f = await network();
   try {
     const info = contact();
-    const registration = await f.request('POST', '/auth/register', undefined, { ...info, password });
-    assert.equal(registration.statusCode, 201, registration.body); const trainee = registration.json();
+    const trainee = await registerTrainee(db,{ ...info, password });
     const invited = await f.request('POST', `/gyms/${f.gymId}/staff-invitations`, f.owner.accessToken, { branchId: f.branch.id, role: 'CASHIER', contact: info });
     assert.equal(invited.statusCode, 201, invited.body);
     const token = invited.json().invitation.token;
@@ -200,7 +200,7 @@ test('an existing identity gains no gym owner access until accepting the owner i
   const f = await fixture();
   try {
     const info = contact();
-    const registered = (await f.request('POST', '/auth/register', undefined, { ...info, password })).json();
+    const registered = await registerTrainee(db,{ ...info, password });
     const created = await f.request('POST', '/admin/gyms', f.adminToken, { name: 'Another synthetic gym', owner: info });
     assert.equal(created.statusCode, 201, created.body); const gym = created.json();
     assert.equal((await f.request('GET', '/gyms', registered.accessToken)).json().items.length, 0);

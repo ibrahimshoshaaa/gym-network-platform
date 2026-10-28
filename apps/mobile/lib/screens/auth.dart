@@ -102,7 +102,6 @@ class _AuthScreenState extends State<AuthScreen> {
           ? <String, dynamic>{
               for (final k in [
                 'displayName',
-                if (!phoneOtpPreview) 'email',
                 'phone',
                 'password',
                 if (owner) ...[
@@ -119,7 +118,7 @@ class _AuthScreenState extends State<AuthScreen> {
               'identifier': fields['identifier']!.text,
               'password': fields['password']!.text,
             };
-      if(register&&phoneOtpPreview){
+      if(register){
         await choosePhoneVerification(context,widget.api,fields['phone']!.text,'REGISTER',english:english,onConfirm:(proof)async{
           await widget.api.authenticate('auth/phone/register',<String,dynamic>{
             'displayName':body['displayName'],'phone':body['phone'],'password':body['password'],...proof,
@@ -128,7 +127,7 @@ class _AuthScreenState extends State<AuthScreen> {
           },rememberSession:true);
         });
       }else{
-        await widget.api.authenticate(register?(owner?'auth/owners/register':'auth/register'):'auth/signin',body,rememberSession:register||rememberMe);
+        await widget.api.authenticate('auth/signin',body,rememberSession:rememberMe);
       }
     } catch (e) {
       if (mounted) setState(() => error = e);
@@ -497,7 +496,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   ),
                                 ),
                                 SizedBox(height: register ? 16 : 24),
-                                if(phoneOtpPreview)...[
+                                if(register)...[
                                   Text(tr(appText('s287'),'Register with your mobile number and confirm it with a verification code.'),style:TextStyle(color:muted,fontSize:12)),
                                   const SizedBox(height:12),
                                 ],
@@ -555,13 +554,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                             'displayName',
                                             appText('s292'),
                                             'Full name',
-                                          ),
-                                          if (!phoneOtpPreview) field(
-                                            'email',
-                                            appText('s293'),
-                                            'Email address',
-                                            keyboard:
-                                                TextInputType.emailAddress,
                                           ),
                                           field(
                                             'phone',
@@ -646,7 +638,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                   title: Text(tr(appText('s303'), 'Remember me'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                                                 )),
-                                                if (phoneOtpPreview) Expanded(child: Align(
+                                                Expanded(child: Align(
                                                   alignment: AlignmentDirectional.centerEnd,
                                                   child: TextButton(
                                                     key: const Key('auth.forgotPassword'),

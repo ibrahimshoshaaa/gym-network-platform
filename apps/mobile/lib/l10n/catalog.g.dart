@@ -1063,6 +1063,7 @@ const arCatalog = <String, String>{
   "s1062": "السيرفر أكد رقمك بنجاح. اضغط متابعة لإكمال الخطوة التالية.",
   "s1063": "الرسالة فيها رمز تحقق مؤقت. ابعتها زي ما هي من غير تعديل.",
   "s1064": "لا يوجد حساب مسجل بهذا الرقم. راجع الرقم أو أنشئ حسابًا جديدًا.",
+  "s1065": "لازم تأكد رقم الموبايل لإكمال التسجيل. حدّث التطبيق وحاول تاني.",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2128,4 +2129,5 @@ const enCatalog = <String, String>{
   "s1062": "The server has confirmed your number. Tap Continue to finish.",
   "s1063": "The message contains a temporary verification code. Send it without editing.",
   "s1064": "No account is registered with this number. Check the number or create a new account.",
+  "s1065": "Verify your mobile number to sign up. Update the app and try again.",
 };

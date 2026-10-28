@@ -1750,5 +1750,6 @@
   "s1061": "Send the prepared message in WhatsApp, then return here. We will confirm automatically when the server receives it.",
   "s1062": "The server has confirmed your number. Tap Continue to finish.",
   "s1063": "The message contains a temporary verification code. Send it without editing.",
-  "s1064": "No account is registered with this number. Check the number or create a new account."
+  "s1064": "No account is registered with this number. Check the number or create a new account.",
+  "s1065": "Verify your mobile number to sign up. Update the app and try again."
 }

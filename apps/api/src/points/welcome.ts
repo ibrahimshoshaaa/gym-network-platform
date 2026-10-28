@@ -29,7 +29,7 @@ export async function grantWelcomePoints(tx:Prisma.TransactionClient,userId:stri
  const policy=await tx.welcomePointsPolicy.findUnique({where:{id:'default'}});
  if(!policy?.enabled||policy.points<=0)return;
  const user=await tx.user.findUnique({where:{id:userId}});
- if(!user?.isActive||user.role!=='TRAINEE')return;
+ if(!user?.isActive||user.role!=='TRAINEE'||!user.phoneVerifiedAt)return;
  await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId}::uuid FOR UPDATE`;
  if(await tx.welcomePointsGrant.findUnique({where:{userId}}))return;
  await requireAdmin(tx,policy.createdById);

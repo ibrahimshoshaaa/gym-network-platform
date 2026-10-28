@@ -68,9 +68,9 @@ test('platform-only browser administration and independent native workflows',{ti
   await ok(await request('/api/backend/admin/support-contact',{cookie,method:'PUT',body:{whatsapp:'+201555550001'}}));
   const saved=await ok(await request('/api/backend/admin/topup-settings',{cookie}));assert.equal(saved.policy.pointPricePiasters,'125');assert.equal(saved.welcomePoints.points,7);
   const conflict=await request('/api/backend/admin/pricing-policies',{cookie,method:'POST',body:{expectedVersion:settings.policy?.version??0,pointPricePiasters:'999',redemptionBps:8000}});assert.equal(conflict.status,409);
-  // Native registration and verification discovery remain available, without creating browser cookies.
+  // Legacy native registration must not bypass phone verification.
   const nativeRegistration=await request('/api/mobile/auth/register',{method:'POST',body:{displayName:'Synthetic native trainee',email:`native-${id}@example.test`,phone:'+2010'+String(BigInt('0x'+id.replaceAll('-','').slice(0,10))%100000000n).padStart(8,'0'),password}});
-  const trainee=await ok(nativeRegistration,201);assert.equal(trainee.user.role,'TRAINEE');assert.equal(sessionCookie(nativeRegistration),undefined);
+  assert.equal(nativeRegistration.status,409);assert.equal((await nativeRegistration.json()).code,'PHONE_VERIFICATION_REQUIRED');assert.equal(sessionCookie(nativeRegistration),undefined);
   assert.equal((await request('/api/mobile/auth/phone/status')).status,200);assert.equal((await request('/api/mobile/auth/whatsapp/status')).status,200);
   if(process.env.GYM_BROWSER_TEST==='1'){
    const {chromium}=await import('@playwright/test');const browser=await chromium.launch({headless:true});
