@@ -236,7 +236,7 @@ class _PageBody extends StatelessWidget {
                   const SizedBox(height: 12),
                   Expanded(
                     child: SizedBox(
-                      height: 160,
+                      height: 120,
                       child: ClipRect(
                         child: Stack(
                           fit: StackFit.expand,
