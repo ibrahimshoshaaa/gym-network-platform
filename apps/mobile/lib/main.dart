@@ -401,7 +401,7 @@ class _NativeShellState extends State<NativeShell> {
             child: Column(
           children: [
             if (owner && widget.gyms.length > 1)
-              Padding(
+              Container(color:canvas,
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
                 child: Row(
                   children: [

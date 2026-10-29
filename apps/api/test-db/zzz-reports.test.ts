@@ -151,6 +151,9 @@ test("sales, visits and current balances are separate exact figures and reports 
     ];
   const s = await reportSummary(db, f.owner.id, { ...range, gymId: f.gym.id });
   assert.equal(s.visits.points, "30");
+  assert.equal(s.dailyVisits.reduce((n,d)=>n+Number(d.count),0),1);
+  assert.equal(s.recentVisits[0]!.id,visit.visit.id);
+  assert.equal(s.recentVisits[0]!.branchName,f.branch.name);
   assert.equal(s.netVisitReceivablesPiasters, visit.visit.settlementPiasters);
   assert.equal(s.topups, null);
   assert.equal(

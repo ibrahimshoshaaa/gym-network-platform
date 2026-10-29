@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_network/screens/owner_portal.dart';
 import 'package:gym_network/screens/branch_services.dart';
 import 'package:gym_network/screens/operations.dart';
-import 'package:gym_network/core/ui.dart';
+import 'package:gym_network/main.dart' show NativeShell;
 import 'operations_test.dart' show client,page,reply;
 
 const gym={'id':'g1','name':'جيم التجربة','status':'ACTIVE'};
@@ -53,4 +53,19 @@ void main(){
   expect(find.text('زيارات اليوم'),findsOneWidget);expect(t.takeException(),isNull);
   await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);await Directory('build/verification').create(recursive:true);await File('build/verification/owner-home.png').writeAsBytes(data!.buffer.asUint8List());image.dispose();});
  });
+ testWidgets('all five owner tabs render on narrow Android and iOS with large text',(t)async{
+  t.view.physicalSize=const Size(320,900);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);
+  final api=client('GYM_OWNER',(r)async{
+   if(r.url.path.endsWith('/calendar'))return reply({'day':'2026-11-02'});
+   if(r.url.path.endsWith('/summary'))return reply({'period':{'to':'2026-11-02'},'visits':{'count':'4'},'netVisitReceivablesPiasters':'18000','currentBalances':[{'type':'GYM_AVAILABLE','balancePiasters':'230000'}],'dailyVisits':[{'day':'2026-11-02','count':'4'}],'recentVisits':[]});
+   if(r.url.path.endsWith('/branches'))return reply({'items':[branch]});return reply({'items':[]});
+  });
+  const key=ValueKey('owner.tabs.review');
+  await t.pumpWidget(RepaintBoundary(key:key,child:page(MediaQuery(data:const MediaQueryData(size:Size(320,900),textScaler:TextScaler.linear(1.5)),child:NativeShell(api:api,gyms:const [gym])))));await t.pumpAndSettle();
+  for(var i=0;i<5;i++){
+   await t.tap(find.byType(NavigationDestination).at(i));await t.pumpAndSettle();expect(t.takeException(),isNull);
+   await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);await Directory('build/verification').create(recursive:true);await File('build/verification/owner-tab-$i.png').writeAsBytes(data!.buffer.asUint8List());image.dispose();});
+  }
+ },variant:TargetPlatformVariant({TargetPlatform.android,TargetPlatform.iOS}));
+
 }
