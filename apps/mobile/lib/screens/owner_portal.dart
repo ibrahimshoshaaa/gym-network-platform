@@ -54,8 +54,26 @@ class _OwnerStat extends StatelessWidget{
  @override Widget build(BuildContext context)=>Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:accent?const Color(0xffdff8ee):Colors.white,borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,color:green,size:21),const SizedBox(height:8),Text(label,style:const TextStyle(color:muted,fontSize:12)),const SizedBox(height:4),Text(value,style:const TextStyle(fontSize:21,fontWeight:FontWeight.w800))]));
 }
 class _OwnerChart extends StatelessWidget{
- final List<Json> days;final DateTime end;const _OwnerChart({required this.days,required this.end});
- @override Widget build(BuildContext context){final points=List.generate(7,(i){final date=ownerDay(ownerDateOnly(end).subtract(Duration(days:6-i)));return (date:date,count:int.tryParse('${days.where((d)=>d['day']==date).firstOrNull?['count']??0}')??0);});final max=points.fold<int>(1,(m,d)=>d.count>m?d.count:m);return Semantics(label:appText('ownerDailyVisits'),child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[for(final p in points)Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:Column(children:[Text('${p.count}',style:const TextStyle(fontSize:11)),const SizedBox(height:5),Container(height:8+60*p.count/max,decoration:BoxDecoration(color:p.count==0?const Color(0xffe5ece9):green,borderRadius:BorderRadius.circular(6))),const SizedBox(height:6),Text(p.date.substring(5),style:const TextStyle(fontSize:9,color:muted))])))]));}
+ final List<Json> days;final DateTime end;
+ const _OwnerChart({required this.days,required this.end});
+ @override Widget build(BuildContext context){
+  final points=List.generate(7,(i){
+   final date=ownerDay(ownerDateOnly(end).subtract(Duration(days:6-i)));
+   return (date:date,count:int.tryParse('${days.where((d)=>d['day']==date).firstOrNull?['count']??0}')??0);
+  });
+  final max=points.fold<int>(1,(m,d)=>d.count>m?d.count:m);
+  return Semantics(label:appText('ownerDailyVisits'),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(appText('ownerDailyVisits'),style:const TextStyle(fontSize:11,color:muted)),
+   const SizedBox(height:8),
+   Row(crossAxisAlignment:CrossAxisAlignment.end,children:[
+    for(final p in points)Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:Column(children:[
+     Text('${p.count}',style:const TextStyle(fontSize:11)),const SizedBox(height:5),
+     Container(height:8+60*p.count/max,decoration:BoxDecoration(color:p.count==0?const Color(0xffe5ece9):green,borderRadius:BorderRadius.circular(6))),
+     const SizedBox(height:6),Text(p.date.substring(5),style:const TextStyle(fontSize:9,color:muted)),
+    ]))),
+   ]),
+  ]));
+ }
 }
 class OwnerVisitTile extends StatelessWidget{
  final Json row;final String kind;final VoidCallback? onTap;
