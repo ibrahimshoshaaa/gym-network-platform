@@ -15,7 +15,7 @@ import 'operations_test.dart' show client,page,reply;
 
 const gym={'id':'g1','name':'جيم التجربة','status':'ACTIVE'};
 const branch={'id':'b1','gymId':'g1','name':'فرع التجربة','canOperate':true};
-Widget reviewPage(Widget child)=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(debugShowCheckedModeBanner:false,theme:appTheme().copyWith(textTheme:appTheme().textTheme.apply(fontFamily:'GymReviewSans'),filledButtonTheme:FilledButtonThemeData(style:appTheme().filledButtonTheme.style!.copyWith(textStyle:const WidgetStatePropertyAll(TextStyle(fontFamily:'GymReviewSans',fontSize:16,fontWeight:FontWeight.w700))))),locale:const Locale('ar'),supportedLocales:const [Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:child));
+Widget reviewPage(Widget child)=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(debugShowCheckedModeBanner:false,theme:appTheme().copyWith(textTheme:appTheme().textTheme.apply(fontFamily:'GymReviewSans'),filledButtonTheme:FilledButtonThemeData(style:appTheme().filledButtonTheme.style!.copyWith(textStyle:const WidgetStatePropertyAll(TextStyle(fontFamily:'GymReviewSans',fontSize:16,fontWeight:FontWeight.w700))))),locale:AppLanguage.instance.locale,supportedLocales:const [Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:child));
 void main(){
  setUpAll(()async{
   final file=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
@@ -63,7 +63,8 @@ void main(){
   expect(find.text('زيارات اليوم'),findsOneWidget);expect(t.takeException(),isNull);
   await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);await Directory('build/verification').create(recursive:true);await File('build/verification/owner-home.png').writeAsBytes(data!.buffer.asUint8List());image.dispose();});
  });
- testWidgets('all five owner tabs render on narrow Android and iOS with large text',(t)async{
+ for(final language in ['ar','en'])testWidgets('all five owner tabs render on narrow Android and iOS with large text ($language)',(t)async{
+  AppLanguage.instance.use(language);addTearDown(()=>AppLanguage.instance.use('ar'));
   t.view.physicalSize=const Size(320,900);t.view.devicePixelRatio=1;addTearDown(t.view.resetPhysicalSize);addTearDown(t.view.resetDevicePixelRatio);
   final api=client('GYM_OWNER',(r)async{
    if(r.url.path.endsWith('/calendar'))return reply({'day':'2026-11-02'});
@@ -74,7 +75,7 @@ void main(){
   await t.pumpWidget(RepaintBoundary(key:key,child:reviewPage(MediaQuery(data:const MediaQueryData(size:Size(320,900),textScaler:TextScaler.linear(1.5)),child:NativeShell(api:api,gyms:const [gym])))));await t.pumpAndSettle();
   for(var i=0;i<5;i++){
    await t.tap(find.byType(NavigationDestination).at(i));await t.pumpAndSettle();
-   await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);await Directory('build/verification').create(recursive:true);await File('build/verification/owner-tab-$i.png').writeAsBytes(data!.buffer.asUint8List());image.dispose();});
+   await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);await Directory('build/verification').create(recursive:true);await File('build/verification/owner-$language-tab-$i.png').writeAsBytes(data!.buffer.asUint8List());image.dispose();});
    expect(t.takeException(),isNull,reason:'owner tab $i');
   }
  },variant:TargetPlatformVariant({TargetPlatform.android,TargetPlatform.iOS}));
