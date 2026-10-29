@@ -117,8 +117,9 @@ export function listServices(db: PrismaClient, actor: string, branchId: string, 
     if (management) {
       await editable(tx, actor, branchId);
       const branch = await tx.branch.findUniqueOrThrow({ where: { id: branchId } });
+      const catalog=await tx.servicePreset.findMany();
       return { facilityIds:branch.facilityIds, hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' }, items: await tx.branchService.findMany({ where: { branchId }, orderBy: { id: 'asc' }, take: 100,
-        include: { requests: { orderBy: { createdAt: 'desc' }, take: 1 } } }) };
+        include: { requests: { orderBy: { createdAt: 'desc' }, take: 1 } } }).then(items=>items.map(s=>({...s,preset:catalog.find(p=>p.id===s.presetId)??null}))) };
     }
     const branch = await tx.branch.findFirst({ where: { id: branchId, status: 'ACTIVE', gym: { status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } } });
     if (!branch) throw new DomainError('NOT_FOUND');

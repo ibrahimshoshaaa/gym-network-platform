@@ -2,7 +2,7 @@ import 'dart:async';
 import '../l10n/language.dart';
 import 'campaigns.dart';
 import 'bookings.dart';
-import 'branch_services.dart' show serviceLabel, presetLabel, serviceHours;
+import 'branch_services.dart' show serviceLabel, presetLabel;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';

@@ -5,8 +5,8 @@ import '../core/ui.dart';
 
 String presetLabel(Json item) => '${item[AppLanguage.instance.english ? 'nameEn' : 'nameAr'] ?? item['name'] ?? ''}';
 String serviceLabel(Json item) => item['preset'] is Map ? presetLabel(Map<String,dynamic>.from(item['preset'])) : '${item['name']}';
-String serviceHours(Json item) => item['openMinute']==null ? '' : '${BookingHoursEditorStateLabel(item['openMinute'])} – ${BookingHoursEditorStateLabel(item['closeMinute'])}';
-String BookingHoursEditorStateLabel(dynamic value) => '${((value as int) ~/ 60).toString().padLeft(2,'0')}:${(value % 60).toString().padLeft(2,'0')}';
+String serviceHours(Json item) => item['openMinute']==null ? '' : '${serviceMinuteLabel(item['openMinute'])} – ${serviceMinuteLabel(item['closeMinute'])}';
+String serviceMinuteLabel(dynamic value) => '${((value as int) ~/ 60).toString().padLeft(2,'0')}:${(value % 60).toString().padLeft(2,'0')}';
 bool _hasPending(Json service) => (service['requests'] as List? ?? []).any((r) => r['status'] == 'PENDING');
 
 class BranchServicesScreen extends StatelessWidget {
@@ -133,14 +133,14 @@ class _BranchServiceFormState extends State<BranchServiceForm> {
     Text(appText('presetChoose'),style:const TextStyle(fontWeight:FontWeight.w800)),
     if(presets==null) const LinearProgressIndicator(),
     if(presets!=null && widget.service==null) ...[
-      for(final category in ['training','classes','spa','nutrition']) ...[
+      for(final category in ['training','classes','spa','nutrition','facilities']) ...[
         Text(appText('presetCategory_$category')),
         Wrap(spacing:8,runSpacing:8,children:[for(final preset in presets!.where((p)=>p['category']==category)) ChoiceChip(label:Text(presetLabel(preset)),selected:selectedPreset==preset['id'],onSelected:busy?null:(_)=>setState((){selectedPreset='${preset['id']}';fields['name']!.text='${preset['nameAr']}';}))]),
         const SizedBox(height:12),
       ],
     ] else if(widget.service!=null) Text(serviceLabel(widget.service!),style:const TextStyle(fontWeight:FontWeight.w800)),
     Text(appText('presetServiceHours')),
-    Text(openMinute==null?appText('presetBranchHours'):'${BookingHoursEditorStateLabel(openMinute)} – ${BookingHoursEditorStateLabel(closeMinute)}'),
+    Text(openMinute==null?appText('presetBranchHours'):'${serviceMinuteLabel(openMinute)} – ${serviceMinuteLabel(closeMinute)}'),
     Wrap(spacing:8,children:[TextButton(onPressed:busy?null:hours,child:Text(appText('s923'))),TextButton(onPressed:busy?null:()=>setState((){openMinute=null;closeMinute=null;}),child:Text(appText('presetBranchHours')))]),
     for (final entry in { 'description': appText('s929'), 'points': appText('s137'), 'durationMinutes': appText('s930'), 'reason': appText('s931')}.entries) Padding(padding: const EdgeInsets.only(bottom: 14), child: TextFormField(
       controller: fields[entry.key], enabled: !busy, decoration: InputDecoration(labelText: entry.value),

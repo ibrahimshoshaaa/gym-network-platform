@@ -1093,6 +1093,7 @@ const arCatalog = <String, String>{
   "presetCategory_classes": "الكلاسات والفنون القتالية",
   "presetCategory_spa": "الاستشفاء والسبا",
   "presetCategory_nutrition": "القياسات والتغذية",
+  "presetCategory_facilities": "المرافق والنظام",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2188,4 +2189,5 @@ const enCatalog = <String, String>{
   "presetCategory_classes": "Classes and martial arts",
   "presetCategory_spa": "Spa and recovery",
   "presetCategory_nutrition": "Measurements and nutrition",
+  "presetCategory_facilities": "Facilities",
 };
