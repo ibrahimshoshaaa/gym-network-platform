@@ -164,6 +164,7 @@ model Gym {
 }
 
 model Branch {
+  facilityIds String[] @default([])
   services BranchService[]
   promotionRequests PromotionRequest[]
   promotionImages PromotionImage[]
@@ -1059,6 +1060,10 @@ model VisitRating {
 
 
 model BranchService {
+  presetId String?
+  preset ServicePreset? @relation(fields: [presetId], references: [id])
+  openMinute Int?
+  closeMinute Int?
   id String @id @default(uuid()) @db.Uuid
   branchId String @db.Uuid
   branch Branch @relation(fields: [branchId], references: [id])
@@ -1077,6 +1082,10 @@ model BranchService {
 }
 
 model ServicePriceRequest {
+  presetId String?
+  preset ServicePreset? @relation(fields: [presetId], references: [id])
+  openMinute Int?
+  closeMinute Int?
   id String @id @default(uuid()) @db.Uuid
   serviceId String @db.Uuid
   service BranchService @relation(fields: [serviceId], references: [id])
@@ -1223,4 +1232,16 @@ model FinancialArchiveRecord {
  data Json
  archivedAt DateTime @default(now())
  @@unique([recordType,recordId])
+}
+
+model ServicePreset {
+ services BranchService[]
+ requests ServicePriceRequest[]
+ id String @id
+ nameAr String
+ nameEn String
+ category String
+ kind String
+ active Boolean @default(true)
+ version Int @default(0)
 }

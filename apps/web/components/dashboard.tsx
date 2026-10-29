@@ -12,6 +12,7 @@ import {AccountTools} from "./updates";
 import {SettingsPanel} from "./settings";
 import {SupportSettings} from "./support-settings";
 import {BookingAdmin} from "./booking-admin";
+import {ServicePresets} from "./service-presets";
 import {ServicePriceReview} from "./service-price-review";
 import {GymApplications} from "./gym-applications";
 import {GymManagement} from "./gyms/management";
@@ -35,6 +36,7 @@ const descriptions:Partial<Record<AdminDestination,[string,string,LucideIcon]>>=
  reviews:["طلبات الشحن","مطابقة التحويلات والموافقة على إضافة النقاط",FileCheck2],
  "gym-applications":["طلبات انضمام الجيمات","مراجعة طلبات الانضمام وقبولها أو رفضها",Building2],
  "branch-prices":["أسعار الزيارات","اعتماد أسعار الزيارة ومددها المقترحة",Coins],
+ "service-presets":["الخدمات الجاهزة والمرافق","إدارة الاختيارات العربية والإنجليزية المتاحة للفروع",Coins],
  "service-prices":["أسعار الخدمات","مراجعة أسعار الخدمات التي تقدمها الفروع",Coins],
  "booking-reviews":["مراجعة عدم الحضور","البت في الحجوزات المعلقة وتوزيع نقاطها",ClipboardCheck],
  "operation-reviews":["الإلغاء والتصحيح","مراجعة طلبات تصحيح العمليات",ClipboardCheck],
@@ -80,6 +82,7 @@ export function Dashboard(){
  case "reviews":return <Reviews/>;
  case "gym-applications":return <GymApplications/>;
  case "branch-prices":return <PriceReviews onOpenGym={id=>{setReviewGym(id);navigate("gyms");}}/>;
+ case "service-presets":return <ServicePresets/>;
  case "service-prices":return <ServicePriceReview/>;
  case "booking-reviews":return <BookingAdmin section="reviews"/>;
  case "booking-policy":return <BookingAdmin section="policy"/>;

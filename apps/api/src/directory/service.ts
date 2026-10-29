@@ -99,6 +99,7 @@ export async function branchDetails(
       Prisma.sql`${projection} WHERE ${eligible} AND b.id=${id}::uuid`,
     );
     if (!b) throw new DomainError("NOT_FOUND");
-    return { asOf: new Date(), branch: (await directoryImages(tx,[view(b)]))[0]! };
+    const facilities=await tx.servicePreset.findMany({where:{id:{in:(await tx.branch.findUniqueOrThrow({where:{id},select:{facilityIds:true}})).facilityIds},kind:'FACILITY'}});
+    return { asOf: new Date(), branch: {...(await directoryImages(tx,[view(b)]))[0]!,facilities} };
   });
 }

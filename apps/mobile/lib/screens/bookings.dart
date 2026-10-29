@@ -1,6 +1,7 @@
 import '../l10n/language.dart';
 import 'dart:async';
 import 'branch_entry.dart';
+import 'branch_services.dart' show serviceLabel, serviceHours;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -112,7 +113,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
      SectionTitle(appText('s192')),
      for(final service in services)CheckboxListTile(contentPadding:EdgeInsets.zero,value:selected.contains(service['id']),
       onChanged:locked?null:(value)=>setState((){if(value==true)selected.add(service['id'] as String);else selected.remove(service['id']);accepted=false;}),
-      title:Text('${service['name']}'),subtitle:Text(appText('s193', [service['points'], service['durationMinutes']]))),
+      title:Text(serviceLabel(service)),subtitle:Text('${appText('s193', [service['points'], service['durationMinutes']])}${service['openMinute']==null?'':' · ${serviceHours(service)}'}')),
      if(services.isEmpty)Text(appText('s194')),
      if(hours?['openMinute']==null)Text(appText('s43')),
      if(hours?['openMinute']!=null)Text(appText('s195', [minuteLabel(hours!['openMinute'] as int), minuteLabel(hours!['closeMinute'] as int)])),

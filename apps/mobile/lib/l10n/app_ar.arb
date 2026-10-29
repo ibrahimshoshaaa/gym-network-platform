@@ -1769,5 +1769,17 @@
   "s1080": "ادخل بسهولة.\nوركّز في هدفك.",
   "s1081": "استخدم كود الدخول في الجيم وابدأ تمرينك بسهولة.",
   "s1082": "دخول سهل",
-  "s1083": "الصفحة {p0} من {p1}"
+  "s1083": "الصفحة {p0} من {p1}",
+  "presetChoose": "اختار الخدمة من القائمة",
+  "presetHoursInvalid": "وقت الفتح والإغلاق لازم يختلفوا",
+  "presetServiceHours": "مواعيد الخدمة — بتوقيت القاهرة",
+  "presetBranchHours": "استخدام مواعيد الفرع",
+  "presetFacilities": "المرافق والمميزات",
+  "presetIncluded": "اختار المتاح ضمن الزيارة، من غير حجز منفصل",
+  "presetSaveFacilities": "حفظ المرافق",
+  "presetCategory_training": "التدريب والأجهزة",
+  "presetCategory_classes": "الكلاسات والفنون القتالية",
+  "presetCategory_spa": "الاستشفاء والسبا",
+  "presetCategory_nutrition": "القياسات والتغذية",
+  "presetCategory_facilities": "المرافق والنظام"
 }

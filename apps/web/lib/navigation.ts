@@ -4,7 +4,7 @@ export const adminSections = [
  {id:"requests",label:"الطلبات والمراجعات",description:"قرارات الشحن والانضمام والأسعار والحضور",items:["reviews","gym-applications","branch-prices","service-prices","booking-reviews","operation-reviews"]},
  {id:"gyms",label:"الجيمات والفروع",description:"إدارة الجيمات والفروع والحسابات المرتبطة بها",items:[]},
  {id:"finance",label:"المالية والتقارير",description:"التحصيلات والمستحقات والسحب والتسويات",items:["direct-topup","withdrawals","disputes","reports","wallet-expiry"]},
- {id:"services",label:"الخدمات والماركت",description:"الصيانة وإعلانات الفروع ومراجعة الماركت",items:["maintenance","promotion-requests","market"]},
+ {id:"services",label:"الخدمات والماركت",description:"الصيانة وإعلانات الفروع ومراجعة الماركت",items:["service-presets","maintenance","promotion-requests","market"]},
  {id:"communication",label:"التواصل",description:"رسائل الدعم وحملات المنصة",items:["support","campaigns"]},
  {id:"oversight",label:"الحسابات والرقابة",description:"إدارة الوصول وطلبات الحذف وسجل القرارات",items:["users","account-deletions","audit"]},
  {id:"settings",label:"إعدادات المنصة",description:"إعدادات التشغيل العامة، مقسمة حسب المهمة",items:["pricing","welcome","payments","packages","booking-policy","support-contact"]},

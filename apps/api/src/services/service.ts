@@ -20,7 +20,7 @@ export function setBookingHours(db: PrismaClient, actor: string, branchId: strin
   });
 }
 
-async function editable(tx: Prisma.TransactionClient, actor: string, branchId: string) {
+export async function editable(tx: Prisma.TransactionClient, actor: string, branchId: string) {
   const branch = await tx.branch.findUnique({ where: { id: branchId } });
   if (!branch) throw new DomainError('NOT_FOUND');
   const authority = await requirePermission(tx, actor, branch.gymId, 'REQUEST_PRICING', branchId);
@@ -33,13 +33,19 @@ async function lockService(tx: Prisma.TransactionClient, serviceId: string, bran
   if (!service || service.branchId !== branchId) throw new DomainError('NOT_FOUND');
   return service;
 }
+function validateHours(input: {openMinute?: number|null;closeMinute?: number|null}) {
+ if ((input.openMinute == null) !== (input.closeMinute == null) || (input.openMinute != null && input.openMinute === input.closeMinute)) throw new DomainError('INVALID_INPUT');
+}
 export function createService(db: PrismaClient, actor: string, branchId: string, body: unknown) {
   const input = parse(serviceInput, body);
+  validateHours(input);
   return serializable(db, async tx => {
     await editable(tx, actor, branchId);
     await tx.$queryRaw`SELECT id FROM "Branch" WHERE id=${branchId}::uuid FOR UPDATE`;
     if (await tx.branchService.count({ where: { branchId } }) >= 100) throw new DomainError('INVALID_STATE');
-    const service = await tx.branchService.create({ data: { branchId, name: input.name, description: input.description } });
+    if(input.presetId){const preset=await tx.servicePreset.findFirst({where:{id:input.presetId,kind:'SERVICE',active:true}});if(!preset)throw new DomainError('INVALID_INPUT');input.name=preset.nameAr;
+      if(await tx.branchService.findFirst({where:{branchId,presetId:input.presetId}}))throw new DomainError('PENDING_REQUEST_EXISTS');}
+    const service = await tx.branchService.create({ data: { branchId, presetId:input.presetId, name: input.name, description: input.description } });
     const request = await tx.servicePriceRequest.create({ data: { ...input, serviceId: service.id, baseVersion: 0, requestedById: actor } });
     await audit(tx, actor, 'SERVICE_CREATED', service.id, input.reason);
     return { service, request };
@@ -47,9 +53,12 @@ export function createService(db: PrismaClient, actor: string, branchId: string,
 }
 export function requestServiceChange(db: PrismaClient, actor: string, branchId: string, serviceId: string, body: unknown) {
   const { expectedVersion, ...input } = parse(serviceChangeInput, body);
+  validateHours(input);
   return serializable(db, async tx => {
     await editable(tx, actor, branchId);
     const service = await lockService(tx, serviceId, branchId);
+    if(input.presetId !== undefined && input.presetId !== service.presetId)throw new DomainError('INVALID_INPUT');
+    if(service.presetId){const preset=await tx.servicePreset.findUniqueOrThrow({where:{id:service.presetId}});input.presetId=service.presetId;input.name=preset.nameAr;}
     if (service.version !== expectedVersion) throw new DomainError('STALE_PRICE_REQUEST');
     if (await tx.servicePriceRequest.findFirst({ where: { serviceId, status: 'PENDING' } })) throw new DomainError('PENDING_REQUEST_EXISTS');
     const request = await tx.servicePriceRequest.create({ data: { ...input, serviceId, baseVersion: service.version, requestedById: actor } });
@@ -90,6 +99,7 @@ export function reviewService(db: PrismaClient, actor: string, requestId: string
     let updated = service;
     if (input.decision === 'APPROVED') {
       updated = await tx.branchService.update({ where: { id: service.id }, data: {
+        presetId: request.presetId, openMinute:request.openMinute, closeMinute:request.closeMinute,
         name: request.name, description: request.description, points: request.points,
         durationMinutes: request.durationMinutes, approvedAt: now, approvedById: actor,
         // Approve first publication; later reviews must not re-enable an archived service.
@@ -107,14 +117,17 @@ export function listServices(db: PrismaClient, actor: string, branchId: string, 
     if (management) {
       await editable(tx, actor, branchId);
       const branch = await tx.branch.findUniqueOrThrow({ where: { id: branchId } });
-      return { hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' }, items: await tx.branchService.findMany({ where: { branchId }, orderBy: { id: 'asc' }, take: 100,
-        include: { requests: { orderBy: { createdAt: 'desc' }, take: 1 } } }) };
+      const catalog=await tx.servicePreset.findMany();
+      return { facilityIds:branch.facilityIds, hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' }, items: await tx.branchService.findMany({ where: { branchId }, orderBy: { id: 'asc' }, take: 100,
+        include: { requests: { orderBy: { createdAt: 'desc' }, take: 1 } } }).then(items=>items.map(s=>({...s,preset:catalog.find(p=>p.id===s.presetId)??null}))) };
     }
     const branch = await tx.branch.findFirst({ where: { id: branchId, status: 'ACTIVE', gym: { status: 'ACTIVE', ownerAcceptedAt: { not: null }, owner: { isActive: true } } } });
     if (!branch) throw new DomainError('NOT_FOUND');
     const items = await tx.branchService.findMany({ where: { branchId, active: true, approvedAt: { not: null } }, orderBy: [{ points: 'asc' }, { id: 'asc' }], take: 100,
-      select: { id: true, branchId: true, name: true, description: true, points: true, durationMinutes: true, version: true } });
+      select: { id: true, branchId: true, presetId:true, openMinute:true, closeMinute:true, name: true, description: true, points: true, durationMinutes: true, version: true } });
     const catalogCount = await tx.branchService.count({ where: { branchId } });
-    return { items, minimumPoints: items[0]?.points ?? null, serviceBooking: catalogCount > 0, hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' } };
+    const presets=await tx.servicePreset.findMany({where:{id:{in:[...branch.facilityIds,...items.flatMap(s=>s.presetId?[s.presetId]:[])]}}});
+    const localized=items.map(s=>({...s,preset:presets.find(p=>p.id===s.presetId)??null}));
+    return { facilities:presets.filter(p=>branch.facilityIds.includes(p.id)), items:localized, minimumPoints: items[0]?.points ?? null, serviceBooking: catalogCount > 0, hours: { openMinute: branch.bookingOpenMinute, closeMinute: branch.bookingCloseMinute, version: branch.bookingHoursVersion, timeZone: 'Africa/Cairo' } };
   });
 }
