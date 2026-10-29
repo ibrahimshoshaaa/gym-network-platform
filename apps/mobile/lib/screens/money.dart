@@ -9,11 +9,11 @@ import 'owner.dart';
 class MoneyScreen extends StatelessWidget {
   final ApiClient api;
   final Json gym;
-  const MoneyScreen({super.key, required this.api, required this.gym});
+  final bool embedded;final int? section;
+  const MoneyScreen({super.key, required this.api, required this.gym,this.embedded=false,this.section});
   @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
-    title: appText('s795'),
-    child: DataView(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return embedded ? content(context) : Screen(title: appText('s795'),child:content(context)); }
+  Widget content(BuildContext context)=>DataView(
     load: () => Future.wait([
       api.request('reports/summary?gymId=${gym['id']}&${reportRange()}'),
       api.request('gyms/${gym['id']}/withdrawals?limit=100'),
@@ -28,7 +28,7 @@ class MoneyScreen extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(22),
         children: [
-          PortalIntro(
+          if(!embedded)PortalIntro(
             appText('s796'),
             eyebrow: '${gym['name']}',
             detail: appText('s797'),
@@ -95,10 +95,13 @@ class MoneyScreen extends StatelessWidget {
               ],
             ),
           ),
+          if(section!=1)...[
           SectionTitle(appText('s804')),
           PortalNote(appText('s805')),
           Panel(child:Column(children:[Fact(appText('s806'),appText('s122', [money(charges['grossAvailablePiasters']??'0')])),Fact(appText('s807'),appText('s122', [money(charges['debtPiasters']??'0')])),Fact(appText('s808'),appText('s122', [money(charges['scheduledPiasters']??'0')])),Fact(appText('s809'),appText('s122', [money(net)]))])),
           for(final c in (charges['items'] as List? ?? []))Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('${c['description']}'),Fact(appText('s810'),appText('s122', [money(c['amountPiasters'])])),Fact(appText('s811'),appText('s122', [money(c['collectedPiasters'])])),Fact(appText('s812'),appText('s122', [money(c['outstandingPiasters'])]))])),
+          ],
+          if(section!=0)...[
           SectionTitle(appText('s813')),
           if (rows(data[1]).isEmpty) EmptyState(appText('s814')),
           ...rows(data[1]).map(
@@ -144,11 +147,11 @@ class MoneyScreen extends StatelessWidget {
               ),
             ),
           ),
+          ],
         ],
       );
     },
-    ),
-  ); }
+    );
 }
 
 class WithdrawalForm extends StatefulWidget {

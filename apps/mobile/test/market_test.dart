@@ -19,7 +19,7 @@ void main() {
       await t.pumpWidget(page(NativeShell(api: api, gyms: role == 'GYM_OWNER'
         ? [{'id': 'g1', 'name': 'جيم اختبار', 'status': 'ACTIVE'}] : const [])));
       await t.pumpAndSettle();
-      await t.tap(find.widgetWithText(NavigationDestination, 'الماركت'));
+      if(role=='GYM_OWNER'){await t.tap(find.widgetWithText(NavigationDestination,'المزيد'));await t.pumpAndSettle();await t.scrollUntilVisible(find.text('الماركت'),150);await t.tap(find.text('الماركت'));}else{await t.tap(find.widgetWithText(NavigationDestination, 'الماركت'));}
       await t.pumpAndSettle();
       expect(find.byType(MarketScreen), findsOneWidget);
       expect(find.text('كل المعروض'), findsOneWidget);

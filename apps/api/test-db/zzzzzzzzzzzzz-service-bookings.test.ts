@@ -53,4 +53,13 @@ test('multi-service escrow captures approved terms, rejects stale/foreign servic
  assert.equal(await db.pointTransaction.count({where:{idempotencyKey:'booking-resolution:'+booking.id}}),1);
  await setBookingHours(db,owner.id,branch.id,{openMinute:60,closeMinute:1439,expectedVersion:1});
  await assert.rejects(createBooking(db,customer.id,randomUUID(),latest),/STALE_SETTINGS/);
+ // Explicit service hours work without general branch hours; inherited hours do not.
+ await db.branch.update({where:{id:branch.id},data:{bookingOpenMinute:null,bookingCloseMinute:null,bookingHoursVersion:3}});
+ await db.branchService.updateMany({where:{branchId:branch.id},data:{openMinute:0,closeMinute:1439}});
+ const standalone=await createBooking(db,customer.id,randomUUID(),{...latest,hoursVersion:3});
+ assert.equal(standalone.points,70);
+ await cancelBooking(db,customer.id,standalone.id,{reason:'Test standalone service hours'});
+ await db.branchService.update({where:{id:services[1]!.id},data:{openMinute:null,closeMinute:null}});
+ await assert.rejects(createBooking(db,customer.id,randomUUID(),{...latest,hoursVersion:3}),/BOOKING_HOURS_NOT_CONFIGURED/);
+ assert.equal((await db.pointAccount.findUniqueOrThrow({where:{id:wallet.id}})).balance,200);
 });

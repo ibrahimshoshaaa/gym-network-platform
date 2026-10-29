@@ -17,6 +17,7 @@ const page = z
   })
   .strict();
 export function registerReportRoutes(app: FastifyInstance, db: PrismaClient) {
+  app.get('/reports/calendar',async r=>{await requireActor(db,await actorId(db,r));const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Cairo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const value=(key:string)=>parts.find(p=>p.type===key)!.value;return {day:`${value('year')}-${value('month')}-${value('day')}`,timeZone:'Africa/Cairo'};});
   app.get('/reports/platform-balances',async r=>{
     const id=await actorId(db,r);await requireAdmin(db,id);await consumeAuthLimit(db,'platform-balances',id,60,900);
     const q=parse(z.object({kind:z.enum(['TRAINEES','GYMS']),cursor:uuid.optional(),limit:z.coerce.number().int().min(1).max(25).default(25)}).strict(),r.query);

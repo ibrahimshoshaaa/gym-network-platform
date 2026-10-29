@@ -332,7 +332,8 @@ class BranchSale extends StatelessWidget {
 class RecordVisit extends StatefulWidget {
   final ApiClient api;
   final Json branch;
-  const RecordVisit({super.key, required this.api, required this.branch});
+  final bool embedded;
+  const RecordVisit({super.key, required this.api, required this.branch,this.embedded=false});
   @override
   State<RecordVisit> createState() => _RecordVisitState();
 }
@@ -388,9 +389,8 @@ class _RecordVisitState extends State<RecordVisit> {
   }
 
   @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(
-    title: appText('s109'),
-    child: ListView(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return widget.embedded ? content(context) : Screen(title:appText('s109'),child:content(context)); }
+  Widget content(BuildContext context)=>ListView(
       padding: const EdgeInsets.all(22),
       children: [
         OperationContext(title:'${widget.branch['name']}',detail:appText('s396'),icon:Icons.qr_code_scanner_rounded),
@@ -501,8 +501,7 @@ class _RecordVisitState extends State<RecordVisit> {
             ),
         ],
       ],
-    ),
-  ); }
+    );
 }
 
 class ScanTicket extends StatefulWidget {

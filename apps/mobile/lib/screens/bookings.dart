@@ -51,7 +51,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
  bool serviceBooking=false,startNow=false;
  int get points => serviceBooking?services.where((s)=>selected.contains(s['id'])).fold(0,(sum,s)=>sum+(s['points'] as int)):(widget.branch['visitPricePoints'] as num? ?? 0).toInt();
  int get minutes => serviceBooking?services.where((s)=>selected.contains(s['id'])).fold(0,(sum,s)=>sum+(s['durationMinutes'] as int)):(widget.branch['sessionMinutes'] as num? ?? 0).toInt();
- bool get ready => !serviceBooking || (selected.isNotEmpty && hours?['openMinute']!=null && points<=1000000 && minutes<=1440);
+ bool get ready => !serviceBooking || (selected.isNotEmpty && services.where((s)=>selected.contains(s['id'])).every((s)=>hours?['openMinute']!=null || (s['openMinute']!=null && s['closeMinute']!=null)) && points<=1000000 && minutes<=1440);
  DateTime? when;
  bool loading=true,busy=false,accepted=false;
  Object? error;
@@ -115,7 +115,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen>{
       onChanged:locked?null:(value)=>setState((){if(value==true)selected.add(service['id'] as String);else selected.remove(service['id']);accepted=false;}),
       title:Text(serviceLabel(service)),subtitle:Text('${appText('s193', [service['points'], service['durationMinutes']])}${service['openMinute']==null?'':' · ${serviceHours(service)}'}')),
      if(services.isEmpty)Text(appText('s194')),
-     if(hours?['openMinute']==null)Text(appText('s43')),
+     if(hours?['openMinute']==null && !ready)Text(appText('ownerMissingHours')),
+     if(hours?['openMinute']==null && ready)Text(appText('ownerServiceHoursApply')),
      if(hours?['openMinute']!=null)Text(appText('s195', [minuteLabel(hours!['openMinute'] as int), minuteLabel(hours!['closeMinute'] as int)])),
      if(points>1000000||minutes>1440)Text(appText('s196')),
      Text(appText('s197')),

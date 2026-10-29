@@ -28,3 +28,13 @@ test('service selection rejects duplicates, unversioned terms, client totals, an
  assert.equal(createBookingSchema.safeParse(body).success,true);
  for(const invalid of [{...body,services:[...body.services,...body.services]},{...body,hoursVersion:undefined},{...body,points:1},{...body,scheduledAt:'2026-11-01T12:00:00Z'},{...body,startNow:undefined}])assert.equal(createBookingSchema.safeParse(invalid).success,false);
 });
+
+test('combined service windows use earliest closing for booking and attendance',()=>{
+ const start=new Date('2026-11-01T10:00:00+02:00');
+ const combined={openMinute:0,closeMinute:1380,additional:[{openMinute:540,closeMinute:660}]};
+ const close=requireSessionFits(start,60,combined).closesAt;
+ assert.equal(close.toISOString(),'2026-11-01T09:00:00.000Z');
+ assert.throws(()=>requireSessionFits(start,61,combined),/SESSION_ENDS_AFTER_CLOSING/);
+ assert.equal(attendanceEnd(new Date('2026-11-01T10:30:00+02:00'),60,combined,close).getTime(),close.getTime());
+ assert.throws(()=>attendanceEnd(new Date('2026-11-01T12:00:00+02:00'),60,combined,close),/OUTSIDE_OPENING_HOURS/);
+});

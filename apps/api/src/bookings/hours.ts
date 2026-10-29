@@ -1,7 +1,7 @@
 import { DomainError } from '../domain/errors.js';
 
 export const bookingTimeZone = 'Africa/Cairo';
-export type DailyHours = { openMinute: number; closeMinute: number };
+export type DailyHours = { openMinute: number; closeMinute: number; additional?: DailyHours[] };
 const formatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: bookingTimeZone, year: 'numeric', month: '2-digit', day: '2-digit',
   hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
@@ -37,12 +37,14 @@ export function sessionWindow(start: Date, hours: DailyHours) {
   };
 }
 export function requireSessionFits(start: Date, minutes: number, hours: DailyHours) {
-  const window = sessionWindow(start, hours);
+  const windows=[sessionWindow(start,hours),...(hours.additional??[]).map(h=>sessionWindow(start,h))];
+  const window={opensAt:new Date(Math.max(...windows.map(w=>w.opensAt.getTime()))),closesAt:new Date(Math.min(...windows.map(w=>w.closesAt.getTime())))};
   if (start.getTime() + minutes * 60000 > window.closesAt.getTime()) throw new DomainError('SESSION_ENDS_AFTER_CLOSING');
   return window;
 }
 export function attendanceEnd(start: Date, minutes: number, hours: DailyHours, scheduledClosesAt: Date | null) {
-  const window = sessionWindow(start, hours);
+  const windows=[sessionWindow(start,hours),...(hours.additional??[]).map(h=>sessionWindow(start,h))];
+  const window={closesAt:new Date(Math.min(...windows.map(w=>w.closesAt.getTime())))};
   if (!scheduledClosesAt || window.closesAt.getTime() !== scheduledClosesAt.getTime()) throw new DomainError('OUTSIDE_OPENING_HOURS');
   return new Date(Math.min(start.getTime() + minutes * 60000, window.closesAt.getTime()));
 }

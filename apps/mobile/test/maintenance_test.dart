@@ -17,7 +17,7 @@ Map<String, dynamic> repair({bool approve = false, String status = 'AWAITING_APP
 };
 void main() {
   for (final role in ['GYM_OWNER', 'BRANCH_MANAGER', 'CASHIER']) {
-    testWidgets('$role opens maintenance only from account on a narrow screen', (t) async {
+    testWidgets('$role opens maintenance from its role menu on a narrow screen', (t) async {
       await t.binding.setSurfaceSize(const Size(320, 800));
       addTearDown(() => t.binding.setSurfaceSize(null));
       final requested = <String>[];
@@ -28,9 +28,9 @@ void main() {
       await t.pumpWidget(page(NativeShell(api: api, gyms: role == 'GYM_OWNER'
         ? [{'id': 'g1', 'name': 'جيم اختبار', 'status': 'ACTIVE'}] : const [])));
       await t.pumpAndSettle();
-      expect(find.text('الصيانة'), findsNothing);
+      if(role!='GYM_OWNER')expect(find.text('الصيانة'), findsNothing);
       expect(find.byTooltip('الصيانة'), findsNothing);
-      await t.tap(find.text('حسابي'));
+      await t.tap(find.widgetWithText(NavigationDestination,role=='GYM_OWNER'?'المزيد':'حسابي'));
       await t.pumpAndSettle();
       expect(find.byTooltip('الصيانة'), findsNothing);
       await t.scrollUntilVisible(find.text('الصيانة'), 180, scrollable: find.byType(Scrollable).first);

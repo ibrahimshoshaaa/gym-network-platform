@@ -16,7 +16,7 @@ import 'screens/market.dart';
 import 'screens/booking_admin.dart';
 import 'screens/directory.dart';
 import 'screens/owner.dart';
-import 'screens/money.dart';
+import 'screens/owner_portal.dart';
 import 'screens/account.dart';
 import 'screens/operations.dart';
 
@@ -309,10 +309,10 @@ class _NativeShellState extends State<NativeShell> {
     final tabs = owner
         ? [
             (Icons.dashboard_outlined, appText('s6')),
-            (Icons.storefront_outlined, appText('s7')),
-            (Icons.qr_code_scanner_rounded, appText('s8')),
-            (Icons.shopping_bag_outlined, appText('s9')),
-            (Icons.person_outline_rounded, appText('s10')),
+            (Icons.people_outline, appText('ownerVisits')),
+            (Icons.qr_code_scanner_rounded, appText('ownerScan')),
+            (Icons.account_balance_wallet_outlined, appText('ownerFinance')),
+            (Icons.menu_rounded, appText('ownerMore')),
           ]
         : staff
         ? [
@@ -329,52 +329,8 @@ class _NativeShellState extends State<NativeShell> {
             (Icons.shopping_bag_outlined, appText('s9')),
             (Icons.person_outline_rounded, appText('s10')),
           ];
-    final workHomeTools=Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-            if (owner && index != 3 && widget.gyms.length > 1)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.storefront_outlined,
-                      color: green,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Semantics(
-                        label: appText('s14'),
-                        child: DropdownButton<int>(
-                          value: gymIndex,
-                          isExpanded: true,
-                          underline: const SizedBox.shrink(),
-                          items: [
-                            for (var i = 0; i < widget.gyms.length; i++)
-                              DropdownMenuItem(
-                                value: i,
-                                child: Text(
-                                  '${widget.gyms[i]['name']}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                          ],
-                          onChanged: widget.api.pending != null
-                              ? null
-                              : (v) => setState(() {
-                                  gymIndex = v!;
-                                  version++;
-                                }),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-     Wrap(alignment:WrapAlignment.end,spacing:8,children:[
+    final workHomeTools=Wrap(alignment:WrapAlignment.end,children:[
       if(widget.api.user?['role']=='TRAINEE'&&widget.assignedWork)TextButton(onPressed:widget.api.pending!=null?null:()=>setState((){workMode=false;index=0;version++;}),child:Text(appText('s15'))),
-     ]),
     ]);
     Widget content;
     if (owner) {
@@ -382,15 +338,16 @@ class _NativeShellState extends State<NativeShell> {
         0 => OwnerHome(
           api: widget.api,
           gym: gym!,
-          showBranches: () => setState(() => index = 1),
-          showMoney: () => open(context, MoneyScreen(api: widget.api, gym: gym)),
+          showBranches: () => open(context, Screen(title:appText('ownerManageBranches'),child:BranchesScreen(api:widget.api,gym:gym))),
+          showVisits: () => setState(() => index = 1),
+          showMoney: () => setState(() => index = 3),
           showOperations: () => setState(() => index = 2),
           homeTools:workHomeTools,
         ),
-        1 => BranchesScreen(api: widget.api, gym: gym!),
-        2 => OperationsHome(api: widget.api, gymId: '${gym!['id']}'),
-        3 => MarketScreen(api: widget.api),
-        _ => AccountScreen(api: widget.api, workplace: true, ownerView: true),
+        1 => OwnerVisits(api: widget.api, gym: gym!),
+        2 => OwnerScan(api: widget.api, gym: gym!),
+        3 => OwnerFinance(api: widget.api, gym: gym!),
+        _ => OwnerMore(api: widget.api, gym: gym!),
       };
     } else if (staff) {
       content = index < 3
@@ -416,7 +373,7 @@ class _NativeShellState extends State<NativeShell> {
     return AnnotatedRegion<SystemUiOverlayStyle>(value: index == 0 ? SystemUiOverlayStyle.light.copyWith(statusBarColor: ink) : SystemUiOverlayStyle.dark, child: Scaffold(
       backgroundColor: index == 0 ? ink : canvas,
       extendBody: !staff,
-      appBar: index == 0 || (!workMode && (index == 1 || index == 3)) ? null : AppBar(
+      appBar: owner || index == 0 || (!workMode && (index == 1 || index == 3)) ? null : AppBar(
         title: const Brand(),
         centerTitle: !workMode,
         actions: [
@@ -443,8 +400,8 @@ class _NativeShellState extends State<NativeShell> {
             padding: EdgeInsets.only(bottom: staff ? 0 : 60 + MediaQuery.viewPaddingOf(context).bottom),
             child: Column(
           children: [
-            if (owner && index != 0 && index != 3 && widget.gyms.length > 1)
-              Padding(
+            if (owner && widget.gyms.length > 1)
+              Container(color:canvas,
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
                 child: Row(
                   children: [
@@ -545,10 +502,10 @@ class _NativeShellState extends State<NativeShell> {
               child: KeyedSubtree(
                 key: ValueKey('$index:$gymIndex:$version'),
                 child: Theme(
-                  data: !workMode ? Theme.of(context).copyWith(
+                  data: (!workMode || owner) ? Theme.of(context).copyWith(
                     textTheme: Theme.of(context).textTheme.copyWith(
-                      titleLarge: const TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:ink),
-                      headlineMedium: const TextStyle(fontSize:23,fontWeight:FontWeight.w800,color:ink),
+                      titleLarge: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize:18,fontWeight:FontWeight.w800,color:ink),
+                      headlineMedium: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize:23,fontWeight:FontWeight.w800,color:ink),
                     ),
                   ) : Theme.of(context),
                   child: content,

@@ -5,7 +5,7 @@ import '../core/ui.dart';
 
 String presetLabel(Json item) => '${item[AppLanguage.instance.english ? 'nameEn' : 'nameAr'] ?? item['name'] ?? ''}';
 String serviceLabel(Json item) => item['preset'] is Map ? presetLabel(Map<String,dynamic>.from(item['preset'])) : '${item['name']}';
-String serviceHours(Json item) => item['openMinute']==null ? '' : '${serviceMinuteLabel(item['openMinute'])} – ${serviceMinuteLabel(item['closeMinute'])}';
+String serviceHours(Json item) => item['openMinute']==null ? '' : '\u2066${serviceMinuteLabel(item['openMinute'])} – ${serviceMinuteLabel(item['closeMinute'])}\u2069';
 String serviceMinuteLabel(dynamic value) => '${((value as int) ~/ 60).toString().padLeft(2,'0')}:${(value % 60).toString().padLeft(2,'0')}';
 bool _hasPending(Json service) => (service['requests'] as List? ?? []).any((r) => r['status'] == 'PENDING');
 
@@ -15,12 +15,11 @@ class BranchServicesScreen extends StatelessWidget {
   const BranchServicesScreen({super.key, required this.api, required this.gymId, required this.branchId, required this.branchName});
   String get path => 'gyms/$gymId/branches/$branchId/services';
   @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(title: appText('s753'), child: DataView(
+  Widget build(BuildContext context) { AppLanguage.watch(context); return DefaultTabController(length:3,child:Screen(title:appText('s753'),child:Column(children:[TabBar(tabs:[Tab(text:appText('ownerServices')),Tab(text:appText('presetFacilities')),Tab(text:appText('ownerHours'))]),Expanded(child:DataView(
     load: () => api.request(path),
-    builder: (data, reload) { return  ListView(padding: const EdgeInsets.all(20), children: [
+    builder: (data, reload) { return TabBarView(children:[ListView(padding:const EdgeInsets.all(16),children:[
       Text(branchName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-      BookingHoursEditor(api: api, path: path, hours: data['hours'] == null ? null : Map<String,dynamic>.from(data['hours']), reload: reload),
-      FacilityEditor(api: api, path: path, selected: List<String>.from(data['facilityIds'] ?? []), version: data['hours']?['version'] ?? 0, reload: reload),
+      if(data['hours']?['openMinute']==null) Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(appText('ownerSetupHoursNote'),style:const TextStyle(color:green,fontSize:12))),
       Text(appText('s907')),
       const SizedBox(height: 16),
       ActionButton(appText('s908'), onPressed: () async { await open(context, BranchServiceForm(api: api, path: path)); await reload(); }),
@@ -30,7 +29,7 @@ class BranchServicesScreen extends StatelessWidget {
         Text(serviceLabel(service), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
         if ('${service['description'] ?? ''}'.isNotEmpty) Text('${service['description']}'),
         Text(service['approvedAt'] == null ? appText('s911') : appText('s912', [service['points'], service['durationMinutes'], service['active'] == true ? appText('s1010') : appText('s1011')])),
-        if(service['openMinute'] != null) Text(serviceHours(service)),
+        if(service['openMinute'] != null) Text(serviceHours(service),textDirection:TextDirection.ltr),
         if (_hasPending(service)) Text(appText('s913'), style: TextStyle(color: green)),
         if ((service['requests'] as List? ?? []).isNotEmpty && service['requests'][0]['status'] == 'REJECTED') Text(appText('s914', [service['requests'][0]['reviewReason'] ?? ''])),
         TextButton(onPressed: _hasPending(service) ? null : () async {
@@ -38,8 +37,8 @@ class BranchServicesScreen extends StatelessWidget {
         }, child: Text(appText('s915'))),
         if (service['approvedAt'] != null) _Availability(api: api, path: path, service: service, reload: reload),
       ])),
-    ]); },
-  )); }
+    ]),ListView(padding:const EdgeInsets.all(16),children:[FacilityEditor(api:api,path:path,selected:List<String>.from(data['facilityIds']??[]),version:data['hours']?['version']??0,reload:reload)]),ListView(padding:const EdgeInsets.all(16),children:[BookingHoursEditor(api:api,path:path,hours:data['hours']==null?null:Map<String,dynamic>.from(data['hours']),reload:reload)])]); },
+  ))]))); }
 }
 
 class BookingHoursEditor extends StatefulWidget {
@@ -68,6 +67,7 @@ class _BookingHoursEditorState extends State<BookingHoursEditor> {
   }
   String label(dynamic minute) => minute == null ? appText('s918') : '${((minute as int) ~/ 60).toString().padLeft(2,'0')}:${(minute % 60).toString().padLeft(2,'0')}';
   @override Widget build(BuildContext context) { AppLanguage.watch(context); return  Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    if(widget.hours?['openMinute']==null)Text(appText('ownerMissingBranchHours'),style:const TextStyle(color:green)),
     Text(appText('s919'), style: TextStyle(fontWeight: FontWeight.w800)),
     Text(appText('s920', [label(widget.hours?['openMinute']), label(widget.hours?['closeMinute'])])),
     Text(appText('s921')),
@@ -104,7 +104,7 @@ class _BranchServiceFormState extends State<BranchServiceForm> {
   late final fields = {for (final k in ['name', 'description', 'points', 'durationMinutes', 'reason']) k: TextEditingController(text: '${widget.service?[k] ?? ''}')};
   bool busy = false; Object? error;
   List<Json>? presets;
-  String? selectedPreset;
+  String? selectedPreset;bool choosing=true;
   int? openMinute, closeMinute;
   @override void initState() { super.initState(); selectedPreset=widget.service?['presetId'] as String?; openMinute=widget.service?['openMinute'] as int?; closeMinute=widget.service?['closeMinute'] as int?; loadPresets(); }
   Future<void> loadPresets() async { try { final data=await widget.api.request('service-presets'); if(mounted)setState(()=>presets=rows(data).where((p)=>p['kind']=='SERVICE').toList()); } catch(e){if(mounted)setState(()=>error=e);} }
@@ -132,15 +132,16 @@ class _BranchServiceFormState extends State<BranchServiceForm> {
   @override Widget build(BuildContext context) { AppLanguage.watch(context); return  Screen(title: widget.service == null ? appText('s926') : appText('s927'), child: Form(key: form, child: ListView(padding: const EdgeInsets.all(20), children: [
     Text(appText('presetChoose'),style:const TextStyle(fontWeight:FontWeight.w800)),
     if(presets==null) const LinearProgressIndicator(),
-    if(presets!=null && widget.service==null) ...[
+    if(presets!=null && widget.service==null && choosing) ...[
       for(final category in ['training','classes','spa','nutrition','facilities']) ...[
         Text(appText('presetCategory_$category')),
-        Wrap(spacing:8,runSpacing:8,children:[for(final preset in presets!.where((p)=>p['category']==category)) ChoiceChip(label:Text(presetLabel(preset)),selected:selectedPreset==preset['id'],onSelected:busy?null:(_)=>setState((){selectedPreset='${preset['id']}';fields['name']!.text='${preset['nameAr']}';}))]),
+        Wrap(spacing:8,runSpacing:8,children:[for(final preset in presets!.where((p)=>p['category']==category)) ChoiceChip(label:Text(presetLabel(preset)),selected:selectedPreset==preset['id'],onSelected:busy?null:(_)=>setState((){selectedPreset='${preset['id']}';choosing=false;fields['name']!.text='${preset['nameAr']}';}))]),
         const SizedBox(height:12),
       ],
     ] else if(widget.service!=null) Text(serviceLabel(widget.service!),style:const TextStyle(fontWeight:FontWeight.w800)),
+    if(widget.service==null && !choosing)ListTile(contentPadding:EdgeInsets.zero,title:Text(presetLabel(presets!.firstWhere((p)=>p['id']==selectedPreset))),trailing:TextButton(onPressed:()=>setState(()=>choosing=true),child:Text(appText('ownerChange')))),
     Text(appText('presetServiceHours')),
-    Text(openMinute==null?appText('presetBranchHours'):'${serviceMinuteLabel(openMinute)} – ${serviceMinuteLabel(closeMinute)}'),
+    Text(openMinute==null?appText('presetBranchHours'):'${serviceMinuteLabel(openMinute)} – ${serviceMinuteLabel(closeMinute)}',textDirection:openMinute==null?null:TextDirection.ltr),
     Wrap(spacing:8,children:[TextButton(onPressed:busy?null:hours,child:Text(appText('s923'))),TextButton(onPressed:busy?null:()=>setState((){openMinute=null;closeMinute=null;}),child:Text(appText('presetBranchHours')))]),
     for (final entry in { 'description': appText('s929'), 'points': appText('s137'), 'durationMinutes': appText('s930'), 'reason': appText('s931')}.entries) Padding(padding: const EdgeInsets.only(bottom: 14), child: TextFormField(
       controller: fields[entry.key], enabled: !busy, decoration: InputDecoration(labelText: entry.value),

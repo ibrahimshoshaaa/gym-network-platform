@@ -1,7 +1,7 @@
 import '../l10n/language.dart';
 import 'branch_entry.dart';
+import 'owner_portal.dart';
 import 'branch_services.dart';
-import 'work_balance_hero.dart';
 import 'branch_cover.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -24,187 +24,35 @@ class OwnerHome extends StatefulWidget {
  final ApiClient api;
  final Json gym;
  final VoidCallback showBranches,showMoney,showOperations;
+ final VoidCallback? showVisits;
  final Widget? homeTools;
  const OwnerHome({super.key,required this.api,required this.gym,
-   required this.showBranches,required this.showMoney,required this.showOperations,this.homeTools});
+   required this.showBranches,required this.showMoney,required this.showOperations,this.homeTools,this.showVisits});
  @override State<OwnerHome> createState()=>_OwnerHomeState();
 }
-class _OwnerHomeState extends State<OwnerHome> {
- Json? report;Object? error;bool loading=true;int generation=0;
- @override void initState(){super.initState();load();}
- Future<void> load()async{final current=++generation;setState((){loading=true;error=null;});try{final r=Map<String,dynamic>.from(await widget.api.request('reports/summary?gymId=${widget.gym['id']}&${reportRange()}'));if(mounted&&current==generation)setState(()=>report=r);}catch(e){if(mounted&&current==generation)setState(()=>error=e);}finally{if(mounted&&current==generation)setState(()=>loading=false);}}
- String? balance(String type){if(report==null)return null;return '${(report!['currentBalances'] as List? ?? []).cast<Map>().where((b)=>b['type']==type).firstOrNull?['balancePiasters']??'0'}';}
- @override Widget build(BuildContext context){ AppLanguage.watch(context); return ColoredBox(color:canvas,child:RefreshIndicator(onRefresh:load,child:ListView(padding:const EdgeInsets.only(bottom:28),physics:const AlwaysScrollableScrollPhysics(),children:[
- WorkBalanceHero(api:widget.api,scope:appText('s735', [widget.gym['name']]),label:appText('s736'),points:report==null?null:money(balance('GYM_AVAILABLE')),unit:appText('s106'),loading:loading,
- primary:BalanceHeroAction(appText('s737'),Icons.payments_outlined,widget.showMoney),secondary:BalanceHeroAction(appText('s109'),Icons.qr_code_scanner_rounded,widget.gym['status']=='ACTIVE'?widget.showOperations:null),footer:BalanceHeroAction(appText('s738'),Icons.storefront_outlined,widget.showBranches)),
- if(widget.homeTools!=null)widget.homeTools!,
- if(error!=null)ErrorNote(error,retry:load),
- Padding(padding:EdgeInsets.all(20),child:PortalNote(appText('s739'))),
- Padding(padding:const EdgeInsets.symmetric(horizontal:20),child:Panel(child:Column(children:[
- _ownerTask(appText('s740'),appText('s741'),Icons.storefront_outlined,widget.showBranches),
- _ownerTask(appText('s742'),appText('s743'),Icons.insights_rounded,()=>open(context,OwnerReport(api:widget.api,gymId:widget.gym['id']))),
- Fact(appText('s744'),report==null?'—':appText('s122', [money(balance('GYM_RESERVED'))])),Fact(appText('s573'),report==null?'—':appText('s122', [money(balance('GYM_DISPUTED'))])),
- ]))),
- ]))); }
+class _OwnerHomeState extends State<OwnerHome>{
+ @override Widget build(BuildContext context)=>OwnerOverview(api:widget.api,gym:widget.gym,branches:widget.showBranches,finance:widget.showMoney,scan:widget.showOperations,visits:widget.showVisits,tools:widget.homeTools);
 }
 
-Widget _ownerTask(String title,String detail,IconData icon,VoidCallback? tap)=>ListTile(
- contentPadding:EdgeInsets.zero,enabled:tap!=null,
- leading:Icon(icon,color:tap==null?muted:green,size:23),
- title:Text(title,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w700)),
- subtitle:Text(detail,style:const TextStyle(fontSize:11,color:muted)),
- trailing:const Icon(Icons.chevron_right_rounded,size:20,color:muted),onTap:tap,
-);
-
-
 class BranchesScreen extends StatelessWidget {
-  final ApiClient api;
-  final Json gym;
-  const BranchesScreen({super.key, required this.api, required this.gym});
-  @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  DataView(
-    load: () => api.request('gyms/${gym['id']}/branches?limit=100'),
-    builder: (d, reload) { return  ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                appText('s745', [gym['name']]),
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ),
-            IconButton.filled(
-              tooltip: appText('s746'),
-              onPressed: () async {
-                await open(context, BranchForm(api: api, gymId: gym['id']));
-                await reload();
-              },
-              icon: const Icon(Icons.add_rounded),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text(
-          appText('s747'),
-          style: TextStyle(color: muted),
-        ),
-        const SizedBox(height: 22),
-        if (rows(d).isEmpty)
-          EmptyState(
-            appText('s748'),
-            detail: appText('s749'),
-          ),
-        ...rows(d).map(
-          (b) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Panel(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: b['status'] != 'ACTIVE' || gym['status'] != 'ACTIVE' ? null : () async {
-                            await open(context, BranchWorkspace(api: api, branch: {...b, 'gymName': gym['name'], 'canOperate': true, 'canCancel': true, 'fullAccess': true}));
-                            await reload();
-                          },
-                          child: Text('${b['name']}', style: Theme.of(context).textTheme.titleLarge),
-                        ),
-                      ),
-                      StatusPill(b['status']),
-                    ],
-                  ),
-                  Text(
-                    '${b['address']}',
-                    style: const TextStyle(color: muted, fontSize: 12),
-                  ),
-                  Fact(
-                    appText('s750'),
-                    appText('s193', [b['visitPricePoints'], b['sessionMinutes']]),
-                  ),
-                  if (b['priceApprovedAt'] == null)
-                    Text(
-                      appText('s751'),
-                      style: TextStyle(color: green, fontSize: 12),
-                    ),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      TextButton.icon(onPressed:()async{await open(context,BranchCoverScreen(api:api,gymId:'${gym['id']}',branchId:'${b['id']}',branchName:'${b['name']}'));},icon:const Icon(Icons.photo_outlined,size:18),label:Text(appText('s439'))),
-                      TextButton.icon(
-                        onPressed:
-                            b['status'] != 'ACTIVE' || gym['status'] != 'ACTIVE'
-                            ? null
-                            : () async {
-                                await open(
-                                  context,
-                                  BranchWorkspace(
-                                    api: api,
-                                    branch: {
-                                      ...b,
-                                      'gymName': gym['name'],
-                                      'canOperate': true,
-                                      'canCancel': true,
-                                      'fullAccess': true,
-                                    },
-                                  ),
-                                );
-                                await reload();
-                              },
-                        icon: const Icon(
-                          Icons.qr_code_scanner_rounded,
-                          size: 18,
-                        ),
-                        label: Text(appText('s108')),
-                      ),
-                      SizedBox(width:double.infinity,child:ExpansionTile(
-                        tilePadding:EdgeInsets.zero,
-                        title:Text(appText('s488'),style:TextStyle(fontSize:13,fontWeight:FontWeight.w700)),
-                        children:[Wrap(spacing:8,runSpacing:4,children:[
-                      TextButton(
-                        onPressed: () async {
-                          await open(
-                            context,
-                            BranchForm(api: api, gymId: gym['id'], branch: b),
-                          );
-                          await reload();
-                        },
-                        child: Text(appText('s752')),
-                      ),
-                      TextButton(onPressed:()=>open(context,BranchServicesScreen(api:api,gymId:'${gym['id']}',branchId:'${b['id']}',branchName:'${b['name']}')),child:Text(appText('s753'))),
-                      if(b['status']=='ACTIVE')TextButton(onPressed:()=>open(context,BranchEntryQrScreen(api:api,branch:Map<String,dynamic>.from(b))),child:Text(appText('s370'))),
-                      TextButton(
-                        onPressed: () => open(
-                          context,
-                          StaffScreen(api: api, gymId: gym['id'], branch: b),
-                        ),
-                        child: Text(appText('s754')),
-                      ),
-                      TextButton(
-                        onPressed: () => open(
-                          context,
-                          OwnerReport(api: api, gymId: gym['id'], branch: b),
-                        ),
-                        child: Text(appText('s755')),
-                      ),
-
-                        ])],
-                      )),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    ); },
-  ); }
+ final ApiClient api;final Json gym;
+ const BranchesScreen({super.key,required this.api,required this.gym});
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return DataView(load:()=>api.request('gyms/${gym['id']}/branches?limit=100'),builder:(data,reload)=>ListView(padding:const EdgeInsets.all(16),children:[
+ Row(children:[Expanded(child:Text('${gym['name']}',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800))),FilledButton.icon(onPressed:()async{await open(context,BranchForm(api:api,gymId:'${gym['id']}'));await reload();},icon:const Icon(Icons.add,size:18),label:Text(appText('ownerAddBranch')))]),
+ const SizedBox(height:12),if(rows(data).isEmpty)EmptyState(appText('s748'),detail:appText('s749')),
+ for(final b in rows(data))Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+ Row(children:[Expanded(child:Text('${b['name']}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w800))),StatusPill(b['status'])]),
+ Text('${b['address']??''}',style:const TextStyle(color:muted,fontSize:12)),const SizedBox(height:12),
+ Wrap(spacing:8,runSpacing:8,children:[FilledButton.tonalIcon(onPressed:()async{await open(context,BranchServicesScreen(api:api,gymId:'${gym['id']}',branchId:'${b['id']}',branchName:'${b['name']}'));await reload();},icon:const Icon(Icons.fitness_center,size:18),label:Text(appText('s753'))),
+ OutlinedButton.icon(onPressed:()async{await open(context,BranchForm(api:api,gymId:'${gym['id']}',branch:b));await reload();},icon:const Icon(Icons.edit_outlined,size:18),label:Text(appText('ownerBranchData'))),
+ OutlinedButton.icon(onPressed:()=>open(context,StaffScreen(api:api,gymId:'${gym['id']}',branch:b)),icon:const Icon(Icons.people_outline,size:18),label:Text(appText('ownerTeam'))),
+ TextButton.icon(onPressed:()=>open(context,BranchCoverScreen(api:api,gymId:'${gym['id']}',branchId:'${b['id']}',branchName:'${b['name']}')),icon:const Icon(Icons.photo_outlined,size:18),label:Text(appText('s439'))),
+ if(b['status']=='ACTIVE')TextButton.icon(onPressed:()=>open(context,BranchEntryQrScreen(api:api,branch:Map<String,dynamic>.from(b))),icon:const Icon(Icons.qr_code,size:18),label:Text(appText('s370'))),
+ TextButton.icon(onPressed:()=>open(context,OwnerReport(api:api,gymId:'${gym['id']}',branch:b)),icon:const Icon(Icons.insights,size:18),label:Text(appText('ownerReports'))),
+ if(b['status']=='ACTIVE'&&gym['status']=='ACTIVE')TextButton.icon(onPressed:()async{await open(context,BranchWorkspace(api:api,branch:{...b,'gymName':gym['name'],'canOperate':true,'canCancel':true,'fullAccess':true}));await reload();},icon:const Icon(Icons.settings_outlined,size:18),label:Text(appText('ownerBranchOperations'))),
+ ]),
+ ])),
+ ]));}
 }
 
 class BranchForm extends StatefulWidget {
@@ -321,6 +169,7 @@ class _BranchFormState extends State<BranchForm> {
                     ? TextInputType.phone
                     : TextInputType.text,
                 decoration: InputDecoration(
+                  helperText:e.key=='openingHours'?appText('ownerDisplayHoursHint'):null,
                   labelText: {
                     'name': appText('s489'),
                     'address': appText('s300'),
@@ -684,57 +533,7 @@ class _InviteStaffState extends State<InviteStaff> {
 }
 
 class OwnerReport extends StatelessWidget {
-  final ApiClient api;
-  final String gymId;
-  final Json? branch;
-  const OwnerReport({
-    super.key,
-    required this.api,
-    required this.gymId,
-    this.branch,
-  });
-  @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  DefaultTabController(
-    length: 1,
-    child: Scaffold(
-      appBar: AppBar(
-        title: Text(branch == null ? appText('s791') : appText('s792', [branch!['name']])),
-        bottom: TabBar(
-          tabs: [
-            Tab(text: appText('s11')),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        children: [
-          for (final kind in ['VISITS'])
-            PagedRecords(
-              api: api,
-              path:
-                  'reports/rows?gymId=$gymId&${reportRange()}&kind=$kind${branch == null ? '' : '&branchId=${branch!['id']}'}',
-              item: (r) => Panel(
-                child: Column(
-                  children: [
-                    Fact(
-                      r['branchName'] ?? appText('s793'),
-                      appText('s120', [r['points']]),
-                      strong: true,
-                    ),
-                    Fact(appText('s794'), appText('s122', [money(r['amountPiasters'])])),
-                    StatusPill(r['status']),
-                    Text(
-                      shortDate(r['eventAt']),
-                      style: const TextStyle(color: muted, fontSize: 12),
-                    ),
-                    Reference('${r['referenceId']}'),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  ); }
+ final ApiClient api;final String gymId;final Json? branch;
+ const OwnerReport({super.key,required this.api,required this.gymId,this.branch});
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return Screen(title:appText('ownerReports'),child:OwnerVisits(api:api,gym:{'id':gymId},branch:branch,reportMode:true,showHeading:false));}
 }
-
-

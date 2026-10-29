@@ -34,6 +34,7 @@ export type ReportRow = {
   points: string | null;
   amountPiasters: string;
   actorId: string | null;
+  traineeName?: string | null;
 };
 async function scope(tx: Tx, actorId: string, f: Filter): Promise<Scope> {
   const actor = await requireActor(tx, actorId),
@@ -163,6 +164,11 @@ async function alerts(tx: Tx, s: Scope, now: Date) {
     withdrawals: withdrawals ?? null,
   };
 }
+function visitTraineeName(kind:Kind){
+ if(kind!=='VISITS'&&kind!=='CANCELLATIONS')return Prisma.sql`NULL::text`;
+ const reference=kind==='CANCELLATIONS'?Prisma.sql`r."referenceId"`:Prisma.sql`r.id`;
+ return Prisma.sql`(SELECT left(u."displayName",80) FROM "Visit" visit JOIN "User" u ON u.id=visit."traineeId" WHERE visit.id=${reference})`;
+}
 export async function reportSummary(
   db: PrismaClient,
   actorId: string,
@@ -189,6 +195,14 @@ export async function reportSummary(
           : Promise.resolve(null),
         alerts(tx, s, asOf),
       ]);
+    const dailyVisits=await tx.$queryRaw<{day:string;count:string;amountPiasters:string}[]>(Prisma.sql`
+      SELECT to_char(r."eventAt" AT TIME ZONE 'Africa/Cairo','YYYY-MM-DD') AS day,count(*)::text AS count,coalesce(sum(r.amount),0)::text AS "amountPiasters"
+      FROM (${source('VISITS',asOf)}) r WHERE ${scoped(s)} AND r.status<>'CANCELLED' AND r."eventAt">=${p.start} AND r."eventAt"<${p.end}
+      GROUP BY day ORDER BY day`);
+    const recentVisits=await tx.$queryRaw<{id:string;branchName:string;traineeName:string|null;eventAt:Date;points:string;amountPiasters:string;status:string}[]>(Prisma.sql`
+      SELECT r.id,r."branchName",${visitTraineeName('VISITS')} AS "traineeName",r."eventAt",r.points::text AS points,r.amount::text AS "amountPiasters",r.status
+      FROM (${source('VISITS',asOf)}) r WHERE ${scoped(s)} AND r."eventAt">=${p.start} AND r."eventAt"<${p.end}
+      ORDER BY r."eventAt" DESC,r.id DESC LIMIT 5`);
     const balances = s.finance
       ? await tx.$queryRaw<{ type: string; balancePiasters: string }[]>(
           Prisma.sql`SELECT type::text AS type,coalesce(sum("balancePiasters"),0)::text AS "balancePiasters" FROM "MoneyAccount" WHERE type<>'PLATFORM_OFFSET' ${s.gymId ? Prisma.sql`AND "gymId"=${s.gymId}::uuid` : Prisma.empty} GROUP BY type ORDER BY type`,
@@ -225,6 +239,7 @@ export async function reportSummary(
         branchId: s.branchId ?? null,
         finance: s.finance,
       },
+      dailyVisits, recentVisits,
       topups,
       visits,
       cancellations,
@@ -260,7 +275,7 @@ export async function reportRows(
       throw new DomainError("ACCESS_DENIED");
     const take = exporting ? 5001 : f.limit + 1;
     const rows = await tx.$queryRaw<ReportRow[]>(
-      Prisma.sql`SELECT r.id,${f.kind === "CANCELLATIONS" ? Prisma.sql`r."referenceId"` : Prisma.sql`r.id`} AS "referenceId",r."eventAt",r."gymId",r."gymName",r."branchId",r."branchName",r.status,r.points::text AS points,r.amount::text AS "amountPiasters",r."actorId" FROM (${source(f.kind, asOf)}) r WHERE ${scoped(s)} AND r."eventAt">=${p.start} AND r."eventAt"<${p.end} ${f.status ? Prisma.sql`AND r.status=${f.status}` : Prisma.empty} ${!exporting && f.cursor ? Prisma.sql`AND r.id>${f.cursor}::uuid` : Prisma.empty} ORDER BY r.id ASC LIMIT ${take}`,
+      Prisma.sql`SELECT r.id,${f.kind === "CANCELLATIONS" ? Prisma.sql`r."referenceId"` : Prisma.sql`r.id`} AS "referenceId",r."eventAt",r."gymId",r."gymName",r."branchId",r."branchName",${visitTraineeName(f.kind)} AS "traineeName",r.status,r.points::text AS points,r.amount::text AS "amountPiasters",r."actorId" FROM (${source(f.kind, asOf)}) r WHERE ${scoped(s)} AND r."eventAt">=${p.start} AND r."eventAt"<${p.end} ${f.status ? Prisma.sql`AND r.status=${f.status}` : Prisma.empty} ${!exporting && f.cursor ? Prisma.sql`AND r.id>${f.cursor}::uuid` : Prisma.empty} ORDER BY r.id ASC LIMIT ${take}`,
     );
     if (exporting) {
       if (rows.length > 5000) throw new DomainError("EXPORT_TOO_LARGE");
