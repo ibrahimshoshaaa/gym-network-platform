@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_network/screens/owner_portal.dart';
 import 'package:gym_network/screens/branch_services.dart';
@@ -12,6 +13,11 @@ import 'operations_test.dart' show client,page,reply;
 const gym={'id':'g1','name':'جيم التجربة','status':'ACTIVE'};
 const branch={'id':'b1','gymId':'g1','name':'فرع التجربة','canOperate':true};
 void main(){
+ setUpAll(()async{
+  final file=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
+  if(await file.exists()){final bytes=ByteData.sublistView(await file.readAsBytes());for(final name in ['GymReviewSans','Roboto','Ahem']){final loader=FontLoader(name)..addFont(Future.value(bytes));await loader.load();}}
+  final icons=FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));await icons.load();
+ });
  testWidgets('single branch owner can open services directly from More without traversing branch settings',(t)async{
   final api=client('GYM_OWNER',(r)async{
    if(r.url.path.endsWith('/branches'))return reply({'items':[branch]});
@@ -63,8 +69,9 @@ void main(){
   const key=ValueKey('owner.tabs.review');
   await t.pumpWidget(RepaintBoundary(key:key,child:page(MediaQuery(data:const MediaQueryData(size:Size(320,900),textScaler:TextScaler.linear(1.5)),child:NativeShell(api:api,gyms:const [gym])))));await t.pumpAndSettle();
   for(var i=0;i<5;i++){
-   await t.tap(find.byType(NavigationDestination).at(i));await t.pumpAndSettle();expect(t.takeException(),isNull);
+   await t.tap(find.byType(NavigationDestination).at(i));await t.pumpAndSettle();
    await t.runAsync(()async{final boundary=t.renderObject<RenderRepaintBoundary>(find.byKey(key));final image=await boundary.toImage(pixelRatio:1);final data=await image.toByteData(format:ui.ImageByteFormat.png);await Directory('build/verification').create(recursive:true);await File('build/verification/owner-tab-$i.png').writeAsBytes(data!.buffer.asUint8List());image.dispose();});
+   expect(t.takeException(),isNull,reason:'owner tab $i');
   }
  },variant:TargetPlatformVariant({TargetPlatform.android,TargetPlatform.iOS}));
 
