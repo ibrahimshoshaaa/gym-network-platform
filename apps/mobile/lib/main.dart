@@ -504,8 +504,8 @@ class _NativeShellState extends State<NativeShell> {
                 child: Theme(
                   data: (!workMode || owner) ? Theme.of(context).copyWith(
                     textTheme: Theme.of(context).textTheme.copyWith(
-                      titleLarge: const TextStyle(fontSize:18,fontWeight:FontWeight.w800,color:ink),
-                      headlineMedium: const TextStyle(fontSize:23,fontWeight:FontWeight.w800,color:ink),
+                      titleLarge: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize:18,fontWeight:FontWeight.w800,color:ink),
+                      headlineMedium: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize:23,fontWeight:FontWeight.w800,color:ink),
                     ),
                   ) : Theme.of(context),
                   child: content,
