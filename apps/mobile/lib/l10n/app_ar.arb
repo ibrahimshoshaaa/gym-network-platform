@@ -1827,5 +1827,8 @@
   "ownerChange": "تغيير",
   "ownerMissingHours": "الخدمات المختارة تحتاج مواعيد: على صاحب الفرع ضبط مواعيد الفرع أو مواعيد مستقلة لكل خدمة.",
   "ownerServiceHoursApply": "الحجز حسب المواعيد المستقلة للخدمات المختارة بتوقيت القاهرة.",
-  "ownerPickBranch": "اختار الفرع"
+  "ownerPickBranch": "اختار الفرع",
+  "ownerPeriodTotals": "إجمالي الفترة المحددة، قبل فلترة الحالة",
+  "ownerAmount": "المبلغ",
+  "ownerPaidWithdrawals": "المصروف خلال الفترة"
 }

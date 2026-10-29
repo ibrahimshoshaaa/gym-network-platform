@@ -1140,6 +1140,9 @@ const arCatalog = <String, String>{
   "ownerMissingHours": "الخدمات المختارة تحتاج مواعيد: على صاحب الفرع ضبط مواعيد الفرع أو مواعيد مستقلة لكل خدمة.",
   "ownerServiceHoursApply": "الحجز حسب المواعيد المستقلة للخدمات المختارة بتوقيت القاهرة.",
   "ownerPickBranch": "اختار الفرع",
+  "ownerPeriodTotals": "إجمالي الفترة المحددة، قبل فلترة الحالة",
+  "ownerAmount": "المبلغ",
+  "ownerPaidWithdrawals": "المصروف خلال الفترة",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2282,4 +2285,7 @@ const enCatalog = <String, String>{
   "ownerMissingHours": "The selected services need hours. The owner must set branch hours or individual service hours.",
   "ownerServiceHoursApply": "Booking uses the selected services’ own hours in Cairo time.",
   "ownerPickBranch": "Choose a branch",
+  "ownerPeriodTotals": "Selected period totals, before status filtering",
+  "ownerAmount": "Amount",
+  "ownerPaidWithdrawals": "Paid during this period",
 };

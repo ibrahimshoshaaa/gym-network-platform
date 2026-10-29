@@ -99,7 +99,7 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   @override
-  Widget build(BuildContext context) { AppLanguage.watch(context); return  !widget.workplace
+  Widget build(BuildContext context) { AppLanguage.watch(context); return widget.ownerView ? ownerAccount(context) : !widget.workplace
     ? traineeAccount(context) : workAccount(context); }
 
   Widget _deleteAccountButton(BuildContext context) => OutlinedButton.icon(
@@ -120,6 +120,19 @@ class _AccountScreenState extends State<AccountScreen> {
     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xffa33740),
       minimumSize: const Size(double.infinity, 48)),
   );
+
+  Widget ownerAccount(BuildContext context)=>ListView(padding:const EdgeInsets.all(16),children:[
+    ListTile(contentPadding:EdgeInsets.zero,leading:CircleAvatar(backgroundColor:lime,child:const Icon(Icons.person_outline,color:ink)),title:Text('${widget.api.user?['displayName']??''}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${widget.api.user?['phone']??widget.api.user?['email']??''}')),
+    const SizedBox(height:12),Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
+      _item(appText('s968'),Icons.person_outline,()=>open(context,ProfileEdit(api:widget.api))),
+      _item(appText('s969'),Icons.lock_outline,()=>open(context,PasswordScreen(api:widget.api))),
+      const LanguageSelector(),
+    ])),
+    Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
+      _item(appText('s368'),Icons.notifications_none,()=>open(context,NotificationsScreen(api:widget.api))),
+      _item(appText('s971'),Icons.support_agent,()=>open(context,SupportScreen(api:widget.api))),
+    ])),ErrorNote(error),const SizedBox(height:12),_deleteAccountButton(context),const SizedBox(height:8),_logoutButton(),const SizedBox(height:20),Text(appText('s976'),textAlign:TextAlign.center,style:const TextStyle(color:muted,fontSize:11)),
+  ]);
 
   Widget workAccount(BuildContext context) => ListView(
     padding: const EdgeInsets.all(22),
