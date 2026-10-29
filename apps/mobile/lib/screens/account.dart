@@ -127,7 +127,7 @@ class _AccountScreenState extends State<AccountScreen> {
       _item(appText('s968'),Icons.person_outline,()=>open(context,ProfileEdit(api:widget.api))),
       _item(appText('s969'),Icons.lock_outline,()=>open(context,PasswordScreen(api:widget.api))),
       const LanguageSelector(),
-    ])),
+    ])),const SizedBox(height:12),
     Panel(padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),child:Column(children:[
       _item(appText('s368'),Icons.notifications_none,()=>open(context,NotificationsScreen(api:widget.api))),
       _item(appText('s971'),Icons.support_agent,()=>open(context,SupportScreen(api:widget.api))),
