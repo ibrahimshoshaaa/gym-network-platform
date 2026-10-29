@@ -57,8 +57,14 @@ class _OwnerChart extends StatelessWidget{
  @override Widget build(BuildContext context){final points=List.generate(7,(i){final date=ownerDay(end.subtract(Duration(days:6-i)));return (date:date,count:int.tryParse('${days.where((d)=>d['day']==date).firstOrNull?['count']??0}')??0);});final max=points.fold<int>(1,(m,d)=>d.count>m?d.count:m);return Semantics(label:appText('ownerDailyVisits'),child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[for(final p in points)Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:Column(children:[Text('${p.count}',style:const TextStyle(fontSize:11)),const SizedBox(height:5),Container(height:8+60*p.count/max,decoration:BoxDecoration(color:p.count==0?const Color(0xffe5ece9):green,borderRadius:BorderRadius.circular(6))),const SizedBox(height:6),Text(p.date.substring(5),style:const TextStyle(fontSize:9,color:muted))])))]));}
 }
 class OwnerVisitTile extends StatelessWidget{
- final Json row;const OwnerVisitTile({super.key,required this.row});
- @override Widget build(BuildContext context)=>Panel(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[const Icon(Icons.fitness_center_rounded,size:19,color:green),const SizedBox(width:8),Expanded(child:Text('${row['branchName']??''}',style:const TextStyle(fontWeight:FontWeight.w700))),Text(appText('s122',[money(row['amountPiasters']??'0')]),style:const TextStyle(color:green,fontWeight:FontWeight.w800))]),const SizedBox(height:7),Wrap(spacing:10,runSpacing:5,children:[Text(shortDate(row['eventAt']),style:const TextStyle(fontSize:11,color:muted)),if(row['points']!=null)Text(appText('s120',[row['points']]),style:const TextStyle(fontSize:11)),StatusPill(row['status'])]),if(row['referenceId']!=null)Reference('${row['referenceId']}')]));
+ final Json row;final String kind;final VoidCallback? onTap;
+ const OwnerVisitTile({super.key,required this.row,this.kind='VISITS',this.onTap});
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return Padding(padding:const EdgeInsets.only(bottom:8),child:Panel(padding:const EdgeInsets.all(14),child:InkWell(onTap:onTap,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+ Row(children:[Icon(kind=='WITHDRAWALS'?Icons.payments_outlined:Icons.fitness_center_rounded,size:19,color:green),const SizedBox(width:8),Expanded(child:Text(kind=='WITHDRAWALS'?appText('ownerWithdrawalRecord'):'${row['branchName']??''}',style:const TextStyle(fontWeight:FontWeight.w700))),const SizedBox(width:6),Flexible(child:Text(appText('s122',[money(row['amountPiasters']??'0')]),style:const TextStyle(color:green,fontWeight:FontWeight.w800)))]),
+ const SizedBox(height:7),Wrap(spacing:10,runSpacing:5,children:[Text(shortDate(row['eventAt']),style:const TextStyle(fontSize:11,color:muted)),if(row['points']!=null)Text(appText('s120',[row['points']]),style:const TextStyle(fontSize:11)),StatusPill(row['status'])]),
+ if(onTap!=null)Text(appText('s816'),style:const TextStyle(color:green,fontSize:12)),
+ if(row['referenceId']!=null)Reference('${row['referenceId']}'),
+ ]))));}
 }
 
 class OwnerVisits extends StatefulWidget{
@@ -83,7 +89,7 @@ class _OwnerVisitsState extends State<OwnerVisits>{
  Text(appText('ownerCairoDates'),style:const TextStyle(fontSize:11,color:muted)),const SizedBox(height:6),
  ])),
  _OwnerPeriodTotals(key:ValueKey('owner.totals.$query.$kind'),api:widget.api,query:query,kind:kind),
- Expanded(child:KeyedSubtree(key:ValueKey('owner.records.$query.$kind.$status.$revision'),child:PagedRecords(api:widget.api,path:'reports/rows?$query&kind=$kind${status.isEmpty?'':'&status=$status'}',item:(r)=>OwnerVisitTile(row:r)))),
+ Expanded(child:KeyedSubtree(key:ValueKey('owner.records.$query.$kind.$status.$revision'),child:PagedRecords(api:widget.api,path:'reports/rows?$query&kind=$kind${status.isEmpty?'':'&status=$status'}',item:(r)=>OwnerVisitTile(row:r,kind:kind,onTap:kind=='WITHDRAWALS'?()=>open(context,WithdrawalDetail(api:widget.api,id:'${r['id']}')):null)))),
  ]);}
 }
 
@@ -123,5 +129,21 @@ class _OwnerPeriodTotalsState extends State<_OwnerPeriodTotals>{
  Json? data;Object? error;bool busy=true;
  @override void initState(){super.initState();load();}
  Future<void> load()async{setState((){busy=true;error=null;});try{final d=await widget.api.request('reports/summary?${widget.query}');if(mounted)setState(()=>data=Map<String,dynamic>.from(d));}catch(e){if(mounted)setState(()=>error=e);}finally{if(mounted)setState(()=>busy=false);}}
- @override Widget build(BuildContext context){AppLanguage.watch(context);if(busy)return const Padding(padding:EdgeInsets.all(10),child:LinearProgressIndicator(minHeight:2));if(error!=null)return ErrorNote(error,retry:load);final key={'VISITS':'visits','CANCELLATIONS':'cancellations','WITHDRAWALS':'paidWithdrawals'}[widget.kind]!;final values=data?[key];return Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(appText('ownerPeriodTotals'),style:const TextStyle(fontSize:11,color:muted)),Wrap(spacing:12,runSpacing:4,children:[Text('${appText(widget.kind=='WITHDRAWALS'?'ownerPaidWithdrawals':'ownerKind${widget.kind}')}: ${values?['count']??0}',style:const TextStyle(fontWeight:FontWeight.w700)),Text('${appText(widget.kind=='VISITS'?'ownerPeriodNet':'ownerAmount')}: ${money(widget.kind=='VISITS'?data?['netVisitReceivablesPiasters']??'0':values?['amountPiasters']??'0')} ${appText('s106')}',style:const TextStyle(color:green))])]));}
+ @override
+ Widget build(BuildContext context){
+  AppLanguage.watch(context);
+  if(busy)return const Padding(padding:EdgeInsets.all(10),child:LinearProgressIndicator(minHeight:2));
+  if(error!=null)return ErrorNote(error,retry:load);
+  final key={'VISITS':'visits','CANCELLATIONS':'cancellations','WITHDRAWALS':'paidWithdrawals'}[widget.kind]!;
+  final values=data?[key];
+  final amount=widget.kind=='VISITS' ? (data?['netVisitReceivablesPiasters'] ?? '0') : (values?['amountPiasters'] ?? '0');
+  final countLabel=widget.kind=='WITHDRAWALS'?'ownerPaidWithdrawals':'ownerKind${widget.kind}';
+  return Padding(padding:const EdgeInsets.symmetric(horizontal:16,vertical:8),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+   Text(appText('ownerPeriodTotals'),style:const TextStyle(fontSize:11,color:muted)),
+   Wrap(spacing:12,runSpacing:4,children:[
+    Text('${appText(countLabel)}: ${values?['count']??0}',style:const TextStyle(fontWeight:FontWeight.w700)),
+    Text('${appText(widget.kind=='VISITS'?'ownerPeriodNet':'ownerAmount')}: ${money(amount)} ${appText('s106')}',style:const TextStyle(color:green)),
+   ]),
+  ]));
+ }
 }

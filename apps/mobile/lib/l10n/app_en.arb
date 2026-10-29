@@ -1830,5 +1830,6 @@
   "ownerPickBranch": "Choose a branch",
   "ownerPeriodTotals": "Selected period totals, before status filtering",
   "ownerAmount": "Amount",
-  "ownerPaidWithdrawals": "Paid during this period"
+  "ownerPaidWithdrawals": "Paid during this period",
+  "ownerWithdrawalRecord": "Withdrawal request"
 }

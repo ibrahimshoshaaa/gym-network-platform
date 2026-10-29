@@ -1143,6 +1143,7 @@ const arCatalog = <String, String>{
   "ownerPeriodTotals": "إجمالي الفترة المحددة، قبل فلترة الحالة",
   "ownerAmount": "المبلغ",
   "ownerPaidWithdrawals": "المصروف خلال الفترة",
+  "ownerWithdrawalRecord": "طلب سحب مستحقات",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2288,4 +2289,5 @@ const enCatalog = <String, String>{
   "ownerPeriodTotals": "Selected period totals, before status filtering",
   "ownerAmount": "Amount",
   "ownerPaidWithdrawals": "Paid during this period",
+  "ownerWithdrawalRecord": "Withdrawal request",
 };

@@ -1830,5 +1830,6 @@
   "ownerPickBranch": "اختار الفرع",
   "ownerPeriodTotals": "إجمالي الفترة المحددة، قبل فلترة الحالة",
   "ownerAmount": "المبلغ",
-  "ownerPaidWithdrawals": "المصروف خلال الفترة"
+  "ownerPaidWithdrawals": "المصروف خلال الفترة",
+  "ownerWithdrawalRecord": "طلب سحب مستحقات"
 }
