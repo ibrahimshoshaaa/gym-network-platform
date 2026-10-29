@@ -71,3 +71,17 @@ test('catalog services keep stable IDs, approved hours and bilingual names', asy
  assert.equal(listed.presetId,'cardio');assert.equal(listed.openMinute,540);assert.equal(listed.preset?.nameEn,'Cardio');
  await assert.rejects(requestServiceChange(db,f.owner.id,f.branch.id,created.service.id,{...input,presetId:'sauna',expectedVersion:1}));
 });
+
+
+test('only admin can manage stable bilingual catalog choices and disable without deleting', async()=>{
+ const {savePreset,listPresets}=await import('../src/services/catalog.js');
+ const f=await fixture(),id='test_'+randomUUID().replaceAll('-','');
+ const data={id,nameAr:'خدمة اختبار',nameEn:'Test service',category:'training',kind:'SERVICE',active:true};
+ await assert.rejects(savePreset(db,f.owner.id,data));
+ const created=await savePreset(db,f.admin.id,data);assert.equal(created.version,0);
+ await assert.rejects(savePreset(db,f.admin.id,{...data,kind:'FACILITY',expectedVersion:0}));
+ await savePreset(db,f.admin.id,{...data,active:false,expectedVersion:0});
+ assert.equal((await listPresets(db,f.owner.id)).items.some(p=>p.id===id),false);
+ assert.equal((await listPresets(db,f.admin.id,true)).items.some(p=>p.id===id),true);
+ assert.equal(await db.auditLog.count({where:{actorId:f.admin.id,action:'SERVICE_PRESET_SAVED',reason:{contains:id}}}),2);
+});

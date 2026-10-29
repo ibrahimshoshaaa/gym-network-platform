@@ -1061,6 +1061,7 @@ model VisitRating {
 
 model BranchService {
   presetId String?
+  preset ServicePreset? @relation(fields: [presetId], references: [id])
   openMinute Int?
   closeMinute Int?
   id String @id @default(uuid()) @db.Uuid
@@ -1082,6 +1083,7 @@ model BranchService {
 
 model ServicePriceRequest {
   presetId String?
+  preset ServicePreset? @relation(fields: [presetId], references: [id])
   openMinute Int?
   closeMinute Int?
   id String @id @default(uuid()) @db.Uuid
@@ -1233,6 +1235,8 @@ model FinancialArchiveRecord {
 }
 
 model ServicePreset {
+ services BranchService[]
+ requests ServicePriceRequest[]
  id String @id
  nameAr String
  nameEn String

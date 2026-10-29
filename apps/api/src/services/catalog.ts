@@ -15,6 +15,6 @@ export async function savePreset(db: PrismaClient, actor: string, body: unknown)
  return serializable(db,async tx=>{await requireAdmin(tx,actor);const old=await tx.servicePreset.findUnique({where:{id:input.id}});
  if(old){if(old.version!==expectedVersion)throw new DomainError('STALE_SETTINGS');if(old.kind!==input.kind)throw new DomainError('INVALID_INPUT');const changed=await tx.servicePreset.updateMany({where:{id:input.id,version:expectedVersion},data:{...input,version:{increment:1}}});if(changed.count!==1)throw new DomainError('STALE_SETTINGS');}
  else {if(expectedVersion!==undefined)throw new DomainError('STALE_SETTINGS');await tx.servicePreset.create({data:input});}
- await audit(tx,actor,'SERVICE_PRESET_SAVED',input.id,'Updated bilingual catalog');return tx.servicePreset.findUniqueOrThrow({where:{id:input.id}});
+ await audit(tx,actor,'SERVICE_PRESET_SAVED',actor,'Updated bilingual catalog preset: '+input.id);return tx.servicePreset.findUniqueOrThrow({where:{id:input.id}});
  });
 }
