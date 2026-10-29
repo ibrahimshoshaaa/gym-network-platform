@@ -1831,5 +1831,6 @@
   "ownerPeriodTotals": "Selected period totals, before status filtering",
   "ownerAmount": "Amount",
   "ownerPaidWithdrawals": "Paid during this period",
-  "ownerWithdrawalRecord": "Withdrawal request"
+  "ownerWithdrawalRecord": "Withdrawal request",
+  "ownerDisplayHoursHint": "Display text only. Set actual booking hours in Branch services → Hours."
 }

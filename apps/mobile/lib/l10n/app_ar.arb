@@ -1831,5 +1831,6 @@
   "ownerPeriodTotals": "إجمالي الفترة المحددة، قبل فلترة الحالة",
   "ownerAmount": "المبلغ",
   "ownerPaidWithdrawals": "المصروف خلال الفترة",
-  "ownerWithdrawalRecord": "طلب سحب مستحقات"
+  "ownerWithdrawalRecord": "طلب سحب مستحقات",
+  "ownerDisplayHoursHint": "وصف للعرض فقط. مواعيد الحجز الفعلية تضبط من خدمات الفرع ← المواعيد."
 }

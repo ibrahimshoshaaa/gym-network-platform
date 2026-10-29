@@ -169,6 +169,7 @@ class _BranchFormState extends State<BranchForm> {
                     ? TextInputType.phone
                     : TextInputType.text,
                 decoration: InputDecoration(
+                  helperText:e.key=='openingHours'?appText('ownerDisplayHoursHint'):null,
                   labelText: {
                     'name': appText('s489'),
                     'address': appText('s300'),
@@ -534,5 +535,5 @@ class _InviteStaffState extends State<InviteStaff> {
 class OwnerReport extends StatelessWidget {
  final ApiClient api;final String gymId;final Json? branch;
  const OwnerReport({super.key,required this.api,required this.gymId,this.branch});
- @override Widget build(BuildContext context){AppLanguage.watch(context);return Screen(title:appText('ownerReports'),child:OwnerVisits(api:api,gym:{'id':gymId},branch:branch,reportMode:true));}
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return Screen(title:appText('ownerReports'),child:OwnerVisits(api:api,gym:{'id':gymId},branch:branch,reportMode:true,showHeading:false));}
 }

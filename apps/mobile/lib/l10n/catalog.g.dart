@@ -1144,6 +1144,7 @@ const arCatalog = <String, String>{
   "ownerAmount": "المبلغ",
   "ownerPaidWithdrawals": "المصروف خلال الفترة",
   "ownerWithdrawalRecord": "طلب سحب مستحقات",
+  "ownerDisplayHoursHint": "وصف للعرض فقط. مواعيد الحجز الفعلية تضبط من خدمات الفرع ← المواعيد.",
 };
 const enCatalog = <String, String>{
   "s0": "Your account",
@@ -2290,4 +2291,5 @@ const enCatalog = <String, String>{
   "ownerAmount": "Amount",
   "ownerPaidWithdrawals": "Paid during this period",
   "ownerWithdrawalRecord": "Withdrawal request",
+  "ownerDisplayHoursHint": "Display text only. Set actual booking hours in Branch services → Hours.",
 };

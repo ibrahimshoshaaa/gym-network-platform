@@ -42,8 +42,8 @@ class _OwnerOverviewState extends State<OwnerOverview>{
  const SizedBox(height:12),
  Panel(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(appText('ownerWeekEarnings'),style:const TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:6),Text(week==null?'—':appText('s122',[money(week!['netVisitReceivablesPiasters']??'0')]),style:const TextStyle(fontSize:24,fontWeight:FontWeight.w800,color:green)),const SizedBox(height:12),if(week!=null)_OwnerChart(end:DateTime.tryParse('${week!['period']?['to']}')??ownerToday(),days:List<Json>.from((week!['dailyVisits'] as List? ?? []).map((r)=>Map<String,dynamic>.from(r))))])),const SizedBox(height:12),
  PortalGrid(children:[PortalTask(appText('s449'),icon:Icons.campaign_outlined,onTap:()=>open(context,PromotionsScreen(api:widget.api))),PortalTask(appText('s681'),icon:Icons.build_outlined,onTap:()=>open(context,MaintenanceScreen(api:widget.api)))]),const SizedBox(height:8),
- ownerLink(appText('s742'),Icons.insights_outlined,()=>open(context,Screen(title:appText('ownerReports'),child:OwnerVisits(api:widget.api,gym:widget.gym,reportMode:true)))),
- Row(children:[Expanded(child:Text(appText('ownerRecentVisits'),style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))),TextButton(onPressed:widget.visits??()=>open(context,Screen(title:appText('ownerVisits'),child:OwnerVisits(api:widget.api,gym:widget.gym))),child:Text(appText('s642')))]),
+ ownerLink(appText('s742'),Icons.insights_outlined,()=>open(context,Screen(title:appText('ownerReports'),child:OwnerVisits(api:widget.api,gym:widget.gym,reportMode:true,showHeading:false)))),
+ Row(children:[Expanded(child:Text(appText('ownerRecentVisits'),style:const TextStyle(fontSize:17,fontWeight:FontWeight.w800))),TextButton(onPressed:widget.visits??()=>open(context,Screen(title:appText('ownerVisits'),child:OwnerVisits(api:widget.api,gym:widget.gym,showHeading:false))),child:Text(appText('s642')))]),
  if(week!=null&&recent.isEmpty)Text(appText('ownerNoRecent'),style:const TextStyle(color:muted)),for(final r in recent)OwnerVisitTile(row:r),
  ]) )
  ])));}
@@ -68,8 +68,8 @@ class OwnerVisitTile extends StatelessWidget{
 }
 
 class OwnerVisits extends StatefulWidget{
- final ApiClient api;final Json gym;final Json? branch;final bool reportMode;
- const OwnerVisits({super.key,required this.api,required this.gym,this.branch,this.reportMode=false});
+ final ApiClient api;final Json gym;final Json? branch;final bool reportMode,showHeading;
+ const OwnerVisits({super.key,required this.api,required this.gym,this.branch,this.reportMode=false,this.showHeading=true});
  @override State<OwnerVisits> createState()=>_OwnerVisitsState();
 }
 class _OwnerVisitsState extends State<OwnerVisits>{
@@ -79,7 +79,7 @@ class _OwnerVisitsState extends State<OwnerVisits>{
  Future<void> loadBranches()async{try{final r=await widget.api.request('reports/gyms/${widget.gym['id']}/branches?limit=100');if(mounted)setState(()=>branches=rows(r));}catch(_){/* Records still provide the authoritative access/error state. */}}
  String get query=>'gymId=${widget.gym['id']}&${ownerRange(days,from:from,to:to??anchor)}${branchId==null?'':'&branchId=$branchId'}';
  Future<void> custom()async{final end=anchor;final range=await showDateRangePicker(context:context,firstDate:end.subtract(const Duration(days:3650)),lastDate:end,initialDateRange:DateTimeRange(start:from??end.subtract(const Duration(days:6)),end:to??end));if(range!=null&&mounted&&range.end.difference(range.start).inDays>=366){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(appText('ownerMaxPeriod'))));return;}if(range!=null&&mounted)setState((){from=range.start;to=range.end;revision++;});}
- @override Widget build(BuildContext context){AppLanguage.watch(context);return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[ownerHeading(appText(widget.reportMode?'ownerReports':'ownerVisits')),
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[if(widget.showHeading)ownerHeading(appText(widget.reportMode?'ownerReports':'ownerVisits')),
  Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
  SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final d in [1,7,30])Padding(padding:const EdgeInsetsDirectional.only(end:8),child:ChoiceChip(label:Text(appText('ownerRange$d')),selected:from==null&&days==d,onSelected:(_)=>setState((){days=d;from=to=null;revision++;}))),ActionChip(label:Text(appText('ownerCustomRange')),onPressed:custom)])),
  if(from!=null)Text('${ownerDay(from!)} – ${ownerDay(to!)}',textDirection:TextDirection.ltr,style:const TextStyle(fontSize:11,color:muted)),
@@ -95,7 +95,7 @@ class _OwnerVisitsState extends State<OwnerVisits>{
 
 class OwnerFinance extends StatelessWidget{
  final ApiClient api;final Json gym;const OwnerFinance({super.key,required this.api,required this.gym});
- @override Widget build(BuildContext context){AppLanguage.watch(context);return DefaultTabController(length:3,child:Column(children:[ownerHeading(appText('ownerFinance')),TabBar(isScrollable:true,tabAlignment:TabAlignment.center,tabs:[Tab(text:appText('ownerOverview')),Tab(text:appText('ownerWithdrawals')),Tab(text:appText('ownerReports'))]),Expanded(child:TabBarView(children:[MoneyScreen(api:api,gym:gym,embedded:true,section:0),MoneyScreen(api:api,gym:gym,embedded:true,section:1),OwnerVisits(api:api,gym:gym,reportMode:true)]))]));}
+ @override Widget build(BuildContext context){AppLanguage.watch(context);return DefaultTabController(length:3,child:Column(children:[ownerHeading(appText('ownerFinance')),TabBar(isScrollable:true,tabAlignment:TabAlignment.center,tabs:[Tab(text:appText('ownerOverview')),Tab(text:appText('ownerWithdrawals')),Tab(text:appText('ownerReports'))]),Expanded(child:TabBarView(children:[MoneyScreen(api:api,gym:gym,embedded:true,section:0),MoneyScreen(api:api,gym:gym,embedded:true,section:1),OwnerVisits(api:api,gym:gym,reportMode:true,showHeading:false)]))]));}
 }
 class OwnerMore extends StatefulWidget{
  final ApiClient api;final Json gym;const OwnerMore({super.key,required this.api,required this.gym});
