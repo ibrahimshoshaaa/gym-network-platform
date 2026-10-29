@@ -79,7 +79,8 @@ class OwnerVisitTile extends StatelessWidget{
  final Json row;final String kind;final VoidCallback? onTap;
  const OwnerVisitTile({super.key,required this.row,this.kind='VISITS',this.onTap});
  @override Widget build(BuildContext context){AppLanguage.watch(context);return Padding(padding:const EdgeInsets.only(bottom:8),child:Panel(padding:const EdgeInsets.all(14),child:InkWell(onTap:onTap,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
- Row(children:[Icon(kind=='WITHDRAWALS'?Icons.payments_outlined:Icons.fitness_center_rounded,size:19,color:green),const SizedBox(width:8),Expanded(child:Text(kind=='WITHDRAWALS'?appText('ownerWithdrawalRecord'):'${row['branchName']??''}',style:const TextStyle(fontWeight:FontWeight.w700))),const SizedBox(width:6),Flexible(child:Text(appText('s122',[money(row['amountPiasters']??'0')]),style:const TextStyle(color:green,fontWeight:FontWeight.w800)))]),
+ Row(children:[Icon(kind=='WITHDRAWALS'?Icons.payments_outlined:Icons.fitness_center_rounded,size:19,color:green),const SizedBox(width:8),Expanded(child:Text(kind=='WITHDRAWALS'?appText('ownerWithdrawalRecord'):'${row['traineeName']??row['branchName']??''}',style:const TextStyle(fontWeight:FontWeight.w700))),const SizedBox(width:6),Flexible(child:Text(appText('s122',[money(row['amountPiasters']??'0')]),style:const TextStyle(color:green,fontWeight:FontWeight.w800)))]),
+ if(row['traineeName']!=null)Text('${row['branchName']??''}',style:const TextStyle(fontSize:11,color:muted)),
  const SizedBox(height:7),Wrap(spacing:10,runSpacing:5,children:[Text(shortDate(row['eventAt']),style:const TextStyle(fontSize:11,color:muted)),if(row['points']!=null)Text(appText('s120',[row['points']]),style:const TextStyle(fontSize:11)),StatusPill(row['status'])]),
  if(onTap!=null)Text(appText('s816'),style:const TextStyle(color:green,fontSize:12)),
  if(row['referenceId']!=null)Reference('${row['referenceId']}'),
