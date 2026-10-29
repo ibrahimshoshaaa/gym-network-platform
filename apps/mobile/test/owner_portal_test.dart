@@ -17,6 +17,11 @@ const gym={'id':'g1','name':'جيم التجربة','status':'ACTIVE'};
 const branch={'id':'b1','gymId':'g1','name':'فرع التجربة','canOperate':true};
 Widget reviewPage(Widget child)=>LanguageScope(language:AppLanguage.instance,child:MaterialApp(debugShowCheckedModeBanner:false,theme:appTheme().copyWith(textTheme:appTheme().textTheme.apply(fontFamily:'GymReviewSans'),filledButtonTheme:FilledButtonThemeData(style:appTheme().filledButtonTheme.style!.copyWith(textStyle:const WidgetStatePropertyAll(TextStyle(fontFamily:'GymReviewSans',fontSize:16,fontWeight:FontWeight.w700))))),locale:AppLanguage.instance.locale,supportedLocales:const [Locale('ar'),Locale('en')],localizationsDelegates:GlobalMaterialLocalizations.delegates,home:child));
 void main(){
+ test('report date ranges use calendar dates across both Cairo daylight saving transitions',(){
+  expect(ownerRange(7,to:DateTime(2026,4,30)),'from=2026-04-24&to=2026-04-30');
+  expect(ownerRange(7,to:DateTime(2026,11,2)),'from=2026-10-27&to=2026-11-02');
+  expect(ownerRange(30,from:DateTime(2026,10,1),to:DateTime(2026,10,31)),'from=2026-10-01&to=2026-10-31');
+ });
  setUpAll(()async{
   final file=File('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf');
   if(await file.exists()){final bytes=ByteData.sublistView(await file.readAsBytes());for(final name in ['GymReviewSans','Roboto','Ahem']){final loader=FontLoader(name)..addFont(Future.value(bytes));await loader.load();}}

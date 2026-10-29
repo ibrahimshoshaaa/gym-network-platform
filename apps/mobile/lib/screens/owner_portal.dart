@@ -15,8 +15,9 @@ import 'promotions.dart';
 import 'work_balance_hero.dart';
 
 String ownerDay(DateTime d)=>'${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-DateTime ownerToday(){final n=DateTime.now();return DateTime(n.year,n.month,n.day);}
-String ownerRange(int days,{DateTime? from,DateTime? to}){final end=to??ownerToday();return 'from=${ownerDay(from??end.subtract(Duration(days:days-1)))}&to=${ownerDay(end)}';}
+DateTime ownerDateOnly(DateTime d)=>DateTime.utc(d.year,d.month,d.day);
+DateTime ownerToday(){final n=DateTime.now();return DateTime.utc(n.year,n.month,n.day);}
+String ownerRange(int days,{DateTime? from,DateTime? to}){final end=ownerDateOnly(to??ownerToday());return 'from=${ownerDay(from==null?end.subtract(Duration(days:days-1)):ownerDateOnly(from))}&to=${ownerDay(end)}';}
 Widget ownerHeading(String title,{Widget? trailing})=>Padding(padding:const EdgeInsets.fromLTRB(18,14,18,10),child:Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w800))),if(trailing!=null)trailing]));
 Widget ownerLink(String title,IconData icon,VoidCallback action,{String? detail})=>Material(color:Colors.transparent,child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:2),leading:Icon(icon,color:green),title:Text(title,style:const TextStyle(fontSize:14,fontWeight:FontWeight.w700)),subtitle:detail==null?null:Text(detail,style:const TextStyle(fontSize:11,color:muted)),trailing:const Icon(Icons.chevron_right_rounded,size:20),onTap:action));
 
@@ -54,7 +55,7 @@ class _OwnerStat extends StatelessWidget{
 }
 class _OwnerChart extends StatelessWidget{
  final List<Json> days;final DateTime end;const _OwnerChart({required this.days,required this.end});
- @override Widget build(BuildContext context){final points=List.generate(7,(i){final date=ownerDay(end.subtract(Duration(days:6-i)));return (date:date,count:int.tryParse('${days.where((d)=>d['day']==date).firstOrNull?['count']??0}')??0);});final max=points.fold<int>(1,(m,d)=>d.count>m?d.count:m);return Semantics(label:appText('ownerDailyVisits'),child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[for(final p in points)Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:Column(children:[Text('${p.count}',style:const TextStyle(fontSize:11)),const SizedBox(height:5),Container(height:8+60*p.count/max,decoration:BoxDecoration(color:p.count==0?const Color(0xffe5ece9):green,borderRadius:BorderRadius.circular(6))),const SizedBox(height:6),Text(p.date.substring(5),style:const TextStyle(fontSize:9,color:muted))])))]));}
+ @override Widget build(BuildContext context){final points=List.generate(7,(i){final date=ownerDay(ownerDateOnly(end).subtract(Duration(days:6-i)));return (date:date,count:int.tryParse('${days.where((d)=>d['day']==date).firstOrNull?['count']??0}')??0);});final max=points.fold<int>(1,(m,d)=>d.count>m?d.count:m);return Semantics(label:appText('ownerDailyVisits'),child:Row(crossAxisAlignment:CrossAxisAlignment.end,children:[for(final p in points)Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:3),child:Column(children:[Text('${p.count}',style:const TextStyle(fontSize:11)),const SizedBox(height:5),Container(height:8+60*p.count/max,decoration:BoxDecoration(color:p.count==0?const Color(0xffe5ece9):green,borderRadius:BorderRadius.circular(6))),const SizedBox(height:6),Text(p.date.substring(5),style:const TextStyle(fontSize:9,color:muted))])))]));}
 }
 class OwnerVisitTile extends StatelessWidget{
  final Json row;final String kind;final VoidCallback? onTap;
