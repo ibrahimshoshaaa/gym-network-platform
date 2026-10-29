@@ -117,6 +117,7 @@ export function createBooking(db:PrismaClient,actorId:string,key:string,input:un
    serviceSnapshots=services.sort((a,b)=>a.id.localeCompare(b.id)).map(s=>({id:s.id,name:s.name,points:s.points!,durationMinutes:s.durationMinutes!,version:s.version}));
    hoursSnapshot={openMinute:branch.bookingOpenMinute,closeMinute:branch.bookingCloseMinute};
    scheduledClosesAt=requireSessionFits(scheduledAt,sessionMinutes,hoursSnapshot).closesAt;
+   for(const service of services)if(service.openMinute!=null && service.closeMinute!=null)requireSessionFits(scheduledAt,sessionMinutes,{openMinute:service.openMinute,closeMinute:service.closeMinute});
   }else if(await tx.branchService.count({where:{branchId:branch.id}})){
    // An old client may not bypass the service catalog using the former branch price.
    throw new DomainError('SERVICE_SELECTION_REQUIRED');

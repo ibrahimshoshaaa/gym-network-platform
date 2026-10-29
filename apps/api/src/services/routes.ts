@@ -4,9 +4,16 @@ import { z } from 'zod';
 import { actorId } from '../gyms/routes.js';
 import { parse } from '../gyms/validation.js';
 import { requireAdmin } from '../auth/authorization.js';
+import { listPresets, savePreset, presetId } from './catalog.js';
+import { editable } from './service.js';
+import { serializable } from '../ledger/service.js';
+import { DomainError } from '../domain/errors.js';
 import { createService, listServices, requestServiceChange, reviewService, setServiceActive, setBookingHours } from './service.js';
 
 export function registerServiceRoutes(app: FastifyInstance, db: PrismaClient) {
+  app.get('/service-presets', async r=>listPresets(db,await actorId(db,r)));
+  app.get('/admin/service-presets', async r=>listPresets(db,await actorId(db,r),true));
+  app.post('/admin/service-presets', async r=>savePreset(db,await actorId(db,r),r.body));
   const id = (value: unknown) => parse(z.string().uuid(), value);
   app.get<{ Params: { branchId: string } }>('/directory/branches/:branchId/services', async r => listServices(db, await actorId(db, r), id(r.params.branchId), false));
   const base = '/gyms/:gymId/branches/:branchId/services';
@@ -20,6 +27,15 @@ export function registerServiceRoutes(app: FastifyInstance, db: PrismaClient) {
     }
     return branchId;
   }
+  app.patch<{Params:Params}>(`${base}/facilities`,async r=>{
+    const actor=await actorId(db,r),branchId=await branch(r.params);
+    const input=parse(z.object({ids:z.array(presetId).max(100).refine(v=>new Set(v).size===v.length),expectedVersion:z.number().int().nonnegative()}).strict(),r.body);
+    return serializable(db,async tx=>{await tx.$queryRaw`SELECT id FROM "Branch" WHERE id=${branchId}::uuid FOR UPDATE`;const current=await editable(tx,actor,branchId);
+    if(current.bookingHoursVersion!==input.expectedVersion)throw new DomainError('STALE_SETTINGS');
+    const valid=await tx.servicePreset.count({where:{id:{in:input.ids},kind:'FACILITY',OR:[{active:true},{id:{in:current.facilityIds}}]}});
+    if(valid!==input.ids.length)throw new DomainError('INVALID_INPUT');
+    await tx.branch.update({where:{id:branchId},data:{facilityIds:input.ids,bookingHoursVersion:{increment:1}}});return {ids:input.ids};});
+  });
   app.get<{ Params: Params }>(base, async r => listServices(db, await actorId(db, r), await branch(r.params), true));
   app.patch<{ Params: Params }>(`${base}/booking-hours`, async r => setBookingHours(db, await actorId(db, r), await branch(r.params), r.body));
   app.post<{ Params: Params }>(base, async (r, reply) => reply.code(201).send(await createService(db, await actorId(db, r), await branch(r.params), r.body)));

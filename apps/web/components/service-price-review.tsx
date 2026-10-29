@@ -4,7 +4,7 @@ import { api, message, send } from "../lib/client";
 import { Busy, Empty, Field, Notice } from "./ui";
 
 type Request = {
-  id: string; name: string; description: string; points: number; durationMinutes: number; baseVersion: number; reason: string;
+  openMinute: number|null; closeMinute: number|null; id: string; name: string; description: string; points: number; durationMinutes: number; baseVersion: number; reason: string;
   service: { points: number | null; durationMinutes: number | null; version: number; branch: { name: string; gymId: string } };
 };
 function Review({ request, onDone }: { request: Request; onDone: () => Promise<void> }) {
@@ -27,6 +27,7 @@ function Review({ request, onDone }: { request: Request; onDone: () => Promise<v
     <p>{request.description}</p>
     <p>المطلوب: {request.points} نقطة · {request.durationMinutes} دقيقة</p>
     {request.service.points !== null && <p>المعتمد حاليًا: {request.service.points} نقطة · {request.service.durationMinutes} دقيقة</p>}
+    <p>المواعيد: {request.openMinute==null?'مواعيد الفرع':`${Math.floor(request.openMinute/60).toString().padStart(2,'0')}:${(request.openMinute%60).toString().padStart(2,'0')} – ${Math.floor(request.closeMinute!/60).toString().padStart(2,'0')}:${(request.closeMinute!%60).toString().padStart(2,'0')}`} · بتوقيت القاهرة</p>
     <p>سبب الطلب: {request.reason}</p>
     <form onSubmit={submit}>
       <label className="field">القرار<select value={decision} disabled={busy} onChange={e => setDecision(e.target.value)}><option value="APPROVED">اعتماد</option><option value="REJECTED">رفض</option></select></label>

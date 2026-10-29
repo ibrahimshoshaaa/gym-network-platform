@@ -1769,5 +1769,16 @@
   "s1080": "Easy entry.\nFocus on your goals.",
   "s1081": "Use your entry code at the gym and start your workout.",
   "s1082": "Easy entry",
-  "s1083": "Page {p0} of {p1}"
+  "s1083": "Page {p0} of {p1}",
+  "presetChoose": "Choose a service",
+  "presetHoursInvalid": "Opening and closing times must differ",
+  "presetServiceHours": "Service hours — Cairo time",
+  "presetBranchHours": "Use branch hours",
+  "presetFacilities": "Facilities and amenities",
+  "presetIncluded": "Included with the visit, without a separate booking",
+  "presetSaveFacilities": "Save facilities",
+  "presetCategory_training": "Training and equipment",
+  "presetCategory_classes": "Classes and martial arts",
+  "presetCategory_spa": "Spa and recovery",
+  "presetCategory_nutrition": "Measurements and nutrition"
 }

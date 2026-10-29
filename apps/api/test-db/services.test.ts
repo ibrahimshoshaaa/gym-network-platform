@@ -58,3 +58,16 @@ test('concurrent proposals and conflicting admin reviews cannot overwrite each o
   assert.equal(reviews.filter(a => a.status === 'fulfilled').length, 1);
   assert.equal(await db.servicePriceRequest.count({ where: { serviceId: first.service.id, status: 'PENDING' } }), 0);
 });
+
+test('catalog services keep stable IDs, approved hours and bilingual names', async()=>{
+ const f=await fixture();
+ const created=await createService(db,f.owner.id,f.branch.id,{...input,presetId:'cardio',name:'untrusted override',openMinute:540,closeMinute:1080});
+ assert.equal(created.service.name,'أجهزة كارديو');
+ assert.equal(created.request.openMinute,540);
+ await assert.rejects(createService(db,f.owner.id,f.branch.id,{...input,presetId:'wifi'}));
+ await assert.rejects(createService(db,f.owner.id,f.branch.id,{...input,presetId:'cardio'}));
+ await reviewService(db,f.admin.id,created.request.id,{decision:'APPROVED',reason:'Approve preset service',expectedVersion:0});
+ const listed=(await listServices(db,f.trainee.id,f.branch.id,false)).items[0]!;
+ assert.equal(listed.presetId,'cardio');assert.equal(listed.openMinute,540);assert.equal(listed.preset?.nameEn,'Cardio');
+ await assert.rejects(requestServiceChange(db,f.owner.id,f.branch.id,created.service.id,{...input,presetId:'sauna',expectedVersion:1}));
+});

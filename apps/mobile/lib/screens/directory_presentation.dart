@@ -115,6 +115,7 @@ class _BranchDetailBodyState extends State<_BranchDetailBody>{
    Text(description.isEmpty?appText('s1045'):description,style:const TextStyle(fontSize:13,color:muted,height:1.9)),
    if('${b['openingHours']??''}'.trim().isNotEmpty)...[const SizedBox(height:14),_DetailInfo(icon:Icons.schedule_outlined,title:appText('s585'),value:'${b['openingHours']}')],
    if(b['serviceBooking']==true)...[SectionTitle(appText('s1052')),_BranchServiceChips(api:widget.api,branch:b,onBook:book)],
+   if((b['facilities'] as List? ?? []).isNotEmpty)...[SectionTitle(appText('presetFacilities')),Wrap(spacing:8,runSpacing:6,children:[for(final f in b['facilities']) Chip(label:Text(presetLabel(Map<String,dynamic>.from(f))))])],
    SectionTitle(appText('s634')),
    ClipRRect(borderRadius:BorderRadius.circular(20),child:SizedBox(height:205,child:FlutterMap(options:MapOptions(initialCenter:point,initialZoom:15),children:[mapTiles(),MarkerLayer(markers:[Marker(point:point,width:124,height:148,alignment:Alignment.topCenter,child:GymMapMarker(branch:b))]),attribution()]))),
    const SizedBox(height:10),_DetailInfo(icon:Icons.location_on_outlined,title:_placeLabel(b),value:'${b['address']??''}'),
@@ -150,7 +151,7 @@ class _BranchServiceChipsState extends State<_BranchServiceChips>{
   if(error!=null)return ErrorNote(error,retry:()=>load());
   if(services==null)return const Padding(padding:EdgeInsets.all(20),child:Center(child:CircularProgressIndicator()));
   if(services!.isEmpty)return Text(appText('s268'),style:const TextStyle(color:muted));
-  return Wrap(spacing:8,runSpacing:8,children:services!.map((s)=>ActionChip(avatar:const Icon(Icons.check_circle_outline,size:16,color:green),label:Text('${s['name']} · ${s['points']} ${appText('s1058')}',maxLines:2,overflow:TextOverflow.ellipsis),onPressed:()=>widget.onBook(service:'${s['id']}'))).toList());
+  return Wrap(spacing:8,runSpacing:8,children:services!.map((s)=>ActionChip(avatar:const Icon(Icons.check_circle_outline,size:16,color:green),label:Text('${serviceLabel(s)} · ${s['points']} ${appText('s1058')}',maxLines:2,overflow:TextOverflow.ellipsis),onPressed:()=>widget.onBook(service:'${s['id']}'))).toList());
  }
 }
 class _GymGallery extends StatefulWidget{

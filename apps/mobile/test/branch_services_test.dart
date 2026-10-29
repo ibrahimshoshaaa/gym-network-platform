@@ -9,13 +9,15 @@ void main() {
     Map<String, dynamic>? posted;
     final api = client('GYM_OWNER', (r) async {
       if (r.method == 'POST') posted = Map<String, dynamic>.from(jsonDecode(r.body));
-      return reply({'items': []});
+      return reply({'items': [{'id':'cardio','nameAr':'كارديو','nameEn':'Cardio','category':'training','kind':'SERVICE'}]});
     });
     await t.pumpWidget(page(const Scaffold(body: SizedBox())));
     final navigator = Navigator.of(t.element(find.byType(Scaffold)));
     navigator.push(MaterialPageRoute<void>(builder: (_) => BranchServiceForm(api: api, path: 'gyms/g1/branches/b1/services')));
     await t.pumpAndSettle();
-    final values = ['كارديو', 'تمرين كارديو', '١٥', '٣٠', 'إضافة خدمة جديدة'];
+    await t.tap(find.widgetWithText(ChoiceChip,'كارديو'));
+    await t.pumpAndSettle();
+    final values = [ 'تمرين كارديو', '١٥', '٣٠', 'إضافة خدمة جديدة'];
     for (var i = 0; i < values.length; i++) {
       final field = find.byType(TextFormField).at(i);
       await t.ensureVisible(field);
@@ -30,7 +32,7 @@ void main() {
     expect(submit.hitTestable(), findsOneWidget);
     await t.tap(submit.hitTestable());
     await t.pumpAndSettle();
-    expect(posted, {'name': 'كارديو', 'description': 'تمرين كارديو', 'points': 15, 'durationMinutes': 30, 'reason': 'إضافة خدمة جديدة'});
+    expect(posted, {'presetId':'cardio','openMinute':null,'closeMinute':null,'name': 'كارديو', 'description': 'تمرين كارديو', 'points': 15, 'durationMinutes': 30, 'reason': 'إضافة خدمة جديدة'});
     expect(find.byType(BranchServiceForm), findsNothing);
     expect(t.takeException(), isNull);
   });
