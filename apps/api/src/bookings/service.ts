@@ -105,7 +105,6 @@ export function createBooking(db:PrismaClient,actorId:string,key:string,input:un
   let serviceSnapshots:Prisma.InputJsonValue=[];
   let hoursSnapshot:DailyHours|undefined,scheduledClosesAt:Date|undefined;
   if(data.services){
-   if(branch.bookingOpenMinute==null||branch.bookingCloseMinute==null)throw new DomainError('BOOKING_HOURS_NOT_CONFIGURED');
    if(branch.bookingHoursVersion!==data.hoursVersion)throw new DomainError('STALE_SETTINGS');
    // Sorted row locks serialize price approval/availability changes with snapshot capture.
    for(const selected of data.services)await tx.$queryRaw`SELECT id FROM "BranchService" WHERE id=${selected.id}::uuid FOR UPDATE`;
@@ -115,9 +114,14 @@ export function createBooking(db:PrismaClient,actorId:string,key:string,input:un
    points=services.reduce((sum,s)=>sum+s.points!,0);sessionMinutes=services.reduce((sum,s)=>sum+s.durationMinutes!,0);
    if(points>1000000||sessionMinutes>1440)throw new DomainError('INVALID_INPUT');
    serviceSnapshots=services.sort((a,b)=>a.id.localeCompare(b.id)).map(s=>({id:s.id,name:s.name,points:s.points!,durationMinutes:s.durationMinutes!,version:s.version}));
-   hoursSnapshot={openMinute:branch.bookingOpenMinute,closeMinute:branch.bookingCloseMinute};
+   const branchHours=branch.bookingOpenMinute!=null&&branch.bookingCloseMinute!=null?{openMinute:branch.bookingOpenMinute,closeMinute:branch.bookingCloseMinute}:null;
+   const windows:DailyHours[]=branchHours?[branchHours]:[];
+   for(const service of services){
+    if(service.openMinute!=null&&service.closeMinute!=null)windows.push({openMinute:service.openMinute,closeMinute:service.closeMinute});
+    else if(!branchHours)throw new DomainError('BOOKING_HOURS_NOT_CONFIGURED');
+   }
+   hoursSnapshot={...windows[0]!,additional:windows.slice(1)};
    scheduledClosesAt=requireSessionFits(scheduledAt,sessionMinutes,hoursSnapshot).closesAt;
-   for(const service of services)if(service.openMinute!=null && service.closeMinute!=null)requireSessionFits(scheduledAt,sessionMinutes,{openMinute:service.openMinute,closeMinute:service.closeMinute});
   }else if(await tx.branchService.count({where:{branchId:branch.id}})){
    // An old client may not bypass the service catalog using the former branch price.
    throw new DomainError('SERVICE_SELECTION_REQUIRED');

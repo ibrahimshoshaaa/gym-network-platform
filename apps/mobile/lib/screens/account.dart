@@ -180,8 +180,8 @@ class _AccountScreenState extends State<AccountScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
         child: Column(
           children: [
-            if(widget.ownerView||canPromote)_item(appText('s449'), Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
-            _item(appText('s681'), Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
+            if(!widget.ownerView&&canPromote)_item(appText('s449'), Icons.campaign_outlined, () => open(context, PromotionsScreen(api: widget.api))),
+            if(!widget.ownerView)_item(appText('s681'), Icons.build_outlined, () => open(context, MaintenanceScreen(api: widget.api))),
                 _item(
               appText('s968'),
               Icons.person_outline_rounded,

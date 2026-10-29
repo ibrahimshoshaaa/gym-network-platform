@@ -189,6 +189,14 @@ export async function reportSummary(
           : Promise.resolve(null),
         alerts(tx, s, asOf),
       ]);
+    const dailyVisits=await tx.$queryRaw<{day:string;count:string;amountPiasters:string}[]>(Prisma.sql`
+      SELECT to_char(r."eventAt" AT TIME ZONE 'Africa/Cairo','YYYY-MM-DD') AS day,count(*)::text AS count,coalesce(sum(r.amount),0)::text AS "amountPiasters"
+      FROM (${source('VISITS',asOf)}) r WHERE ${scoped(s)} AND r.status<>'CANCELLED' AND r."eventAt">=${p.start} AND r."eventAt"<${p.end}
+      GROUP BY day ORDER BY day`);
+    const recentVisits=await tx.$queryRaw<{id:string;branchName:string;eventAt:Date;points:string;amountPiasters:string;status:string}[]>(Prisma.sql`
+      SELECT r.id,r."branchName",r."eventAt",r.points::text AS points,r.amount::text AS "amountPiasters",r.status
+      FROM (${source('VISITS',asOf)}) r WHERE ${scoped(s)} AND r."eventAt">=${p.start} AND r."eventAt"<${p.end}
+      ORDER BY r."eventAt" DESC,r.id DESC LIMIT 5`);
     const balances = s.finance
       ? await tx.$queryRaw<{ type: string; balancePiasters: string }[]>(
           Prisma.sql`SELECT type::text AS type,coalesce(sum("balancePiasters"),0)::text AS "balancePiasters" FROM "MoneyAccount" WHERE type<>'PLATFORM_OFFSET' ${s.gymId ? Prisma.sql`AND "gymId"=${s.gymId}::uuid` : Prisma.empty} GROUP BY type ORDER BY type`,
@@ -225,6 +233,7 @@ export async function reportSummary(
         branchId: s.branchId ?? null,
         finance: s.finance,
       },
+      dailyVisits, recentVisits,
       topups,
       visits,
       cancellations,
