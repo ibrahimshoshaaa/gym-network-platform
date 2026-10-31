@@ -64,6 +64,13 @@ export async function homeSummary(db:PrismaClient,id:string){return db.$transact
   add('تحويلات متأخرة',await tx.withdrawalRequest.count({where:{status:'APPROVED',dueAt:{lt:now}}}),'withdrawals');
   add('طلبات أسعار',await tx.branchPricingRequest.count({where:{status:'PENDING'}}),'branch-prices');
   add('طلبات تصحيح',await tx.operationReview.count({where:{status:'PENDING'}}),'operation-reviews');
+  add('أسعار خدمات تنتظر المراجعة',await tx.servicePriceRequest.count({where:{status:'PENDING'}}),'service-prices');
+  add('إعلانات فروع تنتظر المراجعة',await tx.promotionRequest.count({where:{status:'PENDING'}}),'promotion-requests');
+  add('إعلانات ماركت تنتظر المراجعة',await tx.marketListing.count({where:{status:'PENDING'}}),'market');
+  add('بلاغات ماركت مفتوحة',await tx.marketReport.count({where:{status:'OPEN'}}),'market');
+  add('حجوزات تنتظر القرار',await tx.booking.count({where:{status:'PENDING_REVIEW'}}),'booking-reviews');
+  add('صيانة تحتاج متابعة',await tx.maintenanceRequest.count({where:{status:{in:['NEW','REVIEWING','SCHEDULED','IN_PROGRESS']}}}),'maintenance');
+  add('طلبات حذف تحتاج مراجعة',await tx.accountDeletion.count({where:{status:{in:['PENDING','ERASING']}}}),'account-deletions');
   add('طلبات دعم مفتوحة',await tx.supportTicket.count({where:{status:{not:'CLOSED'}}}),'support');
   add('جيمات تنتظر التفعيل',await tx.gym.count({where:{status:'PENDING',ownerAcceptedAt:{not:null}}}),'gyms');
   add('جيمات نشطة',await tx.gym.count({where:{status:'ACTIVE'}}),'gyms');

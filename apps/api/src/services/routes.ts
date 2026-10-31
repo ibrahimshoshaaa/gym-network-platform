@@ -5,7 +5,7 @@ import { actorId } from '../gyms/routes.js';
 import { parse } from '../gyms/validation.js';
 import { requireAdmin } from '../auth/authorization.js';
 import { listPresets, savePreset, presetId } from './catalog.js';
-import { editable } from './service.js';
+import { editable,inspectBranchServices } from './service.js';
 import { serializable } from '../ledger/service.js';
 import { DomainError } from '../domain/errors.js';
 import { createService, listServices, requestServiceChange, reviewService, setServiceActive, setBookingHours } from './service.js';
@@ -18,6 +18,7 @@ export function registerServiceRoutes(app: FastifyInstance, db: PrismaClient) {
   app.get<{ Params: { branchId: string } }>('/directory/branches/:branchId/services', async r => listServices(db, await actorId(db, r), id(r.params.branchId), false));
   const base = '/gyms/:gymId/branches/:branchId/services';
   type Params = { gymId: string; branchId: string; serviceId: string };
+  app.get<{Params:Params}>('/admin/gyms/:gymId/branches/:branchId/services',async r=>inspectBranchServices(db,await actorId(db,r),id(r.params.gymId),id(r.params.branchId)));
   // Match both IDs before delegating authorization to the shared service layer.
   async function branch(p: Params) {
     const gymId = id(p.gymId), branchId = id(p.branchId);

@@ -1,4 +1,5 @@
 "use client";
+import {ReviewNote,DecisionButtons} from "./review-decision";
 import { RecordReference } from "./record-reference";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, message, decimal, date } from "../lib/client";
@@ -85,6 +86,7 @@ function ReviewDetail({ id, onClose }: {
             createdAt?: string;
         };
     } | null>(null), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(""), [receipt, setReceipt] = useState("");
+    const [decision,setDecision]=useState("REJECT");
     const { call, uncertain } = useCommand();
     useEffect(() => {
         let active = true;
@@ -183,16 +185,9 @@ function ReviewDetail({ id, onClose }: {
                 }}/>)}
             {detail.review.status === "PENDING" ? (<form onSubmit={submit}>
                 <fieldset disabled={busy}>
-                  <label className="field">
-                    القرار
-                    <select name="decision" disabled={uncertain}>
-                      <option value="REJECT">رفض الطلب</option>
-                      {detail.review.kind === "VISIT_CANCEL" && (<option value="APPROVE">
-                          قبول الإلغاء ورد النقاط وعكس المستحق
-                        </option>)}
-                    </select>
-                  </label>
-                  <Field name="reason" label="سبب القرار" readOnly={uncertain} required minLength={5} maxLength={1000}/>
+                  <input type="hidden" name="decision" value={decision}/>
+                  {detail.review.kind==='VISIT_CANCEL'?<DecisionButtons value={decision} onChange={setDecision} approveValue="APPROVE" rejectValue="REJECT" approve="قبول الإلغاء ورد النقاط" disabled={uncertain}/>:<p>رفض طلب التصحيح</p>}
+                  <ReviewNote key={decision} preset={decision==='APPROVE'?'تمت مراجعة العملية والأدلة وقبول الإلغاء ورد النقاط وعكس المستحق.':'تمت مراجعة العملية والأدلة ولم يثبت ما يستلزم التصحيح.'} choices={decision==='REJECT'?['الأدلة غير كافية لقبول الطلب.','العملية مسجلة بشكل صحيح.']:[]} disabled={uncertain}/>
                   <label className="check">
                     <input type="checkbox" required disabled={uncertain}/>
                     راجعت العملية والسبب والأدلة وتأثير القرار

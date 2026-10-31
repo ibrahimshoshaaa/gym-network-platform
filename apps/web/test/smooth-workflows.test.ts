@@ -10,7 +10,8 @@ test("review opens on approval with the expected amount and explicit receipt-and
  assert.match(html,/125/);
  assert.match(html,/name="reference"/);
  assert.match(html,/name="confirmed"/);
- assert.doesNotMatch(html,/review-decision|name="amount"|name="reason"/);
+ assert.match(html,/<input type="hidden" name="reason"/);
+ assert.doesNotMatch(html,/review-decision|name="amount"|<textarea[^>]*required/);
  assert.match(html,/disabled=""[^>]*>قبول وإضافة 50 نقطة/);
 });
 test("pending topup cards expose the review action without a horizontal table",()=>{

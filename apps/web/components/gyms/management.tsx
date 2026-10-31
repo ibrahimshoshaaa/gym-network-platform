@@ -1,4 +1,5 @@
 "use client";
+import {ReviewNote} from "../review-decision";
 import { StaffDelegation } from "../staff-delegation";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, Building2, Plus, RefreshCw, Pencil, Users, Mail, History, CirclePause, CircleCheck, } from "lucide-react";
@@ -7,6 +8,7 @@ import { Busy, Empty, Field, Notice } from "../ui";
 import { BranchFields, ContactFields, Invitation, More, Mutation, PriceFields, Reason, Status, branchBody, contact, roleText, usePage, type Gym, type Branch, type Staff, type Invite, type NewInvite, } from "./shared";
 import { useListTools } from "../list-tools";
 import { BusinessMedia } from "./business-media";
+import {BranchCatalog} from './branch-catalog';
 import { BranchSetup } from "./branch-setup";
 import { PriceHistory } from "./pricing";
 export function GymManagement({ admin, initialGym }: {
@@ -120,6 +122,7 @@ function GymDetails({ id, admin, onBack, }: {
 }) {
     const prefix = `admin/gyms/${id}`;
     const [gym, setGym] = useState<Gym | null>(null), [error, setError] = useState(""), [loading, setLoading] = useState(true), [tab, setTab] = useState("branches"), [action, setAction] = useState<Action | null>(null), [invitation, setInvitation] = useState<NewInvite | null>(null), [history, setHistory] = useState<Branch | null>(null), [success, setSuccess] = useState("");
+    const [catalog,setCatalog]=useState<Branch|null>(null);
     const [delegating, setDelegating] = useState<{
         user: {
             id: string;
@@ -177,6 +180,7 @@ function GymDetails({ id, admin, onBack, }: {
     }
     const editable = false, active = gym?.status === "ACTIVE";
     return (<>
+      {catalog&&<BranchCatalog gymId={id} branch={catalog} onClose={()=>setCatalog(null)}/>}
       {delegating && <StaffDelegation gymId={id} userId={delegating.user.id} branchId={delegating.branchId} name={delegating.user.displayName} onClose={() => setDelegating(null)}/>}
       <div className="section-toolbar">
         <button className="text-button" onClick={onBack}>
@@ -272,7 +276,7 @@ function GymDetails({ id, admin, onBack, }: {
                   <Busy />
                 </div>) : !branches.rows.length && !branches.error ? (<Empty title="لا توجد فروع بعد">
                   {"صاحب الجيم يضيف الفرع ويقترح سعر الزيارة، ثم تراجع السعر وتفعّل الفرع."}
-                </Empty>) : (<div className="branch-setup-list">{branches.rows.map(branch => <BranchSetup key={branch.id} gym={gym} branch={branch} onDone={result => { setSuccess(result === 'rejected' ? 'تم رفض مقترح السعر، وحالة تشغيل الفرع لم تتغير.' : 'تم اعتماد البيانات وتحديث حالة الجيم والفرع.'); refresh(); }} onSuspend={() => setAction({ kind: 'branchStatus', branch, status: 'SUSPENDED' })} onResume={() => setAction({ kind: 'branchStatus', branch, status: 'ACTIVE' })}/>)}</div>)}
+                </Empty>) : (<div className="branch-setup-list">{branches.rows.map(branch => <BranchSetup key={branch.id} gym={gym} branch={branch} onInspect={()=>setCatalog(branch)} onDone={result => { setSuccess(result === 'rejected' ? 'تم رفض مقترح السعر، وحالة تشغيل الفرع لم تتغير.' : 'تم اعتماد البيانات وتحديث حالة الجيم والفرع.'); refresh(); }} onSuspend={() => setAction({ kind: 'branchStatus', branch, status: 'SUSPENDED' })} onResume={() => setAction({ kind: 'branchStatus', branch, status: 'ACTIVE' })}/>)}</div>)}
               <More list={branches}/>
             </section>)}
           {false}
@@ -358,7 +362,7 @@ function GymDetails({ id, admin, onBack, }: {
                         : "موقوف"}
                 ». حالة الفروع تُدار بشكل مستقل.
               </p>
-              <Reason />
+              <ReviewNote preset={action.status==='ACTIVE'?"تمت مراجعة بيانات الجيم وتفعيل حسابه.":"تم تغيير حالة الجيم بعد المراجعة."} choices={action.status==='ACTIVE'?[]:["بيانات الجيم تحتاج مراجعة.","طلب إيقاف من صاحب الجيم."]}/>
             </Mutation>)}
           {action?.kind === "branchStatus" && (<Mutation title={action.status === "ACTIVE" ? "تفعيل الفرع" : "إيقاف الفرع"} path={`admin/branches/${action.branch.id}/status`} method="PATCH" onClose={() => setAction(null)} onDone={() => done()} build={(form) => ({
                     status: action.status,
@@ -368,7 +372,7 @@ function GymDetails({ id, admin, onBack, }: {
                 الفرع: {action.branch.name}. التفعيل يتطلب جيمًا نشطًا وسعرًا
                 معتمدًا وبيانات موقع مكتملة.
               </p>
-              <Reason />
+              <ReviewNote preset={action.status==='ACTIVE'?"تمت مراجعة بيانات الفرع وتفعيله.":"تم إيقاف الفرع بعد المراجعة."} choices={action.status==='ACTIVE'?[]:["بيانات الفرع أو موقعه تحتاج تصحيحًا.","طلب إيقاف مؤقت من صاحب الجيم."]}/>
             </Mutation>)}
           {action?.kind === "ownerInvite" && (<Mutation<NewInvite> title="إصدار دعوة جديدة لصاحب الجيم" path={`admin/gyms/${id}/owner-invitations`} onClose={() => setAction(null)} onDone={done} build={() => ({})} label="إصدار الرمز">
               <p className="subtle-box">

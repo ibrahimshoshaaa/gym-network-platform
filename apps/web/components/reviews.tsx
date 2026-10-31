@@ -4,6 +4,7 @@ import { RefreshCw, Eye, CheckCircle2, XCircle } from "lucide-react";
 import { api, send, message, decimal, methodName, date, type Page, type Topup } from "../lib/client";
 import { Busy, Empty, Field, Modal, Notice } from "./ui";
 
+import {ReviewNote} from "./review-decision";
 import { useListTools } from "./list-tools";
 
 export function Reviews() {
@@ -56,7 +57,7 @@ export function Review({request:row,onClose,onDone}:{request:Topup;onClose:()=>v
   if(decision==="APPROVED"&&(!viewed||form.get("confirmed")!=="on")){setError("راجع الإيصال وأكد وصول المبلغ أولًا.");return;}
   setBusy(true);setError("");
   try {
-   const body=decision==="REJECTED"?{decision,reason:form.get("reason")}:{decision,reason:String(form.get("note")??"").trim()||"تمت مطابقة الإيصال والتأكد من وصول التحويل.",paymentReference:form.get("reference"),receivedAmountPiasters:row.chargePiasters,fundsReceived:true,receiptReviewed:true};
+   const body=decision==="REJECTED"?{decision,reason:form.get("reason")}:{decision,reason:form.get("reason"),paymentReference:form.get("reference"),receivedAmountPiasters:row.chargePiasters,fundsReceived:true,receiptReviewed:true};
    await api(`admin/topups/${row.id}/review`,send(body));onDone(decision);
   }catch(e){setError(message(e));}finally{setBusy(false);}
  }
@@ -71,8 +72,8 @@ export function Review({request:row,onClose,onDone}:{request:Topup;onClose:()=>v
    {decision==="APPROVED"?<>
     <Field label="مرجع التحويل الوارد" name="reference" required minLength={3} maxLength={150} dir="ltr" hint="رقم العملية الظاهر في حساب الاستلام."/>
     <label className="check review-confirm"><input name="confirmed" type="checkbox" required disabled={!viewed}/>راجعت الإيصال وتأكدت من وصول {decimal(row.chargePiasters)} ج.م لحساب الاستلام</label>
-    <details className="optional-note"><summary>إضافة ملاحظة (اختياري)</summary><Field label="ملاحظة المراجعة" name="note" maxLength={1000}/></details>
-   </>:<div className="field"><label htmlFor="reject-reason">سبب الرفض</label><textarea name="reason" id="reject-reason" required maxLength={1000} rows={3} placeholder="وضح لصاحب الطلب سبب الرفض"/></div>}
+    <ReviewNote preset="تمت مطابقة الإيصال والتأكد من وصول التحويل." disabled={busy}/>
+   </>:<ReviewNote preset="لم يصل التحويل إلى حساب الاستلام." choices={["الإيصال غير واضح، يرجى رفع صورة أوضح.","قيمة التحويل لا تطابق مبلغ الطلب.","بيانات التحويل لا تطابق حساب الاستلام."]} disabled={busy}/>}
    <Notice text={error}/><button className={decision==="APPROVED"?"primary full":"danger full"} disabled={decision==="APPROVED"&&!viewed}>{busy?<Busy>جاري تسجيل القرار</Busy>:decision==="APPROVED"?`قبول وإضافة ${row.points} نقطة`:"تأكيد رفض الطلب"}</button>
   </fieldset></form>
  </Modal>;

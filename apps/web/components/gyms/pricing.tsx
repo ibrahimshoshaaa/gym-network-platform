@@ -4,11 +4,12 @@ import { RefreshCw, FileCheck2 } from "lucide-react";
 import { useListTools } from "../list-tools";
 import { date } from "../../lib/client";
 import { Busy, Empty, Modal, Notice } from "../ui";
-import { More, Mutation, Reason, Status, usePage, type Pricing, } from "./shared";
+import {ReviewNote,DecisionButtons} from '../review-decision';
+import { More, Mutation, Status, usePage, type Pricing, } from "./shared";
 export function PriceReviews({ onOpenGym }: {
     onOpenGym?: (gymId: string) => void;
 } = {}) {
-    const list = usePage<Pricing>("admin/price-change-requests"), [selected, setSelected] = useState<Pricing | null>(null), [success, setSuccess] = useState("");
+    const list = usePage<Pricing>("admin/price-change-requests"), [selected, setSelected] = useState<Pricing | null>(null), [success, setSuccess] = useState(""), [decision,setDecision]=useState("APPROVED");
     const filtered = useListTools(list.rows, r => [r.id, r.branch?.gym.name, r.branch?.name, r.reason, String(r.visitPricePoints)].filter(Boolean).join(" "));
     return (<>
       <div className="section-toolbar">
@@ -69,7 +70,7 @@ export function PriceReviews({ onOpenGym }: {
                       <Status value={row.branch?.gym.status ?? "PENDING"}/>
                     </td>
                     <td data-label="القرار">
-                      <button className="text-button" onClick={() => row.branch?.gymId && onOpenGym ? onOpenGym(row.branch.gymId) : setSelected(row)}>
+                      <button className="text-button" onClick={() => {setSelected(row);setDecision("APPROVED");}}>
                         <FileCheck2 size={16}/>
                         مراجعة
                       </button>
@@ -87,7 +88,7 @@ export function PriceReviews({ onOpenGym }: {
                     : "تم رفض طلب السعر، ولم يتغير السعر المعتمد سابقًا.");
                 void list.refresh();
             }} build={(form) => ({
-                decision: form.get("decision"),
+                decision,
                 reason: form.get("reason"),
             })} label="تسجيل القرار">
           <div className="subtle-box price-proposal">
@@ -101,15 +102,10 @@ export function PriceReviews({ onOpenGym }: {
             <p>سبب الطلب: {selected.reason}</p>
           </div>
           {selected.branch?.gym.status !== "ACTIVE" && (<Notice text="الجيم غير نشط حاليًا. اعتماد السعر يحتاج تفعيل الجيم؛ رفض المقترح متاح دون تفعيل."/>)}
-          <div className="field">
-            <label htmlFor="price-review-decision">القرار</label>
-            <select name="decision" id="price-review-decision" required defaultValue="">
-              <option value="">اختر القرار</option>
-              <option value="APPROVED">اعتماد السعر والمدة</option>
-              <option value="REJECTED">رفض الطلب</option>
-            </select>
-          </div>
-          <Reason />
+          <DecisionButtons value={decision} onChange={setDecision} approve="اعتماد السعر والمدة"/>
+          <ReviewNote key={decision} preset={decision==='APPROVED'?'تمت مراجعة سعر الزيارة ومدتها والموافقة عليهما.':'سعر الزيارة أو مدتها يحتاج تعديلًا.'} choices={decision==='REJECTED'?['بيانات الفرع غير مكتملة.','السعر المقترح غير مناسب.']:[]}/>
+          {selected.branch?.gymId&&onOpenGym&&<button type="button" className="text-button" onClick={()=>onOpenGym(selected.branch!.gymId!)}>فتح ملف الجيم والفروع</button>}
+
         </Mutation>)}
     </>);
 }

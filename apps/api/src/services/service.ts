@@ -111,6 +111,17 @@ export function reviewService(db: PrismaClient, actor: string, requestId: string
     return { service: updated, request: reviewed, alreadyApplied: false };
   });
 }
+/** Platform review can inspect inactive branches without impersonating their owner. */
+export async function inspectBranchServices(db:PrismaClient,actor:string,gymId:string,branchId:string){
+ return db.$transaction(async tx=>{
+  await requireAdmin(tx,actor);
+  const branch=await tx.branch.findFirst({where:{id:branchId,gymId},select:{id:true,name:true,bookingOpenMinute:true,bookingCloseMinute:true,facilityIds:true}});
+  if(!branch)throw new DomainError('NOT_FOUND');
+  const facilities=await tx.servicePreset.findMany({where:{id:{in:branch.facilityIds}},select:{id:true,nameAr:true,nameEn:true}});
+  const items=await tx.branchService.findMany({where:{branchId},orderBy:{id:'asc'},take:100,include:{requests:{orderBy:[{createdAt:'desc'},{id:'desc'}],take:1}}});
+  return {branch,facilities,items};
+ },{isolationLevel:'RepeatableRead'});
+}
 export function listServices(db: PrismaClient, actor: string, branchId: string, management: boolean) {
   return db.$transaction(async tx => {
     await requireActor(tx, actor);
