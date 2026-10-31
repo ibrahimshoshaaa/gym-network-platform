@@ -73,6 +73,7 @@ const rules: Record<string, RegExp[]> = {
     /^service-presets$/, /^admin\/service-presets$/,
     /^me\/account-deletion$/, /^admin\/account-deletions$/, new RegExp(`^admin/account-deletions/${uuid}$`),
     /^admin\/service-price-requests$/,
+    new RegExp(`^admin/gyms/${uuid}/branches/${uuid}/services$`),
     new RegExp(`^directory/branches/${uuid}/services$`),
     new RegExp(`^gyms/${uuid}/branches/${uuid}/services$`),
     new RegExp(`^promotions/branches/${uuid}/services$`),

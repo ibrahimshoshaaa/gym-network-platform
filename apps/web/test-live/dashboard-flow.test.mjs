@@ -5,6 +5,7 @@ import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {mkdir} from 'node:fs/promises';
 import test from 'node:test';
+import {verifyAdminWorkspace} from './admin-workspace-browser.mjs';
 const apiRequire=createRequire(new URL('../../api/package.json',import.meta.url));
 const webRequire=createRequire(import.meta.url);
 const {PrismaClient}=apiRequire('@prisma/client');
@@ -19,7 +20,7 @@ async function request(path,{cookie,method='GET',body,headers={},crossOrigin=fal
 const sessionCookie=r=>r.headers.getSetCookie().find(h=>h.startsWith('__Host-gym_session='))?.split(';')[0];
 async function ready(child){for(let i=0;i<180;i++){if(child.exitCode!==null)throw new Error('Web server exited before readiness');try{await fetch(origin+'/api/health');return;}catch{await sleep(250);}}throw new Error('Web readiness timed out');}
 async function ok(response,status=200){assert.equal(response.status,status,await response.clone().text());return response.json();}
-test('platform-only browser administration and independent native workflows',{timeout:180000},async()=>{
+test('platform-only browser administration and independent native workflows',{timeout:300000},async()=>{
  const password='Synthetic administrator passphrase!',passwordHash=await hashPassword(password),id=randomUUID();
  const actors={};let index=0;
  for(const role of ['PLATFORM_ADMIN','GYM_OWNER','TRAINEE','BRANCH_MANAGER','CASHIER'])actors[role]=await db.user.create({data:{role,displayName:'Synthetic '+role,email:`${role.toLowerCase()}-${id}@example.test`,phoneE164:'+2015'+String(BigInt('0x'+id.replaceAll('-','').slice(0,10))%10000000n).padStart(7,'0')+(index++),password:{create:{passwordHash}}}});
@@ -105,6 +106,7 @@ test('platform-only browser administration and independent native workflows',{ti
      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2),false);
      await page.goto(origin+'/?section=settings');await page.getByRole('heading',{name:'إعدادات المنصة',exact:true}).waitFor();
      await mkdir(new URL('../build-verification/',import.meta.url),{recursive:true});await page.screenshot({path:fileURLToPath(new URL(`../build-verification/admin-settings-${width}.png`,import.meta.url)),fullPage:true,animations:'disabled'});
+     await verifyAdminWorkspace(page,origin,width);
      await context.close();
     }
    }finally{await browser.close();}

@@ -149,6 +149,7 @@ export async function request<T>(
       window.dispatchEvent(new Event("session-expired"));
     throw new ApiError(body.code ?? "SERVICE_UNAVAILABLE", response.status);
   }
+  if (typeof window !== 'undefined' && path.startsWith('/api/backend/') && init.method && !['GET','HEAD'].includes(init.method.toUpperCase())) window.dispatchEvent(new Event('admin-data-changed'));
   return body as T;
 }
 export const api = <T>(path: string, init?: RequestInit) =>

@@ -66,3 +66,33 @@ test('business image uploads are scoped, bounded and never reused as private fin
  await rejects(uploadBusinessImage(db,storage,f.owner.id,f.gym.id,f.branch.id,'PHOTO',image),'IMAGE_LIMIT');assert.equal(removed,1);
  assert.equal(await db.receiptEvidence.count({where:{objectKey:{startsWith:'gym-business/'+f.gym.id}}}),0);
 });
+
+test('platform inbox includes moderation and branch service inspection remains administrator-only',async()=>{
+ const f=await fixture();
+ const {inspectBranchServices}=await import('../src/services/service.js');
+ const service=await db.branchService.create({data:{branchId:f.branch.id,name:'Synthetic pending service'}});
+ await db.servicePriceRequest.create({data:{serviceId:service.id,baseVersion:0,name:service.name,points:35,durationMinutes:25,requestedById:f.owner.id,reason:'Synthetic service request'}});
+ const promotion=await db.promotionRequest.create({data:{requestedById:f.owner.id,branchId:f.branch.id,title:'Synthetic queued offer',body:'Synthetic offer body',clientKey:randomUUID(),requestHash:randomUUID()}});
+ const listing=await db.marketListing.create({data:{sellerId:f.user.id,title:'Synthetic listing',description:'Synthetic listing details',category:'EQUIPMENT',condition:'USED',pricePiasters:1000n,governorate:'Synthetic',city:'Synthetic',contactPhone:'+201555550000',searchText:'synthetic',clientKey:randomUUID(),requestHash:randomUUID()}});
+ await db.marketReport.create({data:{listingId:listing.id,reporterId:f.outsider.id,reason:'Synthetic moderation report'}});
+ await db.maintenanceRequest.create({data:{branchId:f.branch.id,createdById:f.owner.id,equipment:'Synthetic equipment',description:'Synthetic repair',contactPhone:'+201555550000',clientKey:randomUUID(),requestHash:randomUUID()}});
+ await db.accountDeletion.create({data:{userId:f.outsider.id,requestKeyHash:randomUUID(),reviewDueAt:new Date(Date.now()+86400000)}});
+ const checks:[string,string,()=>Promise<number>][]=[
+  ['أسعار خدمات تنتظر المراجعة','service-prices',()=>db.servicePriceRequest.count({where:{status:'PENDING'}})],
+  ['إعلانات فروع تنتظر المراجعة','promotion-requests',()=>db.promotionRequest.count({where:{status:'PENDING'}})],
+  ['إعلانات ماركت تنتظر المراجعة','market',()=>db.marketListing.count({where:{status:'PENDING'}})],
+  ['بلاغات ماركت مفتوحة','market',()=>db.marketReport.count({where:{status:'OPEN'}})],
+  ['حجوزات تنتظر القرار','booking-reviews',()=>db.booking.count({where:{status:'PENDING_REVIEW'}})],
+  ['صيانة تحتاج متابعة','maintenance',()=>db.maintenanceRequest.count({where:{status:{in:['NEW','REVIEWING','SCHEDULED','IN_PROGRESS']}}})],
+  ['طلبات حذف تحتاج مراجعة','account-deletions',()=>db.accountDeletion.count({where:{status:{in:['PENDING','ERASING']}}})],
+ ];
+ const summary=await homeSummary(db,f.admin.id);
+ for(const [label,destination,count] of checks){const card=summary.cards.find(c=>c.label===label);assert.ok(card,label);assert.equal(card.destination,destination);assert.equal(card.value,String(await count()));}
+ await db.promotionRequest.update({where:{id:promotion.id},data:{status:'REJECTED'}});
+ assert.equal(Number((await homeSummary(db,f.admin.id)).cards.find(c=>c.label==='إعلانات فروع تنتظر المراجعة')!.value),Number(summary.cards.find(c=>c.label==='إعلانات فروع تنتظر المراجعة')!.value)-1);
+ await db.branch.update({where:{id:f.branch.id},data:{status:'SUSPENDED'}});
+ const view=await inspectBranchServices(db,f.admin.id,f.gym.id,f.branch.id);assert.equal(view.items[0]!.requests[0]!.points,35);
+ await rejects(inspectBranchServices(db,f.owner.id,f.gym.id,f.branch.id),'ACCESS_DENIED');
+ await rejects(inspectBranchServices(db,f.admin.id,randomUUID(),f.branch.id),'NOT_FOUND');
+ const native=await homeSummary(db,f.user.id);assert.ok(!native.cards.some(c=>c.label==='إعلانات فروع تنتظر المراجعة'));
+});

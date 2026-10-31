@@ -1,4 +1,5 @@
 "use client";
+import {ReviewNote} from "./review-decision";
 import { ArrowDownLeft } from "lucide-react";
 import { useEffect, useState, type ReactNode, type FormEvent } from "react";
 import { api, message, decimal, minorUnits, date, methodName, } from "../lib/client";
@@ -387,7 +388,7 @@ function WithdrawalDetail({ id, admin, onClose, }: {
                         راجعت مرجع التحويل وصورة إثباته
                       </label>
                     </>)}
-                  <Field label="سبب الإجراء أو تفاصيل التأكيد/الاعتراض" name="reason" required minLength={5} maxLength={1000} readOnly={uncertain}/>
+                  <ReviewNote key={action} preset={action==='APPROVE'?'تمت مراجعة المستحقات وبيانات الاستلام والموافقة على طلب السحب.':action==='PAY'?'تم تنفيذ التحويل ومطابقة المرجع وإثبات الدفع.':'تم رفض طلب السحب بعد مراجعة بياناته.'} choices={action==='REJECT'?['بيانات حساب الاستلام تحتاج تصحيحًا.','المستحقات تحتاج تسوية قبل التحويل.']:[]} disabled={uncertain}/>
                   <label className="check">
                     <input type="checkbox" required disabled={uncertain}/>
                     راجعت تفاصيل الطلب وتأثير الإجراء

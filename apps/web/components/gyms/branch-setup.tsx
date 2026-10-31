@@ -2,13 +2,15 @@
 import { useState } from 'react';
 import { CheckCircle2, MapPin, Clock3, Coins, ChevronLeft, CirclePause } from 'lucide-react';
 import { Field, Notice } from '../ui';
-import { Mutation, Reason, Status, type Branch, type Gym } from './shared';
-export function BranchSetup({ gym, branch, onDone, onSuspend, onResume }: {
+import {ReviewNote} from '../review-decision';
+import { Mutation, Status, type Branch, type Gym } from './shared';
+export function BranchSetup({ gym, branch, onDone, onSuspend, onResume, onInspect }: {
     gym: Gym;
     branch: Branch;
     onDone: (result?: 'rejected') => void;
     onSuspend: () => void;
     onResume: () => void;
+    onInspect?:()=>void;
 }) {
     const [action, setAction] = useState<'approve' | 'reject' | null>(null), request = branch.pricingRequests?.[0];
     const activate = branch.status === 'PENDING', points = request?.visitPricePoints ?? branch.visitPricePoints, minutes = request?.sessionMinutes ?? branch.sessionMinutes;
@@ -23,10 +25,11 @@ export function BranchSetup({ gym, branch, onDone, onSuspend, onResume }: {
  {missing.length > 0 && <div className="notice" role="status"><strong>المطلوب قبل الاعتماد</strong><ul>{missing.map(m => <li key={m}>{m}</li>)}</ul></div>}
  {branch.status === 'ACTIVE' && !request && <p className="branch-setup-ready"><CheckCircle2 size={17}/>الفرع معتمد ومفعّل</p>}
  <div className="actions">{(activate || request) && <button className="primary" disabled={!canApprove} onClick={() => setAction('approve')}>{label}<CheckCircle2 size={17}/></button>}{request && <button className="secondary" onClick={() => setAction('reject')}>رفض مقترح السعر</button>}{branch.status === 'SUSPENDED' && <button className="secondary" disabled={gym.status !== 'ACTIVE' || !gym.ownerAcceptedAt || !gym.owner?.isActive || branch.pricingVersion < 1 || !branch.priceApprovedAt || missing.length > 0} onClick={onResume}>إعادة تفعيل الفرع</button>}{branch.status === 'ACTIVE' && <button className="text-button" onClick={onSuspend}><CirclePause size={16}/>إيقاف الفرع</button>}</div>
+ {onInspect&&<button className="secondary full" onClick={onInspect}>الخدمات والمرافق ومواعيد الحجز</button>}
  <small className="muted">شحن المتدربين من صاحب المنصة فقط. صاحب الجيم يدير الموظفين ويتابع مستحقات الزيارات.</small>
  {action === 'approve' && <Mutation title={label} path={`admin/gyms/${gym.id}/branches/${branch.id}/approve-setup`} onClose={() => setAction(null)} onDone={() => { setAction(null); onDone(); }} label="تأكيد الاعتماد" build={form => ({ pricingRequestId: request?.id ?? null, expectedGymUpdatedAt: gym.updatedAt, expectedBranchUpdatedAt: branch.updatedAt, expectedPricingVersion: branch.pricingVersion, mode: activate ? 'APPROVE_AND_ACTIVATE' : 'APPROVE_PRICE', reason: form.get('reason'), reviewed: form.get('reviewed') === 'on' })}>
- <div className="subtle-box"><h3>{gym.name} · {branch.name}</h3><p>{points} نقطة للزيارة · {minutes} دقيقة</p><p>{activate ? (gym.status === 'PENDING' ? 'سيُفعّل الجيم، ويُعتمد السعر والمدة، ويُفعّل هذا الفرع معًا.' : 'سيُعتمد السعر والمدة ويُفعّل هذا الفرع معًا.') : 'سيُعتمد السعر والمدة لهذا الفرع. حالة تشغيله تظل كما هي.'}</p></div><Field label="ملاحظة الاعتماد" name="reason" defaultValue="تمت مراجعة بيانات الفرع وموقعه وسعر الزيارة ومدتها والموافقة عليها." required minLength={5} maxLength={1000}/><label className="check"><input type="checkbox" name="reviewed" required/>راجعت بيانات الفرع والموقع والنقاط ومدة الزيارة</label><Notice text="لو البيانات اتغيّرت أثناء المراجعة، حدّث الصفحة وراجعها تاني قبل الاعتماد."/>
+ <div className="subtle-box"><h3>{gym.name} · {branch.name}</h3><p>{points} نقطة للزيارة · {minutes} دقيقة</p><p>{activate ? (gym.status === 'PENDING' ? 'سيُفعّل الجيم، ويُعتمد السعر والمدة، ويُفعّل هذا الفرع معًا.' : 'سيُعتمد السعر والمدة ويُفعّل هذا الفرع معًا.') : 'سيُعتمد السعر والمدة لهذا الفرع. حالة تشغيله تظل كما هي.'}</p></div><ReviewNote preset="تمت مراجعة بيانات الفرع وموقعه وسعر الزيارة ومدتها والموافقة عليها."/><label className="check"><input type="checkbox" name="reviewed" required/>راجعت بيانات الفرع والموقع والنقاط ومدة الزيارة</label><Notice text="لو البيانات اتغيّرت أثناء المراجعة، حدّث الصفحة وراجعها تاني قبل الاعتماد."/>
  </Mutation>}
- {action === 'reject' && request && <Mutation title="رفض مقترح السعر" path={`admin/price-change-requests/${request.id}/review`} onClose={() => setAction(null)} onDone={() => { setAction(null); onDone('rejected'); }} label="تأكيد رفض المقترح" build={form => ({ decision: 'REJECTED', reason: form.get('reason') })}><p>رفض المقترح لا يغيّر السعر المعتمد سابقًا ولا يوقف فرعًا نشطًا.</p><Reason /></Mutation>}
+ {action === 'reject' && request && <Mutation title="رفض مقترح السعر" path={`admin/price-change-requests/${request.id}/review`} onClose={() => setAction(null)} onDone={() => { setAction(null); onDone('rejected'); }} label="تأكيد رفض المقترح" build={form => ({ decision: 'REJECTED', reason: form.get('reason') })}><p>رفض المقترح لا يغيّر السعر المعتمد سابقًا ولا يوقف فرعًا نشطًا.</p><ReviewNote preset="سعر الزيارة أو مدتها يحتاج تعديلًا." choices={["بيانات الفرع أو موقعه غير مكتملة.","السعر المقترح غير مناسب."]}/></Mutation>}
  </article>;
 }

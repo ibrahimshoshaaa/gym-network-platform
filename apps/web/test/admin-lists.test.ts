@@ -3,6 +3,7 @@ import test from "node:test";
 import {createElement} from "react";
 import {renderToStaticMarkup} from "react-dom/server";
 import {filterRecords,normalizeSearch} from "../lib/list-filter";
+import {adminQueues} from '../lib/admin-queues';
 import {AdminHome} from "../components/admin-home";
 const rows=[{name:"إبراهيم شُوشه",phone:"01025269977",status:"PENDING"},{name:"احمد",phone:"01000000000",status:"ACTIVE"}];
 test("Arabic search accepts accents, alef variants and Arabic digits",()=>{
@@ -15,7 +16,7 @@ test("Arabic search accepts accents, alef variants and Arabic digits",()=>{
 
 import {AdminOverview,type AdminSummary} from "../components/admin-home";
 import {adminSections,adminSectionFor,roleTabs,roleQuickTabs} from "../lib/navigation";
-const labels=["شحن ينتظر المراجعة","طلبات انضمام الجيمات","سحب ينتظر المراجعة","تحويلات تنتظر التنفيذ","طلبات أسعار","طلبات تصحيح","جيمات تنتظر التفعيل","طلبات دعم مفتوحة"];
+const labels=adminQueues.map(q=>q.label);
 const summary=(values:Record<string,string>={}):AdminSummary=>({asOf:"2026-10-19T12:00:00Z",cards:labels.map(label=>({label,value:values[label]??"0",destination:"reviews"}))});
 test("admin home starts with the decision queue, not a financial report or section directory",()=>{
  const html=renderToStaticMarkup(createElement(AdminHome,{onNavigate:()=>{}}));
