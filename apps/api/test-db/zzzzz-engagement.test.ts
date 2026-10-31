@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import test,{after} from 'node:test';
 import {PrismaClient} from '@prisma/client';
 import {createTicket,listTickets,ticketDetail,replyTicket,setTicketStatus} from '../src/engagement/support.js';
@@ -76,7 +76,7 @@ test('platform inbox includes moderation and branch service inspection remains a
  const listing=await db.marketListing.create({data:{sellerId:f.user.id,title:'Synthetic listing',description:'Synthetic listing details',category:'EQUIPMENT',condition:'USED',pricePiasters:1000n,governorate:'Synthetic',city:'Synthetic',contactPhone:'+201555550000',searchText:'synthetic',clientKey:randomUUID(),requestHash:randomUUID()}});
  await db.marketReport.create({data:{listingId:listing.id,reporterId:f.outsider.id,reason:'Synthetic moderation report'}});
  await db.maintenanceRequest.create({data:{branchId:f.branch.id,createdById:f.owner.id,equipment:'Synthetic equipment',description:'Synthetic repair',contactPhone:'+201555550000',clientKey:randomUUID(),requestHash:randomUUID()}});
- await db.accountDeletion.create({data:{userId:f.outsider.id,requestKeyHash:randomUUID(),reviewDueAt:new Date(Date.now()+86400000)}});
+ await db.accountDeletion.create({data:{userId:f.outsider.id,requestKeyHash:createHash('sha256').update(randomUUID()).digest('hex'),reviewDueAt:new Date(Date.now()+86400000)}});
  const checks:[string,string,()=>Promise<number>][]=[
   ['أسعار خدمات تنتظر المراجعة','service-prices',()=>db.servicePriceRequest.count({where:{status:'PENDING'}})],
   ['إعلانات فروع تنتظر المراجعة','promotion-requests',()=>db.promotionRequest.count({where:{status:'PENDING'}})],
